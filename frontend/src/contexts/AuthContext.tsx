@@ -50,9 +50,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Silently fail
           }
         } catch (err) {
-          console.error('Auth init error:', err);
-          supabase.auth.signOut();
-          tokenStorage.clearTokens();
+          console.warn('Backend unreachable on init, using Supabase session fallback:', err);
+          // Set minimal user from session — don't sign out
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+            role: 'OWNER' as any,
+            hotel_id: '',
+            created_at: session.user.created_at,
+            updated_at: session.user.updated_at || session.user.created_at,
+          });
         }
       }
       setIsLoading(false);
@@ -99,19 +107,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         expires_in: data.session.expires_in || 3600,
       });
 
-      const currentUser = await authApi.getCurrentUser();
-      setUser(currentUser);
+      // Try to get full user profile from backend — but don't block login if it fails
+      // This handles cases where backend API URL is misconfigured or unreachable
+      try {
+        const currentUser = await authApi.getCurrentUser();
+        setUser(currentUser);
+      } catch (backendErr) {
+        console.warn('Backend user fetch failed, using Supabase session data:', backendErr);
+        // Set minimal user from Supabase session so app can proceed
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+          role: 'OWNER' as any,
+          hotel_id: '',
+          created_at: data.user.created_at,
+          updated_at: data.user.updated_at || data.user.created_at,
+        });
+      }
 
+      // Hotel fetch — always non-blocking
       try {
         const hotelData = await apiClient.get<Hotel>('/hotels/me');
         setHotel(hotelData);
       } catch {
-        // Silently fail
+        // Silently fail — DashboardLayout will redirect to onboarding if needed
       }
     } finally {
       setIsLoading(false);
     }
   }, []);
+
 
   const signup = useCallback(async (data: SignupRequest) => {
     setIsLoading(true);
