@@ -39,6 +39,25 @@ class Settings(BaseSettings):
         "https://api.gadget4me.in"
     ]
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_url(cls, v: str) -> str:
+        if not v:
+            return v
+        # Fix postgres:// -> postgresql://
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql://", 1)
+        # Ensure asyncpg driver
+        if v.startswith("postgresql://"):
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # Ensure sslmode=require for Supabase
+        if "supabase.com" in v and "sslmode=require" not in v:
+            if "?" in v:
+                v += "&sslmode=require"
+            else:
+                v += "?sslmode=require"
+        return v
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:
