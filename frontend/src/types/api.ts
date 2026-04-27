@@ -288,6 +288,11 @@ export interface DashboardStats {
   today_revenue: number;
   pending_bookings: number;
   total_rooms: number;
+  trends?: {
+    arrivals: number;
+    occupancy: number;
+    revenue: number;
+  };
 }
 
 // ============== API Response Wrappers ==============

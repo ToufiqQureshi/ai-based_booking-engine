@@ -4,6 +4,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { apiClient as api } from '../api/client';
+import { Button } from '@/components/ui/button';
 import { 
   BarChart3, Users, Clock, MousePointerClick, 
   Smartphone, Monitor, Globe, 
