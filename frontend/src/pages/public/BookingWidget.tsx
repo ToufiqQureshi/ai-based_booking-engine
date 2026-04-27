@@ -60,7 +60,7 @@ export default function BookingWidget() {
         const isOpen = isCheckInOpen || isCheckOutOpen || isGuestOpen;
         const height = isOpen ? expandedHeight : baseHeight;
 
-        console.log("BookingWidget: Resize Request ->", height);
+
 
         if (window.parent !== window) {
             window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, '*');
@@ -87,7 +87,7 @@ export default function BookingWidget() {
         if (promoCode) params.append('promo_code', promoCode);
 
         // Debug log
-        console.log("Searching with params:", params.toString());
+
 
         if (window.parent !== window) {
             window.open(`${targetUrl}?${params.toString()}`, '_blank');

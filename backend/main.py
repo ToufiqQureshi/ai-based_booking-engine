@@ -62,9 +62,12 @@ app = FastAPI(
 )
 
 
+from app.core.exceptions import global_exception_handler
+
 # Connect Limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(Exception, global_exception_handler)
 
 # CORS Middleware - Frontend ko allow karna hai
 app.add_middleware(
@@ -136,12 +139,6 @@ app.include_router(promos.router, prefix=API_V1_PREFIX + "/promos", tags=["Promo
 app.include_router(notifications.router, prefix=API_V1_PREFIX, tags=["Notifications"])
 app.include_router(analytics.router, prefix=API_V1_PREFIX + "/analytics", tags=["Analytics"])
 
-
-# DEV ONLY: Mock external API router (never in production)
-if settings.DEBUG:
-    from app.api.v1 import mock_channex
-    app.include_router(mock_channex.router, prefix=API_V1_PREFIX)
-    logger.warning("DEBUG MODE: mock_channex router is active")
 
 # Root endpoint
 @app.get("/", tags=["Root"])

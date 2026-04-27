@@ -54,18 +54,22 @@ const PageLoader = () => (
   </div>
 );
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 2,     // Cache data for 2 minutes
-      gcTime: 1000 * 60 * 10,       // Keep in memory for 10 minutes
+      staleTime: 1000 * 60 * 5,     // Optimized: Cache data for 5 minutes to reduce API calls
+      gcTime: 1000 * 60 * 15,       // Keep in memory for 15 minutes
       retry: 1,                      // Fail fast (1 retry only)
       refetchOnWindowFocus: false,   // Don't re-fetch on every tab switch
+      refetchOnMount: false,         // Don't refetch if data is already fresh
     },
   },
 });
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
@@ -127,6 +131,7 @@ const App = () => (
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

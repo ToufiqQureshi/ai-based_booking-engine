@@ -13,12 +13,13 @@ from app.core.supabase import verify_supabase_token
 from app.models.user import User
 from sqlalchemy.orm import selectinload
 import logging
+import json
+from app.core.redis_client import redis_client
 
 logger = logging.getLogger(__name__)
 
 # OAuth2 scheme - Frontend Authorization header se token extract karega
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
-
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
@@ -26,7 +27,7 @@ async def get_current_user(
 ) -> User:
     """
     Token verify karke current user return karta hai.
-    Supabase Native Auth support ke saath.
+    Supabase Native Auth support ke saath. Optimized with Redis caching for verification.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -34,8 +35,25 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    # Check if the token payload is cached in Redis to skip the expensive decoding
+    cache_key = f"auth_payload:{token}"
+    payload = None
+    r = redis_client.get_instance()
+    try:
+        cached_payload = r.get(cache_key)
+        if cached_payload:
+            payload = json.loads(cached_payload)
+    except Exception as e:
+        logger.warning(f"Redis cache read failed during auth token verification: {e}")
+
     # Supabase Token verify karo (Returns payload now)
-    payload = await verify_supabase_token(token)
+    if not payload:
+        payload = await verify_supabase_token(token)
+        if payload:
+            try:
+                r.setex(cache_key, 600, json.dumps(payload)) # Cache valid token for 10 minutes
+            except Exception as e:
+                logger.warning(f"Redis cache write failed during auth token cache: {e}")
     if payload is None:
         logger.error("Token verification failed in get_current_user")
         raise credentials_exception
