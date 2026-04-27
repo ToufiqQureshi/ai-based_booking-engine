@@ -23,3 +23,10 @@ redis
 supabase
 slowapi
 langchain-ollama
+openmeteo-requests
+requests-cache
+retry-requests
+pandas
+reportlab
+matplotlib
+langchain-community
