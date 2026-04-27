@@ -29,14 +29,10 @@ class Settings(BaseSettings):
     # CORS - Parsed from JSON string in env
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
         "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-        "https://app.gadget4me.in",
-        "https://api.gadget4me.in"
+        "https://staybooker.ai",
+        "https://www.staybooker.ai",
+        "https://api.staybooker.ai"
     ]
 
     @field_validator("DATABASE_URL", mode="before")
@@ -68,8 +64,8 @@ class Settings(BaseSettings):
         return v
 
     # Public URLs (for emails, widgets, etc.)
-    API_URL: str = "http://localhost:8001"
-    FRONTEND_URL: str = "http://localhost:8080"
+    API_URL: str = "https://api.staybooker.ai"
+    FRONTEND_URL: str = "https://staybooker.ai"
 
     # AI Config
     OPENAI_API_KEY: str | None = None
