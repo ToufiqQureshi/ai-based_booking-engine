@@ -8,7 +8,8 @@ from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
 
 from app.core.config import get_settings
-from app.models.booking import Booking, BookingStatus, BookingSource, Guest, BookingTimeline
+from app.models.timeline import BookingTimeline
+from app.models.booking import Booking, BookingStatus, BookingSource, Guest
 from app.models.room import RoomType
 from app.models.user import User
 from app.models.competitor import Competitor, CompetitorRate
@@ -497,7 +498,7 @@ def create_agent_executor(session: AsyncSession, user: User):
             session.add(new_booking)
             await session.flush()
             
-            # 4. Log to Timeline
+            # 4. Log to BookingTimeline
             timeline = BookingTimeline(
                 booking_id=new_booking.id,
                 event_type="booking_created",

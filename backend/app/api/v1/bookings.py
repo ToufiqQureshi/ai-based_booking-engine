@@ -10,9 +10,10 @@ from sqlmodel import select
 import uuid
 
 from app.api.deps import CurrentUser, DbSession
+from app.models.timeline import BookingTimeline
 from app.models.booking import (
     Booking, BookingCreate, BookingRead, BookingUpdate,
-    Guest, GuestCreate, GuestRead, BookingStatus, BookingTimeline
+    Guest, GuestCreate, GuestRead, BookingStatus,
 )
 from app.models.room import RoomType
 
