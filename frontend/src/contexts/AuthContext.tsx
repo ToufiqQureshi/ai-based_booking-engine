@@ -166,8 +166,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           expires_in: authData.session.expires_in || 3600,
         });
         
-        // Profile check backend se
+        // 3. Programmatically create the hotel directly on registration
         try {
+          const onboardingRes = await authApi.onboarding(data.hotel_name);
+          setUser(onboardingRes.user);
+          setHotel(onboardingRes.hotel as any);
+        } catch (onboardErr) {
+          console.error("Auto onboarding failed, falling back to profile fetch:", onboardErr);
           const currentUser = await authApi.getCurrentUser();
           setUser(currentUser);
           
@@ -175,9 +180,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
              const hotelData = await apiClient.get<Hotel>('/hotels/me');
              setHotel(hotelData);
           }
-        } catch {
-          // Profile might be being created by trigger, or hotel not yet set
-          // DashboardLayout will handle the redirect to /onboarding
         }
       } else {
         // Confirmation required case

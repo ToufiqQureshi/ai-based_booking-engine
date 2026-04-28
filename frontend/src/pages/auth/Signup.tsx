@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
+  hotelName: z.string().min(2, 'Hotel name must be at least 2 characters'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
@@ -47,11 +48,11 @@ export function SignupPage() {
         name: data.name,
         email: data.email,
         password: data.password,
-        hotel_name: 'TEMPORARY', // Backend trigger handles profile creation
+        hotel_name: data.hotelName,
       });
       toast({
         title: 'Account created!',
-        description: 'Welcome! Let\'s set up your property next.',
+        description: 'Welcome to your dashboard.',
       });
       navigate('/dashboard');
     } catch (error) {
@@ -115,6 +116,21 @@ export function SignupPage() {
                 />
                 {errors.email && (
                   <p className="text-xs text-destructive">{errors.email.message}</p>
+                )}
+              </div>
+
+              {/* Hotel Name */}
+              <div className="space-y-2">
+                <Label htmlFor="hotelName">Hotel Name</Label>
+                <Input
+                  id="hotelName"
+                  type="text"
+                  placeholder="The Grand Hotel"
+                  {...register('hotelName')}
+                  className={errors.hotelName ? 'border-destructive' : ''}
+                />
+                {errors.hotelName && (
+                  <p className="text-xs text-destructive">{errors.hotelName.message}</p>
                 )}
               </div>
 
