@@ -5,6 +5,7 @@ import { User } from '@/types/api';
 export interface RegisterResponse {
   message: string;
   user: User;
+  hotel?: any;
 }
 
 export const authApi = {
