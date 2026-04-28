@@ -10,7 +10,6 @@ import { Loader2 } from "lucide-react";
 // Auth Pages
 const LoginPage = lazy(() => import("@/pages/auth/Login"));
 const SignupPage = lazy(() => import("@/pages/auth/Signup"));
-const OnboardingPage = lazy(() => import("@/pages/auth/Onboarding"));
 const ForgotPasswordPage = lazy(() => import("@/pages/auth/ForgotPassword"));
 const ResetPasswordPage = lazy(() => import("@/pages/auth/ResetPassword"));
 
@@ -81,7 +80,6 @@ const App = () => (
               {/* Public Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
-              <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
 
