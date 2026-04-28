@@ -30,3 +30,4 @@ pandas
 reportlab
 matplotlib
 langchain-community
+user-agents
