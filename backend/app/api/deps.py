@@ -81,8 +81,22 @@ async def get_current_user(
                 session.add(user)
                 await session.commit()
                 await session.refresh(user)
-            else:
-                logger.info(f"User not found by email {email} either.")
+    # Auto-heal: User exists but missing hotel_id
+    if user and not user.hotel_id:
+        logger.info(f"Auto-healing missing hotel for user {email}")
+        from app.models.hotel import Hotel
+        import uuid
+        
+        hotel_name = payload.get("user_metadata", {}).get("hotel_name", f"{user.name or 'My'}'s Hotel")
+        hotel_slug = f"hotel-{str(uuid.uuid4())[:8]}"
+        hotel = Hotel(name=hotel_name, slug=hotel_slug)
+        session.add(hotel)
+        await session.flush()
+        
+        user.hotel_id = hotel.id
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
 
     # 3. Last Resort: Agar email se bhi nahi mila, toh Auto-Registration (First time login)
     if user is None:
@@ -102,7 +116,8 @@ async def get_current_user(
                     raise Exception(f"Email {email} already exists but linking failed")
 
             # Default Hotel banao
-            hotel = Hotel(name=f"{name}'s Hotel", slug=f"hotel-{str(uuid.uuid4())[:8]}")
+            hotel_name = payload.get("user_metadata", {}).get("hotel_name", f"{name}'s Hotel")
+            hotel = Hotel(name=hotel_name, slug=f"hotel-{str(uuid.uuid4())[:8]}")
             session.add(hotel)
             await session.flush()
             

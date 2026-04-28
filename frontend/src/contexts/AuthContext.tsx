@@ -142,14 +142,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = useCallback(async (data: SignupRequest) => {
     setIsLoading(true);
     try {
-      // 1. Supabase Auth me user create karo (Industry Standard)
-      // Postgres Trigger will automatically create the profile in 'users' table
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           data: {
             name: data.name,
+            hotel_name: data.hotel_name,
           },
         },
       });
@@ -157,37 +156,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (authError) throw authError;
       if (!authData.user) throw new Error('Signup failed');
 
-      // 2. Token save karo (agar session mila)
-      if (authData.session) {
-        tokenStorage.setTokens({
-          access_token: authData.session.access_token,
-          refresh_token: authData.session.refresh_token || '',
-          token_type: 'Bearer',
-          expires_in: authData.session.expires_in || 3600,
-        });
-        
-        // 3. Programmatically create the hotel directly on registration
-        try {
-          const onboardingRes = await authApi.onboarding(data.hotel_name);
-          setUser(onboardingRes.user);
-          setHotel(onboardingRes.hotel as any);
-        } catch (onboardErr) {
-          console.error("Auto onboarding failed, falling back to profile fetch:", onboardErr);
-          const currentUser = await authApi.getCurrentUser();
-          setUser(currentUser);
-          
-          if (currentUser.hotel_id) {
-             const hotelData = await apiClient.get<Hotel>('/hotels/me');
-             setHotel(hotelData);
-          }
-        }
-      } else {
-        // Confirmation required case
-        toast({
-          title: 'Signup successful',
-          description: 'Please check your email to confirm your account before logging in.',
-        });
-      }
+      // Do NOT log the user in automatically. 
+      // Force direct login step constraints.
       
       toast({
         title: 'Welcome!',
