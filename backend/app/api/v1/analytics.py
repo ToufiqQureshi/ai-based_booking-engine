@@ -23,12 +23,14 @@ async def start_session(request: SessionStartRequest, session: DbSession):
     # Since this is a public tracking endpoint, we need hotel_id in the body or path.
     pass # Will refactor to include hotel_id
 
+import httpx
+from fastapi import Request
+
 from user_agents import parse
 
 @router.post("/track/start")
-async def track_start(hotel_id: str, request: SessionStartRequest, session: DbSession):
-    """Analytics session start point"""
-    # Resolve hotel_id (could be slug or ID)
+async def track_start(hotel_id: str, request: SessionStartRequest, req_fastapi: Request, session: DbSession):
+    """Analytics session start point with GeoIP location resolution"""
     from app.models.hotel import Hotel
     
     # Try finding by slug first
@@ -36,9 +38,6 @@ async def track_start(hotel_id: str, request: SessionStartRequest, session: DbSe
     hotel = (await session.execute(h_query)).scalar_one_or_none()
     
     actual_hotel_id = hotel.id if hotel else hotel_id
-    
-    # If not found by slug and not a valid UUID format, this might still fail, 
-    # but at least we handle the slug case which is common in the widget.
     
     # Parse User Agent
     ua_string = request.user_agent or ""
@@ -49,13 +48,32 @@ async def track_start(hotel_id: str, request: SessionStartRequest, session: DbSe
     elif ua.is_tablet: device_type = "tablet"
     elif ua.is_bot: device_type = "bot"
 
+    # Resolve Client IP & Country
+    client_ip = req_fastapi.headers.get("X-Forwarded-For") or req_fastapi.client.host
+    if client_ip and "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+        
+    country_name = "Unknown"
+    
+    try:
+        if client_ip and client_ip not in ("127.0.0.1", "::1", "localhost"):
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                res = await client.get(f"http://ip-api.com/json/{client_ip}")
+                if res.status_code == 200:
+                    geo_data = res.json()
+                    if geo_data.get("status") == "success":
+                        country_name = geo_data.get("country", "Unknown")
+    except Exception as e:
+        print(f"GeoIP Lookup Failed: {e}")
+
     new_session = AnalyticsSession(
         hotel_id=actual_hotel_id,
         user_agent=ua_string,
         device_type=device_type,
         browser=f"{ua.browser.family} {ua.browser.version_string}",
         os=f"{ua.os.family} {ua.os.version_string}",
-        referrer=request.referrer
+        referrer=request.referrer,
+        country=country_name
     )
     session.add(new_session)
     await session.commit()
@@ -187,6 +205,32 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             res = await session.execute(q)
             funnel_data.append({"stage": stage, "count": res.scalar() or 0})
 
+        # 6. Geo Stats
+        geo_q = select(AnalyticsSession.country, func.count(AnalyticsSession.id)).where(
+            AnalyticsSession.hotel_id == hotel_id,
+            AnalyticsSession.started_at >= start_date_naive
+        ).group_by(AnalyticsSession.country).order_by(func.count(AnalyticsSession.id).desc())
+        res_geo = await session.execute(geo_q)
+        
+        geo_stats = []
+        code_map = {
+            "India": "IN", "United States": "US", "United Kingdom": "GB", 
+            "United Arab Emirates": "AE", "Germany": "DE", "Australia": "AU",
+            "Canada": "CA", "France": "FR", "Japan": "JP", "China": "CN"
+        }
+        
+        for row in res_geo.all():
+            country = row[0] or "Unknown"
+            count = row[1]
+            pct = int(round((count / total_visitors * 100), 0)) if total_visitors > 0 else 0
+            geo_stats.append({
+                "country": country,
+                "code": code_map.get(country, "XX"),
+                "visitors": count,
+                "percentage": pct,
+                "trend": "+0%"
+            })
+
         return {
             "total_visitors": total_visitors,
             "avg_time_spent_seconds": avg_time,
@@ -195,7 +239,8 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             "device_stats": device_stats,
             "top_rooms": top_rooms,
             "chart_data": chart_data,
-            "funnel_data": funnel_data
+            "funnel_data": funnel_data,
+            "geo_stats": geo_stats
         }
     except Exception as e:
         import logging

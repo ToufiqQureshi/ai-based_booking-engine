@@ -21,69 +21,82 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
     """
     Dashboard ke liye summary stats.
-    Frontend DashboardStats interface se match karta hai.
-    Optimized: 5 min cache + Parallel execution
+    Parallel execution optimized.
     """
-    # 1. Check Cache
     cache_key = f"dashboard_stats:{current_user.hotel_id}"
+    r = None
     try:
         r = redis_client.get_instance()
         cached_data = r.get(cache_key)
         if cached_data:
             return json.loads(cached_data)
     except Exception as e:
-        print(f"Redis Read Failed: {e}")
+        print(f"Redis Read Failed or Not Configured: {e}")
 
     today = date.today()
     yesterday = today - timedelta(days=1)
-    
-    # Helper for count query
-    async def get_count(q):
-        res = await session.execute(q)
-        return res.scalar() or 0
-
-    # 2. Today's Stats
-    arrivals_today = await get_count(select(func.count(Booking.id)).where(
-        Booking.hotel_id == current_user.hotel_id, Booking.check_in == today,
-        Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
-    ))
-    
-    departures_today = await get_count(select(func.count(Booking.id)).where(
-        Booking.hotel_id == current_user.hotel_id, Booking.check_out == today,
-        Booking.status == BookingStatus.CHECKED_IN
-    ))
-    
-    occupancy_today = await get_count(select(func.count(Booking.id)).where(
-        Booking.hotel_id == current_user.hotel_id, Booking.status == BookingStatus.CHECKED_IN
-    ))
-    
     start_of_day = datetime.combine(today, datetime.min.time())
-    revenue_today_res = await session.execute(select(func.sum(Booking.total_amount)).where(
-        Booking.hotel_id == current_user.hotel_id, Booking.created_at >= start_of_day
-    ))
-    revenue_today = float(revenue_today_res.scalar() or 0)
-
-    # 3. Yesterday's Stats (for Trends)
-    arrivals_yest = await get_count(select(func.count(Booking.id)).where(
-        Booking.hotel_id == current_user.hotel_id, Booking.check_in == yesterday,
-        Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
-    ))
-    
-    occupancy_yest = await get_count(select(func.count(Booking.id)).where(
-        Booking.hotel_id == current_user.hotel_id, 
-        Booking.status == BookingStatus.CHECKED_IN,
-        Booking.updated_at < start_of_day # Simple proxy for 'was checked in yesterday'
-    ))
-
     start_of_yest = start_of_day - timedelta(days=1)
-    revenue_yest_res = await session.execute(select(func.sum(Booking.total_amount)).where(
-        Booking.hotel_id == current_user.hotel_id, 
-        Booking.created_at >= start_of_yest,
-        Booking.created_at < start_of_day
-    ))
-    revenue_yest = float(revenue_yest_res.scalar() or 0)
 
-    # Calculate Trends (%)
+    # Parallel Execution of DB Queries
+    queries = [
+        # arrivals_today
+        session.execute(select(func.count(Booking.id)).where(
+            Booking.hotel_id == current_user.hotel_id, Booking.check_in == today,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
+        )),
+        # departures_today
+        session.execute(select(func.count(Booking.id)).where(
+            Booking.hotel_id == current_user.hotel_id, Booking.check_out == today,
+            Booking.status == BookingStatus.CHECKED_IN
+        )),
+        # occupancy_today
+        session.execute(select(func.count(Booking.id)).where(
+            Booking.hotel_id == current_user.hotel_id, Booking.status == BookingStatus.CHECKED_IN
+        )),
+        # revenue_today
+        session.execute(select(func.sum(Booking.total_amount)).where(
+            Booking.hotel_id == current_user.hotel_id, Booking.created_at >= start_of_day
+        )),
+        # arrivals_yest
+        session.execute(select(func.count(Booking.id)).where(
+            Booking.hotel_id == current_user.hotel_id, Booking.check_in == yesterday,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
+        )),
+        # occupancy_yest
+        session.execute(select(func.count(Booking.id)).where(
+            Booking.hotel_id == current_user.hotel_id, 
+            Booking.status == BookingStatus.CHECKED_IN,
+            Booking.updated_at < start_of_day
+        )),
+        # revenue_yest
+        session.execute(select(func.sum(Booking.total_amount)).where(
+            Booking.hotel_id == current_user.hotel_id, 
+            Booking.created_at >= start_of_yest,
+            Booking.created_at < start_of_day
+        )),
+        # pending_bookings
+        session.execute(select(func.count(Booking.id)).where(
+            Booking.hotel_id == current_user.hotel_id, Booking.status == BookingStatus.PENDING
+        )),
+        # total_rooms
+        session.execute(select(func.sum(RoomType.total_inventory)).where(
+            RoomType.hotel_id == current_user.hotel_id, RoomType.is_active == True
+        ))
+    ]
+
+    results = await asyncio.gather(*queries)
+
+    arrivals_today = results[0].scalar() or 0
+    departures_today = results[1].scalar() or 0
+    occupancy_today = results[2].scalar() or 0
+    revenue_today = float(results[3].scalar() or 0)
+    arrivals_yest = results[4].scalar() or 0
+    occupancy_yest = results[5].scalar() or 0
+    revenue_yest = float(results[6].scalar() or 0)
+    pending_bookings = results[7].scalar() or 0
+    total_rooms = results[8].scalar() or 0
+
     def calc_trend(curr, prev):
         if prev == 0: return 100 if curr > 0 else 0
         return round(((curr - prev) / prev) * 100, 1)
@@ -93,12 +106,8 @@ async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
         "today_departures": departures_today,
         "current_occupancy": occupancy_today,
         "today_revenue": revenue_today,
-        "pending_bookings": await get_count(select(func.count(Booking.id)).where(
-            Booking.hotel_id == current_user.hotel_id, Booking.status == BookingStatus.PENDING
-        )),
-        "total_rooms": await get_count(select(func.sum(RoomType.total_inventory)).where(
-            RoomType.hotel_id == current_user.hotel_id, RoomType.is_active == True
-        )),
+        "pending_bookings": pending_bookings,
+        "total_rooms": total_rooms,
         "trends": {
             "arrivals": calc_trend(arrivals_today, arrivals_yest),
             "occupancy": calc_trend(occupancy_today, occupancy_yest),
@@ -106,11 +115,14 @@ async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
         }
     }
 
-    # 4. Cache Result (5 Minutes)
-    try:
-        r.setex(cache_key, 300, json.dumps(data))
-    except Exception as e:
-        print(f"Redis Write Failed: {e}")
+    # Cache result if Redis is working
+    if r:
+        try:
+            r.setex(cache_key, 300, json.dumps(data))
+        except Exception as e:
+            print(f"Redis Write Failed: {e}")
+
+    return data
 
     return data
 

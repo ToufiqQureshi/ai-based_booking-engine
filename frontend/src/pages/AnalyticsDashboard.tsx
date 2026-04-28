@@ -26,6 +26,7 @@ interface AnalyticsData {
   avg_daily_rate: number;
   rev_par: number;
   occupancy_rate: number;
+  geo_stats?: { country: string; code: string; visitors: number; percentage: number; trend: string }[];
 }
 
 interface LiveEvent {
@@ -352,13 +353,32 @@ export const AnalyticsDashboard: React.FC = () => {
           <Globe className="w-5 h-5 text-blue-500" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          {[
-            { country: 'India', code: 'IN', visitors: 1420, percentage: 65, trend: '+5%' },
-            { country: 'United States', code: 'US', visitors: 320, percentage: 15, trend: '+12%' },
-            { country: 'United Kingdom', code: 'UK', visitors: 180, percentage: 8, trend: '-2%' },
-            { country: 'United Arab Emirates', code: 'UAE', visitors: 120, percentage: 5, trend: '+20%' },
-            { country: 'Germany', code: 'DE', visitors: 95, percentage: 4, trend: '+1%' },
-          ].map((item) => (
+          {data?.geo_stats && data.geo_stats.length > 0 ? data.geo_stats.map((item) => (
+            <div key={item.country} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-blue-600 hover:border-blue-700 transition-all duration-300">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-6 rounded bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                  {item.code}
+                </div>
+                <span className="text-sm font-bold text-slate-900 group-hover:text-white">{item.country}</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-end gap-2">
+                  <span className="text-xl font-black text-slate-900 group-hover:text-white">{item.visitors}</span>
+                  <span className={`text-[10px] font-bold mb-1 ${item.trend.startsWith('+') ? 'text-emerald-600 group-hover:text-emerald-300' : 'text-red-500 group-hover:text-red-300'}`}>
+                    {item.trend}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-1 mt-2">
+                  <div className="bg-blue-600 group-hover:bg-white h-full rounded-full" style={{ width: `${item.percentage}%` }}></div>
+                </div>
+              </div>
+            </div>
+          )) : (
+            <div className="col-span-full text-center py-12 text-gray-400">
+              No geographical traffic data recorded yet.
+            </div>
+          )}
+        </div>
             <div key={item.country} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-blue-600 hover:border-blue-700 transition-all duration-300">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-6 rounded bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
