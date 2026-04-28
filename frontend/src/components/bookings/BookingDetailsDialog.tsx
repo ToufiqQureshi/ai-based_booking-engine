@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, Mail, CreditCard, Bed, Clock, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, User, Mail, CreditCard, Bed, Clock, MessageSquare, CheckCircle, XCircle, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiClient } from '@/api/client';
 import { useToast } from '@/hooks/use-toast';
@@ -154,6 +154,34 @@ export function BookingDetailsDialog({ open, onOpenChange, booking, onStatusChan
                             </table>
                         </div>
                     </div>
+                    <Separator />
+
+                    {/* Add-ons */}
+                    {booking.addons && booking.addons.length > 0 && (
+                        <div className="space-y-3">
+                            <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <PlusCircle className="h-4 w-4" /> Add-ons
+                            </h4>
+                            <div className="border rounded-lg overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-muted text-muted-foreground text-left">
+                                        <tr>
+                                            <th className="p-2 font-medium">Add-on Name</th>
+                                            <th className="p-2 font-medium text-right">Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {booking.addons.map((addon: any, i: number) => (
+                                            <tr key={i}>
+                                                <td className="p-2">{addon.name || addon.addon_name}</td>
+                                                <td className="p-2 text-right">{formatCurrency(addon.price || addon.amount || addon.total_price)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Special Requests */}
                     {booking.special_requests && (
