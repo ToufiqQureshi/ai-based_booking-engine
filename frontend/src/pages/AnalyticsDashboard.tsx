@@ -379,27 +379,6 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
           )}
         </div>
-            <div key={item.country} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-blue-600 hover:border-blue-700 transition-all duration-300">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-6 rounded bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
-                  {item.code}
-                </div>
-                <span className="text-sm font-bold text-slate-900 group-hover:text-white">{item.country}</span>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-end gap-2">
-                  <span className="text-xl font-black text-slate-900 group-hover:text-white">{item.visitors}</span>
-                  <span className={`text-[10px] font-bold mb-1 ${item.trend.startsWith('+') ? 'text-emerald-600 group-hover:text-emerald-300' : 'text-red-500 group-hover:text-red-300'}`}>
-                    {item.trend}
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-1 mt-2">
-                  <div className="bg-blue-600 group-hover:bg-white h-full rounded-full" style={{ width: `${item.percentage}%` }}></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
