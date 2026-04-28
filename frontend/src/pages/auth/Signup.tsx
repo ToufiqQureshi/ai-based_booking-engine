@@ -54,7 +54,7 @@ export function SignupPage() {
         title: 'Account created!',
         description: 'Welcome to your dashboard.',
       });
-      navigate('/dashboard');
+      navigate('/login');
     } catch (error) {
       toast({
         variant: 'destructive',
