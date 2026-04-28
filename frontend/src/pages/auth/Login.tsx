@@ -72,11 +72,11 @@ export function LoginPage() {
       navigate('/dashboard');
     } catch (error) {
       // 4. Agar error aaya (jaise galat password)
-      console.log('--- LOGIN DEBUG INFO ---');
-      console.log('Error Object:', error);
+
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.log('Error Message:', errorMessage);
-      console.log('--- END DEBUG INFO ---');
+
+
 
       toast({
         variant: 'destructive',
