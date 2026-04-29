@@ -192,92 +192,47 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* Main Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Visitors Chart */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Revenue & Traffic</h2>
-              <p className="text-xs text-gray-500">Performance correlation over time</p>
-            </div>
-            <div className="flex items-center gap-4 text-xs font-medium">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                Visitors
-              </div>
-              <div className="flex items-center gap-1.5 text-emerald-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                Revenue
-              </div>
-            </div>
+      <div className="w-full bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Revenue & Traffic</h2>
+            <p className="text-xs text-gray-500">Performance correlation over time</p>
           </div>
-          <div className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.chart_data || []}>
-                <defs>
-                  <linearGradient id="colorVisitors" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Area yAxisId="left" type="monotone" dataKey="visitors" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorVisitors)" />
-                <Area yAxisId="right" type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="flex items-center gap-4 text-xs font-medium">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+              Visitors
+            </div>
+            <div className="flex items-center gap-1.5 text-emerald-600">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              Revenue
+            </div>
           </div>
         </div>
-
-        {/* Live Feed Component */}
-        <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-xl overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-4">
-             <span className="flex h-3 w-3 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </span>
-          </div>
-          <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-emerald-400" />
-            Live Event Stream
-          </h2>
-          <div className="space-y-6">
-            {liveEvents.length > 0 ? liveEvents.map((event) => (
-              <div key={event.id} className="flex gap-4 group animate-in slide-in-from-right duration-500">
-                <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
-                  event.type === 'booking' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 
-                  event.type === 'search' ? 'bg-blue-400' : 'bg-slate-500'
-                }`} />
-                <div className="space-y-1">
-                  <p className={`text-sm ${event.type === 'booking' ? 'text-emerald-400 font-bold' : 'text-slate-300'}`}>
-                    {event.message}
-                  </p>
-                  <div className="flex items-center gap-3 text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-                    <span>{event.timestamp}</span>
-                    {event.amount && <span className="bg-emerald-500/10 text-emerald-500 px-1.5 rounded">₹{event.amount}</span>}
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <div className="py-20 text-center text-slate-500">
-                Monitoring incoming events...
-              </div>
-            )}
-          </div>
-          <div className="mt-8 pt-6 border-t border-slate-800">
-            <Button variant="ghost" size="sm" className="w-full text-slate-400 hover:text-white hover:bg-slate-800 gap-2">
-              View Full History <ArrowUpRight className="w-4 h-4" />
-            </Button>
-          </div>
+        <div className="h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data.chart_data || []}>
+              <defs>
+                <linearGradient id="colorVisitors" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis yAxisId="left" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip 
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+              />
+              <Area yAxisId="left" type="monotone" dataKey="visitors" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorVisitors)" />
+              <Area yAxisId="right" type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
