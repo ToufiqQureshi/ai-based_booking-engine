@@ -3,11 +3,14 @@ Analytics API Routes
 Receives tracking events from the widget and provides aggregated data to the dashboard.
 """
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
-from sqlmodel import select, func, case
+from sqlmodel import select, func, case, or_
 from datetime import datetime, timedelta, timezone
 
 from app.api.deps import DbSession, CurrentUser
 from app.models.analytics import AnalyticsSession, AnalyticsEvent, SessionStartRequest, SessionPingRequest, EventTrackRequest
+from app.models.booking import Booking, BookingStatus
+from app.models.room import RoomType
+
 
 router = APIRouter(tags=["Analytics"])
 
@@ -143,6 +146,32 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
 
         start_date_naive = datetime.utcnow() - timedelta(days=days)
         
+        # Calculate revenue, ADR, RevPAR, Occupancy
+        bookings_q = select(Booking).where(
+            Booking.hotel_id == hotel_id,
+            Booking.created_at >= start_date_naive,
+            Booking.status != BookingStatus.CANCELLED
+        )
+        res_bookings = await session.execute(bookings_q)
+        bookings = res_bookings.scalars().all()
+
+        revenue_total = sum(b.total_amount for b in bookings)
+        total_rooms_booked = sum(len(b.rooms) for b in bookings)
+
+        room_types_q = select(RoomType).where(
+            RoomType.hotel_id == hotel_id,
+            RoomType.is_active == True
+        )
+        res_room_types = await session.execute(room_types_q)
+        room_types = res_room_types.scalars().all()
+        total_inventory = sum(r.total_inventory for r in room_types)
+
+        avg_daily_rate = round(revenue_total / total_rooms_booked, 2) if total_rooms_booked > 0 else 0
+        total_rooms_available = total_inventory * days
+        occupancy_rate = round((total_rooms_booked / total_rooms_available * 100), 2) if total_rooms_available > 0 else 0
+        rev_par = round(revenue_total / total_rooms_available, 2) if total_rooms_available > 0 else 0
+
+        
         # 1. Main Stats
         stats_q = select(
             func.count(AnalyticsSession.id).label("visitors"),
@@ -240,8 +269,13 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             "top_rooms": top_rooms,
             "chart_data": chart_data,
             "funnel_data": funnel_data,
-            "geo_stats": geo_stats
+            "geo_stats": geo_stats,
+            "revenue_total": revenue_total,
+            "avg_daily_rate": avg_daily_rate,
+            "rev_par": rev_par,
+            "occupancy_rate": occupancy_rate
         }
+
     except Exception as e:
         import logging
         logging.error(f"Analytics Error: {str(e)}")
@@ -255,11 +289,15 @@ async def get_active_sessions(current_user: CurrentUser, session: DbSession):
     five_mins_ago = datetime.utcnow() - timedelta(minutes=5)
     query = select(func.count(AnalyticsSession.id)).where(
         AnalyticsSession.hotel_id == current_user.hotel_id,
-        AnalyticsSession.ended_at >= five_mins_ago
+        or_(
+            AnalyticsSession.ended_at >= five_mins_ago,
+            AnalyticsSession.started_at >= five_mins_ago
+        )
     )
     result = await session.execute(query)
     count = result.scalar() or 0
     return {"active_visitors": count}
+
 
 @router.get("/live/feed")
 async def get_live_feed(current_user: CurrentUser, session: DbSession, limit: int = 10):
