@@ -176,14 +176,31 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str):
         return details
 
     tools = [get_hotel_info, get_hotel_amenities, check_availability, get_room_details, prepare_booking]
-
+    
     try:
-        # Initialize Ollama
-        llm = ChatOllama(
-            model="deepseek-v3.1:671b-cloud",
-            temperature=0.3,
-            base_url="http://localhost:11434"
-        )
+
+        if settings.GROQ_API_KEY:
+            from langchain_openai import ChatOpenAI
+            llm = ChatOpenAI(
+                model="llama-3.3-70b-versatile", # Using stable Groq model
+                temperature=0.3,
+                openai_api_key=settings.GROQ_API_KEY,
+                base_url="https://api.groq.com/openai/v1"
+            )
+        elif settings.OPENAI_API_KEY:
+            from langchain_openai import ChatOpenAI
+            llm = ChatOpenAI(
+                model="gpt-4o-mini",
+                temperature=0.3,
+                openai_api_key=settings.OPENAI_API_KEY
+            )
+        else:
+            # Initialize Ollama
+            llm = ChatOllama(
+                model="deepseek-v3.1:671b-cloud",
+                temperature=0.3,
+                base_url="http://localhost:11434"
+            )
 
         formatted_prompt = SYSTEM_PROMPT.format(current_date=date.today().isoformat())
 
