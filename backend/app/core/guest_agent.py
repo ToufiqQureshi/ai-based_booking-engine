@@ -48,7 +48,7 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str):
     # --- READ-ONLY TOOLS ---
 
     @tool
-    async def get_hotel_info() -> Dict[str, Any]:
+    async def get_hotel_info() -> str:
         """
         Get general hotel information (Address, Contact, Check-in/out times, Policies).
         Use this to answer questions like "Where are you located?" or "What is check-in time?".
@@ -57,24 +57,48 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str):
         result = await session.execute(query)
         hotel = result.scalar_one_or_none()
         if not hotel: return "Hotel information not found."
-        return {
+        
+        import json
+        return json.dumps({
             "name": hotel.name,
             "description": hotel.description,
             "address": hotel.address,
             "contact": hotel.contact,
             "policies": hotel.settings,
             "star_rating": hotel.star_rating
-        }
+        })
 
     @tool
-    async def get_hotel_amenities() -> List[str]:
+    async def get_hotel_amenities() -> str:
         """
         Get list of amenities available at the hotel (e.g. WiFi, Pool, Parking).
         """
-        query = select(Amenity).join(RoomType).where(RoomType.hotel_id == hotel_id)
-        result = await session.execute(query)
-        amenities = result.scalars().all()
-        return list(set([a.name for a in amenities]))
+        from app.models.amenity import Amenity, RoomAmenityLink
+        from app.models.room import RoomType
+        
+        # Get all room types for this hotel
+        rt_stmt = select(RoomType).where(RoomType.hotel_id == hotel_id)
+        rt_res = await session.execute(rt_stmt)
+        room_ids = [r.id for r in rt_res.scalars().all()]
+
+        if not room_ids:
+            return "No specific amenities configured."
+
+        # Get linked amenities
+        link_stmt = select(RoomAmenityLink).where(RoomAmenityLink.room_id.in_(room_ids))
+        link_res = await session.execute(link_stmt)
+        amenity_ids = {link.amenity_id for link in link_res.scalars().all()}
+
+        if not amenity_ids:
+            return "No specific amenities configured."
+
+        am_stmt = select(Amenity).where(Amenity.id.in_(amenity_ids))
+        am_res = await session.execute(am_stmt)
+        names = list(set([a.name for a in am_res.scalars().all()]))
+        
+        if not names:
+            return "No specific amenities configured."
+        return ", ".join(names)
 
     @tool
     async def check_availability(check_in_date: str, check_out_date: str, guests: int = 2) -> str:
