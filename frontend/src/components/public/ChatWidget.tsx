@@ -101,22 +101,22 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
                         <Card className="border border-gray-100 shadow-2xl h-[550px] flex flex-col bg-white overflow-hidden rounded-3xl">
                             {/* Polished Gradient Header */}
                             <CardHeader
-                                className="flex flex-row items-center justify-between p-4 shadow-lg relative z-10 shrink-0"
+                                className="flex flex-row items-center justify-between p-4 shadow-xl relative z-10 shrink-0"
                                 style={{
-                                    background: 'linear-gradient(135deg, #1f2937, #111827)',
+                                    background: 'linear-gradient(135deg, #4f46e5, #3730a3)',
                                     borderBottom: '1px solid rgba(255,255,255,0.1)',
                                     minHeight: '70px'
                                 }}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="bg-white/10 p-2 rounded-xl backdrop-blur-md border border-white/10 shadow-inner flex items-center justify-center w-9 h-9">
-                                        <Bot className="w-5 h-5 text-white" />
+                                    <div className="bg-white/20 p-2 rounded-2xl backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center w-11 h-11">
+                                        <img src="/webmerito-icon.png" alt="Logo" className="w-6 h-6 object-contain" />
                                     </div>
                                     <div className="flex flex-col justify-center">
-                                        <span className="text-[15px] font-bold text-white leading-none tracking-tight">Concierge AI</span>
-                                        <div className="flex items-center gap-1.5 mt-1.5">
-                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-                                            <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-none">Online</span>
+                                        <span className="text-[16px] font-extrabold text-white leading-tight tracking-tight">Saaraa AI</span>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
+                                            <span className="text-[11px] font-bold text-indigo-100/80 uppercase tracking-widest leading-none">Concierge Active</span>
                                         </div>
                                     </div>
                                 </div>
@@ -138,13 +138,12 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
                                                 key={idx}
                                                 className={`flex items-start gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-in fade-in slide-in-from-bottom-2 duration-300 mb-2`}
                                             >
-                                                {/* Consistent Avatar Sizing and Containers */}
-                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm border ${msg.role === 'user' ? 'bg-white border-primary/10' : 'bg-gray-100 border-gray-200'
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-md ${msg.role === 'user' ? 'bg-gradient-to-tr from-purple-500 to-indigo-600' : 'bg-white border border-gray-100'
                                                     }`}>
                                                     {msg.role === 'user' ? (
-                                                        <User className="w-4.5 h-4.5 text-gray-400" />
+                                                        <User className="w-4 h-4 text-white" />
                                                     ) : (
-                                                        <Bot className="w-4.5 h-4.5 text-gray-400" />
+                                                        <img src="/webmerito-icon.png" alt="AI" className="w-5 h-5 object-contain" />
                                                     )}
                                                 </div>
 
