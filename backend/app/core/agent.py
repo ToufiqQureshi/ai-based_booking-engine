@@ -609,20 +609,8 @@ def create_agent_executor(session: AsyncSession, user: User):
             openai_api_key=settings.GROQ_API_KEY,
             base_url="https://api.groq.com/openai/v1"
         )
-    elif settings.OPENAI_API_KEY:
-        from langchain_openai import ChatOpenAI
-        llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0,
-            openai_api_key=settings.OPENAI_API_KEY
-        )
     else:
-        # Fallback to local Ollama
-        llm = ChatOllama(
-            model="gpt-oss:120b-cloud",
-            temperature=0,
-            base_url=settings.OLLAMA_HOST
-        )
+        raise ValueError("GROQ_API_KEY is not configured in backend environment.")
 
     # Fetch Hotel City for Context - Handle NoneType safety
     hotel_city = "Unknown City"

@@ -211,15 +211,8 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str):
                 openai_api_key=settings.GROQ_API_KEY,
                 base_url="https://api.groq.com/openai/v1"
             )
-        elif settings.OPENAI_API_KEY:
-            from langchain_openai import ChatOpenAI
-            llm = ChatOpenAI(
-                model="gpt-4o-mini",
-                temperature=0.3,
-                openai_api_key=settings.OPENAI_API_KEY
-            )
         else:
-            raise ValueError("No LLM API Key configured in backend environment.")
+            raise ValueError("GROQ_API_KEY is not configured in backend environment.")
 
         formatted_prompt = SYSTEM_PROMPT.format(current_date=date.today().isoformat())
 
