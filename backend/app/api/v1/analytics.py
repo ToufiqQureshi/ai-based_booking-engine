@@ -256,9 +256,62 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
                 "country": country,
                 "code": code_map.get(country, "XX"),
                 "visitors": count,
-                "percentage": pct,
-                "trend": "+0%"
+                "percentage": pct
             })
+
+        # --- ADVANCED HOTELIER METRICS ---
+        
+        # A. Most & Least Booked Rooms
+        room_booking_counts = {r.id: {"id": r.id, "name": r.name, "count": 0} for r in room_types}
+        for b in bookings:
+            for rm in b.rooms:
+                rt_id = rm.get("room_type_id")
+                if rt_id in room_booking_counts:
+                    room_booking_counts[rt_id]["count"] += 1
+        most_booked_rooms = sorted(room_booking_counts.values(), key=lambda x: x["count"], reverse=True)
+        least_booked_rooms = sorted(room_booking_counts.values(), key=lambda x: x["count"])
+
+        # B. Funnel Drop-offs
+        funnel_dropoffs = []
+        for i in range(len(funnel_data) - 1):
+            curr_c = funnel_data[i]["count"]
+            next_c = funnel_data[i+1]["count"]
+            drop_pct = round(((curr_c - next_c) / curr_c * 100), 2) if curr_c > 0 else 0
+            funnel_dropoffs.append({
+                "stage": funnel_data[i]["stage"],
+                "drop_percentage": drop_pct
+            })
+
+        # C. Promo Stats
+        promo_counts = {}
+        for b in bookings:
+            if b.promo_code:
+                promo_counts[b.promo_code] = promo_counts.get(b.promo_code, 0) + 1
+        promo_stats = [{"code": k, "bookings": v} for k, v in promo_counts.items()]
+
+        # D. Time-Heatmap
+        heatmap_q = select(AnalyticsSession.started_at).where(
+            AnalyticsSession.hotel_id == hotel_id,
+            AnalyticsSession.started_at >= start_date_naive
+        )
+        res_heatmap = await session.execute(heatmap_q)
+        heatmap_data = {}
+        for row in res_heatmap.all():
+            dt = row[0]
+            wd = dt.weekday() # 0-6
+            hr = dt.hour # 0-23
+            k = f"{wd}-{hr}"
+            heatmap_data[k] = heatmap_data.get(k, 0) + 1
+
+        heatmap_list = []
+        for wd in range(7):
+            for hr in range(24):
+                k = f"{wd}-{hr}"
+                heatmap_list.append({
+                    "weekday": wd,
+                    "hour": hr,
+                    "visitors": heatmap_data.get(k, 0)
+                })
 
         return {
             "total_visitors": total_visitors,
@@ -273,7 +326,13 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             "revenue_total": revenue_total,
             "avg_daily_rate": avg_daily_rate,
             "rev_par": rev_par,
-            "occupancy_rate": occupancy_rate
+            "occupancy_rate": occupancy_rate,
+            "most_booked_rooms": most_booked_rooms,
+            "least_booked_rooms": least_booked_rooms,
+            "funnel_dropoffs": funnel_dropoffs,
+            "promo_stats": promo_stats,
+            "traffic_heatmap": heatmap_list,
+            "commission_saved": round(revenue_total * 0.15, 2)
         }
 
     except Exception as e:

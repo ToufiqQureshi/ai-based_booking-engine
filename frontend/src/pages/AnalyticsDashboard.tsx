@@ -26,7 +26,15 @@ interface AnalyticsData {
   avg_daily_rate: number;
   rev_par: number;
   occupancy_rate: number;
-  geo_stats?: { country: string; code: string; visitors: number; percentage: number; trend: string }[];
+  geo_stats?: { country: string; code: string; visitors: number; percentage: number; trend?: string }[];
+  
+  // Advanced metrics
+  most_booked_rooms?: { id: string; name: string; count: number }[];
+  least_booked_rooms?: { id: string; name: string; count: number }[];
+  funnel_dropoffs?: { stage: string; drop_percentage: number }[];
+  promo_stats?: { code: string; bookings: number }[];
+  traffic_heatmap?: { weekday: number; hour: number; visitors: number }[];
+  commission_saved?: number;
 }
 
 interface LiveEvent {
@@ -150,7 +158,7 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard 
           title="Total Revenue" 
           value={`₹${(data.revenue_total || 0).toLocaleString()}`} 
@@ -158,7 +166,13 @@ export const AnalyticsDashboard: React.FC = () => {
           description="Gross earnings this period"
         />
         <StatCard 
-          title="Conversion Rate" 
+          title="Direct Saver" 
+          value={`₹${(data.commission_saved || 0).toLocaleString()}`} 
+          icon={<MousePointerClick className="w-6 h-6 text-indigo-600" />}
+          description="Commission saved vs OTAs"
+        />
+        <StatCard 
+          title="Conversion" 
           value={`${data.conversion_rate || 0}%`} 
           icon={<Zap className="w-6 h-6 text-yellow-600" />}
           description="Look-to-book ratio"
@@ -366,6 +380,148 @@ export const AnalyticsDashboard: React.FC = () => {
               No geographical traffic data recorded yet.
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ADVANCED HOTELIER KPI SECTION */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Most & Least Booked Rooms */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Room Booking Popularity</h2>
+            <Layout className="w-5 h-5 text-gray-400" />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+                <ArrowUpRight className="w-4 h-4 text-emerald-500" /> Most Booked
+              </h3>
+              <div className="space-y-2">
+                {data.most_booked_rooms && data.most_booked_rooms.some(r => r.count > 0) ? (
+                  data.most_booked_rooms.filter(r => r.count > 0).map((room) => (
+                    <div key={room.id} className="p-3 bg-emerald-50/50 border border-emerald-100/50 rounded-xl flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-700 truncate max-w-[150px]">{room.name}</span>
+                      <span className="bg-emerald-500 text-white text-xs font-black px-2 py-1 rounded-lg">{room.count} stays</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 italic">No bookings recorded.</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+                <ArrowDownRight className="w-4 h-4 text-red-500" /> Least Booked
+              </h3>
+              <div className="space-y-2">
+                {data.least_booked_rooms && data.least_booked_rooms.length > 0 ? (
+                  data.least_booked_rooms.map((room) => (
+                    <div key={room.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center">
+                      <span className="text-xs font-semibold text-slate-600 truncate max-w-[150px]">{room.name}</span>
+                      <span className="bg-slate-200 text-slate-600 text-xs font-bold px-2 py-1 rounded-lg">{room.count} stays</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 italic">No room types configured.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Promo Code & Drop-offs Section */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Promo Code Utilization</h2>
+              <MousePointerClick className="w-5 h-5 text-indigo-500" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              {data.promo_stats && data.promo_stats.length > 0 ? (
+                data.promo_stats.map((promo) => (
+                  <div key={promo.code} className="p-3 bg-indigo-50/50 border border-indigo-100/50 rounded-xl flex justify-between items-center">
+                    <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-200">{promo.code}</span>
+                    <span className="text-xs font-bold text-indigo-900">{promo.bookings} uses</span>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-6 text-center text-xs text-slate-400 italic bg-slate-50 rounded-xl border border-slate-100">
+                  No promo codes have been used in this period.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <h3 className="text-sm font-bold text-slate-800 mb-3">Customer Funnel Drop-off Rate</h3>
+            <div className="space-y-3">
+              {data.funnel_dropoffs && data.funnel_dropoffs.length > 0 ? (
+                data.funnel_dropoffs.map((drop) => (
+                  <div key={drop.stage} className="flex justify-between items-center">
+                    <span className="text-xs text-slate-500 font-medium">Drop-off from {getStageLabel(drop.stage)}</span>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${drop.drop_percentage > 50 ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
+                      {drop.drop_percentage}%
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-400">Not enough conversions.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Advanced Traffic Heatmap */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Traffic Peaks Heatmap</h2>
+            <p className="text-xs text-gray-500">Find the busiest hours to launch promotions</p>
+          </div>
+          <Clock className="w-5 h-5 text-gray-400" />
+        </div>
+        <div className="overflow-x-auto">
+          <div className="min-w-[750px] p-2 bg-slate-50 rounded-xl border border-slate-100">
+            <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(24, minmax(0, 1fr))', gap: '4px' }}>
+              {/* Header row for hours */}
+              <div className="h-6"></div>
+              {Array.from({ length: 24 }).map((_, h) => (
+                <div key={h} className="text-[9px] text-center font-bold text-slate-400 flex items-center justify-center">
+                  {h}
+                </div>
+              ))}
+
+              {/* Rows for weekdays */}
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, dIdx) => (
+                <React.Fragment key={day}>
+                  <div className="text-xs font-bold text-slate-500 flex items-center pr-2">
+                    {day}
+                  </div>
+                  {Array.from({ length: 24 }).map((_, hIdx) => {
+                    const cell = data.traffic_heatmap?.find(
+                      (item) => item.weekday === dIdx && item.hour === hIdx
+                    );
+                    const count = cell?.visitors || 0;
+                    const maxCount = Math.max(...(data.traffic_heatmap?.map(c => c.visitors) || [1]), 1);
+                    const opacity = count > 0 ? 0.2 + (count / maxCount) * 0.8 : 0.05;
+                    const bgColor = count > 0 ? `rgba(59, 130, 246, ${opacity})` : '#ffffff';
+                    
+                    return (
+                      <div 
+                        key={hIdx} 
+                        title={`${day} @ ${hIdx}:00 -> ${count} visitors`}
+                        style={{ backgroundColor: bgColor }}
+                        className="h-7 rounded border border-slate-100/50 transition-all hover:scale-110 hover:shadow-sm cursor-pointer"
+                      />
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
