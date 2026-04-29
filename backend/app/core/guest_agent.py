@@ -206,8 +206,8 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str):
         if settings.GROQ_API_KEY:
             from langchain_openai import ChatOpenAI
             llm = ChatOpenAI(
-                model="llama-3.3-70b-versatile", # Using stable Groq model
-                temperature=0.3,
+                model="openai/gpt-oss-120b",
+                temperature=1,
                 openai_api_key=settings.GROQ_API_KEY,
                 base_url="https://api.groq.com/openai/v1"
             )
@@ -219,12 +219,7 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str):
                 openai_api_key=settings.OPENAI_API_KEY
             )
         else:
-            # Initialize Ollama
-            llm = ChatOllama(
-                model="deepseek-v3.1:671b-cloud",
-                temperature=0.3,
-                base_url="http://localhost:11434"
-            )
+            raise ValueError("No LLM API Key configured in backend environment.")
 
         formatted_prompt = SYSTEM_PROMPT.format(current_date=date.today().isoformat())
 
