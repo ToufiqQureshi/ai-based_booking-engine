@@ -1,6 +1,6 @@
 // Bookings Page - Real API Integration
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { Plus, Search, Filter, Eye, Edit, X, MoreHorizontal, Loader2, CalendarDays } from 'lucide-react';
 import { CreateBookingDialog } from '@/components/bookings/CreateBookingDialog';
 import { BookingDetailsDialog } from '@/components/bookings/BookingDetailsDialog';
@@ -71,12 +71,13 @@ export function BookingsPage() {
 
   const { toast } = useToast();
 
-  const { data: bookings = [], isLoading, refetch } = useQuery({
+  const { data: bookings = [], isLoading, isPlaceholderData, refetch } = useQuery({
     queryKey: ['bookings', statusFilter],
     queryFn: async () => {
       const params = statusFilter !== 'all' ? { status: statusFilter } : undefined;
       return await apiClient.get<BookingData[]>('/bookings', params);
-    }
+    },
+    placeholderData: keepPreviousData
   });
 
   const fetchBookings = () => {
@@ -124,7 +125,7 @@ export function BookingsPage() {
     booking.booking_number.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (isLoading) {
+  if (isLoading && !isPlaceholderData) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
