@@ -68,6 +68,31 @@ const AgentPage = () => {
         }
     };
 
+    const triggerQuickAsk = async (promptText: string) => {
+        if (isLoading) return;
+        const newMessages: Message[] = [...messages, { role: 'human', content: promptText }];
+        setMessages(newMessages);
+        setIsLoading(true);
+
+        try {
+            const historyArray = newMessages.map(m => [m.role, m.content]);
+            const data = await apiClient.post<ChatResponse>('/agent/chat', {
+                message: promptText,
+                history: historyArray
+            });
+            setMessages(prev => [...prev, { role: 'ai', content: data.response }]);
+        } catch (error: any) {
+            console.error("Agent Error:", error);
+            toast({
+                title: "Error",
+                description: error.message || "Something went wrong. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -122,6 +147,36 @@ const AgentPage = () => {
                                     </div>
                                 </div>
                             ))}
+                            
+                            {messages.length === 1 && (
+                                <div className="flex flex-wrap gap-2 mt-2 ml-11 max-w-[80%]">
+                                    <button
+                                        onClick={() => triggerQuickAsk("Show me last week's total revenue")}
+                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                    >
+                                        📊 Total Revenue
+                                    </button>
+                                    <button
+                                        onClick={() => triggerQuickAsk("Tell me which rooms are most booked")}
+                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                    >
+                                        🛏️ Most Booked Rooms
+                                    </button>
+                                    <button
+                                        onClick={() => triggerQuickAsk("Check our occupancy rate for this month")}
+                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                    >
+                                        📈 Occupancy Rate
+                                    </button>
+                                    <button
+                                        onClick={() => triggerQuickAsk("What are the cancellation metrics?")}
+                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                    >
+                                        ❌ Cancellation Stats
+                                    </button>
+                                </div>
+                            )}
+
                             {isLoading && (
                                 <div className="flex justify-start">
                                     <div className="flex gap-3 max-w-[80%]">
