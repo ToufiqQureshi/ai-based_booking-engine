@@ -324,8 +324,7 @@ export const AnalyticsDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-bold text-emerald-600">+12%</p>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Conversion</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Performance</p>
                 </div>
               </div>
             )) : (
@@ -356,9 +355,6 @@ export const AnalyticsDashboard: React.FC = () => {
               <div className="space-y-1">
                 <div className="flex items-end gap-2">
                   <span className="text-xl font-black text-slate-900 group-hover:text-white">{item.visitors}</span>
-                  <span className={`text-[10px] font-bold mb-1 ${item.trend.startsWith('+') ? 'text-emerald-600 group-hover:text-emerald-300' : 'text-red-500 group-hover:text-red-300'}`}>
-                    {item.trend}
-                  </span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-1 mt-2">
                   <div className="bg-blue-600 group-hover:bg-white h-full rounded-full" style={{ width: `${item.percentage}%` }}></div>
