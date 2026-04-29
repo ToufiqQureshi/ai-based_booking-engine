@@ -1,6 +1,6 @@
 // Bookings Page - Real API Integration
 import { useState, useEffect } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Plus, Search, Filter, Eye, Edit, X, MoreHorizontal, Loader2, CalendarDays } from 'lucide-react';
 import { CreateBookingDialog } from '@/components/bookings/CreateBookingDialog';
 import { BookingDetailsDialog } from '@/components/bookings/BookingDetailsDialog';
@@ -63,6 +63,7 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 export function BookingsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
 
   // Dialog States
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
@@ -85,18 +86,31 @@ export function BookingsPage() {
   };
 
   const handleCancelBooking = async (bookingId: string) => {
+    const queryKey = ['bookings', statusFilter];
+    const previousBookings = queryClient.getQueryData<BookingData[]>(queryKey);
+
+    if (previousBookings) {
+      queryClient.setQueryData<BookingData[]>(queryKey, (old) =>
+        old?.map((b) => (b.id === bookingId ? { ...b, status: 'cancelled' } : b))
+      );
+    }
+
+    toast({
+      title: 'Booking Cancelled',
+      description: 'The booking has been cancelled.',
+    });
+
     try {
       await apiClient.patch(`/bookings/${bookingId}`, { status: 'cancelled' });
-      toast({
-        title: 'Booking Cancelled',
-        description: 'The booking has been cancelled.',
-      });
-      fetchBookings();
+      queryClient.invalidateQueries({ queryKey });
     } catch (error) {
+      if (previousBookings) {
+        queryClient.setQueryData(queryKey, previousBookings);
+      }
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to cancel booking.',
+        description: 'Failed to cancel booking on server.',
       });
     }
   };
