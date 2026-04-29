@@ -98,7 +98,7 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
                         transition={{ duration: 0.2 }}
                         className="mb-4 w-[calc(100vw-2rem)] md:w-96 shadow-2xl rounded-3xl overflow-hidden"
                     >
-                        <Card className="border border-gray-100 shadow-2xl h-[550px] flex flex-col bg-white overflow-hidden rounded-3xl">
+                        <Card className="border border-gray-100 shadow-2xl h-[calc(100vh-140px)] max-h-[600px] min-h-[400px] flex flex-col bg-white overflow-hidden rounded-3xl">
                             {/* Polished Gradient Header */}
                             <CardHeader
                                 className="flex flex-row items-center justify-between p-4 shadow-xl relative z-10 shrink-0"
@@ -246,7 +246,7 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
                                             <Send className="w-4 h-4" />
                                         </Button>
                                     </form>
-                                    <p className="text-[10px] text-center text-gray-400 mt-2.5 font-bold uppercase tracking-widest opacity-60">Powered by Gadget4me AI</p>
+                                    <p className="text-[10px] text-center text-gray-400 mt-2.5 font-bold uppercase tracking-widest opacity-60">Powered by WebMerito AI</p>
                                 </div>
                             </CardContent>
                         </Card>
