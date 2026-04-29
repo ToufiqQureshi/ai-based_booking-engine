@@ -13,6 +13,19 @@ from app.models.booking import Booking, BookingStatus
 from app.models.rates import RoomRate
 from pydantic import BaseModel
 
+import json
+from app.core.redis_client import redis_client
+
+def clear_availability_cache(hotel_id: str):
+    try:
+        r = redis_client.get_instance()
+        if r:
+            keys = r.keys(f"availability:{hotel_id}:*")
+            if keys:
+                r.delete(*keys)
+    except Exception as e:
+        print(f"Failed clearing availability cache for hotel {hotel_id}: {e}")
+
 router = APIRouter(prefix="/availability", tags=["Availability"])
 
 @router.get("", response_model=List[Dict[str, Any]])
@@ -26,6 +39,14 @@ async def get_availability(
     Calculate daily availability for all room types.
     Returns: List of room types with their daily availability.
     """
+    cache_key = f"availability:{current_user.hotel_id}:{start_date.isoformat()}:{end_date.isoformat()}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception as e:
+        print(f"Redis get availability failed: {e}")
+
     # 1. Get all room types
     room_types_result = await session.execute(
         select(RoomType).where(RoomType.hotel_id == current_user.hotel_id)
@@ -123,6 +144,11 @@ async def get_availability(
             
         availability_data.append(room_data)
         
+    try:
+        redis_client.set_value(cache_key, json.dumps(availability_data), expire=300)
+    except Exception as e:
+        print(f"Redis set availability failed: {e}")
+        
     return availability_data
 
 
@@ -160,6 +186,7 @@ async def create_block(
     session.add(block)
     await session.commit()
     await session.refresh(block)
+    clear_availability_cache(current_user.hotel_id)
     return block
 
 
@@ -189,8 +216,8 @@ async def delete_block(
     try:
         # Delete the block
         await session.delete(block)
-        await session.flush()
         await session.commit()
+        clear_availability_cache(current_user.hotel_id)
             
     except Exception as e:
         await session.rollback()
@@ -285,5 +312,6 @@ async def update_daily_rates(
     session.add(new_rate)
     
     await session.commit()
+    clear_availability_cache(current_user.hotel_id)
     
     return {"message": "Rates updated successfully"}

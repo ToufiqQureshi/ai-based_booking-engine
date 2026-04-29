@@ -17,6 +17,7 @@ from app.models.booking import (
 )
 from app.models.room import RoomType
 from app.core.tasks import log_timeline_task
+from app.api.v1.availability import clear_availability_cache
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -144,6 +145,7 @@ async def create_booking(
     )
     
     await session.commit()
+    clear_availability_cache(current_user.hotel_id)
     await session.refresh(booking)
     await session.refresh(guest)
     
@@ -258,6 +260,7 @@ async def update_booking(
     booking.updated_at = datetime.utcnow()
     session.add(booking)
     await session.commit()
+    clear_availability_cache(current_user.hotel_id)
     await session.refresh(booking)
     
     guest_result = await session.execute(select(Guest).where(Guest.id == booking.guest_id))
