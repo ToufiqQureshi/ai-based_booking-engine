@@ -1,5 +1,6 @@
 // Bookings Page - Real API Integration
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, Search, Filter, Eye, Edit, X, MoreHorizontal, Loader2, CalendarDays } from 'lucide-react';
 import { CreateBookingDialog } from '@/components/bookings/CreateBookingDialog';
 import { BookingDetailsDialog } from '@/components/bookings/BookingDetailsDialog';
@@ -60,8 +61,6 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 };
 
 export function BookingsPage() {
-  const [bookings, setBookings] = useState<BookingData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -72,27 +71,17 @@ export function BookingsPage() {
 
   const { toast } = useToast();
 
-  const fetchBookings = async () => {
-    try {
-      setIsLoading(true);
+  const { data: bookings = [], isLoading, refetch } = useQuery({
+    queryKey: ['bookings', statusFilter],
+    queryFn: async () => {
       const params = statusFilter !== 'all' ? { status: statusFilter } : undefined;
-      const data = await apiClient.get<BookingData[]>('/bookings', params);
-      setBookings(data);
-    } catch (error) {
-      console.error('Failed to fetch bookings:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load bookings.',
-      });
-    } finally {
-      setIsLoading(false);
+      return await apiClient.get<BookingData[]>('/bookings', params);
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchBookings();
-  }, [statusFilter]);
+  const fetchBookings = () => {
+    refetch();
+  };
 
   const handleCancelBooking = async (bookingId: string) => {
     try {

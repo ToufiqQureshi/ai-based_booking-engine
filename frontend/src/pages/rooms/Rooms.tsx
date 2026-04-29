@@ -1,6 +1,7 @@
 // Rooms Page - Room Types Management with Real API
 import { Plus, Search, Grid, List, Bed, Loader2 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,8 +14,6 @@ import { RoomListItem } from '@/components/rooms/RoomListItem';
 
 export function RoomsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [rooms, setRooms] = useState<RoomType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Dialog State
@@ -23,28 +22,14 @@ export function RoomsPage() {
 
   const { toast } = useToast();
 
-  const fetchRooms = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await apiClient.get<RoomType[]>('/rooms');
-      setRooms(data);
-    } catch (error) {
-      console.error('Failed to fetch rooms:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load rooms. Please try again.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+  const { data: rooms = [], isLoading, refetch } = useQuery<RoomType[]>({
+    queryKey: ['rooms'],
+    queryFn: () => apiClient.get<RoomType[]>('/rooms'),
+  });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchRooms();
-    return () => controller.abort();
-  }, [fetchRooms]);
+  const fetchRooms = () => {
+    refetch();
+  };
 
   const handleCreateOpen = () => {
     setSelectedRoom(null);
@@ -59,19 +44,14 @@ export function RoomsPage() {
   const handleDeleteRoom = async (roomId: string) => {
     if (!confirm("Are you sure you want to delete this room type?")) return;
 
-    // Optimistic update
-    const previousRooms = [...rooms];
-    setRooms(rooms.filter(r => r.id !== roomId));
-
     try {
       await apiClient.delete(`/rooms/${roomId}`);
       toast({
         title: 'Deleted',
         description: 'Room type deleted successfully!',
       });
+      refetch();
     } catch (error) {
-      // Revert if failed
-      setRooms(previousRooms);
       toast({
         variant: 'destructive',
         title: 'Error',
