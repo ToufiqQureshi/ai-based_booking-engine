@@ -128,6 +128,10 @@
                 chatIframe.style.height = BTN_HEIGHT;
                 chatIframe.style.borderRadius = "0";
                 chatIframe.style.boxShadow = "none";
+            } else if (event.data.type === 'CHECKOUT_REDIRECT') {
+                if (event.data.data && event.data.data.booking_id) {
+                    window.location.href = frontendUrl + '/checkout/' + event.data.data.booking_id;
+                }
             }
         });
 

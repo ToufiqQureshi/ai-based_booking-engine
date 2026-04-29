@@ -85,6 +85,10 @@ class Hotel(HotelBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
+    # AI dynamic configurations
+    ai_provider: Optional[str] = Field(default="groq")
+    ai_api_key: Optional[str] = Field(default=None)
+
     # Relationships
     users: List["User"] = Relationship(back_populates="hotel")
     room_types: List["RoomType"] = Relationship(back_populates="hotel")

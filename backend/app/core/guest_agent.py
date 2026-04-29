@@ -39,9 +39,9 @@ DATE HANDLING (IMPORTANT):
 Current Date: {current_date}
 """
 
-def create_guest_agent_graph(session: AsyncSession, hotel_id: str):
+def create_guest_agent_graph(session: AsyncSession, hotel_id: str, ai_provider: str = None, ai_api_key: str = None):
     """
-    Creates a Guest-Facing Agent Graph using local Ollama model.
+    Creates a Guest-Facing Agent Graph with dynamic LLM provider injection.
     """
     settings = get_settings()
     
@@ -203,16 +203,19 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str):
     
     try:
 
-        if settings.GROQ_API_KEY:
+        # Resolve dynamic provider/keys
+        target_api_key = ai_api_key or settings.GROQ_API_KEY
+        
+        if target_api_key:
             from langchain_openai import ChatOpenAI
             llm = ChatOpenAI(
                 model="openai/gpt-oss-120b",
                 temperature=1,
-                openai_api_key=settings.GROQ_API_KEY,
+                openai_api_key=target_api_key,
                 base_url="https://api.groq.com/openai/v1"
             )
         else:
-            raise ValueError("GROQ_API_KEY is not configured in backend environment.")
+            raise ValueError("No valid GROQ_API_KEY available for this hotel.")
 
         formatted_prompt = SYSTEM_PROMPT.format(current_date=date.today().isoformat())
 

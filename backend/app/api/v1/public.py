@@ -619,6 +619,12 @@ async def chat_with_guest_ai(
         # (This logic is now covered by the OR condition above)
         raise HTTPException(status_code=404, detail="Hotel not found")
 
+    # Fetch integration settings for dynamic AI provider/keys
+    from app.models.integration import IntegrationSettings
+    int_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
+    int_res = await session.execute(int_query)
+    integration_settings = int_res.scalar_one_or_none()
+
     # 2. Prepare History
     messages = []
     for msg in request.history:
@@ -633,7 +639,12 @@ async def chat_with_guest_ai(
     # 3. Initialize Agent
     from app.core.guest_agent import create_guest_agent_graph
     try:
-        agent = create_guest_agent_graph(session, hotel.id)
+        agent = create_guest_agent_graph(
+            session, 
+            hotel.id, 
+            getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None), 
+            getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None)
+        )
         
         # 4. Invoke Agent
         # LangGraph inputs: {"messages": [...]}

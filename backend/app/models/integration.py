@@ -69,6 +69,10 @@ class IntegrationSettings(SQLModel, table=True):
     rate_limit_per_hour: int = Field(default=1000)
     require_https: bool = Field(default=True)
     
+    # AI dynamic configurations
+    ai_provider: Optional[str] = Field(default="groq")
+    ai_api_key: Optional[str] = Field(default=None)
+
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -111,6 +115,8 @@ class IntegrationSettingsRead(BaseModel):
     webhook_events: str
     rate_limit_per_hour: int
     require_https: bool
+    ai_provider: Optional[str] = "groq"
+    ai_api_key: Optional[str] = None
 
 
 class IntegrationSettingsUpdate(BaseModel):
@@ -124,6 +130,8 @@ class IntegrationSettingsUpdate(BaseModel):
     webhook_events: Optional[str] = None
     rate_limit_per_hour: Optional[int] = None
     require_https: Optional[bool] = None
+    ai_provider: Optional[str] = None
+    ai_api_key: Optional[str] = None
 
 
 class WidgetCodeResponse(BaseModel):

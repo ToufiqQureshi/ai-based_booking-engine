@@ -94,6 +94,19 @@ async def update_integration_settings(
             setattr(settings, key, value)
         settings.updated_at = datetime.utcnow()
     
+    # Sync AI parameters into Hotel table for synchronous background accesses
+    from app.models.hotel import Hotel
+    hotel_query = select(Hotel).where(Hotel.id == current_user.hotel_id)
+    hotel_res = await session.execute(hotel_query)
+    hotel = hotel_res.scalar_one_or_none()
+    if hotel:
+        updates_dict = settings_update.model_dump(exclude_unset=True)
+        if 'ai_provider' in updates_dict:
+            hotel.ai_provider = updates_dict['ai_provider']
+        if 'ai_api_key' in updates_dict:
+            hotel.ai_api_key = updates_dict['ai_api_key']
+        session.add(hotel)
+
     await session.commit()
     await session.refresh(settings)
     return settings

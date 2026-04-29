@@ -26,6 +26,8 @@ interface IntegrationSettings {
     widget_background_color: string;
     allowed_domains: string;
     webhook_url?: string;
+    ai_provider?: string;
+    ai_api_key?: string;
 }
 
 interface WidgetCode {
@@ -594,6 +596,45 @@ const IntegrationPage = () => {
                                         <p className="text-xs text-muted-foreground mt-1">
                                             Receive real-time notifications for bookings
                                         </p>
+                                    </div>
+
+                                    <div className="border-t pt-4 mt-4">
+                                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                            <MessageCircle className="w-4 h-4 text-primary" />
+                                            AI Agent Configuration
+                                        </h4>
+                                        
+                                        <div className="grid gap-4">
+                                            <div>
+                                                <Label>AI Provider</Label>
+                                                <select
+                                                    className="w-full mt-1 border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
+                                                    value={settings.ai_provider || 'groq'}
+                                                    onChange={(e) =>
+                                                        updateSettings({ ai_provider: e.target.value })
+                                                    }
+                                                >
+                                                    <option value="groq">Groq (Default)</option>
+                                                    <option value="deepseek">DeepSeek</option>
+                                                    <option value="openai">OpenAI</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <Label>Custom API Key (Optional)</Label>
+                                                <Input
+                                                    type="password"
+                                                    placeholder="Provide your own provider API Key"
+                                                    value={settings.ai_api_key || ''}
+                                                    onChange={(e) =>
+                                                        updateSettings({ ai_api_key: e.target.value })
+                                                    }
+                                                />
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Leave empty to use platform defaults.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </>
                             )}

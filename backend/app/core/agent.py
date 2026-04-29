@@ -601,16 +601,21 @@ def create_agent_executor(session: AsyncSession, user: User):
         check_availability_matrix
     ]
 
-    if settings.GROQ_API_KEY:
+    # Resolve dynamic keys from hotel relation
+    target_api_key = settings.GROQ_API_KEY
+    if user.hotel and getattr(user.hotel, 'ai_api_key', None):
+        target_api_key = user.hotel.ai_api_key
+
+    if target_api_key:
         from langchain_openai import ChatOpenAI
         llm = ChatOpenAI(
             model="openai/gpt-oss-120b",
             temperature=1,
-            openai_api_key=settings.GROQ_API_KEY,
+            openai_api_key=target_api_key,
             base_url="https://api.groq.com/openai/v1"
         )
     else:
-        raise ValueError("GROQ_API_KEY is not configured in backend environment.")
+        raise ValueError("No valid GROQ_API_KEY available for this hotel.")
 
     # Fetch Hotel City for Context - Handle NoneType safety
     hotel_city = "Unknown City"
