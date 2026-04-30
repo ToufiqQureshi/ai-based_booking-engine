@@ -46,12 +46,15 @@ class RedisClient:
     @classmethod
     def set_value(cls, key: str, value: str, expire: int = 3600):
         r = cls.get_instance()
-        r.setex(key, expire, value)
+        if r:
+            r.setex(key, expire, value)
 
     @classmethod
     def get_value(cls, key: str) -> Optional[str]:
         r = cls.get_instance()
-        return r.get(key)
+        if r:
+            return r.get(key)
+        return None
 
 # Global accessor
 redis_client = RedisClient

@@ -8,6 +8,7 @@ import {
   Users,
   Bed,
   TrendingUp,
+  Sparkles,
   Loader2,
   ExternalLink,
   MoreHorizontal
@@ -67,7 +68,7 @@ export function DashboardPage() {
     queryKey: ['dashboardStats'],
     queryFn: () => apiClient.get<DashboardStats>('/dashboard/stats'),
     staleTime: 60000, // 1 minute stale time (no spamming requests)
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true
   });
 
   // 2. Fetch Recent Bookings
@@ -75,7 +76,7 @@ export function DashboardPage() {
     queryKey: ['recentBookings'],
     queryFn: () => apiClient.get<RecentBooking[]>('/dashboard/recent-bookings'),
     staleTime: 60000,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true
   });
 
   // 3. Fetch AI Analysis Summary
@@ -460,19 +461,38 @@ export function DashboardPage() {
             </Card>
           </motion.div>
 
-          {/* Quick Actions / Help Stub */}
+          {/* Actionable AI Insights Feature */}
           <motion.div variants={itemVariants}>
-            <Card className="bg-slate-50 dark:bg-slate-900 border-dashed">
-              <CardContent className="p-6 text-center">
-                <p className="text-sm font-medium text-slate-900 dark:text-slate-200 mb-1">Need Help?</p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Ask the AI Assistant for reports or insights.
-                </p>
-                <Button variant="secondary" size="sm" className="w-full gap-2" asChild>
-                  <Link to="/agent">
-                    <Users className="h-4 w-4" /> Ask AI Agent
-                  </Link>
-                </Button>
+            <Card className="bg-gradient-to-br from-indigo-50 to-white dark:from-slate-900 dark:to-slate-950 border border-indigo-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-indigo-400"></div>
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-2.5 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-100 dark:border-slate-700">
+                    <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">AI Smart Insights</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
+                      {rateAnalysis?.suggestion ||
+                        "Based on your recent activity, your pricing strategy is optimal. Connect more OTAs to get real-time market positioning insights."}
+                    </p>
+
+                    <div className="space-y-2">
+                      <Button variant="outline" size="sm" className="w-full justify-start text-xs font-medium hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors" asChild>
+                        <Link to="/agent" state={{ prompt: "Analyze my revenue trend for the past week and suggest improvements" }}>
+                          <TrendingUp className="h-3.5 w-3.5 mr-2" />
+                          Analyze Revenue Trend
+                        </Link>
+                      </Button>
+                      <Button variant="outline" size="sm" className="w-full justify-start text-xs font-medium hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors" asChild>
+                        <Link to="/agent" state={{ prompt: "What is my current market positioning against competitors?" }}>
+                          <Users className="h-3.5 w-3.5 mr-2" />
+                          Check Market Position
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

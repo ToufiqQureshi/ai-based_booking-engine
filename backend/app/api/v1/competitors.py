@@ -112,8 +112,7 @@ async def get_market_analysis(
     # 1. Check Redis Cache (Market Analysis is heavy, cache for 1 hour)
     cache_key = f"market_analysis:{current_user.hotel_id}:{today.isoformat()}"
     try:
-        r = redis_client.get_instance()
-        cached = r.get(cache_key)
+        cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
     except: pass
@@ -220,7 +219,7 @@ async def get_market_analysis(
 
     # Cache for 1 Hour
     try:
-        r.setex(cache_key, 3600, json.dumps(results))
+        redis_client.set_value(cache_key, json.dumps(results), expire=3600)
     except: pass
 
     return results
@@ -237,8 +236,7 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
     # Cache Check
     cache_key = f"rate_comparison:{current_user.hotel_id}:{today.isoformat()}"
     try:
-        r = redis_client.get_instance()
-        cached = r.get(cache_key)
+        cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
     except: pass
@@ -333,7 +331,7 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
 
     # Cache for 1 Hour
     try:
-        r.setex(cache_key, 3600, json.dumps(final_res))
+        redis_client.set_value(cache_key, json.dumps(final_res), expire=3600)
     except: pass
 
     return final_res

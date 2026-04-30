@@ -38,9 +38,8 @@ async def get_current_user(
     # Check if the token payload is cached in Redis to skip the expensive decoding
     cache_key = f"auth_payload:{token}"
     payload = None
-    r = redis_client.get_instance()
     try:
-        cached_payload = r.get(cache_key)
+        cached_payload = redis_client.get_value(cache_key)
         if cached_payload:
             payload = json.loads(cached_payload)
     except Exception as e:
@@ -51,7 +50,7 @@ async def get_current_user(
         payload = await verify_supabase_token(token)
         if payload:
             try:
-                r.setex(cache_key, 600, json.dumps(payload)) # Cache valid token for 10 minutes
+                redis_client.set_value(cache_key, json.dumps(payload), expire=600) # Cache valid token for 10 minutes
             except Exception as e:
                 logger.warning(f"Redis cache write failed during auth token cache: {e}")
     if payload is None:
