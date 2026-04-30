@@ -24,10 +24,8 @@ async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
     Parallel execution optimized.
     """
     cache_key = f"dashboard_stats:{current_user.hotel_id}"
-    r = None
     try:
-        r = redis_client.get_instance()
-        cached_data = r.get(cache_key)
+        cached_data = redis_client.get_value(cache_key)
         if cached_data:
             return json.loads(cached_data)
     except Exception as e:
@@ -116,13 +114,10 @@ async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
     }
 
     # Cache result if Redis is working
-    if r:
-        try:
-            r.setex(cache_key, 300, json.dumps(data))
-        except Exception as e:
-            print(f"Redis Write Failed: {e}")
-
-    return data
+    try:
+        redis_client.set_value(cache_key, json.dumps(data), expire=300)
+    except Exception as e:
+        print(f"Redis Write Failed: {e}")
 
     return data
 
@@ -135,8 +130,7 @@ async def get_recent_bookings(current_user: CurrentUser, session: DbSession):
     # Check Cache
     cache_key = f"dashboard_recent_bookings:{current_user.hotel_id}"
     try:
-        r = redis_client.get_instance()
-        cached = r.get(cache_key)
+        cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
     except: pass
@@ -167,7 +161,7 @@ async def get_recent_bookings(current_user: CurrentUser, session: DbSession):
     
     # Cache for 1 min only (updates frequently)
     try:
-        r.setex(cache_key, 60, json.dumps(response))
+        redis_client.set_value(cache_key, json.dumps(response), expire=60)
     except: pass
 
     return response

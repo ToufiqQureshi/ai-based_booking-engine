@@ -82,7 +82,9 @@ export function BookingsPage() {
   });
 
   const fetchBookings = () => {
-    refetch();
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+    queryClient.invalidateQueries({ queryKey: ['recentBookings'] });
   };
 
   const handleCancelBooking = async (bookingId: string) => {
@@ -96,13 +98,16 @@ export function BookingsPage() {
     }
 
     toast({
-      title: 'Booking Cancelled',
-      description: 'The booking has been cancelled.',
+      title: 'Cancelling Booking...',
+      description: 'Please wait...',
     });
 
     try {
       await apiClient.patch(`/bookings/${bookingId}`, { status: 'cancelled' });
-      queryClient.invalidateQueries({ queryKey });
+      toast({
+        title: 'Booking Cancelled',
+        description: 'The booking has been successfully cancelled.',
+      });
     } catch (error) {
       if (previousBookings) {
         queryClient.setQueryData(queryKey, previousBookings);
@@ -112,6 +117,10 @@ export function BookingsPage() {
         title: 'Error',
         description: 'Failed to cancel booking on server.',
       });
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      queryClient.invalidateQueries({ queryKey: ['recentBookings'] });
     }
   };
 

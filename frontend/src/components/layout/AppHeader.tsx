@@ -27,14 +27,12 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { NotificationPopover } from '@/components/notifications/NotificationPopover';
 
-import { ChatWidget } from '@/components/support/ChatWidget';
 
 export function AppHeader() {
   const { user, hotel, logout } = useAuth();
   const [properties, setProperties] = React.useState<any[]>([]);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = React.useState(false);
   const [isHelpOpen, setIsHelpOpen] = React.useState(false);
-  const [isChatOpen, setIsChatOpen] = React.useState(false); // Chat state
   const [newPropName, setNewPropName] = React.useState('');
   const [newPropSlug, setNewPropSlug] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
@@ -187,7 +185,7 @@ export function AppHeader() {
               className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
               onClick={() => {
                 setIsHelpOpen(false);
-                setIsChatOpen(true);
+                window.open("mailto:support@hotelierhub.com");
               }}
             >
               <div className="bc-primary/10 p-2 rounded-full text-primary group-hover:bg-primary/20">
@@ -260,8 +258,6 @@ export function AppHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </header>
   );
 }

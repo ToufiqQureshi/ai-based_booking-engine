@@ -96,41 +96,39 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.2 }}
-                        className="mb-4 w-[calc(100vw-2rem)] md:w-96 shadow-2xl rounded-3xl overflow-hidden"
+                        className="mb-4 w-[calc(100vw-2rem)] md:w-96 shadow-2xl rounded-2xl overflow-hidden"
                     >
-                        <Card className="border border-gray-100 shadow-2xl h-[calc(100vh-140px)] max-h-[600px] min-h-[400px] flex flex-col bg-white overflow-hidden rounded-3xl">
-                            {/* Polished Gradient Header */}
+                        <Card className="border border-slate-200/60 shadow-2xl h-[calc(100vh-140px)] max-h-[600px] min-h-[400px] flex flex-col bg-white overflow-hidden rounded-2xl">
+                            {/* Premium Minimal Header */}
                             <CardHeader
-                                className="flex flex-row items-center justify-between p-4 shadow-xl relative z-10 shrink-0"
-                                style={{
-                                    background: 'linear-gradient(135deg, #4f46e5, #3730a3)',
-                                    borderBottom: '1px solid rgba(255,255,255,0.1)',
-                                    minHeight: '70px'
-                                }}
+                                className="flex flex-row items-center justify-between p-4 shadow-sm relative z-10 shrink-0 bg-white border-b border-slate-100"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="bg-white/20 p-2 rounded-2xl backdrop-blur-md border border-white/20 shadow-lg flex items-center justify-center w-11 h-11">
-                                        <img src="/webmerito-icon.png" alt="Logo" className="w-6 h-6 object-contain" />
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-primary/20 blur-md rounded-full"></div>
+                                        <div className="bg-primary/10 p-2 rounded-full border border-primary/20 relative flex items-center justify-center w-10 h-10">
+                                            <Bot className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
                                     </div>
                                     <div className="flex flex-col justify-center">
-                                        <span className="text-[16px] font-extrabold text-white leading-tight tracking-tight">Saaraa AI</span>
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
-                                            <span className="text-[11px] font-bold text-indigo-100/80 uppercase tracking-widest leading-none">Concierge Active</span>
+                                        <span className="text-[16px] font-bold text-slate-800 leading-tight tracking-tight">AI Concierge</span>
+                                        <div className="flex items-center mt-0.5">
+                                            <span className="text-[11px] font-medium text-slate-500">Always online & ready to help</span>
                                         </div>
                                     </div>
                                 </div>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                                    className="h-8 w-8 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
-                                    <X className="w-5 h-5" />
+                                    <X className="w-4 h-4" />
                                 </Button>
                             </CardHeader>
 
-                            <CardContent className="p-0 flex-1 flex flex-col overflow-hidden bg-[#fafafa]">
+                            <CardContent className="p-0 flex-1 flex flex-col overflow-hidden bg-slate-50/50">
                                 <ScrollArea className="flex-1 px-4 py-6">
                                     <div className="space-y-5">
                                         {messages.map((msg, idx) => (
@@ -138,28 +136,20 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
                                                 key={idx}
                                                 className={`flex items-start gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-in fade-in slide-in-from-bottom-2 duration-300 mb-2`}
                                             >
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-md ${msg.role === 'user' ? 'bg-gradient-to-tr from-purple-500 to-indigo-600' : 'bg-white border border-gray-100'
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm border ${msg.role === 'user' ? 'bg-primary border-primary text-white' : 'bg-white border-slate-200'
                                                     }`}>
                                                     {msg.role === 'user' ? (
                                                         <User className="w-4 h-4 text-white" />
                                                     ) : (
-                                                        <img src="/webmerito-icon.png" alt="AI" className="w-5 h-5 object-contain" />
+                                                        <Bot className="w-4 h-4 text-slate-600" />
                                                     )}
                                                 </div>
 
                                                 <div
-                                                    className={`max-w-[80%] px-4 py-2.5 text-[14px] leading-relaxed relative ${msg.role === 'user'
-                                                        ? 'rounded-[20px] rounded-tr-[4px] shadow-md shadow-primary/10'
-                                                        : 'rounded-[20px] rounded-tl-[4px] shadow-sm'
+                                                    className={`max-w-[85%] px-4 py-3 text-[14px] leading-relaxed relative shadow-sm ${msg.role === 'user'
+                                                        ? 'bg-primary text-white rounded-2xl rounded-tr-sm'
+                                                        : 'bg-white text-slate-800 border border-slate-200/60 rounded-2xl rounded-tl-sm'
                                                         }`}
-                                                    style={msg.role === 'user' ? {
-                                                        background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`,
-                                                        color: getContrastText(primaryColor)
-                                                    } : {
-                                                        backgroundColor: '#ffffff',
-                                                        color: '#374151',
-                                                        border: '1px solid #f3f4f6'
-                                                    }}
                                                 >
                                                     <div className="prose prose-sm max-w-none break-words dark:prose-invert">
                                                         <ReactMarkdown
@@ -204,24 +194,24 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
 
                                         {isLoading && (
                                             <div className="flex items-start gap-2.5 flex-row animate-in fade-in slide-in-from-bottom-1 duration-300">
-                                                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm border bg-gray-100 border-gray-200">
-                                                    <Bot className="w-4.5 h-4.5 text-gray-400" />
+                                                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm border bg-white border-slate-200">
+                                                    <Bot className="w-4 h-4 text-slate-600" />
                                                 </div>
-                                                <div className="bg-white border border-gray-200 rounded-[20px] rounded-tl-[4px] px-4 py-3 shadow-sm">
+                                                <div className="bg-white border border-slate-200/60 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
                                                     <div className="flex gap-1.5 px-0.5 py-1">
-                                                        <span className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                        <span className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                        <span className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                                                     </div>
                                                 </div>
                                             </div>
                                         )}
-                                        <div ref={scrollRef} />
+                                        <div ref={scrollRef} className="h-2" />
                                     </div>
                                 </ScrollArea>
 
                                 {/* Input Area Polish */}
-                                <div className="p-4 bg-white border-t border-gray-100">
+                                <div className="p-4 bg-white border-t border-slate-100">
                                     <form
                                         onSubmit={(e) => {
                                             e.preventDefault();
@@ -232,21 +222,20 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
                                         <Input
                                             value={input}
                                             onChange={(e) => setInput(e.target.value)}
-                                            placeholder="Message Concierge..."
+                                            placeholder="Message Assistant..."
                                             disabled={isLoading}
-                                            className="focus-visible:ring-0 focus-visible:ring-offset-0 border-gray-200 rounded-2xl px-4 py-6 text-[14px] bg-gray-50/50 placeholder:text-gray-400 pr-12 h-12 transition-all focus:bg-white focus:border-gray-200 shadow-inner"
+                                            className="focus-visible:ring-1 focus-visible:ring-primary border-slate-200 rounded-full px-4 py-6 text-[14px] bg-slate-50 placeholder:text-slate-400 pr-12 h-12 transition-all shadow-inner"
                                         />
                                         <Button
                                             type="submit"
                                             size="icon"
                                             disabled={isLoading || !input.trim()}
-                                            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-xl h-9 w-9 bg-primary hover:opacity-90 text-white transition-all shadow-md active:scale-95 flex items-center justify-center"
-                                            style={!isLoading && input.trim() ? { backgroundColor: primaryColor } : {}}
+                                            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full h-[36px] w-[36px] bg-primary hover:opacity-90 text-white transition-all shadow-sm flex items-center justify-center"
                                         >
-                                            <Send className="w-4 h-4" />
+                                            <Send className="w-4 h-4 ml-0.5" />
                                         </Button>
                                     </form>
-                                    <p className="text-[10px] text-center text-gray-400 mt-2.5 font-bold uppercase tracking-widest opacity-60">Powered by WebMerito AI</p>
+                                    <p className="text-[10px] text-center text-slate-400 mt-2 font-medium tracking-wider">AI Assistant can make mistakes.</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -265,33 +254,23 @@ export function ChatWidget({ hotelSlug, primaryColor = '#3B82F6' }: ChatWidgetPr
                         onClick={() => setIsOpen(!isOpen)}
                         whileHover={{ scale: 1.05, y: -2 }}
                         whileTap={{ scale: 0.95 }}
-                        className="flex items-center gap-3 bg-white/95 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full px-5 py-2.5 hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all border border-gray-100 group"
-                        style={{ padding: isOpen ? '0.75rem' : '0.6rem 1.4rem' } as any}
+                        className="flex items-center gap-3 bg-white/95 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full px-5 py-3 hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)] transition-all border border-slate-100 group"
+                        style={{ padding: isOpen ? '0.75rem' : '0.75rem 1.25rem' } as any}
                     >
                         {isOpen ? (
-                            <div
-                                className="p-2.5 rounded-full shadow-inner"
-                                style={{ backgroundColor: `${primaryColor}20` }}
-                            >
-                                <X className="w-6 h-6" style={{ color: primaryColor }} />
+                            <div className="p-2 rounded-full bg-slate-100">
+                                <X className="w-5 h-5 text-slate-600" />
                             </div>
                         ) : (
                             <>
-                                <div className="relative w-11 h-11 flex items-center justify-center">
-                                    <div className="absolute inset-0 bg-primary/5 rounded-full animate-ping scale-150 opacity-10" style={{ backgroundColor: primaryColor }} />
-                                    <img src="/webmerito-icon.png" alt="Chat" className="w-full h-full object-contain relative z-10 drop-shadow-md group-hover:rotate-12 transition-transform" />
+                                <div className="relative flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping opacity-50" />
+                                    <div className="bg-primary p-2.5 rounded-full relative z-10 shadow-md group-hover:-rotate-12 transition-transform">
+                                        <Bot className="w-5 h-5 text-white" />
+                                    </div>
                                 </div>
                                 <div className="hidden md:flex flex-col items-start pr-2">
-                                    <span className="text-[10px] font-bold text-gray-500/80 uppercase tracking-widest leading-none mb-1">Live Concierge</span>
-                                    <span className="text-[18px] font-black tracking-tighter" style={{
-                                        fontFamily: 'Inter, sans-serif, system-ui',
-                                        background: `linear-gradient(to right, ${primaryColor}, #5735B8)`,
-                                        backgroundClip: 'text',
-                                        WebkitBackgroundClip: 'text',
-                                        color: 'transparent'
-                                    } as any}>
-                                        Hi, I'm Saaraa!
-                                    </span>
+                                    <span className="text-[14px] font-bold text-slate-800 tracking-tight">Need help?</span>
                                 </div>
                             </>
                         )}
