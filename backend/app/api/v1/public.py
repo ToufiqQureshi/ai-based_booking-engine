@@ -611,36 +611,47 @@ async def chat_with_guest_ai(
     Chat endpoint for hotel guests.
     Uses Ollama (Deepseek) with RAG context.
     """
-    # 1. Get Hotel (Allow matching by Slug OR ID)
-    query = select(Hotel).where(or_(Hotel.slug == request.hotel_slug, Hotel.id == request.hotel_slug))
-    result = await session.execute(query)
-    hotel = result.scalar_one_or_none()
-    
-    if not hotel:
-        # Fallback: Check if it's a valid ID but passed as slug
-        # (This logic is now covered by the OR condition above)
-        raise HTTPException(status_code=404, detail="Hotel not found")
-
-    # Fetch integration settings for dynamic AI provider/keys
-    from app.models.integration import IntegrationSettings
-    int_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
-    int_res = await session.execute(int_query)
-    integration_settings = int_res.scalar_one_or_none()
-
-    # 2. Prepare History
-    messages = []
-    for msg in request.history:
-        if msg["role"] == "user":
-            messages.append(HumanMessage(content=msg["content"]))
-        elif msg["role"] == "assistant":
-            messages.append(AIMessage(content=msg["content"]))
-    
-    # Add current message
-    messages.append(HumanMessage(content=request.message))
-
-    # 3. Initialize Agent
-    from app.core.guest_agent import create_guest_agent_graph
     try:
+        import uuid
+        is_uuid = False
+        try:
+            uuid.UUID(request.hotel_slug)
+            is_uuid = True
+        except ValueError:
+            pass
+            
+        if is_uuid:
+            query = select(Hotel).where(or_(Hotel.slug == request.hotel_slug, Hotel.id == request.hotel_slug))
+        else:
+            query = select(Hotel).where(Hotel.slug == request.hotel_slug)
+            
+        result = await session.execute(query)
+        hotel = result.scalar_one_or_none()
+        
+        if not hotel:
+            # Fallback: Check if it's a valid ID but passed as slug
+            # (This logic is now covered by the OR condition above)
+            raise HTTPException(status_code=404, detail="Hotel not found")
+
+        # Fetch integration settings for dynamic AI provider/keys
+        from app.models.integration import IntegrationSettings
+        int_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
+        int_res = await session.execute(int_query)
+        integration_settings = int_res.scalar_one_or_none()
+
+        # 2. Prepare History
+        messages = []
+        for msg in request.history:
+            if msg["role"] == "user":
+                messages.append(HumanMessage(content=msg["content"]))
+            elif msg["role"] == "assistant":
+                messages.append(AIMessage(content=msg["content"]))
+        
+        # Add current message
+        messages.append(HumanMessage(content=request.message))
+
+        # 3. Initialize Agent
+        from app.core.guest_agent import create_guest_agent_graph
         agent = create_guest_agent_graph(
             session, 
             hotel.id, 
@@ -660,9 +671,9 @@ async def chat_with_guest_ai(
         ai_msg = response["messages"][-1]
         
         return GuestChatResponse(response=ai_msg.content)
-        
+            
     except Exception as e:
         import traceback
-        logger.error(f"Guest AI Error for hotel {hotel.id}: {traceback.format_exc()}")
-        # Fallback response if AI fails
-        return GuestChatResponse(response=f"I'm having trouble connecting. Please try again or reach out directly!")
+        logger.error(f"Guest AI Error: {traceback.format_exc()}")
+        # Temporary: return error to frontend to see what's crashing
+        return GuestChatResponse(response=f"DEBUG ERROR: {traceback.format_exc()}")
