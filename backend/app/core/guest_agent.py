@@ -46,7 +46,8 @@ def create_guest_agent_graph(
     ai_provider: str = None, 
     ai_api_key: str = None,
     ai_model: str = None,
-    ai_base_url: str = None
+    ai_base_url: str = None,
+    hotel_name: str = "the hotel"
 ):
     """
     Creates a Guest-Facing Agent Graph with dynamic LLM provider injection.
@@ -285,13 +286,8 @@ def create_guest_agent_graph(
         if not ai_model:
             return None
 
-        # Fetch Hotel Name for Prompt
-        hotel_name = "the hotel"
-        try:
-            h_query = select(Hotel.name).where(Hotel.id == hotel_id)
-            h_res = await session.execute(h_query)
-            hotel_name = h_res.scalar() or "the hotel"
-        except: pass
+        # Hotel name is now passed as parameter, so we just use it directly
+
 
         llm = ChatOpenAI(
             model=ai_model,

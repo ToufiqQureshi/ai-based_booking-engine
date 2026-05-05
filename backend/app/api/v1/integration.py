@@ -436,7 +436,8 @@ async def test_ai_connection(
             settings.ai_provider,
             settings.ai_api_key,
             settings.ai_model,
-            settings.ai_base_url
+            settings.ai_base_url,
+            "Test Hotel"
         )
         
         if not agent:
