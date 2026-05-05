@@ -14,7 +14,7 @@ async def main():
                 if r.status_code == 200:
                     resp = r.json().get("response","")
                     print(f"200 OK: {resp}")
-                    if "DEBUG ERROR" in resp or "trouble connecting" in resp:
+                    if "SyntaxError" not in resp:
                         break
                 else:
                     print(f"HTTP {r.status_code}: {r.text[:100]}")

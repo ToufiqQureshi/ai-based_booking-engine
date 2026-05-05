@@ -676,5 +676,4 @@ async def chat_with_guest_ai(
     except Exception as e:
         import traceback
         logger.error(f"Guest AI Error: {traceback.format_exc()}")
-        # Temporary: return error to frontend to see what's crashing
-        return GuestChatResponse(response=f"DEBUG ERROR: {traceback.format_exc()}")
+        return GuestChatResponse(response=f"I'm having trouble connecting. Please try again or reach out directly!")
