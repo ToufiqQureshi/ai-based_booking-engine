@@ -75,6 +75,7 @@ interface LeadData {
   check_in?: string;
   check_out?: string;
   status: string;
+  ai_conversation_summary?: string;
   created_at: string;
 }
 
@@ -350,6 +351,7 @@ export function BookingsPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Room Interested</TableHead>
                     <TableHead>Check-in/Out</TableHead>
+                    <TableHead>Inquiry Summary</TableHead>
                     <TableHead>Date Captured</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -372,6 +374,9 @@ export function BookingsPage() {
                           {lead.check_in && lead.check_out 
                             ? `${lead.check_in} to ${lead.check_out}`
                             : 'Not decided'}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground italic" title={lead.ai_conversation_summary}>
+                          {lead.ai_conversation_summary || '-'}
                         </TableCell>
                         <TableCell>{new Date(lead.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>

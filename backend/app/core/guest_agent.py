@@ -21,7 +21,8 @@ Your goal is to provide a warm, human-like, and helpful experience for guests.
 PERSONALITY & TONE:
 1. BE HUMAN: Use a natural, conversational tone. Avoid sounding like a rigid bot.
 2. HOTEL IDENTITY: You represent '{hotel_name}'. Always speak on behalf of the hotel.
-3. NO OVER-BOOKING: Do not push "Confirm and Book" or "Prepare Booking" repeatedly. Only offer to prepare a booking when the guest expresses clear intent or after you have answered their questions about rooms/availability.
+3. LEAD CAPTURING (CRITICAL): To "Prepare a Booking" or "Send a Booking Link", you MUST first collect the guest's Name and Mobile Number. If they don't provide a mobile number, you cannot prepare the booking.
+4. NO OVER-BOOKING: Do not push "Confirm and Book" or "Prepare Booking" repeatedly.
 4. EMPATHY: If a guest asks about amenities or features, describe them with enthusiasm (e.g., "You'll love our rooftop pool!" instead of "Pool is available.").
 
 RESPONSE STYLE:
@@ -140,16 +141,20 @@ def create_guest_agent_graph(
         room_type_name: str, 
         adults: int, 
         children: int,
-        first_name: str = "",
-        last_name: str = "",
+        first_name: str,
+        last_name: str,
+        phone: str,
         email: str = "",
-        phone: str = ""
+        inquiry_summary: str = ""
     ) -> str:
         """
         PREPARES a booking for the guest. 
-        Call this when you have specific dates, room type, and guest details.
-        Returns a special action marker for the frontend.
+        You MUST provide the guest's Name and Phone number.
+        The inquiry_summary should be a 1-sentence summary of the guest's main request.
         """
+        # Validate Phone (Mandatory)
+        if not phone or len(phone.strip()) < 8:
+            return "I need a valid mobile number to prepare your booking link. Could you please provide it?"
         # 1. Resolve Room Type
         query = select(RoomType).where(
             RoomType.hotel_id == hotel_id,
@@ -201,7 +206,7 @@ def create_guest_agent_graph(
             check_out=check_out,
             num_adults=adults,
             num_children=children,
-            ai_conversation_summary=f"Booking prepared for {room.name}"
+            ai_conversation_summary=inquiry_summary or f"Interested in {room.name}"
         )
         session.add(lead)
         await session.commit()
