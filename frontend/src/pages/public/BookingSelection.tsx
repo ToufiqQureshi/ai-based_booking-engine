@@ -547,7 +547,7 @@ export default function BookingSelection() {
                                             )}
                                             <div className="absolute top-2 left-2">
                                                 <Badge className="bg-indigo-600/90 text-white border-0 rounded-md shadow-lg">
-                                                    {room.room_type_name || 'Standard'}
+                                                    {room.name || 'Standard'}
                                                 </Badge>
                                             </div>
                                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
