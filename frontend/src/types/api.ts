@@ -50,6 +50,7 @@ export interface Hotel {
   address: Address;
   contact: ContactInfo;
   settings: HotelSettings;
+  photos: RoomPhoto[];
   created_at: string;
   updated_at: string;
 }

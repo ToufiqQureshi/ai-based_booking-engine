@@ -1,6 +1,6 @@
 // Settings Page - Real API Integration
 import { useState } from 'react';
-import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload } from 'lucide-react';
+import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ import { Hotel } from '@/types/api';
 
 import { useEffect } from 'react';
 import { PromoManager } from '@/components/settings/PromoManager';
+import { PropertyGallery } from '@/components/settings/PropertyGallery';
 
 function TeamList() {
   const [users, setUsers] = useState<any[]>([]);
@@ -95,9 +96,6 @@ export function SettingsPage() {
       check_out_time: hotel?.settings?.check_out_time || '11:00',
       currency: hotel?.settings?.currency || 'INR',
       timezone: hotel?.settings?.timezone || 'Asia/Kolkata',
-      // Store branding in settings json for now to match form structure or map to top level if backend requires
-      // Backend Hotel model has them at top level (logo_url, primary_color) but our handleUpdate maps simplistic sections.
-      // Let's check handleSave.
       primary_color: hotel?.primary_color || '#3B82F6',
       logo_url: hotel?.logo_url || '',
       notify_new_booking: hotel?.settings?.notify_new_booking !== false,
@@ -107,7 +105,8 @@ export function SettingsPage() {
       child_policy: hotel?.settings?.child_policy || '',
       privacy_policy: hotel?.settings?.privacy_policy || '',
       important_info: hotel?.settings?.important_info || '',
-    }
+    },
+    photos: hotel?.photos || []
   });
 
   const handleUpdate = (section: string, field: string, value: any) => {
@@ -138,6 +137,7 @@ export function SettingsPage() {
         address: formData.address,
         contact: formData.contact,
         settings: formData.settings,
+        photos: formData.photos,
         // Map back from settings state to top level fields
         logo_url: formData.settings.logo_url,
         primary_color: formData.settings.primary_color
@@ -213,6 +213,13 @@ export function SettingsPage() {
           >
             <Key className="h-4 w-4" />
             <span className="font-medium">Policies & Privacy</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="gallery" 
+            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+          >
+            <Image className="h-4 w-4" />
+            <span className="font-medium">Property Gallery</span>
           </TabsTrigger>
         </TabsList>
 
@@ -628,6 +635,33 @@ export function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Property Gallery */}
+          <TabsContent value="gallery" className="space-y-6 mt-0">
+            <PropertyGallery 
+              photos={formData.photos} 
+              onChange={(photos) => setFormData(prev => ({ ...prev, photos }))}
+              onSave={async (photos) => {
+                try {
+                  const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
+                    photos: photos
+                  });
+                  setHotel(updatedHotel);
+                  toast({
+                    title: 'Gallery saved',
+                    description: 'Property photos have been updated.',
+                  });
+                } catch (error) {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: 'Failed to save gallery.',
+                  });
+                  throw error;
+                }
+              }}
+            />
           </TabsContent>
         </div>
       </Tabs>

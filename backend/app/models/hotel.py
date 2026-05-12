@@ -80,6 +80,7 @@ class Hotel(HotelBase, table=True):
     address: dict = Field(default_factory=lambda: {"city": "Unknown", "country": "India"}, sa_column=Column(JSON))
     contact: dict = Field(default_factory=dict, sa_column=Column(JSON))
     settings: dict = Field(default_factory=lambda: HotelSettings().model_dump(), sa_column=Column(JSON))
+    photos: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
     
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -111,6 +112,7 @@ class HotelRead(HotelBase):
     address: dict
     contact: dict
     settings: dict
+    photos: List[dict] = []
     created_at: datetime
     updated_at: datetime
 
@@ -125,6 +127,7 @@ class HotelUpdate(SQLModel):
     address: Optional[dict] = None
     contact: Optional[dict] = None
     settings: Optional[dict] = None
+    photos: Optional[List[dict]] = None
     # Feature Flags
     feature_rate_shopper: Optional[bool] = None
     feature_ai_agent: Optional[bool] = None
