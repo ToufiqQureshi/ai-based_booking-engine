@@ -8,6 +8,8 @@ import { apiClient } from '@/api/client';
 import { PublicRoomSearchResult, RateOption, AddOn, Hotel } from '@/types/api';
 import { RoomDetailModal } from '@/components/public/RoomDetailModal';
 import { BookingStepper } from '@/components/public/BookingStepper'; // New Component
+import { SocialProofWidget } from '@/components/public/SocialProofWidget';
+import { ChatWidget } from '@/components/public/ChatWidget';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
@@ -69,6 +71,11 @@ export default function BookingSelection() {
     const [adults, setAdults] = useState(2);
     const [children, setChildren] = useState(0);
     const [promoCode, setPromoCode] = useState('');
+    
+    // Filters
+    const [priceRange, setPriceRange] = useState<[number, number]>([0, 20000]);
+    const [selectedMealPlans, setSelectedMealPlans] = useState<string[]>([]);
+    const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'recommended'>('recommended');
 
 
 
@@ -258,7 +265,6 @@ export default function BookingSelection() {
 
             <div className="max-w-7xl mx-auto px-4 mt-8">
                 {/* Inline Search Modifier (Always Visible) */}
-                {/* Inline Search Modifier (Always Visible) */}
                 <div id="search-bar" className="bg-white border border-slate-200 p-4 lg:p-6 rounded-xl shadow-sm mb-8">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         {/* Check In */}
@@ -350,158 +356,226 @@ export default function BookingSelection() {
                     </div>
                 </div>
 
-                {rooms.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-md border border-slate-200">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                            <Search className="w-6 h-6 text-slate-400" />
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-900">
-                            {(!checkInDate || !checkOutDate) ? "Select Dates" : "No rooms available"}
-                        </h3>
-                        <p className="text-slate-500 mb-6">
-                            {(!checkInDate || !checkOutDate) ? "Please select check-in and check-out dates." : "Try changing your dates."}
-                        </p>
-                        <Button variant="outline" onClick={() => document.getElementById('search-bar')?.scrollIntoView()}>Modify Search</Button>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-
-
-
-                        {/* Room List (STAAH Style) */}
-                        {rooms.map((room) => (
-                            <div key={room.id} className="bg-white border border-slate-200 shadow-sm rounded-md overflow-hidden flex flex-col md:flex-row mb-6">
-                                {/* Left: Image (Fixed Width) */}
-                                <div className="md:w-72 md:min-w-[18rem] bg-slate-100 relative group cursor-pointer" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
-                                    {room.photos && room.photos.length > 0 ? (
-                                        <img src={room.photos[0].url} alt={room.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center flex-col text-slate-400 p-4 text-center">
-                                            <Bed className="w-8 h-8 mb-2 opacity-50" />
-                                            <span className="text-xs">No Photos</span>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Left Sidebar: Social Proof & Filters */}
+                    <div className="lg:col-span-3 space-y-6">
+                        <SocialProofWidget />
+                        
+                        {/* Filters Card */}
+                        <Card className="p-5 border-slate-200 shadow-sm rounded-xl bg-white sticky top-24">
+                            <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                <Search className="w-4 h-4 text-indigo-600" /> Filter Rooms
+                            </h3>
+                            
+                            <div className="space-y-6">
+                                {/* Price Filter */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-3 block">Price Range</label>
+                                    <div className="px-2">
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="20000" 
+                                            step="500"
+                                            value={priceRange[1]}
+                                            onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
+                                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                        />
+                                        <div className="flex justify-between mt-2 text-xs font-bold text-slate-600">
+                                            <span>₹0</span>
+                                            <span>Up to ₹{priceRange[1].toLocaleString()}</span>
                                         </div>
-                                    )}
-                                    <div className="absolute bottom-2 left-2">
-                                        <Badge variant="secondary" className="bg-black/60 text-white hover:bg-black/70 backdrop-blur border-0 rounded-sm px-2 text-[10px] h-6">
-                                            {room.name}
-                                        </Badge>
-                                    </div>
-                                    {/* Hover overlay hint */}
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                        <Button size="sm" variant="secondary" className="shadow-lg">View Photos</Button>
                                     </div>
                                 </div>
 
-                                {/* Right: Content */}
-                                <div className="flex-1 flex flex-col">
-                                    {/* Room Header Info */}
-                                    <div className="p-4 border-b border-slate-100 bg-slate-50/30 flex justify-between items-center">
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="text-lg font-bold text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-2" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
-                                                    {room.name} <span className="text-xs font-normal text-slate-400 underline underline-offset-2">More Info ↗</span>
-                                                </h3>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-slate-600">
-                                            <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1 rounded shadow-sm" title="Occupancy">
-                                                <User className="h-3 w-3" />
-                                                <span className="text-xs font-bold">{room.base_occupancy}-{room.max_occupancy}</span>
-                                            </div>
-                                            {room.room_size ? (
-                                                <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1 rounded shadow-sm">
-                                                    <div className="text-xs font-bold whitespace-nowrap">{room.room_size} sq ft</div>
-                                                </div>
-                                            ) : null}
-                                            {room.bed_type && (
-                                                <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1 rounded shadow-sm">
-                                                    <BedDouble className="h-3 w-3" />
-                                                    <span className="text-xs font-bold">{room.bed_type}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Rate Plans List */}
-                                    <div className="divide-y divide-slate-100">
-                                        {(room.rate_options || []).map((plan) => {
-                                            return (
-                                                <div key={plan.id} className="p-4 hover:bg-slate-50 transition-colors grid grid-cols-1 md:grid-cols-12 gap-4 items-center group/plan">
-                                                    {/* Plan Info (Left) */}
-                                                    <div className="md:col-span-8 space-y-1">
-                                                        <div className="font-bold text-slate-800 flex items-center gap-2">
-
-                                                            {plan.meal_plan_code === 'EP' && <Bed className="w-4 h-4 text-slate-400" />}
-                                                            {plan.meal_plan_code === 'CP' && <Coffee className="w-4 h-4 text-orange-500" />}
-                                                            {plan.meal_plan_code === 'MAP' && <Utensils className="w-4 h-4 text-green-600" />}
-                                                            {plan.meal_plan_code === 'AP' && <Utensils className="w-4 h-4 text-blue-600" />}
-                                                            {plan.name}
-                                                            <span
-                                                                className="text-xs font-normal text-blue-600 border border-blue-200 bg-blue-50 px-2 py-0.5 rounded cursor-pointer hover:underline flex items-center gap-1 transition-colors"
-                                                                title="Click for rate policies"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setSelectedRateInfo(plan);
-                                                                    setIsRateModalOpen(true);
-                                                                }}
-                                                            >
-                                                                More Info ↗
-                                                            </span>
-                                                        </div>
-                                                        <div className="text-sm text-slate-600 flex items-center gap-2">
-                                                            {/* Show inclusions text directly if any, or generic */}
-                                                            {plan.inclusions && plan.inclusions.length > 0 ? plan.inclusions.join(", ") : "Standard Rate"}
-                                                        </div>
-
-                                                        {/* Tags */}
-                                                        <div className="flex flex-wrap gap-2 mt-2">
-                                                            {plan.savings_text ? (
-                                                                <div className="inline-flex items-center bg-red-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm relative shadow-sm">
-                                                                    <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[4px] border-t-transparent border-r-[4px] border-r-red-600 border-b-[4px] border-b-transparent"></span>
-                                                                    Weekday Discount | Save {plan.savings_text}
-                                                                </div>
-                                                            ) : (
-                                                                <div className="inline-flex items-center bg-green-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm">
-                                                                    Best Value
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-
-
-                                                    {/* Right (Price & Button) */}
-                                                    <div className="md:col-span-4 flex items-center justify-end gap-4">
-                                                        <div className="text-right">
-                                                            {plan.savings_text && (
-                                                                <div className="text-xs text-slate-400 line-through decoration-slate-400 decoration-1 mb-0.5">
-                                                                    {formatCurrency(plan.total_price * 1.15)}
-                                                                </div>
-                                                            )}
-                                                            <div className="flex items-baseline justify-end gap-1">
-                                                                <span className="text-xs text-slate-500 font-medium uppercase">INR</span>
-                                                                <span className="text-xl font-bold text-slate-900">{new Intl.NumberFormat('en-IN').format(plan.total_price)}</span>
-                                                            </div>
-                                                            <div className="text-[10px] text-slate-500">Rate for {numNights} Night{numNights > 1 ? 's' : ''}</div>
-                                                            <div className="text-[10px] text-slate-400">Excludes Taxes & Fees</div>
-                                                        </div>
-
-                                                        <Button
-                                                            className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 shadow-sm rounded-sm h-10 w-24"
-                                                            onClick={() => handleSelectRate(room, plan)}
-                                                        >
-                                                            Book
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                {/* Meal Plan Filter */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-3 block">Meal Plan</label>
+                                    <div className="space-y-2">
+                                        {['EP', 'CP', 'MAP', 'AP'].map(plan => (
+                                            <label key={plan} className="flex items-center gap-3 cursor-pointer group">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedMealPlans.includes(plan)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setSelectedMealPlans([...selectedMealPlans, plan]);
+                                                        else setSelectedMealPlans(selectedMealPlans.filter(p => p !== plan));
+                                                    }}
+                                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
+                                                    {plan === 'EP' ? 'Room Only (EP)' : 
+                                                     plan === 'CP' ? 'With Breakfast (CP)' :
+                                                     plan === 'MAP' ? 'Half Board (MAP)' : 'Full Board (AP)'}
+                                                </span>
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
                             </div>
-                        ))}
+                            
+                            <Button 
+                                variant="ghost" 
+                                className="w-full mt-6 text-xs font-bold text-slate-400 hover:text-red-500"
+                                onClick={() => {
+                                    setPriceRange([0, 20000]);
+                                    setSelectedMealPlans([]);
+                                }}
+                            >
+                                Reset All Filters
+                            </Button>
+                        </Card>
                     </div>
-                )}
+
+                    {/* Right Side: Room List */}
+                    <div className="lg:col-span-9">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-lg font-bold text-slate-900">
+                                {rooms.length} Rooms Found
+                            </h2>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-400 uppercase">Sort By:</span>
+                                <select 
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                    className="bg-transparent text-sm font-bold text-indigo-600 focus:outline-none cursor-pointer"
+                                >
+                                    <option value="recommended">Recommended</option>
+                                    <option value="price_asc">Price: Low to High</option>
+                                    <option value="price_desc">Price: High to Low</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {rooms.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                                    <Search className="w-6 h-6 text-slate-400" />
+                                </div>
+                                <h3 className="text-lg font-bold text-slate-900">No rooms match your filters</h3>
+                                <p className="text-slate-500">Try adjusting your filters or search dates.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {rooms
+                                    .filter(room => {
+                                        const minPrice = Math.min(...room.rate_options.map(o => o.total_price));
+                                        const matchesPrice = minPrice <= priceRange[1];
+                                        const matchesMeal = selectedMealPlans.length === 0 || 
+                                            room.rate_options.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
+                                        return matchesPrice && matchesMeal;
+                                    })
+                                    .sort((a, b) => {
+                                        const aPrice = Math.min(...a.rate_options.map(o => o.total_price));
+                                        const bPrice = Math.min(...b.rate_options.map(o => o.total_price));
+                                        if (sortBy === 'price_asc') return aPrice - bPrice;
+                                        if (sortBy === 'price_desc') return bPrice - aPrice;
+                                        return 0;
+                                    })
+                                    .map((room) => (
+                                    <div key={room.id} className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden flex flex-col md:flex-row mb-6 hover:shadow-md transition-shadow">
+                                        {/* Left: Image (Fixed Width) */}
+                                        <div className="md:w-80 md:min-w-[20rem] bg-slate-100 relative group cursor-pointer" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
+                                            {room.photos && room.photos.length > 0 ? (
+                                                <img src={room.photos[0].url} alt={room.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center flex-col text-slate-400 p-4 text-center">
+                                                    <Bed className="w-8 h-8 mb-2 opacity-50" />
+                                                    <span className="text-xs">No Photos Available</span>
+                                                </div>
+                                            )}
+                                            <div className="absolute top-2 left-2">
+                                                <Badge className="bg-indigo-600/90 text-white border-0 rounded-md shadow-lg">
+                                                    {room.room_type_name || 'Standard'}
+                                                </Badge>
+                                            </div>
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                <Button size="sm" variant="secondary" className="shadow-lg font-bold">View Gallery</Button>
+                                            </div>
+                                        </div>
+
+                                        {/* Right: Content */}
+                                        <div className="flex-1 flex flex-col">
+                                            {/* Room Header Info */}
+                                            <div className="p-5 border-b border-slate-100 bg-slate-50/30 flex justify-between items-start">
+                                                <div>
+                                                    <h3 className="text-xl font-black text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer flex items-center gap-2" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
+                                                        {room.name}
+                                                    </h3>
+                                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-tighter">Instant Confirmation Available</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-slate-600">
+                                                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm" title="Occupancy">
+                                                        <User className="h-3.5 w-3.5 text-indigo-500" />
+                                                        <span className="text-xs font-black">{room.max_occupancy}</span>
+                                                    </div>
+                                                    {room.room_size && (
+                                                        <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
+                                                            <Waves className="h-3.5 w-3.5 text-indigo-500" />
+                                                            <span className="text-xs font-black">{room.room_size} ft²</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Rate Plans List */}
+                                            <div className="divide-y divide-slate-100">
+                                                {(room.rate_options || []).map((plan) => (
+                                                    <div key={plan.id} className="p-5 hover:bg-slate-50/50 transition-colors grid grid-cols-1 md:grid-cols-12 gap-4 items-center group/plan">
+                                                        <div className="md:col-span-8 space-y-1.5">
+                                                            <div className="font-black text-slate-800 flex items-center gap-2">
+                                                                <div className={cn(
+                                                                    "w-2 h-2 rounded-full",
+                                                                    plan.meal_plan_code === 'EP' ? 'bg-slate-300' : 'bg-green-500 animate-pulse'
+                                                                )} />
+                                                                {plan.name}
+                                                                <button 
+                                                                    className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider hover:bg-indigo-100 transition-colors"
+                                                                    onClick={() => { setSelectedRateInfo(plan); setIsRateModalOpen(true); }}
+                                                                >
+                                                                    Details
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-3">
+                                                                <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                                                    <Check className="w-3.5 h-3.5 text-green-500" /> Free Wi-Fi
+                                                                </div>
+                                                                {plan.meal_plan_code !== 'EP' && (
+                                                                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                                                        <Check className="w-3.5 h-3.5 text-green-500" /> {plan.meal_plan_code === 'CP' ? 'Breakfast Included' : 'All Meals Included'}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="md:col-span-4 flex items-center justify-end gap-5">
+                                                            <div className="text-right">
+                                                                <div className="flex items-baseline justify-end gap-1">
+                                                                    <span className="text-[10px] font-bold text-slate-400">INR</span>
+                                                                    <span className="text-2xl font-black text-slate-900 leading-none">
+                                                                        {new Intl.NumberFormat('en-IN').format(plan.total_price)}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">Net Total / {numNights} Night{numNights > 1 ? 's' : ''}</p>
+                                                            </div>
+
+                                                            <Button
+                                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 shadow-md rounded-xl h-11 min-w-[100px] transition-all active:scale-95"
+                                                                onClick={() => handleSelectRate(room, plan)}
+                                                            >
+                                                                BOOK
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Room Detail Modal (Preserved) */}
@@ -607,6 +681,9 @@ export default function BookingSelection() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* AI Chat Widget */}
+            <ChatWidget hotelSlug={hotelSlug || ''} />
         </div>
     );
 }
