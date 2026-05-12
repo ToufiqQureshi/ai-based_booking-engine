@@ -72,31 +72,43 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
                 </div>
                 <CardDescription className="line-clamp-2 min-h-[2.5em]">{room.description || 'No description available for this room type.'}</CardDescription>
             </CardHeader>
-            <CardContent>
-                <div className="flex items-center justify-between text-sm pt-2 border-t">
-                    <div className="flex items-center gap-4 text-muted-foreground">
-                        <span className="flex items-center gap-1.5" title="Occupancy">
-                            <Users className="h-4 w-4" />
-                            {room.base_occupancy}-{room.max_occupancy}
-                        </span>
-                        <div className="flex items-center gap-1">
-                            <Bed className="h-4 w-4" />
-                            <span>Max {room.max_occupancy} Guests</span>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                            <BedDouble className="h-4 w-4" />
-                            <span>{room.bed_type || 'Queen'} Bed</span>
-                        </div>
-
-                        {room.room_size ? (
-                            <div className="flex items-center gap-1">
-                                <Ruler className="h-4 w-4" />
-                                <span>{room.room_size} sq ft</span>
-                            </div>
-                        ) : null}
+            <CardContent className="space-y-4">
+                {/* Room Specs Grid */}
+                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs text-muted-foreground pt-2">
+                    <div className="flex items-center gap-2" title="Occupancy">
+                        <Users className="h-3.5 w-3.5 text-indigo-500" />
+                        <span>{room.base_occupancy}-{room.max_occupancy} Adults</span>
                     </div>
-                    <span className="font-bold text-primary">{formatCurrency(room.base_price)}<span className="text-xs font-normal text-muted-foreground">/night</span></span>
+                    <div className="flex items-center gap-2">
+                        <Bed className="h-3.5 w-3.5 text-indigo-500" />
+                        <span>Max {room.max_occupancy} Guests</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <BedDouble className="h-3.5 w-3.5 text-indigo-500" />
+                        <span>{room.bed_type || 'Double'} Bed</span>
+                    </div>
+                    {room.room_size && (
+                        <div className="flex items-center gap-2">
+                            <Ruler className="h-3.5 w-3.5 text-indigo-500" />
+                            <span>{room.room_size} sq ft</span>
+                        </div>
+                    )}
+                </div>
+
+                <Separator className="opacity-50" />
+
+                {/* Price Section */}
+                <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Base Price</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-xl font-black text-indigo-600">{formatCurrency(room.base_price)}</span>
+                            <span className="text-[10px] text-muted-foreground">/night</span>
+                        </div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs font-bold hover:bg-indigo-50 hover:text-indigo-600" onClick={() => onEdit(room)}>
+                        Edit
+                    </Button>
                 </div>
             </CardContent>
         </Card>
