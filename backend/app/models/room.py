@@ -43,7 +43,6 @@ class RoomTypeBase(SQLModel):
     total_inventory: int = Field(default=1, ge=0)
     is_active: bool = Field(default=True)
     bed_type: Optional[str] = Field(default="Queen")
-    bed_type: Optional[str] = Field(default="Queen")
     room_size: Optional[int] = Field(default=None, description="Size in sq ft")
     extra_person_price: float = Field(default=0.0, ge=0)
     extra_adult_price: float = Field(default=0.0, ge=0)
@@ -102,7 +101,6 @@ class RoomTypeUpdate(SQLModel):
     amenity_ids: Optional[List[str]] = None
     max_children: Optional[int] = None
     extra_bed_allowed: Optional[bool] = None
-    bed_type: Optional[str] = None
     bed_type: Optional[str] = None
     room_size: Optional[int] = None
     extra_person_price: Optional[float] = None
