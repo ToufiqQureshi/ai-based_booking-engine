@@ -22,7 +22,6 @@ const AvailabilityPage = lazy(() => import("@/pages/rooms/Availability"));
 const BookingsPage = lazy(() => import("@/pages/bookings/Bookings"));
 const GuestsPage = lazy(() => import("@/pages/bookings/Guests"));
 const PaymentsPage = lazy(() => import("@/pages/finance/Payments"));
-const ReportsPage = lazy(() => import("@/pages/finance/Reports"));
 const AddonsPage = lazy(() => import("@/pages/marketing/Addons"));
 const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
 const IntegrationPage = lazy(() => import("@/pages/settings/Integration"));
@@ -95,7 +94,6 @@ const App = () => (
                 <Route path="/guests" element={<GuestsPage />} />
                 <Route path="/rate-shopper" element={<RatesShopper />} />
                 <Route path="/payments" element={<PaymentsPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/addons" element={<AddonsPage />} />
                 <Route path="/amenities" element={<Amenities />} />
                 <Route path="/channel-settings" element={<ChannelSettings />} />

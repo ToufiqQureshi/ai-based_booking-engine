@@ -41,7 +41,7 @@ import { Button } from '@/components/ui/button';
 // Navigation items for the dashboard
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Analytics', url: '/analytics', icon: LineChart },
+  { title: 'Analytics & Reports', url: '/analytics', icon: LineChart },
   { title: 'AI Assistant', url: '/agent', icon: Bot },
 
   { title: 'Rooms', url: '/rooms', icon: Bed },
@@ -51,7 +51,6 @@ const mainNavItems = [
   { title: 'Bookings', url: '/bookings', icon: BookOpen },
   { title: 'Guests', url: '/guests', icon: Users },
   { title: 'Payments', url: '/payments', icon: CreditCard },
-  { title: 'Reports', url: '/reports', icon: BarChart3 },
   { title: 'Amenities', url: '/amenities', icon: Coffee },
   { title: 'Add-ons', url: '/addons', icon: Sparkles },
   { title: 'Channel Manager', url: '/channel-settings', icon: Link2 },

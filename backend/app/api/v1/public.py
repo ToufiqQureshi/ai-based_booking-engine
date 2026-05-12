@@ -677,3 +677,87 @@ async def chat_with_guest_ai(
         import traceback
         logger.error(f"Guest AI Error: {traceback.format_exc()}")
         return GuestChatResponse(response=f"I'm having trouble connecting. Please try again or reach out directly!")
+
+
+# --- Loyalty & Personalization ---
+
+class LoyaltyCheckRequest(BaseModel):
+    email: str
+    hotel_id: str
+
+class LoyaltyCheckResponse(BaseModel):
+    is_repeat_guest: bool
+    message: str
+    coupon_code: Optional[str] = None
+    discount_text: Optional[str] = None
+
+@router.post("/loyalty-check", response_model=LoyaltyCheckResponse)
+async def check_guest_loyalty(
+    data: LoyaltyCheckRequest,
+    session: DbSession
+):
+    """
+    Checks if the guest has booked at this hotel before.
+    If yes, returns a special AI-powered loyalty discount.
+    """
+    try:
+        # 1. Check if guest exists for this hotel
+        guest_query = select(Guest).where(
+            Guest.email == data.email,
+            Guest.hotel_id == data.hotel_id
+        )
+        result = await session.execute(guest_query)
+        guest = result.scalar_one_or_none()
+        
+        if not guest:
+            return LoyaltyCheckResponse(
+                is_repeat_guest=False,
+                message="Welcome! We're excited to have you here."
+            )
+        
+        # 2. Check booking count (confirmed or checked out)
+        booking_query = select(Booking).where(
+            Booking.guest_id == guest.id,
+            or_(Booking.status == BookingStatus.CONFIRMED, Booking.status == BookingStatus.CHECKED_OUT)
+        )
+        b_result = await session.execute(booking_query)
+        bookings = b_result.scalars().all()
+        
+        if len(bookings) == 0:
+             return LoyaltyCheckResponse(
+                is_repeat_guest=False,
+                message="Welcome back! We hope to see you stay with us soon."
+            )
+
+        # 3. Repeat guest found!
+        # Try to find a 'LOYALTY' promo or use a default one
+        promo_query = select(PromoCode).where(
+            PromoCode.hotel_id == data.hotel_id,
+            PromoCode.code.like("%LOYALTY%"),
+            PromoCode.is_active == True
+        )
+        p_result = await session.execute(promo_query)
+        promo = p_result.scalar_one_or_none()
+        
+        # Default loyalty info if no specific promo found
+        coupon_code = promo.code if promo else "LOYALTY10"
+        discount_text = "10% Loyalty Discount"
+        
+        if promo:
+            if promo.discount_type == "percentage":
+                discount_text = f"{int(promo.discount_value)}% Loyalty Discount"
+            else:
+                discount_text = f"₹{int(promo.discount_value)} Loyalty Reward"
+
+        return LoyaltyCheckResponse(
+            is_repeat_guest=True,
+            message=f"Welcome back, {guest.first_name}! Our AI system recognized your previous stay. As a valued guest, we've unlocked a special loyalty discount for you.",
+            coupon_code=coupon_code,
+            discount_text=discount_text
+        )
+    except Exception as e:
+        logger.error(f"Loyalty check error: {str(e)}")
+        return LoyaltyCheckResponse(
+            is_repeat_guest=False,
+            message="Welcome! Enjoy your booking experience."
+        )

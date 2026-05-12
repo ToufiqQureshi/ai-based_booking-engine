@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowRight, User, Mail, Phone, Calendar, ShieldCheck, CreditCard, Sparkles, MapPin } from 'lucide-react';
+import { Loader2, ArrowRight, User, Mail, Phone, Calendar, ShieldCheck, CreditCard, Sparkles, MapPin, Zap, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,8 @@ import { AddOn } from '@/types/api';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { BookingStepper } from '@/components/public/BookingStepper';
+import { LoyaltyRewardPopup } from '@/components/public/LoyaltyRewardPopup';
+import { SocialProofWidget } from '@/components/public/SocialProofWidget';
 
 // Error Boundary to catch render crashes
 class CheckoutErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -65,7 +67,7 @@ function BookingCheckoutInner() {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const { register, setValue, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>();
+    const { register, setValue, watch, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>();
 
     const [state, setState] = useState<BookingState | null>(null);
 
@@ -75,6 +77,22 @@ function BookingCheckoutInner() {
     const [discountAmount, setDiscountAmount] = useState(0);
     const [promoMessage, setPromoMessage] = useState('');
     const [isValidating, setIsValidating] = useState(false);
+
+    // Loyalty AI state
+    const [loyaltyData, setLoyaltyData] = useState<{
+        isOpen: boolean;
+        message: string;
+        couponCode: string;
+        discountText: string;
+    }>({
+        isOpen: false,
+        message: '',
+        couponCode: '',
+        discountText: ''
+    });
+    const [hasCheckedLoyalty, setHasCheckedLoyalty] = useState(false);
+
+    const emailValue = watch('email');
 
     useEffect(() => {
         if (location.state) {
@@ -103,6 +121,43 @@ function BookingCheckoutInner() {
             }
         }
     }, [location.state, setValue]);
+
+    // Check loyalty when email is entered
+    const handleEmailBlur = async () => {
+        if (!emailValue || !state || hasCheckedLoyalty) return;
+        
+        try {
+            // Get hotel ID from first room
+            const hotelId = state.rooms[0]?.hotel_id || hotelSlug;
+            
+            const response = await apiClient.post<any>('/public/loyalty-check', {
+                email: emailValue,
+                hotel_id: hotelId
+            });
+
+            if (response.is_repeat_guest) {
+                setLoyaltyData({
+                    isOpen: true,
+                    message: response.message,
+                    couponCode: response.coupon_code,
+                    discountText: response.discount_text
+                });
+                setHasCheckedLoyalty(true);
+            }
+        } catch (error) {
+            console.error("Loyalty check failed", error);
+        }
+    };
+
+    const applyLoyaltyCoupon = async () => {
+        setPromoCode(loyaltyData.couponCode);
+        setLoyaltyData(prev => ({ ...prev, isOpen: false }));
+        
+        // Wait a bit then apply
+        setTimeout(() => {
+            handleApplyPromo(loyaltyData.couponCode);
+        }, 100);
+    };
 
     if (!state || !state.rooms || state.rooms.length === 0 || !state.checkInDate || !state.checkOutDate) {
         return (
@@ -177,31 +232,28 @@ function BookingCheckoutInner() {
         return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
     };
 
-
-
     const addonsTotal = state.addons?.reduce((sum, a) => sum + a.price, 0) || 0;
     const grandTotal = state.totalRoomPrice + addonsTotal;
     const finalTotal = grandTotal - discountAmount;
 
-    const handleApplyPromo = async () => {
-        if (!promoCode) return;
+    const handleApplyPromo = async (codeToApply?: string) => {
+        const code = codeToApply || promoCode;
+        if (!code) return;
+        
         setIsValidating(true);
         setPromoMessage('');
         try {
             const res = await apiClient.post<{ valid: boolean, discount: number, message: string }>('/promos/validate', {
-                code: promoCode,
-                hotel_id: room.hotel_id, // We need hotel_id from somewhere. It's usually in room object or params if we had it. room has hotel_id?
-                // room object comes from location state. Let's check BookingRoom interface in booking.py/ts.
-                // Assuming we can get hotel_id. Wait, `hotelSlug` is in params. We might need to resolve it or pass hotel_id in state.
-                // Let's assume room object has hotel_id for now as per BookingRoom definition
+                code: code,
+                hotel_id: room.hotel_id,
                 booking_amount: grandTotal
             });
 
             if (res.valid) {
-                setAppliedPromo(promoCode);
+                setAppliedPromo(code);
                 setDiscountAmount(res.discount);
                 setPromoMessage(res.message);
-                // Update form data so it gets submitted
+                if (codeToApply) setPromoCode(codeToApply);
             } else {
                 setPromoMessage(res.message);
                 setDiscountAmount(0);
@@ -220,91 +272,114 @@ function BookingCheckoutInner() {
             <BookingStepper currentStep={4} />
 
             <div className="max-w-6xl mx-auto px-4 mt-8">
-                <div className="mb-10 text-center md:text-left">
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Secure Your Stay</h1>
-                    <p className="text-slate-500">Complete your reservation in just a few steps.</p>
+                <div className="mb-10 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider mb-3 border border-blue-100">
+                            <Zap className="w-3 h-3 fill-blue-600" /> AI-Powered Booking Engine
+                        </div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Secure Your Stay</h1>
+                        <p className="text-slate-500 font-medium">Complete your reservation in just a few steps.</p>
+                    </div>
+                    
+                    <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                        <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                            <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Guaranteed</p>
+                            <p className="text-sm font-bold text-slate-900">Secure Checkout</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid gap-12 lg:grid-cols-[1fr,420px]">
                     {/* Left Column: Form */}
                     <div className="space-y-8 animate-enter">
+                        
+                        <SocialProofWidget />
+
                         {/* Guest Section */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
-                            <div className="flex items-center gap-4 mb-8">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                    <User className="w-5 h-5" />
+                        <div className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                                <User className="w-32 h-32" />
+                            </div>
+
+                            <div className="flex items-center gap-4 mb-10">
+                                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary rotate-3">
+                                    <User className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-slate-900">Guest Information</h2>
-                                    <p className="text-sm text-slate-500">Who will be staying?</p>
+                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Guest Information</h2>
+                                    <p className="text-sm text-slate-500 font-medium">Please enter the details of the primary guest.</p>
                                 </div>
                             </div>
 
-                            <form id="booking-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="firstName" className="text-xs uppercase tracking-wider text-slate-500 font-bold">First Name</Label>
+                            <form id="booking-form" onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="firstName" className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black ml-1">First Name</Label>
                                         <Input
                                             id="firstName"
-                                            placeholder="Eg. John"
-                                            className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                                            placeholder="e.g. John"
+                                            className="h-14 px-6 rounded-2xl bg-slate-50 border-transparent focus:border-primary focus:bg-white transition-all text-lg font-medium"
                                             {...register('firstName', { required: 'First name is required' })}
                                         />
-                                        {errors.firstName && <span className="text-xs text-red-500 font-medium">{errors.firstName.message}</span>}
+                                        {errors.firstName && <span className="text-xs text-red-500 font-bold ml-1">{errors.firstName.message}</span>}
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="lastName" className="text-xs uppercase tracking-wider text-slate-500 font-bold">Last Name</Label>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="lastName" className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black ml-1">Last Name</Label>
                                         <Input
                                             id="lastName"
-                                            placeholder="Eg. Doe"
-                                            className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                                            placeholder="e.g. Doe"
+                                            className="h-14 px-6 rounded-2xl bg-slate-50 border-transparent focus:border-primary focus:bg-white transition-all text-lg font-medium"
                                             {...register('lastName', { required: 'Last name is required' })}
                                         />
-                                        {errors.lastName && <span className="text-xs text-red-500 font-medium">{errors.lastName.message}</span>}
+                                        {errors.lastName && <span className="text-xs text-red-500 font-bold ml-1">{errors.lastName.message}</span>}
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email" className="text-xs uppercase tracking-wider text-slate-500 font-bold">Email Address</Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="email" className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black ml-1">Email Address</Label>
                                         <div className="relative">
-                                            <Mail className="absolute left-4 top-4 h-4 w-4 text-slate-400" />
+                                            <Mail className="absolute left-6 top-5 h-4 w-4 text-slate-400" />
                                             <Input
                                                 id="email"
                                                 type="email"
-                                                className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                                                className="pl-14 h-14 pr-6 rounded-2xl bg-slate-50 border-transparent focus:border-primary focus:bg-white transition-all text-lg font-medium"
                                                 placeholder="john@example.com"
                                                 {...register('email', {
                                                     required: 'Email is required',
                                                     pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' }
                                                 })}
+                                                onBlur={handleEmailBlur}
                                             />
                                         </div>
-                                        {errors.email && <span className="text-xs text-red-500 font-medium">{errors.email.message}</span>}
+                                        {errors.email && <span className="text-xs text-red-500 font-bold ml-1">{errors.email.message}</span>}
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="phone" className="text-xs uppercase tracking-wider text-slate-500 font-bold">Phone Number</Label>
+                                    <div className="space-y-3">
+                                        <Label htmlFor="phone" className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black ml-1">Phone Number</Label>
                                         <div className="relative">
-                                            <Phone className="absolute left-4 top-4 h-4 w-4 text-slate-400" />
+                                            <Phone className="absolute left-6 top-5 h-4 w-4 text-slate-400" />
                                             <Input
                                                 id="phone"
                                                 type="tel"
-                                                className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                                                className="pl-14 h-14 pr-6 rounded-2xl bg-slate-50 border-transparent focus:border-primary focus:bg-white transition-all text-lg font-medium"
                                                 placeholder="+91 98765 43210"
                                                 {...register('phone', { required: 'Phone is required' })}
                                             />
                                         </div>
-                                        {errors.phone && <span className="text-xs text-red-500 font-medium">{errors.phone.message}</span>}
+                                        {errors.phone && <span className="text-xs text-red-500 font-bold ml-1">{errors.phone.message}</span>}
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="requests" className="text-xs uppercase tracking-wider text-slate-500 font-bold">Special Requests</Label>
+                                <div className="space-y-3">
+                                    <Label htmlFor="requests" className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-black ml-1">Special Requests</Label>
                                     <Textarea
                                         id="requests"
                                         placeholder="Any specific preferences? (Optional)"
-                                        className="min-h-[100px] bg-slate-50 border-slate-200 focus:bg-white transition-all resize-none"
+                                        className="min-h-[120px] p-6 rounded-2xl bg-slate-50 border-transparent focus:border-primary focus:bg-white transition-all resize-none text-lg"
                                         {...register('specialRequests')}
                                     />
                                 </div>
@@ -312,26 +387,31 @@ function BookingCheckoutInner() {
                         </div>
 
                         {/* Payment Section */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm relative overflow-hidden">
-                            <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+                        <div className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+                            <div className="absolute inset-x-0 bottom-0 h-1.5 bg-gradient-to-r from-transparent via-green-500/20 to-transparent" />
 
                             <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-                                        <ShieldCheck className="w-5 h-5" />
+                                <div className="flex items-center gap-5">
+                                    <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 -rotate-3 group-hover:rotate-0 transition-transform">
+                                        <ShieldCheck className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-slate-900">Payment Details</h2>
-                                        <p className="text-sm text-green-600 font-medium">No prepayment needed today</p>
+                                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Payment Details</h2>
+                                        <p className="text-sm text-green-600 font-bold flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                            Pay at the Property
+                                        </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/50 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-                                <CreditCard className="w-8 h-8 text-slate-400" />
+                            <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200/50 flex flex-col md:flex-row items-center gap-6 text-center md:text-left hover:border-green-200 transition-colors">
+                                <div className="w-16 h-16 rounded-full bg-white shadow-inner flex items-center justify-center">
+                                    <CreditCard className="w-8 h-8 text-slate-400" />
+                                </div>
                                 <div className="flex-1">
-                                    <h3 className="font-bold text-slate-900">Pay at Property</h3>
-                                    <p className="text-sm text-slate-500">Your card is only needed to guarantee your booking. You'll pay when you arrive.</p>
+                                    <h3 className="text-xl font-black text-slate-900 mb-1">Guarantee Policy</h3>
+                                    <p className="text-slate-500 leading-relaxed font-medium">Your card details are only used to guarantee your booking. No charges will be made today. Full payment will be collected at the hotel during check-in or check-out.</p>
                                 </div>
                             </div>
                         </div>
@@ -339,154 +419,172 @@ function BookingCheckoutInner() {
 
                     {/* Right Column: Summary */}
                     <div className="lg:sticky lg:top-8 h-fit animate-enter" style={{ animationDelay: '0.1s' }}>
-                        <div className="bg-white rounded-3xl overflow-hidden shadow-xl shadow-slate-200/50 border border-slate-100">
+                        <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-300/50 border border-slate-100">
                             {/* Room Image Header */}
-                            <div className="h-48 relative bg-slate-200">
+                            <div className="h-56 relative bg-slate-200">
                                 {room.photos && room.photos.length > 0 ? (
                                     <img src={room.photos[0].url} alt="Room" className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-400">No Image</div>
+                                    <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
+                                        <MapPin className="w-12 h-12 opacity-20" />
+                                    </div>
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                <div className="absolute bottom-4 left-6 text-white">
-                                    <h3 className="font-bold text-xl mb-1">{room.name}</h3>
-                                    <Badge className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border-0">
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                <div className="absolute bottom-6 left-8 right-8 text-white">
+                                    <h3 className="font-black text-2xl mb-2 tracking-tight">{room.name}</h3>
+                                    <Badge className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border-0 font-bold px-4 py-1.5 rounded-full">
                                         {room.rate_plan_name || room.rate_options?.[0]?.name || 'Standard Rate'}
                                     </Badge>
                                 </div>
                             </div>
 
-                            <div className="p-6 space-y-6">
+                            <div className="p-8 md:p-10 space-y-8">
                                 {/* Date Timeline */}
-                                <div className="flexItems-center justify-between relative pl-4">
-                                    <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-slate-100"></div>
-                                    <div className="space-y-6">
-                                        <div className="relative pl-6">
-                                            <div className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-primary bg-white z-10" />
-                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Check-in</p>
-                                            <p className="font-semibold text-slate-900">{format(new Date(state.checkInDate), 'EEE, MMM dd')}</p>
-                                            <p className="text-xs text-slate-500">From 2:00 PM</p>
-                                        </div>
-                                        <div className="relative pl-6">
-                                            <div className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300 z-10" />
-                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Check-out</p>
-                                            <p className="font-semibold text-slate-900">{format(new Date(state.checkOutDate), 'EEE, MMM dd')}</p>
-                                            <p className="text-xs text-slate-500">Until 11:00 AM</p>
-                                        </div>
+                                <div className="grid grid-cols-2 gap-4 relative">
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-slate-50 rounded-full border border-slate-100 flex items-center justify-center z-10 hidden md:flex">
+                                        <ArrowRight className="w-4 h-4 text-slate-300" />
+                                    </div>
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Check-in</p>
+                                        <p className="font-bold text-slate-900">{format(new Date(state.checkInDate), 'MMM dd')}</p>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase">2:00 PM</p>
+                                    </div>
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Check-out</p>
+                                        <p className="font-bold text-slate-900">{format(new Date(state.checkOutDate), 'MMM dd')}</p>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase">11:00 AM</p>
                                     </div>
                                 </div>
 
-                                <Separator />
+                                <Separator className="bg-slate-100" />
 
                                 {/* Price Breakdown */}
-                                <div className="space-y-3">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-600">{room.name} x {nights} nights</span>
-                                        <span className="font-medium text-slate-900">{formatCurrency(state.totalRoomPrice)}</span>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500 font-bold text-sm">{room.name} <span className="text-xs opacity-60">({nights} {nights === 1 ? 'night' : 'nights'})</span></span>
+                                        <span className="font-bold text-slate-900">{formatCurrency(state.totalRoomPrice)}</span>
                                     </div>
 
                                     {state.addons && state.addons.length > 0 && (
-                                        <div className="space-y-2 pt-2">
+                                        <div className="space-y-3 pt-2">
                                             {state.addons.map((addon, index) => (
-                                                <div key={index} className="flex justify-between text-sm text-slate-500">
-                                                    <span className="flex items-center"><Sparkles className="w-3 h-3 mr-1 text-primary" /> {addon.name}</span>
-                                                    <span>{formatCurrency(addon.price)}</span>
+                                                <div key={index} className="flex justify-between items-center text-sm">
+                                                    <span className="flex items-center text-slate-500 font-medium"><Sparkles className="w-3.5 h-3.5 mr-2 text-primary" /> {addon.name}</span>
+                                                    <span className="font-bold text-slate-900">{formatCurrency(addon.price)}</span>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
 
-                                    <div className="flex justify-between text-sm text-green-600 pt-2">
-                                        <span>Taxes & Fees</span>
-                                        <span className="font-bold">Included</span>
+                                    <div className="flex justify-between items-center text-sm text-green-600 bg-green-50 px-4 py-2 rounded-xl border border-green-100">
+                                        <span className="font-bold">Taxes & Fees</span>
+                                        <span className="font-black uppercase tracking-tighter">Included</span>
                                     </div>
                                 </div>
 
 
                                 {/* Coupon Section */}
-                                <div className="pt-4 border-t border-slate-100">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <Label htmlFor="promoCode" className="text-sm font-medium text-slate-700">Have a coupon?</Label>
+                                <div className="pt-2">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <Label htmlFor="promoCode" className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Promo Code</Label>
                                     </div>
                                     <div className="flex gap-2">
                                         <Input
                                             id="promoCode"
-                                            placeholder="Enter code"
+                                            placeholder="ENTER CODE"
                                             value={promoCode}
                                             onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                                             disabled={!!appliedPromo}
-                                            className="h-9"
+                                            className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white font-bold tracking-widest text-center"
                                         />
                                         {appliedPromo ? (
-                                            <Button type="button" variant="outline" size="sm" onClick={() => {
+                                            <Button type="button" variant="outline" size="lg" className="rounded-xl px-6 font-bold" onClick={() => {
                                                 setAppliedPromo(null);
                                                 setDiscountAmount(0);
                                                 setPromoCode('');
                                             }}>
-                                                Remove
+                                                Clear
                                             </Button>
                                         ) : (
-                                            <Button type="button" size="sm" onClick={handleApplyPromo} disabled={isValidating || !promoCode}>
+                                            <Button type="button" size="lg" className="rounded-xl px-8 font-bold" onClick={() => handleApplyPromo()} disabled={isValidating || !promoCode}>
                                                 {isValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                                             </Button>
                                         )}
                                     </div>
                                     {promoMessage && (
-                                        <p className={cn("text-xs mt-1", appliedPromo ? "text-green-600" : "text-red-500")}>
-                                            {promoMessage}
-                                        </p>
+                                        <div className={cn("mt-3 p-3 rounded-xl text-xs font-bold flex items-center gap-2", appliedPromo ? "bg-green-50 text-green-600 border border-green-100" : "bg-red-50 text-red-500 border border-red-100")}>
+                                            <Info className="w-3.5 h-3.5" /> {promoMessage}
+                                        </div>
                                     )}
                                 </div>
 
                                 {/* Total */}
-                                <div className="pt-4 border-t border-slate-100">
-                                    <div className="space-y-1 mb-2">
-                                        <div className="flex justify-between items-end">
-                                            <span className="text-sm text-slate-500">Subtotal</span>
-                                            <span className="text-sm font-medium text-slate-900">{formatCurrency(grandTotal)}</span>
+                                <div className="pt-8 border-t border-slate-100">
+                                    <div className="space-y-2 mb-6">
+                                        <div className="flex justify-between items-center text-slate-400 font-bold">
+                                            <span className="text-xs uppercase tracking-widest">Subtotal</span>
+                                            <span className="text-sm">{formatCurrency(grandTotal)}</span>
                                         </div>
                                         {appliedPromo && (
-                                            <div className="flex justify-between items-end text-green-600">
-                                                <span className="text-sm">Discount ({appliedPromo})</span>
-                                                <span className="text-sm font-medium">-{formatCurrency(discountAmount)}</span>
+                                            <div className="flex justify-between items-center text-green-600 font-bold animate-in fade-in slide-in-from-top-1">
+                                                <span className="text-xs uppercase tracking-widest">Loyalty Reward</span>
+                                                <span className="text-sm">-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
                                     </div>
+                                    
                                     <div className="flex justify-between items-end mb-1">
-                                        <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">Total Amount</span>
-                                        <span className="text-3xl font-bold text-slate-900 tracking-tight">{formatCurrency(finalTotal)}</span>
+                                        <span className="text-xs font-black text-slate-900 uppercase tracking-widest mb-1">Total to Pay</span>
+                                        <div className="text-right">
+                                            <span className="text-4xl font-black text-slate-900 tracking-tighter block">{formatCurrency(finalTotal)}</span>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-right text-slate-400">Includes all taxes and charges</p>
+                                    <p className="text-[10px] text-right text-slate-400 font-bold uppercase tracking-tighter">No hidden charges • All taxes included</p>
                                 </div>
 
                                 {/* Submit Button */}
                                 <Button
-                                    className="w-full h-14 text-lg font-bold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                                    className="w-full h-16 text-xl font-black rounded-2xl shadow-2xl shadow-primary/30 hover:shadow-primary/40 hover:-translate-y-1 active:translate-y-0 transition-all uppercase tracking-tight"
                                     type="submit"
                                     form="booking-form"
                                     disabled={isSubmitting}
                                 >
                                     {isSubmitting ? (
                                         <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Confirming...
+                                            <Loader2 className="mr-3 h-6 w-6 animate-spin" /> Confirming...
                                         </>
                                     ) : (
                                         <>
-                                            Complete Booking <ArrowRight className="ml-2 h-5 w-5" />
+                                            Finish Booking <ArrowRight className="ml-3 h-6 w-6" />
                                         </>
                                     )}
                                 </Button>
                             </div>
                         </div>
 
-                        <div className="text-center mt-6">
-                            <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                                By proceeding, you agree to our <a href="#" className="underline hover:text-primary">Terms of Service</a> and <a href="#" className="underline hover:text-primary">Privacy Policy</a>.
+                        <div className="text-center mt-10">
+                            <div className="flex items-center justify-center gap-3 mb-4 grayscale opacity-40">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-4" />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3" />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5" />
+                            </div>
+                            <p className="text-[10px] text-slate-400 max-w-xs mx-auto font-bold uppercase tracking-widest leading-relaxed">
+                                By proceeding, you agree to our <a href="#" className="text-primary hover:underline">Terms</a> & <a href="#" className="text-primary hover:underline">Privacy Policy</a>.
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* AI Loyalty Reward Popup */}
+            <LoyaltyRewardPopup 
+                isOpen={loyaltyData.isOpen}
+                onClose={() => setLoyaltyData(prev => ({ ...prev, isOpen: false }))}
+                message={loyaltyData.message}
+                couponCode={loyaltyData.couponCode}
+                discountText={loyaltyData.discountText}
+                onApply={applyLoyaltyCoupon}
+            />
         </div>
     );
 }
