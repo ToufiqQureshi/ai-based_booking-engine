@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/api/client';
-import { PublicRoomSearchResult, RateOption, AddOn } from '@/types/api';
+import { PublicRoomSearchResult, RateOption, AddOn, Hotel } from '@/types/api';
 import { RoomDetailModal } from '@/components/public/RoomDetailModal';
 import { BookingStepper } from '@/components/public/BookingStepper'; // New Component
 import { Calendar } from '@/components/ui/calendar';
@@ -36,6 +36,7 @@ export default function BookingSelection() {
 
     const [rooms, setRooms] = useState<PublicRoomSearchResult[]>([]);
     const [addons, setAddons] = useState<AddOn[]>([]);
+    const [hotel, setHotel] = useState<Hotel | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedRoom, setSelectedRoom] = useState<PublicRoomSearchResult | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -141,13 +142,15 @@ export default function BookingSelection() {
                     promo_code: urlPromo || ''
                 }).toString();
 
-                const [roomsData, addonsData] = await Promise.all([
+                const [roomsData, addonsData, hotelData] = await Promise.all([
                     apiClient.get<PublicRoomSearchResult[]>(`/public/hotels/${hotelSlug}/rooms?${query}`),
-                    apiClient.get<AddOn[]>(`/public/hotels/${hotelSlug}/addons`)
+                    apiClient.get<AddOn[]>(`/public/hotels/${hotelSlug}/addons`),
+                    apiClient.get<Hotel>(`/public/hotels/${hotelSlug}`)
                 ]);
 
                 setRooms(roomsData);
                 setAddons(addonsData.filter(a => a.is_active !== false));
+                setHotel(hotelData);
             } catch (error) {
                 console.error('Failed to fetch data:', error);
             } finally {
@@ -225,6 +228,33 @@ export default function BookingSelection() {
         <div className="min-h-screen bg-slate-50/50 pb-20 font-sans">
             {/* 1. Header with Stepper */}
             <BookingStepper currentStep={2} />
+
+            {/* 2. Property Hero/Banner */}
+            {hotel && hotel.photos && hotel.photos.length > 0 && (
+                <div className="w-full h-48 md:h-72 lg:h-[400px] relative overflow-hidden bg-slate-900 group">
+                    <img 
+                        src={hotel.photos.find(p => p.is_primary)?.url || hotel.photos[0].url} 
+                        alt={hotel.name}
+                        className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-[20s] ease-linear"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-12">
+                        <div className="max-w-7xl mx-auto w-full">
+                            <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight drop-shadow-xl">{hotel.name}</h1>
+                            <div className="flex items-center gap-3 mt-4 text-white/90">
+                                <Badge className="bg-white/20 backdrop-blur-md border-white/30 text-white font-bold px-3">
+                                    {hotel.star_rating} Star Property
+                                </Badge>
+                                <span className="text-sm font-medium hidden md:flex items-center gap-1.5 backdrop-blur-sm bg-black/20 px-3 py-1 rounded-full border border-white/10">
+                                    <Car className="w-3.5 h-3.5" /> Free Parking
+                                </span>
+                                <span className="text-sm font-medium hidden md:flex items-center gap-1.5 backdrop-blur-sm bg-black/20 px-3 py-1 rounded-full border border-white/10">
+                                    <Wifi className="w-3.5 h-3.5" /> High Speed Wi-Fi
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="max-w-7xl mx-auto px-4 mt-8">
                 {/* Inline Search Modifier (Always Visible) */}
