@@ -144,7 +144,7 @@ app.include_router(promos.router, prefix=API_V1_PREFIX + "/promos", tags=["Promo
 app.include_router(notifications.router, prefix=API_V1_PREFIX, tags=["Notifications"])
 app.include_router(analytics.router, prefix=API_V1_PREFIX + "/analytics", tags=["Analytics"])
 app.include_router(leads.router, prefix=API_V1_PREFIX + "/leads", tags=["Leads"])
-app.include_router(superadmin.router, prefix=API_V1_PREFIX + "/superadmin", tags=["Super Admin"])
+app.include_router(superadmin.router, prefix=API_V1_PREFIX)
 
 
 # Root endpoint
