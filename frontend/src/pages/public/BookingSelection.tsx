@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed } from 'lucide-react';
+import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +77,20 @@ export default function BookingSelection() {
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 20000]);
     const [selectedMealPlans, setSelectedMealPlans] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'recommended'>('recommended');
+
+    // Carousel State
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    // Auto-slide effect
+    useEffect(() => {
+        if (!hotel?.photos || hotel.photos.length <= 1) return;
+        
+        const timer = setInterval(() => {
+            setCurrentImageIndex(prev => (prev + 1) % hotel.photos.length);
+        }, 5000);
+        
+        return () => clearInterval(timer);
+    }, [hotel?.photos]);
 
 
 
@@ -236,30 +251,76 @@ export default function BookingSelection() {
             {/* 1. Header with Stepper */}
             <BookingStepper currentStep={2} />
 
-            {/* 2. Property Hero/Banner */}
+            {/* 2. Property Hero/Banner Slider */}
             {hotel && hotel.photos && hotel.photos.length > 0 && (
-                <div className="w-full h-48 md:h-72 lg:h-[400px] relative overflow-hidden bg-slate-900 group">
-                    <img 
-                        src={hotel.photos.find(p => p.is_primary)?.url || hotel.photos[0].url} 
-                        alt={hotel.name}
-                        className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-[20s] ease-linear"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-12">
+                <div className="w-full h-48 md:h-72 lg:h-[450px] relative overflow-hidden bg-slate-900 group">
+                    <AnimatePresence mode="wait">
+                        <motion.img 
+                            key={currentImageIndex}
+                            src={hotel.photos[currentImageIndex].url} 
+                            alt={`${hotel.name} - ${currentImageIndex + 1}`}
+                            initial={{ opacity: 0, scale: 1.1 }}
+                            animate={{ opacity: 0.8, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 1.2, ease: "easeOut" }}
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
+                    </AnimatePresence>
+
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-6 md:p-12 z-10">
                         <div className="max-w-7xl mx-auto w-full">
-                            <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight drop-shadow-xl">{hotel.name}</h1>
-                            <div className="flex items-center gap-3 mt-4 text-white/90">
-                                <Badge className="bg-white/20 backdrop-blur-md border-white/30 text-white font-bold px-3">
-                                    {hotel.star_rating} Star Property
-                                </Badge>
-                                <span className="text-sm font-medium hidden md:flex items-center gap-1.5 backdrop-blur-sm bg-black/20 px-3 py-1 rounded-full border border-white/10">
-                                    <Car className="w-3.5 h-3.5" /> Free Parking
-                                </span>
-                                <span className="text-sm font-medium hidden md:flex items-center gap-1.5 backdrop-blur-sm bg-black/20 px-3 py-1 rounded-full border border-white/10">
-                                    <Wifi className="w-3.5 h-3.5" /> High Speed Wi-Fi
-                                </span>
-                            </div>
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <h1 className="text-3xl md:text-6xl font-black text-white tracking-tight drop-shadow-2xl">
+                                    {hotel.name}
+                                </h1>
+                                <div className="flex flex-wrap items-center gap-3 mt-4 text-white/90">
+                                    <Badge className="bg-indigo-600/90 backdrop-blur-md border-indigo-400/30 text-white font-bold px-4 py-1.5 shadow-lg">
+                                        {hotel.star_rating} Star Property
+                                    </Badge>
+                                    <span className="text-sm font-semibold hidden md:flex items-center gap-2 backdrop-blur-sm bg-black/40 px-4 py-2 rounded-full border border-white/20 shadow-inner">
+                                        <Car className="w-4 h-4 text-indigo-400" /> Free Parking
+                                    </span>
+                                    <span className="text-sm font-semibold hidden md:flex items-center gap-2 backdrop-blur-sm bg-black/40 px-4 py-2 rounded-full border border-white/20 shadow-inner">
+                                        <Wifi className="w-4 h-4 text-indigo-400" /> High Speed Wi-Fi
+                                    </span>
+                                </div>
+                            </motion.div>
                         </div>
                     </div>
+
+                    {/* Slider Navigation */}
+                    {hotel.photos.length > 1 && (
+                        <>
+                            <button 
+                                onClick={() => setCurrentImageIndex(prev => (prev - 1 + hotel.photos.length) % hotel.photos.length)}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/10 text-white transition-all opacity-0 group-hover:opacity-100"
+                            >
+                                <ChevronLeft className="w-6 h-6" />
+                            </button>
+                            <button 
+                                onClick={() => setCurrentImageIndex(prev => (prev + 1) % hotel.photos.length)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/10 text-white transition-all opacity-0 group-hover:opacity-100"
+                            >
+                                <ChevronRight className="w-6 h-6" />
+                            </button>
+
+                            {/* Dots Indicator */}
+                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                                {hotel.photos.map((_, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setCurrentImageIndex(idx)}
+                                        className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentImageIndex ? 'w-8 bg-indigo-500' : 'w-2 bg-white/40'}`}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 
