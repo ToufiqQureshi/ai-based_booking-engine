@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { apiClient } from "@/api/client";
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/contexts/AuthContext';
+import { ShieldAlert } from 'lucide-react';
 
 // Types
 interface Message {
@@ -19,8 +21,6 @@ interface ChatResponse {
     response: string;
 }
 
-import { useAuth } from '@/contexts/AuthContext';
-import { ShieldAlert } from 'lucide-react';
 
 const AgentPage = () => {
     const { hotel } = useAuth();
@@ -102,6 +102,7 @@ const AgentPage = () => {
             e.preventDefault();
             handleSend();
         }
+    };
     if (hotel && !hotel.feature_ai_agent) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center p-4 text-center">

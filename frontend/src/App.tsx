@@ -29,7 +29,7 @@ const ChannelSettings = lazy(() => import("@/pages/dashboard/ChannelSettings"));
 const Amenities = lazy(() => import("@/pages/dashboard/Amenities"));
 const RatesShopper = lazy(() => import("@/pages/marketing/RatesShopper"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
-const AgentPage = lazy(() => import("@/pages/agent/AgentPage"));
+const AgentPage = lazy(() => import("@/pages/agent/AgentPage").then(m => ({ default: m.default })));
 const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
 const SuperAdminDashboard = lazy(() => import("@/pages/superadmin/SuperAdminDashboard"));

@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Bot,
   LineChart,
+  ShieldCheck,
 } from 'lucide-react';
 import { NavLink } from '@/components/layout/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
