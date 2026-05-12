@@ -2,7 +2,7 @@
 // These types mirror the FastAPI backend contracts
 
 // ============== Auth Types ==============
-export type UserRole = 'OWNER' | 'MANAGER' | 'STAFF';
+export type UserRole = 'OWNER' | 'MANAGER' | 'STAFF' | 'SUPER_ADMIN';
 
 export interface User {
   id: string;
@@ -51,6 +51,10 @@ export interface Hotel {
   contact: ContactInfo;
   settings: HotelSettings;
   photos: RoomPhoto[];
+  feature_rate_shopper?: boolean;
+  feature_ai_agent?: boolean;
+  feature_guest_bot?: boolean;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }

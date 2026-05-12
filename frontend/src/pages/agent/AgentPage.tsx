@@ -19,7 +19,11 @@ interface ChatResponse {
     response: string;
 }
 
+import { useAuth } from '@/contexts/AuthContext';
+import { ShieldAlert } from 'lucide-react';
+
 const AgentPage = () => {
+    const { hotel } = useAuth();
     const [messages, setMessages] = useState<Message[]>([
         { role: 'ai', content: 'Namaste! Main Staybooker AI hun. Main aapki hotel growth aur operations mein kaise madad kar sakta hun?' }
     ]);
@@ -98,7 +102,23 @@ const AgentPage = () => {
             e.preventDefault();
             handleSend();
         }
-    };
+    if (hotel && !hotel.feature_ai_agent) {
+        return (
+            <div className="flex h-screen w-full flex-col items-center justify-center p-4 text-center">
+                <div className="p-6 bg-slate-100 rounded-full mb-6">
+                    <ShieldAlert className="h-16 w-16 text-slate-400" />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 mb-2">Feature Locked</h2>
+                <p className="text-slate-500 mb-8 max-w-md font-medium">
+                    AI Assistant is not included in your current plan. 
+                    Please contact support or your account manager to enable this feature.
+                </p>
+                <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 px-8 py-6 text-lg font-bold">
+                    Upgrade Now
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto p-4 h-[calc(100vh-4rem)] flex flex-col">

@@ -32,6 +32,7 @@ const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AgentPage = lazy(() => import("@/pages/agent/AgentPage"));
 const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
+const SuperAdminDashboard = lazy(() => import("@/pages/superadmin/SuperAdminDashboard"));
 
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -102,6 +103,7 @@ const App = () => (
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/agent" element={<AgentPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/superadmin" element={<SuperAdminDashboard />} />
               </Route>
 
               {/* Public Booking Engine Routes */}

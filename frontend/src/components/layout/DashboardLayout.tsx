@@ -1,6 +1,6 @@
 // Main Dashboard Layout - wraps all authenticated pages
 import { Outlet, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, BedDouble, Users, Settings, LogOut, Menu, X, Receipt, Link2 } from 'lucide-react';
+import { LayoutDashboard, Calendar, BedDouble, Users, Settings, LogOut, Menu, X, Receipt, Link2, ShieldX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
@@ -44,6 +44,29 @@ export function DashboardLayout() {
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (hotel && hotel.is_active === false) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="w-24 h-24 bg-red-100 rounded-3xl flex items-center justify-center mb-8 shadow-xl shadow-red-100 rotate-12">
+          <ShieldX className="w-12 h-12 text-red-600" />
+        </div>
+        <h1 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Account Deactivated</h1>
+        <p className="text-slate-500 max-w-lg mb-8 text-lg font-medium leading-relaxed">
+          Your access to the Staybooker platform has been suspended. This could be due to an expired subscription or a violation of terms.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button className="bg-slate-900 hover:bg-slate-800 px-8 py-6 text-lg font-bold rounded-2xl shadow-lg">
+            Contact Billing
+          </Button>
+          <Button variant="outline" className="px-8 py-6 text-lg font-bold rounded-2xl bg-white border-slate-200" onClick={logout}>
+            Logout
+          </Button>
+        </div>
+        <p className="mt-12 text-sm text-slate-400 font-bold uppercase tracking-widest">Staybooker Master Control</p>
+      </div>
+    );
   }
 
 

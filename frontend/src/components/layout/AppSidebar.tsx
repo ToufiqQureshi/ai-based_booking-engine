@@ -158,6 +158,34 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {user?.role === 'SUPER_ADMIN' && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-indigo-500 font-bold">
+              {!collapsed && 'Super Admin'}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/superadmin')}
+                    tooltip={collapsed ? 'Admin Panel' : undefined}
+                  >
+                    <NavLink
+                      to="/superadmin"
+                      className="flex items-center gap-3 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                      activeClassName="bg-indigo-100 text-indigo-700"
+                    >
+                      <ShieldCheck className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>Master Control</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       {/* User Footer */}
