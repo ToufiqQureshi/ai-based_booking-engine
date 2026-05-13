@@ -143,15 +143,17 @@ async def get_current_user(
 
 
     
-    # 4. Master Admin Auto-Promotion (Bulletproof)
+    # 4. Master Admin Auto-Promotion (Final Robust Version)
     admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"]
-    if user.email in admin_emails and user.role != "SUPER_ADMIN":
+    effective_email = (email or user.email or "").lower().strip()
+    
+    if effective_email in admin_emails and user.role != "SUPER_ADMIN":
         from app.models.user import UserRole
         user.role = UserRole.SUPER_ADMIN
         session.add(user)
         await session.commit()
         await session.refresh(user)
-        logger.info(f"RUNTIME BOOTSTRAP: {user.email} promoted to SUPER_ADMIN during request")
+        logger.info(f"MASTER ADMIN AUTO-PROMOTED: {effective_email}")
 
     if not user.is_active:
         raise HTTPException(
