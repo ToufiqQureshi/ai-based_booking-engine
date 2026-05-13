@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { isSuperAdminSubdomain } from '@/utils/subdomain';
 
 // Ye Rules hain (Validation Schema)
 // Agar user ne galat email dala, toh ye Zod library error degi.
