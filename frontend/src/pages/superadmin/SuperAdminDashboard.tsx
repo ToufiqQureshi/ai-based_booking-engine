@@ -78,6 +78,47 @@ export default function SuperAdminDashboard() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
+    const { data: hotels = [], isLoading, refetch } = useQuery<HotelAdminData[]>({
+        queryKey: ['superadmin-hotels'],
+        queryFn: () => apiClient.get('/superadmin/hotels'),
+        enabled: !!user && user.role === 'SUPER_ADMIN'
+    });
+
+    const { data: users = [], isLoading: isLoadingUsers } = useQuery<UserAdminData[]>({
+        queryKey: ['superadmin-users', userSearchQuery],
+        queryFn: () => apiClient.get(`/superadmin/users?query=${userSearchQuery}`),
+        enabled: !!user && user.role === 'SUPER_ADMIN'
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string, data: any }) =>
+            apiClient.patch(`/superadmin/hotels/${id}`, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+            toast({ title: 'Updated', description: 'Hotel configuration saved successfully.' });
+        }
+    });
+
+    const updateRoleMutation = useMutation({
+        mutationFn: ({ id, role }: { id: string, role: string }) =>
+            apiClient.patch(`/superadmin/users/${id}/role?role=${role}`, {}),
+        onSuccess: (res: any) => {
+            queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
+            toast({ title: 'Role Updated', description: res.message });
+        }
+    });
+
+    const deleteHotelMutation = useMutation({
+        mutationFn: (id: string) => apiClient.delete(`/superadmin/hotels/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+            toast({ title: 'Deleted', description: 'Hotel has been removed from the system.' });
+        },
+        onError: () => {
+            toast({ title: 'Error', description: 'Failed to delete hotel.', variant: 'destructive' });
+        }
+    });
+
     // Layer 0: Wait for authentication to initialize
     if (authLoading) {
         return (
@@ -122,45 +163,6 @@ export default function SuperAdminDashboard() {
             </div>
         );
     }
-
-    const { data: hotels = [], isLoading, refetch } = useQuery<HotelAdminData[]>({
-        queryKey: ['superadmin-hotels'],
-        queryFn: () => apiClient.get('/superadmin/hotels'),
-    });
-
-    const { data: users = [], isLoading: isLoadingUsers } = useQuery<UserAdminData[]>({
-        queryKey: ['superadmin-users', userSearchQuery],
-        queryFn: () => apiClient.get(`/superadmin/users?query=${userSearchQuery}`),
-    });
-
-    const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string, data: any }) =>
-            apiClient.patch(`/superadmin/hotels/${id}`, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
-            toast({ title: 'Updated', description: 'Hotel configuration saved successfully.' });
-        }
-    });
-
-    const updateRoleMutation = useMutation({
-        mutationFn: ({ id, role }: { id: string, role: string }) =>
-            apiClient.patch(`/superadmin/users/${id}/role?role=${role}`, {}),
-        onSuccess: (res: any) => {
-            queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
-            toast({ title: 'Role Updated', description: res.message });
-        }
-    });
-
-    const deleteHotelMutation = useMutation({
-        mutationFn: (id: string) => apiClient.delete(`/superadmin/hotels/${id}`),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
-            toast({ title: 'Deleted', description: 'Hotel has been removed from the system.' });
-        },
-        onError: () => {
-            toast({ title: 'Error', description: 'Failed to delete hotel.', variant: 'destructive' });
-        }
-    });
 
     const toggleActive = (id: string, currentStatus: boolean) => {
         updateMutation.mutate({ id, data: { is_active: !currentStatus } });
