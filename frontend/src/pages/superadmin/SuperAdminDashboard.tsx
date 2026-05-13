@@ -96,7 +96,10 @@ export default function SuperAdminDashboard() {
                         </div>
                         <Button 
                             className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12"
-                            onClick={() => logout()}
+                            onClick={async () => {
+                                await logout();
+                                window.location.href = '/login';
+                            }}
                         >
                             Return to Login
                         </Button>
