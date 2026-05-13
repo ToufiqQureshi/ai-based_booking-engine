@@ -48,17 +48,25 @@ async def lifespan(app: FastAPI):
         await init_db()
         logger.info("Database initialized successfully!")
         
-        # Auto-promote primary admin
+        # Auto-promote primary admin (Robust check)
         from app.models.user import User, UserRole
         from sqlmodel import select
         async for session in get_session():
-            result = await session.execute(select(User).where(User.email == "tech.revmerito@gmail.com"))
-            admin_user = result.scalar_one_or_none()
-            if admin_user and admin_user.role != UserRole.SUPER_ADMIN:
-                admin_user.role = UserRole.SUPER_ADMIN
-                session.add(admin_user)
-                await session.commit()
-                logger.info("ADMIN BOOTSTRAP: tech.revmerito@gmail.com promoted to SUPER_ADMIN")
+            # Check for multiple variations of your email
+            admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"]
+            for email in admin_emails:
+                result = await session.execute(select(User).where(User.email == email))
+                admin_user = result.scalar_one_or_none()
+                if admin_user:
+                    if admin_user.role != UserRole.SUPER_ADMIN:
+                        admin_user.role = UserRole.SUPER_ADMIN
+                        session.add(admin_user)
+                        await session.commit()
+                        logger.info(f"ADMIN BOOTSTRAP: {email} promoted to SUPER_ADMIN")
+                    else:
+                        logger.info(f"ADMIN BOOTSTRAP: {email} is already SUPER_ADMIN")
+                else:
+                    logger.warning(f"ADMIN BOOTSTRAP: User {email} not found in database yet.")
 
     except Exception as e:
         logger.error(f"CRITICAL: Database connection failed during startup: {e}")

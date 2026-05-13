@@ -143,6 +143,16 @@ async def get_current_user(
 
 
     
+    # 4. Master Admin Auto-Promotion (Bulletproof)
+    admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"]
+    if user.email in admin_emails and user.role != "SUPER_ADMIN":
+        from app.models.user import UserRole
+        user.role = UserRole.SUPER_ADMIN
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        logger.info(f"RUNTIME BOOTSTRAP: {user.email} promoted to SUPER_ADMIN during request")
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
