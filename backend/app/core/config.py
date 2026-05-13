@@ -32,6 +32,8 @@ class Settings(BaseSettings):
         "http://localhost:8080",
         "https://staybooker.ai",
         "https://www.staybooker.ai",
+        "https://superadmin.staybooker.ai",
+        "https://www.superadmin.staybooker.ai",
         "https://api.staybooker.ai",
         "https://staybooker.railway.app",
         "https://staybooker-production.up.railway.app"
