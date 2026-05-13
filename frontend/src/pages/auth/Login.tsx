@@ -44,9 +44,9 @@ export function LoginPage() {
   // Hook 2: Page change karne ke liye
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isSuperAdmin = isSuperAdminSubdomain();
 
   // Hook 3: Form handling (React Hook Form)
-  // Ye HTML form ka sara data sambhalta hai automatically.
   const {
     register,
     handleSubmit,
@@ -55,21 +55,19 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  // Ye function TAB chalega jab user "Sign In" button dabayega
   const onSubmit = async (data: LoginFormData) => {
     try {
-      // 1. Context wale login function ko call kiya
-      // (Ye background mein API call karega)
       await login({ email: data.email, password: data.password });
 
-      // 2. Agar sab sahi raha, toh user ko welcome message dikhao
       toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
+        title: isSuperAdmin ? 'Master Dashboard Access' : 'Welcome back!',
+        description: isSuperAdmin 
+          ? 'Authenticated for Global Administration.' 
+          : 'You have successfully logged in.',
       });
 
-      // 3. User ko Dashboard pe bhej do
-      navigate('/dashboard');
+      // Redirect based on entry point
+      navigate(isSuperAdmin ? '/superadmin' : '/dashboard');
     } catch (error) {
       // 4. Agar error aaya (jaise galat password)
 
@@ -97,17 +95,21 @@ export function LoginPage() {
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl overflow-hidden shadow-md">
             <img src="/logo.png" alt="Staybooker Logo" className="h-full w-full object-cover" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Staybooker</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {isSuperAdmin ? 'Staybooker Master Control' : 'Staybooker'}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Multi-tenant hotel management platform
+            {isSuperAdmin ? 'Global Platform Administration' : 'Multi-tenant hotel management platform'}
           </p>
         </div>
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl">Sign in</CardTitle>
+            <CardTitle className="text-xl">
+              {isSuperAdmin ? 'Admin Sign in' : 'Sign in'}
+            </CardTitle>
             <CardDescription>
-              Enter your credentials to access your dashboard
+              {isSuperAdmin ? 'Enter master credentials to access global settings' : 'Enter your credentials to access your dashboard'}
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -168,22 +170,31 @@ export function LoginPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className={`w-full ${isSuperAdmin ? 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100' : ''}`} disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Signing in...
                   </>
                 ) : (
-                  'Sign in'
+                  isSuperAdmin ? 'Master Access Login' : 'Sign in'
                 )}
               </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                Don&apos;t have an account?{' '}
-                <Link to="/signup" className="font-medium text-primary hover:underline">
-                  Create account
-                </Link>
-              </p>
+              
+              {!isSuperAdmin && (
+                <p className="text-center text-sm text-muted-foreground">
+                  Don&apos;t have an account?{' '}
+                  <Link to="/signup" className="font-medium text-primary hover:underline">
+                    Create account
+                  </Link>
+                </p>
+              )}
+
+              {isSuperAdmin && (
+                <p className="text-center text-[10px] text-slate-400 font-medium uppercase tracking-widest pt-4">
+                  Proprietary System - Authorized Access Only
+                </p>
+              )}
             </CardFooter>
           </form>
         </Card>

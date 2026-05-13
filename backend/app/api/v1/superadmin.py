@@ -116,3 +116,49 @@ async def update_subscription(
     session.add(sub)
     await session.commit()
     return {"message": "Subscription updated successfully"}
+
+@router.get("/users", response_model=List[dict])
+async def list_users(
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+    query: Optional[str] = None
+):
+    """List all users for admin management"""
+    stmt = select(User)
+    if query:
+        stmt = stmt.where(User.email.contains(query) | User.name.contains(query))
+    
+    result = await session.execute(stmt)
+    users = result.scalars().all()
+    
+    return [
+        {
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role,
+            "hotel_id": u.hotel_id,
+            "created_at": u.created_at.isoformat() if u.created_at else None
+        } for u in users
+    ]
+
+@router.patch("/users/{user_id}/role")
+async def update_user_role(
+    user_id: str,
+    role: str,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    """Update a user's role (e.g., promote to SUPER_ADMIN)"""
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if role not in [r.value for r in UserRole]:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {[r.value for r in UserRole]}")
+    
+    user.role = UserRole(role)
+    user.updated_at = datetime.utcnow()
+    session.add(user)
+    await session.commit()
+    return {"message": f"User role updated to {role}"}

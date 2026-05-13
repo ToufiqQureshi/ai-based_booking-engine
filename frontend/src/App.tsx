@@ -67,69 +67,86 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <ErrorBoundary>
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Public Auth Routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+import { isSuperAdminSubdomain } from "@/utils/subdomain";
 
+const App = () => {
+  const isSuperAdmin = isSuperAdminSubdomain();
 
-              {/* Protected Dashboard Routes */}
-              <Route element={<DashboardLayout />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/rooms" element={<RoomsPage />} />
-                <Route path="/rates" element={<RatesPage />} />
-                <Route path="/availability" element={<AvailabilityPage />} />
-                <Route path="/analytics" element={<AnalyticsDashboard />} />
-                <Route path="/bookings" element={<BookingsPage />} />
-                <Route path="/guests" element={<GuestsPage />} />
-                <Route path="/rate-shopper" element={<RatesShopper />} />
-                <Route path="/payments" element={<PaymentsPage />} />
-                <Route path="/addons" element={<AddonsPage />} />
-                <Route path="/amenities" element={<Amenities />} />
-                <Route path="/channel-settings" element={<ChannelSettings />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/integration" element={<IntegrationPage />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/agent" element={<AgentPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/superadmin" element={<SuperAdminDashboard />} />
-              </Route>
+  return (
+    <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public Auth Routes */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-              {/* Public Booking Engine Routes */}
-              <Route path="/book/:hotelSlug" element={<PublicBookingLayout />}>
-                <Route index element={<Navigate to="rooms" replace />} />
-                <Route path="rooms" element={<BookingSelection />} />
-                <Route path="checkout" element={<BookingCheckout />} />
-                <Route path="confirmation" element={<BookingConfirmation />} />
-              </Route>
+                {/* Super Admin Specialized Routing */}
+                {isSuperAdmin ? (
+                  <Route element={<DashboardLayout />}>
+                    <Route path="/superadmin" element={<SuperAdminDashboard />} />
+                    <Route path="/" element={<Navigate to="/superadmin" replace />} />
+                    {/* Hide other routes on admin subdomain for cleanliness */}
+                    <Route path="*" element={<Navigate to="/superadmin" replace />} />
+                  </Route>
+                ) : (
+                  <>
+                    {/* Protected Dashboard Routes */}
+                    <Route element={<DashboardLayout />}>
+                      <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="/rooms" element={<RoomsPage />} />
+                      <Route path="/rates" element={<RatesPage />} />
+                      <Route path="/availability" element={<AvailabilityPage />} />
+                      <Route path="/analytics" element={<AnalyticsDashboard />} />
+                      <Route path="/bookings" element={<BookingsPage />} />
+                      <Route path="/guests" element={<GuestsPage />} />
+                      <Route path="/rate-shopper" element={<RatesShopper />} />
+                      <Route path="/payments" element={<PaymentsPage />} />
+                      <Route path="/addons" element={<AddonsPage />} />
+                      <Route path="/amenities" element={<Amenities />} />
+                      <Route path="/channel-settings" element={<ChannelSettings />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/integration" element={<IntegrationPage />} />
+                      <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/agent" element={<AgentPage />} />
+                      <Route path="/profile" element={<ProfilePage />} />
+                      <Route path="/superadmin" element={<SuperAdminDashboard />} />
+                    </Route>
 
-              {/* Standalone Widget Route */}
-              <Route path="/book/:hotelSlug/widget" element={<BookingWidget />} />
-              <Route path="/book/:hotelSlug/chat" element={<ChatEmbed />} />
+                    {/* Public Booking Engine Routes */}
+                    <Route path="/book/:hotelSlug" element={<PublicBookingLayout />}>
+                      <Route index element={<Navigate to="rooms" replace />} />
+                      <Route path="rooms" element={<BookingSelection />} />
+                      <Route path="checkout" element={<BookingCheckout />} />
+                      <Route path="confirmation" element={<BookingConfirmation />} />
+                    </Route>
 
-              {/* Redirects */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    {/* Standalone Widget Route */}
+                    <Route path="/book/:hotelSlug/widget" element={<BookingWidget />} />
+                    <Route path="/book/:hotelSlug/chat" element={<ChatEmbed />} />
 
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-  </ErrorBoundary>
-);
+                    {/* Redirects */}
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+                    {/* 404 */}
+                    <Route path="*" element={<NotFound />} />
+                  </>
+                )}
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;

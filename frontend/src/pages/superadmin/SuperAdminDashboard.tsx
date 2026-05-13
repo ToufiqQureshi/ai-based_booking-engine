@@ -57,14 +57,63 @@ interface HotelAdminData {
     } | null;
 }
 
+interface UserAdminData {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    created_at: string;
+}
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
+
 export default function SuperAdminDashboard() {
+    const { user, logout } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
+    const [userSearchQuery, setUserSearchQuery] = useState('');
     const { toast } = useToast();
     const queryClient = useQueryClient();
+
+    // Layer 1: Role Enforcement
+    if (!user || user.role !== 'SUPER_ADMIN') {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+                <Card className="max-w-md w-full border-none shadow-2xl">
+                    <CardHeader className="text-center pb-2">
+                        <div className="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                            <XCircle className="w-10 h-10" />
+                        </div>
+                        <CardTitle className="text-2xl font-black text-slate-900">Access Denied</CardTitle>
+                        <CardDescription className="text-slate-500 font-medium">
+                            This area is restricted to authorized platform administrators only.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="p-4 bg-slate-100 rounded-xl text-xs font-mono text-slate-600 break-all">
+                            Error: Insufficient privileges for path /superadmin
+                        </div>
+                        <Button 
+                            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12"
+                            onClick={() => logout()}
+                        >
+                            Return to Login
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     const { data: hotels = [], isLoading, refetch } = useQuery<HotelAdminData[]>({
         queryKey: ['superadmin-hotels'],
         queryFn: () => apiClient.get('/superadmin/hotels'),
+    });
+
+    const { data: users = [], isLoading: isLoadingUsers } = useQuery<UserAdminData[]>({
+        queryKey: ['superadmin-users', userSearchQuery],
+        queryFn: () => apiClient.get(`/superadmin/users?query=${userSearchQuery}`),
     });
 
     const updateMutation = useMutation({
@@ -73,6 +122,15 @@ export default function SuperAdminDashboard() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
             toast({ title: 'Updated', description: 'Hotel configuration saved successfully.' });
+        }
+    });
+
+    const updateRoleMutation = useMutation({
+        mutationFn: ({ id, role }: { id: string, role: string }) => 
+            apiClient.patch(`/superadmin/users/${id}/role?role=${role}`, {}),
+        onSuccess: (res: any) => {
+            queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
+            toast({ title: 'Role Updated', description: res.message });
         }
     });
 
@@ -128,7 +186,7 @@ export default function SuperAdminDashboard() {
                     { label: 'Total Hotels', value: hotels.length, icon: Building2, color: 'bg-blue-500' },
                     { label: 'Active Subscriptions', value: hotels.filter(h => h.subscription?.status === 'active').length, icon: CheckCircle2, color: 'bg-emerald-500' },
                     { label: 'AI Features Active', value: hotels.filter(h => h.feature_ai_agent).length, icon: Bot, color: 'bg-indigo-500' },
-                    { label: 'Pending Expiries', value: 0, icon: Zap, color: 'bg-orange-500' },
+                    { label: 'Global Admins', value: users.filter(u => u.role === 'SUPER_ADMIN').length, icon: ShieldCheck, color: 'bg-purple-500' },
                 ].map((stat, i) => (
                     <Card key={i} className="border-none shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
                         <CardContent className="p-6 relative">
@@ -146,124 +204,200 @@ export default function SuperAdminDashboard() {
                 ))}
             </div>
 
-            {/* Main Table */}
-            <Card className="border-none shadow-sm overflow-hidden">
-                <CardHeader className="border-b bg-slate-50/50 p-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <CardTitle className="text-xl font-bold">Hotel Management</CardTitle>
-                            <CardDescription>Manage feature access, subscriptions and hotel status.</CardDescription>
-                        </div>
-                        <div className="relative w-full md:w-96">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <Input 
-                                placeholder="Search by hotel name or email..." 
-                                className="pl-10 bg-white border-slate-200"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                </CardHeader>
-                <Table>
-                    <TableHeader className="bg-slate-50/30">
-                        <TableRow>
-                            <TableHead className="font-bold py-4">Hotel Details</TableHead>
-                            <TableHead className="font-bold">Subscription</TableHead>
-                            <TableHead className="font-bold">AI Assistant</TableHead>
-                            <TableHead className="font-bold">Guest Bot</TableHead>
-                            <TableHead className="font-bold">Rate Shopper</TableHead>
-                            <TableHead className="font-bold text-right">Status</TableHead>
-                            <TableHead className="w-[80px]"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredHotels.map((hotel) => (
-                            <TableRow key={hotel.id} className="hover:bg-slate-50/50 transition-colors">
-                                <TableCell className="py-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400">
-                                            {hotel.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-slate-900 flex items-center gap-2">
-                                                {hotel.name}
-                                                <a href={`/book/${hotel.slug}`} target="_blank" rel="noreferrer">
-                                                    <ExternalLink className="w-3 h-3 text-slate-400 hover:text-indigo-600" />
-                                                </a>
+            <Tabs defaultValue="hotels" className="w-full">
+                <TabsList className="bg-slate-100 p-1 mb-6">
+                    <TabsTrigger value="hotels" className="font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Hotels Management</TabsTrigger>
+                    <TabsTrigger value="team" className="font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Team & Roles</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="hotels">
+                    {/* Main Table */}
+                    <Card className="border-none shadow-sm overflow-hidden">
+                        <CardHeader className="border-b bg-slate-50/50 p-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <CardTitle className="text-xl font-bold">Hotel Management</CardTitle>
+                                    <CardDescription>Manage feature access, subscriptions and hotel status.</CardDescription>
+                                </div>
+                                <div className="relative w-full md:w-96">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Input 
+                                        placeholder="Search by hotel name or email..." 
+                                        className="pl-10 bg-white border-slate-200"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <Table>
+                            <TableHeader className="bg-slate-50/30">
+                                <TableRow>
+                                    <TableHead className="font-bold py-4">Hotel Details</TableHead>
+                                    <TableHead className="font-bold">Subscription</TableHead>
+                                    <TableHead className="font-bold">AI Assistant</TableHead>
+                                    <TableHead className="font-bold">Guest Bot</TableHead>
+                                    <TableHead className="font-bold">Rate Shopper</TableHead>
+                                    <TableHead className="font-bold text-right">Status</TableHead>
+                                    <TableHead className="w-[80px]"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredHotels.map((hotel) => (
+                                    <TableRow key={hotel.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <TableCell className="py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400">
+                                                    {hotel.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-slate-900 flex items-center gap-2">
+                                                        {hotel.name}
+                                                        <a href={`/book/${hotel.slug}`} target="_blank" rel="noreferrer">
+                                                            <ExternalLink className="w-3 h-3 text-slate-400 hover:text-indigo-600" />
+                                                        </a>
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 font-medium">{hotel.owner_email}</div>
+                                                </div>
                                             </div>
-                                            <div className="text-xs text-slate-500 font-medium">{hotel.owner_email}</div>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col">
-                                        <Badge className={`w-fit mb-1 font-bold ${
-                                            hotel.subscription?.status === 'active' 
-                                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200' 
-                                            : 'bg-red-100 text-red-700 hover:bg-red-100 border-red-200'
-                                        }`}>
-                                            {hotel.subscription?.plan || 'Free'}
-                                        </Badge>
-                                        <span className="text-[10px] font-bold text-slate-400">
-                                            {hotel.subscription?.end_date ? `Expires: ${format(new Date(hotel.subscription.end_date), 'dd MMM yyyy')}` : 'No Expiry'}
-                                        </span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Switch 
-                                        checked={hotel.feature_ai_agent} 
-                                        onCheckedChange={() => toggleFeature(hotel.id, 'feature_ai_agent', hotel.feature_ai_agent)}
-                                        className="data-[state=checked]:bg-indigo-600"
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <Badge className={`w-fit mb-1 font-bold ${
+                                                    hotel.subscription?.status === 'active' 
+                                                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200' 
+                                                    : 'bg-red-100 text-red-700 hover:bg-red-100 border-red-200'
+                                                }`}>
+                                                    {hotel.subscription?.plan || 'Free'}
+                                                </Badge>
+                                                <span className="text-[10px] font-bold text-slate-400">
+                                                    {hotel.subscription?.end_date ? `Expires: ${format(new Date(hotel.subscription.end_date), 'dd MMM yyyy')}` : 'No Expiry'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Switch 
+                                                checked={hotel.feature_ai_agent} 
+                                                onCheckedChange={() => toggleFeature(hotel.id, 'feature_ai_agent', hotel.feature_ai_agent)}
+                                                className="data-[state=checked]:bg-indigo-600"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Switch 
+                                                checked={hotel.feature_guest_bot} 
+                                                onCheckedChange={() => toggleFeature(hotel.id, 'feature_guest_bot', hotel.feature_guest_bot)}
+                                                className="data-[state=checked]:bg-indigo-600"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Switch 
+                                                checked={hotel.feature_rate_shopper} 
+                                                onCheckedChange={() => toggleFeature(hotel.id, 'feature_rate_shopper', hotel.feature_rate_shopper)}
+                                                className="data-[state=checked]:bg-indigo-600"
+                                            />
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant={hotel.is_active ? "outline" : "destructive"} className={hotel.is_active ? "text-emerald-600 border-emerald-200 bg-emerald-50 font-bold" : "font-bold"}>
+                                                {hotel.is_active ? 'ACTIVE' : 'LOCKED'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <MoreVertical className="w-4 h-4 text-slate-400" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-56">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => toggleActive(hotel.id, hotel.is_active)}>
+                                                        {hotel.is_active ? <XCircle className="mr-2 w-4 h-4 text-red-500" /> : <CheckCircle2 className="mr-2 w-4 h-4 text-emerald-500" />}
+                                                        {hotel.is_active ? 'Disable Account' : 'Enable Account'}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem>
+                                                        <CreditCard className="mr-2 w-4 h-4" /> Manage Subscription
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-red-600 focus:text-red-700">
+                                                        Delete Hotel Data
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="team">
+                    <Card className="border-none shadow-sm overflow-hidden">
+                        <CardHeader className="border-b bg-slate-50/50 p-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <CardTitle className="text-xl font-bold">Team Management</CardTitle>
+                                    <CardDescription>Promote users to Super Admin to give them global access.</CardDescription>
+                                </div>
+                                <div className="relative w-full md:w-96">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Input 
+                                        placeholder="Search by name or email..." 
+                                        className="pl-10 bg-white border-slate-200"
+                                        value={userSearchQuery}
+                                        onChange={(e) => setUserSearchQuery(e.target.value)}
                                     />
-                                </TableCell>
-                                <TableCell>
-                                    <Switch 
-                                        checked={hotel.feature_guest_bot} 
-                                        onCheckedChange={() => toggleFeature(hotel.id, 'feature_guest_bot', hotel.feature_guest_bot)}
-                                        className="data-[state=checked]:bg-indigo-600"
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Switch 
-                                        checked={hotel.feature_rate_shopper} 
-                                        onCheckedChange={() => toggleFeature(hotel.id, 'feature_rate_shopper', hotel.feature_rate_shopper)}
-                                        className="data-[state=checked]:bg-indigo-600"
-                                    />
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Badge variant={hotel.is_active ? "outline" : "destructive"} className={hotel.is_active ? "text-emerald-600 border-emerald-200 bg-emerald-50 font-bold" : "font-bold"}>
-                                        {hotel.is_active ? 'ACTIVE' : 'LOCKED'}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreVertical className="w-4 h-4 text-slate-400" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-56">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => toggleActive(hotel.id, hotel.is_active)}>
-                                                {hotel.is_active ? <XCircle className="mr-2 w-4 h-4 text-red-500" /> : <CheckCircle2 className="mr-2 w-4 h-4 text-emerald-500" />}
-                                                {hotel.is_active ? 'Disable Account' : 'Enable Account'}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem>
-                                                <CreditCard className="mr-2 w-4 h-4" /> Manage Subscription
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-600 focus:text-red-700">
-                                                Delete Hotel Data
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Card>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <Table>
+                            <TableHeader className="bg-slate-50/30">
+                                <TableRow>
+                                    <TableHead className="font-bold py-4">User</TableHead>
+                                    <TableHead className="font-bold">Email</TableHead>
+                                    <TableHead className="font-bold">Current Role</TableHead>
+                                    <TableHead className="font-bold">Joined</TableHead>
+                                    <TableHead className="font-bold text-right">Access Level</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {users.map((u: any) => (
+                                    <TableRow key={u.id}>
+                                        <TableCell className="font-bold text-slate-900">{u.name}</TableCell>
+                                        <TableCell>{u.email}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className="font-bold uppercase text-[10px] tracking-widest">
+                                                {u.role}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-slate-500">{format(new Date(u.created_at), 'dd MMM yyyy')}</TableCell>
+                                        <TableCell className="text-right">
+                                            {u.role === 'SUPER_ADMIN' ? (
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
+                                                    className="text-red-600 border-red-200 hover:bg-red-50 font-bold"
+                                                    onClick={() => updateRoleMutation.mutate({ id: u.id, role: 'OWNER' })}
+                                                >
+                                                    Remove Admin
+                                                </Button>
+                                            ) : (
+                                                <Button 
+                                                    size="sm" 
+                                                    className="bg-indigo-600 hover:bg-indigo-700 font-bold"
+                                                    onClick={() => updateRoleMutation.mutate({ id: u.id, role: 'SUPER_ADMIN' })}
+                                                >
+                                                    Make Super Admin
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
