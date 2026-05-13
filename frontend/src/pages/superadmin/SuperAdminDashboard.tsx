@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ShieldCheck,
-    Shield,
     Building2,
     User as UserIcon,
     Users,
@@ -196,7 +195,7 @@ export default function SuperAdminDashboard() {
             <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 h-16 px-8 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-100">
-                        <Shield className="text-white w-5 h-5" />
+                        <ShieldCheck className="text-white w-5 h-5" />
                     </div>
                     <div>
                         <h1 className="text-lg font-bold text-slate-900 leading-none">Staybooker <span className="text-indigo-600">Admin</span></h1>
