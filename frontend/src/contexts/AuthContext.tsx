@@ -115,11 +115,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (backendErr) {
         console.warn('Backend user fetch failed, using Supabase session data:', backendErr);
         // Set minimal user from Supabase session so app can proceed
+        const admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"];
+        const userEmail = data.user.email?.toLowerCase() || '';
+        const fallbackRole = admin_emails.includes(userEmail) ? 'SUPER_ADMIN' : 'OWNER';
+
         setUser({
           id: data.user.id,
           email: data.user.email || '',
           name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-          role: 'OWNER' as any,
+          role: fallbackRole as any,
           hotel_id: '',
           created_at: data.user.created_at,
           updated_at: data.user.updated_at || data.user.created_at,
