@@ -2,20 +2,27 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ShieldCheck,
+    Shield,
     Building2,
     User as UserIcon,
-    CreditCard,
-    Zap,
-    Bot,
-    TrendingUp,
-    CheckCircle2,
-    XCircle,
+    Users,
+    LogOut,
+    Hotel,
     Search,
     RefreshCw,
     ExternalLink,
     MoreVertical,
     FileDown,
-    Trash2
+    Trash2,
+    BrainCircuit,
+    MessageSquare,
+    TrendingUp,
+    MapPin,
+    XCircle,
+    CheckCircle2,
+    CreditCard,
+    Zap,
+    Bot
 } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
