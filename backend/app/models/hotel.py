@@ -93,11 +93,26 @@ class Hotel(HotelBase, table=True):
     ai_base_url: Optional[str] = Field(default=None)
     
     # Relationships
-    users: List["User"] = Relationship(back_populates="hotel")
-    room_types: List["RoomType"] = Relationship(back_populates="hotel")
-    bookings: List["Booking"] = Relationship(back_populates="hotel")
-    rate_plans: List["RatePlan"] = Relationship(back_populates="hotel")
-    subscription: Optional["Subscription"] = Relationship(back_populates="hotel")
+    users: List["User"] = Relationship(
+        back_populates="hotel", 
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    room_types: List["RoomType"] = Relationship(
+        back_populates="hotel",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    bookings: List["Booking"] = Relationship(
+        back_populates="hotel",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    rate_plans: List["RatePlan"] = Relationship(
+        back_populates="hotel",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    subscription: Optional["Subscription"] = Relationship(
+        back_populates="hotel",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
 class HotelCreate(SQLModel):
