@@ -90,10 +90,9 @@ const App = () => {
 
                 {/* Super Admin Specialized Routing */}
                 {isSuperAdmin ? (
-                  <Route element={<DashboardLayout />}>
+                  <Route path="/">
                     <Route path="/superadmin" element={<SuperAdminDashboard />} />
-                    <Route path="/" element={<Navigate to="/superadmin" replace />} />
-                    {/* Hide other routes on admin subdomain for cleanliness */}
+                    <Route index element={<Navigate to="/superadmin" replace />} />
                     <Route path="*" element={<Navigate to="/superadmin" replace />} />
                   </Route>
                 ) : (

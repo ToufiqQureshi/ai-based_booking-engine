@@ -25,7 +25,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import get_settings
-from app.core.database import init_db
+from app.core.database import init_db, get_session
 from app.core.limiter import limiter, _rate_limit_exceeded_handler, RateLimitExceeded
 
 # Import routers
@@ -47,6 +47,19 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
         logger.info("Database initialized successfully!")
+        
+        # Auto-promote primary admin
+        from app.models.user import User, UserRole
+        from sqlmodel import select
+        async for session in get_session():
+            result = await session.execute(select(User).where(User.email == "tech.revmerito@gmail.com"))
+            admin_user = result.scalar_one_or_none()
+            if admin_user and admin_user.role != UserRole.SUPER_ADMIN:
+                admin_user.role = UserRole.SUPER_ADMIN
+                session.add(admin_user)
+                await session.commit()
+                logger.info("ADMIN BOOTSTRAP: tech.revmerito@gmail.com promoted to SUPER_ADMIN")
+
     except Exception as e:
         logger.error(f"CRITICAL: Database connection failed during startup: {e}")
         # We don't re-raise here so the app can at least boot and serve /health

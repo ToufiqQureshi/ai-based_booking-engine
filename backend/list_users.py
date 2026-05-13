@@ -1,15 +1,14 @@
 import asyncio
 from sqlmodel import select
-from app.core.database import async_session
+from app.core.database import get_session
 from app.models.user import User
 
 async def list_users():
-    async with async_session() as session:
-        statement = select(User)
-        results = await session.execute(statement)
-        users = results.scalars().all()
+    async for session in get_session():
+        result = await session.execute(select(User))
+        users = result.scalars().all()
         for u in users:
-            print(f"Email: {u.email}, Role: {u.role}")
+            print(f"ID: {u.id} | Email: {u.email} | Role: {u.role} | Name: {u.name}")
 
 if __name__ == "__main__":
     asyncio.run(list_users())
