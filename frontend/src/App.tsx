@@ -115,9 +115,10 @@ const App = () => {
                       <Route path="/integration" element={<IntegrationPage />} />
                       <Route path="/admin" element={<AdminDashboard />} />
                       <Route path="/agent" element={<AgentPage />} />
-                      <Route path="/profile" element={<ProfilePage />} />
-                      <Route path="/superadmin" element={<SuperAdminDashboard />} />
-                    </Route>
+                      <Route path="/settings/profile" element={<ProfilePage />} />
+                    
+                    {/* Note: /superadmin is only available on the admin subdomain above */}
+                  </Route>
 
                     {/* Public Booking Engine Routes */}
                     <Route path="/book/:hotelSlug" element={<PublicBookingLayout />}>

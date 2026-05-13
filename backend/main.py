@@ -74,10 +74,19 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
-# CORS Middleware - Frontend ko allow karna hai
+# Prepare CORS Origins (Settings + SuperAdmin subdomains)
+allowed_origins = list(settings.CORS_ORIGINS)
+extra_origins = [
+    "https://superadmin.staybooker.ai",
+    "https://www.superadmin.staybooker.ai"
+]
+for origin in extra_origins:
+    if origin not in allowed_origins:
+        allowed_origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
