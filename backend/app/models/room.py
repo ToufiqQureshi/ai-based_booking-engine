@@ -51,6 +51,7 @@ class RoomTypeBase(SQLModel):
     floor: Optional[str] = Field(default=None, description="Floor level")
     smoking_allowed: bool = Field(default=False)
     is_pet_friendly: bool = Field(default=False)
+    market_price: Optional[float] = Field(default=None, description="Original price for strike-through display at room level")
 
 
 class RoomType(RoomTypeBase, table=True):
@@ -98,6 +99,7 @@ class RoomTypeUpdate(SQLModel):
     base_occupancy: Optional[int] = None
     max_occupancy: Optional[int] = None
     base_price: Optional[float] = None
+    market_price: Optional[float] = None
     total_inventory: Optional[int] = None
     is_active: Optional[bool] = None
     photos: Optional[List[Dict[str, Any]]] = None

@@ -47,6 +47,7 @@ const ratePlanSchema = z.object({
     inclusions: z.string().optional(), // Comma-separated string, will be converted to array
     is_package: z.boolean().default(false),
     package_items: z.string().optional(), // Comma-separated string for package components
+    market_price: z.coerce.number().min(0).optional().nullable(),
 });
 
 interface RatePlanDialogProps {
@@ -76,6 +77,7 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
             inclusions: '',
             is_package: false,
             package_items: '',
+            market_price: undefined,
         },
     });
 
@@ -94,6 +96,7 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                 inclusions: (planToEdit.inclusions || []).join(', '),
                 is_package: planToEdit.is_package || false,
                 package_items: (planToEdit.package_items || []).join(', '),
+                market_price: planToEdit.market_price,
             });
         } else {
             form.reset({
@@ -109,6 +112,7 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                 inclusions: '',
                 is_package: defaultIsPackage,
                 package_items: '',
+                market_price: undefined,
             });
         }
     }, [planToEdit, form, open]);
@@ -187,6 +191,28 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                     <FormControl>
                                         <Input placeholder="Short description for guests" {...field} />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="market_price"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Market Price (Strike-through)</FormLabel>
+                                    <FormControl>
+                                        <Input 
+                                            type="number" 
+                                            placeholder="Optional original price (e.g. 15000)" 
+                                            {...field} 
+                                            value={field.value ?? ''}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>
+                                        If set, this will appear as a strike-through price on the booking engine.
+                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}

@@ -26,6 +26,7 @@ class RatePlanBase(SQLModel):
     inclusions: list = Field(default_factory=list, sa_column=Column(JSON))  # e.g. ["Free WiFi", "Airport Pickup"]
     is_package: bool = Field(default=False)
     package_items: list = Field(default_factory=list, sa_column=Column(JSON)) # Specific bundle items for packages
+    market_price: Optional[float] = Field(default=None, description="Original price for strike-through display")
 
 class RatePlan(RatePlanBase, table=True):
     __tablename__ = "rate_plans"

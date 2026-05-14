@@ -65,6 +65,7 @@ const roomSchema = z.object({
         order: z.number(),
     })).default([]),
     amenity_ids: z.array(z.string()).default([]),
+    market_price: z.coerce.number().min(0).optional().nullable(),
 });
 
 interface RoomDialogProps {
@@ -99,6 +100,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
             smoking_allowed: false,
             is_pet_friendly: false,
             photos: [],
+            market_price: undefined,
         },
     });
 
@@ -139,6 +141,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     smoking_allowed: initialData.smoking_allowed || false,
                     is_pet_friendly: initialData.is_pet_friendly || false,
                     photos: initialData.photos || [],
+                    market_price: initialData.market_price,
                     // Map existing Linked Amenities to IDs
                     // If backend sends 'amenities' as objects, we map them to IDs
                     amenity_ids: initialData.amenities?.map(a => a.id) || [],
@@ -164,6 +167,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     is_pet_friendly: false,
                     photos: [],
                     amenity_ids: [],
+                    market_price: undefined,
                 });
             }
         }
@@ -473,6 +477,25 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                 <Input type="number" {...field} />
                                             </FormControl>
                                             <p className="text-[10px] text-muted-foreground">Standard room rate for base occupancy.</p>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="market_price"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Market Price (Strike-through) (₹)</FormLabel>
+                                            <FormControl>
+                                                <Input 
+                                                    type="number" 
+                                                    placeholder="e.g. 15000" 
+                                                    {...field} 
+                                                    value={field.value ?? ''}
+                                                />
+                                            </FormControl>
+                                            <p className="text-[10px] text-muted-foreground">Optional original price for strike-through.</p>
                                             <FormMessage />
                                         </FormItem>
                                     )}

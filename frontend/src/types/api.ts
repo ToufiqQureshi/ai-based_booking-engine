@@ -121,6 +121,7 @@ export interface RoomType {
   floor?: string;
   smoking_allowed?: boolean;
   is_pet_friendly?: boolean;
+  market_price?: number;
   photos: RoomPhoto[];
   amenities: Amenity[];
   is_active: boolean;
@@ -162,6 +163,7 @@ export interface RatePlan {
   inclusions?: string[];
   is_package?: boolean;
   package_items?: string[];
+  market_price?: number;
   created_at: string;
 }
 
@@ -363,6 +365,7 @@ export interface RateOption {
   cancellation_policy?: string;
   savings_text?: string;
   is_package?: boolean;
+  market_price?: number;
 }
 
 export interface PublicRoomSearchResult extends RoomType {

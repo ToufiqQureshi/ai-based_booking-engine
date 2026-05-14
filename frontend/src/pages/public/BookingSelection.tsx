@@ -789,9 +789,11 @@ export default function BookingSelection() {
                                                                                     </span>
                                                                                     <span className="text-[10px] text-slate-400 font-medium">total</span>
                                                                                 </div>
-                                                                                <p className="text-[10px] text-slate-300 line-through">
-                                                                                    {formatCurrency(plan.total_price * 1.12)}
-                                                                                </p>
+                                                                                {(plan.market_price || room.market_price) && (
+                                                                                    <p className="text-[10px] text-slate-300 line-through">
+                                                                                        {formatCurrency(plan.market_price || room.market_price || 0)}
+                                                                                    </p>
+                                                                                )}
                                                                             </div>
                                                                             <Button 
                                                                                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 h-9 rounded-lg shadow-sm transition-all active:scale-95"
