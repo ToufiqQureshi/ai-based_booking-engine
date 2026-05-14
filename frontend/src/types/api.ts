@@ -123,7 +123,7 @@ export interface RoomType {
   is_pet_friendly?: boolean;
   market_price?: number;
   photos: RoomPhoto[];
-  amenities: Amenity[];
+  amenities: RoomAmenity[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -133,8 +133,17 @@ export interface RoomPhoto {
   id?: string;
   url: string;
   caption?: string;
-  is_primary: boolean;
-  order: number;
+  is_primary?: boolean;
+  order?: number;
+  sort_order?: number;
+}
+
+// Amenity as stored in room JSON column (subset of full Amenity)
+export interface RoomAmenity {
+  id: string;
+  name: string;
+  icon?: string;
+  category?: string;
 }
 
 export interface Amenity {

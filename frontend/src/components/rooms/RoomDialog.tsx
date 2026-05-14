@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Ruler, BedDouble, Info, LayoutGrid, CreditCard, Users, Zap } from 'lucide-react';
+import { Loader2, Ruler, BedDouble, Info, LayoutGrid, CreditCard, Users, Zap, Image as ImageIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +21,11 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
     FormMessage,
     FormDescription,
 } from '@/components/ui/form';
@@ -29,7 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { apiClient } from '@/api/client';
-import { RoomType, Amenity, RoomPhoto } from '@/types/api';
+import { RoomType, Amenity, RoomPhoto, RoomAmenity } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
 import { RoomImageUploader } from './RoomImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,8 +63,9 @@ const roomSchema = z.object({
         id: z.string().optional(),
         url: z.string(),
         caption: z.string().optional(),
-        is_primary: z.boolean(),
-        order: z.number(),
+        is_primary: z.boolean().optional().default(false),
+        order: z.number().optional().default(0),
+        sort_order: z.number().optional(),
     })).default([]),
     amenity_ids: z.array(z.string()).default([]),
     market_price: z.coerce.number().min(0).optional().nullable(),
@@ -385,6 +391,33 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         )}
                                     />
                                 </div>
+                            </div>
+                        </section>
+
+                        {/* Room Photos Section */}
+                        <section className="space-y-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-100/50 flex items-center justify-center shadow-sm">
+                                    <ImageIcon className="w-6 h-6 text-indigo-600" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-indigo-950 tracking-tight">Visual Identity</h3>
+                            </div>
+                            <div className="p-10 bg-indigo-50/10 rounded-[32px] border border-indigo-100/30">
+                                <FormField
+                                    control={form.control}
+                                    name="photos"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <RoomImageUploader 
+                                                    images={field.value as RoomPhoto[]} 
+                                                    onChange={field.onChange} 
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
                         </section>
 

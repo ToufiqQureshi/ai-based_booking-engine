@@ -19,7 +19,7 @@ interface RoomCardProps {
 }
 
 export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardProps) {
-    const primaryPhoto = room.photos?.find(p => p.is_primary) ?? room.photos?.[0];
+    const primaryPhoto = room.photos?.find(p => p.is_primary) || room.photos?.[0] || null;
 
     return (
         <Card className="overflow-hidden group hover:shadow-[0_20px_50px_rgba(79,70,229,0.15)] transition-all duration-500 border-none bg-white/70 backdrop-blur-xl rounded-[32px] ring-1 ring-indigo-50/50 hover:ring-indigo-100/50 relative">

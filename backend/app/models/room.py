@@ -112,6 +112,10 @@ class RoomTypeUpdate(SQLModel):
     extra_person_price: Optional[float] = None
     extra_adult_price: Optional[float] = None
     extra_child_price: Optional[float] = None
+    view: Optional[str] = None
+    floor: Optional[str] = None
+    smoking_allowed: Optional[bool] = None
+    is_pet_friendly: Optional[bool] = None
 
 
 class RoomBlockBase(SQLModel):
