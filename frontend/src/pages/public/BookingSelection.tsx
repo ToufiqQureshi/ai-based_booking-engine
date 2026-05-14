@@ -718,88 +718,86 @@ export default function BookingSelection() {
                                                             </div>
                                                         </div>
 
-                                                        {/* Content Section: Focused on Hierarchy */}
-                                                        <div className="flex-1 flex flex-col p-8 lg:p-10">
+                                                        {/* Content Section: More Compact & Professional */}
+                                                        <div className="flex-1 flex flex-col p-6 lg:p-7">
                                                             {/* Header Area */}
-                                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
-                                                                <div className="space-y-2">
-                                                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors duration-300">
+                                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-5">
+                                                                <div className="space-y-1">
+                                                                    <h3 className="text-xl font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors duration-300">
                                                                         {room.name}
                                                                     </h3>
-                                                                    <div className="flex items-center gap-4 text-slate-400 font-bold text-xs uppercase tracking-widest">
-                                                                        <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> {room.max_occupancy} Adults</span>
-                                                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                                                                        <span className="flex items-center gap-1.5"><Maximize className="w-3.5 h-3.5" /> {room.room_size || '---'} ft²</span>
+                                                                    <div className="flex items-center gap-3 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
+                                                                        <span className="flex items-center gap-1.5"><User className="w-3 h-3" /> {room.max_occupancy} Adults</span>
+                                                                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                                                        <span className="flex items-center gap-1.5"><Maximize className="w-3 h-3" /> {room.room_size || '---'} ft²</span>
                                                                     </div>
                                                                 </div>
                                                                 <Button 
-                                                                    variant="outline" 
+                                                                    variant="ghost" 
                                                                     size="sm" 
-                                                                    className="rounded-full border-slate-200 text-slate-600 font-black text-[10px] px-6 h-10 hover:bg-slate-50 hover:text-indigo-600 transition-all"
+                                                                    className="rounded-full text-indigo-600 font-black text-[10px] px-4 h-8 hover:bg-indigo-50 transition-all"
                                                                     onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}
                                                                 >
-                                                                    ROOM DETAILS
+                                                                    DETAILS
                                                                 </Button>
                                                             </div>
 
-                                                            {/* Amenities: Subtle & Clean */}
-                                                            <div className="flex flex-wrap gap-3 mb-10">
-                                                                {(room.amenities || []).slice(0, 4).map((am: any, i) => {
+                                                            {/* Amenities: Compact List */}
+                                                            <div className="flex flex-wrap gap-2 mb-6">
+                                                                {(room.amenities || []).slice(0, 5).map((am: any, i) => {
                                                                     const Icon = ICONS[am.icon_slug || am.icon] || Wifi;
                                                                     return (
-                                                                        <div key={i} className="flex items-center gap-2 py-1.5 pr-4 rounded-full" title={am.name}>
-                                                                            <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
-                                                                                <Icon className="w-4 h-4 text-indigo-500" />
-                                                                            </div>
-                                                                            <span className="text-[11px] font-bold text-slate-500">{am.name}</span>
+                                                                        <div key={i} className="flex items-center gap-1.5 bg-slate-50/80 px-2.5 py-1 rounded-lg border border-slate-100" title={am.name}>
+                                                                            <Icon className="w-3 h-3 text-slate-400" />
+                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase">{am.name}</span>
                                                                         </div>
                                                                     );
                                                                 })}
                                                             </div>
 
-                                                            {/* Rates: Minimal List with No Heavy Boxes */}
-                                                            <div className="space-y-4">
+                                                            {/* Rates: Sleek & Integrated */}
+                                                            <div className="space-y-2.5">
                                                                 {filteredRates.map((plan, idx) => (
                                                                     <div 
                                                                         key={plan.id} 
                                                                         className={cn(
-                                                                            "flex flex-col sm:flex-row items-center justify-between p-6 rounded-2xl border border-transparent hover:border-slate-100 hover:bg-slate-50/50 transition-all duration-300",
-                                                                            idx === 0 && "bg-slate-50/30"
+                                                                            "flex flex-col sm:flex-row items-center justify-between p-4 rounded-xl border border-slate-100/60 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-300",
+                                                                            idx === 0 && "bg-slate-50/50"
                                                                         )}
                                                                     >
-                                                                        <div className="flex-1 w-full sm:w-auto mb-4 sm:mb-0">
-                                                                            <div className="flex items-center gap-3 mb-2">
-                                                                                <span className="text-base font-black text-slate-800 tracking-tight">{plan.name}</span>
+                                                                        <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
+                                                                            <div className="flex items-center gap-2 mb-1">
+                                                                                <span className="text-sm font-black text-slate-800 tracking-tight uppercase">{plan.name}</span>
                                                                                 {plan.savings_text && (
-                                                                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-[10px] px-2 py-0.5 rounded-md font-black uppercase">
+                                                                                    <span className="bg-green-100 text-green-700 text-[9px] px-1.5 py-0.5 rounded font-black uppercase">
                                                                                         {plan.savings_text}
-                                                                                    </Badge>
+                                                                                    </span>
                                                                                 )}
                                                                             </div>
-                                                                            <div className="flex flex-wrap gap-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                                                                <span className="flex items-center gap-1.5"><Utensils className="w-3.5 h-3.5" /> {plan.meal_plan_code}</span>
-                                                                                <span className="flex items-center gap-1.5 text-green-600/70"><Check className="w-3.5 h-3.5" /> Free Cancellation</span>
+                                                                            <div className="flex flex-wrap gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                                <span className="flex items-center gap-1.5"><Utensils className="w-3 h-3" /> {plan.meal_plan_code}</span>
+                                                                                <span className="flex items-center gap-1.5 text-green-600/80"><Check className="w-3 h-3" /> Free Cancellation</span>
                                                                             </div>
                                                                         </div>
 
-                                                                        <div className="flex items-center justify-between sm:justify-end gap-8 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 pt-4 sm:pt-0">
+                                                                        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto border-t sm:border-t-0 border-slate-100/60 pt-3 sm:pt-0">
                                                                             <div className="text-right">
-                                                                                <p className="text-[10px] font-bold text-slate-300 line-through mb-0.5">
+                                                                                <p className="text-[10px] font-bold text-slate-300 line-through mb-0">
                                                                                     {formatCurrency(plan.total_price * 1.12)}
                                                                                 </p>
-                                                                                <div className="flex items-baseline gap-1.5">
-                                                                                    <span className="text-3xl font-black text-slate-900 tracking-tighter">
+                                                                                <div className="flex items-baseline gap-1">
+                                                                                    <span className="text-xl font-black text-slate-900 tracking-tight">
                                                                                         {formatCurrency(plan.total_price)}
                                                                                     </span>
-                                                                                    <span className="text-[10px] font-black text-slate-400 uppercase">/ Total</span>
+                                                                                    <span className="text-[9px] font-black text-slate-400 uppercase">/ Total</span>
                                                                                 </div>
                                                                             </div>
                                                                             <Button 
-                                                                                className="bg-slate-900 hover:bg-indigo-600 text-white font-black px-10 h-14 rounded-2xl shadow-lg shadow-slate-200 transition-all duration-300 active:scale-95 group/btn"
+                                                                                className="bg-slate-900 hover:bg-indigo-600 text-white font-black px-6 h-11 rounded-xl shadow-md shadow-slate-200 transition-all duration-300 active:scale-95 group/btn"
                                                                                 onClick={() => handleSelectRate(room, plan)}
                                                                             >
                                                                                 SELECT 
-                                                                                <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                                                                                <ArrowRight className="w-3.5 h-3.5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                                                                             </Button>
                                                                         </div>
                                                                     </div>
