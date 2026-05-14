@@ -1,19 +1,21 @@
 // Rooms Page - Room Types Management with Ultra-Premium UI
 import { Plus, Search, Grid, List, Bed, Loader2, Package, Sparkles, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { RoomDialog } from '@/components/rooms/RoomDialog';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { cn } from '@/lib/utils';
 import { RoomType, RatePlan } from '@/types/api';
 import { RoomCard } from '@/components/rooms/RoomCard';
 import { RoomListItem } from '@/components/rooms/RoomListItem';
-import { RatePlanDialog } from '@/components/rates/RatePlanDialog';
-import { PackageCard } from '@/components/rooms/PackageCard';
+
+// Lazy load dialog components to avoid circular dependency / "Form is not defined" error
+const RoomDialog = lazy(() => import('@/components/rooms/RoomDialog').then(m => ({ default: m.RoomDialog })));
+const RatePlanDialog = lazy(() => import('@/components/rates/RatePlanDialog').then(m => ({ default: m.RatePlanDialog })));
+const PackageCard = lazy(() => import('@/components/rooms/PackageCard').then(m => ({ default: m.PackageCard })));
 
 export function RoomsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -162,20 +164,24 @@ export function RoomsPage() {
         </div>
       </div>
 
-      <RoomDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onSuccess={refetchRooms}
-        initialData={selectedRoom}
-      />
+      <Suspense fallback={null}>
+        <RoomDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSuccess={refetchRooms}
+          initialData={selectedRoom}
+        />
+      </Suspense>
 
-      <RatePlanDialog
-        open={isPackageDialogOpen}
-        onOpenChange={setIsPackageDialogOpen}
-        onSuccess={refetchRates}
-        planToEdit={selectedPackage}
-        defaultIsPackage={activeTab === 'package'}
-      />
+      <Suspense fallback={null}>
+        <RatePlanDialog
+          open={isPackageDialogOpen}
+          onOpenChange={setIsPackageDialogOpen}
+          onSuccess={refetchRates}
+          planToEdit={selectedPackage}
+          defaultIsPackage={activeTab === 'package'}
+        />
+      </Suspense>
 
       {/* Control Bar: Search & View Mode */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between sticky top-6 z-30 px-2">
@@ -281,18 +287,20 @@ export function RoomsPage() {
                   />
                 ))
               ) : (
-                (displayItems as RatePlan[]).map((pkg) => (
-                  <PackageCard
-                    key={pkg.id}
-                    pkg={pkg}
-                    onEdit={handleEditOpen}
-                    onDelete={(id) => {
-                      if (confirm("Permanently remove this package?")) {
-                        apiClient.delete(`/rates/plans/${id}`).then(() => refetchRates());
-                      }
-                    }}
-                  />
-                ))
+                <Suspense fallback={null}>
+                  {(displayItems as RatePlan[]).map((pkg) => (
+                    <PackageCard
+                      key={pkg.id}
+                      pkg={pkg}
+                      onEdit={handleEditOpen}
+                      onDelete={(id) => {
+                        if (confirm("Permanently remove this package?")) {
+                          apiClient.delete(`/rates/plans/${id}`).then(() => refetchRates());
+                        }
+                      }}
+                    />
+                  ))}
+                </Suspense>
               )}
             </div>
           )}
