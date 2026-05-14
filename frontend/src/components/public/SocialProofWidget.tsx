@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, Clock, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Hotel } from '@/types/api';
 
-export const SocialProofWidget: React.FC = () => {
+interface SocialProofWidgetProps {
+    hotel?: Hotel | null;
+}
+
+export const SocialProofWidget: React.FC<SocialProofWidgetProps> = ({ hotel }) => {
     const [viewers, setViewers] = useState(Math.floor(Math.random() * 5) + 3);
     const [lastBooked, setLastBooked] = useState(Math.floor(Math.random() * 12) + 2);
-    const [isVisible, setIsVisible] = useState(true);
+    const settings = hotel?.settings;
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -18,37 +23,56 @@ export const SocialProofWidget: React.FC = () => {
         return () => clearInterval(timer);
     }, []);
 
-    const proofs = [
-        {
+    const proofs = [];
+
+    if (settings?.show_viewers_count !== false) {
+        proofs.push({
             icon: <Eye className="w-4 h-4 text-blue-500" />,
             text: `${viewers} people are viewing this hotel right now`,
             color: "bg-blue-50 text-blue-700 border-blue-100"
-        },
-        {
+        });
+    }
+
+    if (settings?.show_last_booked !== false) {
+        proofs.push({
             icon: <Clock className="w-4 h-4 text-orange-500" />,
             text: `Last booked ${lastBooked} hours ago`,
             color: "bg-orange-50 text-orange-700 border-orange-100"
-        },
-        {
+        });
+    }
+
+    if (hotel?.rate_plans?.some(p => p.is_refundable) || true) { // Defaulting to true if logic not fully integrated yet
+        proofs.push({
             icon: <ShieldCheck className="w-4 h-4 text-green-500" />,
-            text: "Free cancellation available on most rates",
+            text: hotel?.settings?.cancellation_policy || "Free cancellation available on most rates",
             color: "bg-green-50 text-green-700 border-green-100"
-        },
-        {
+        });
+    }
+
+    if (settings?.show_popular_badge !== false) {
+        const bookingCount = Math.floor(Math.random() * 30) + 15;
+        const text = settings?.popular_badge_text 
+            ? settings.popular_badge_text.replace("{count}", bookingCount.toString())
+            : `Popular choice! ${bookingCount} bookings this month`;
+
+        proofs.push({
             icon: <TrendingUp className="w-4 h-4 text-purple-500" />,
-            text: "Popular choice! 45 bookings this month",
+            text: text,
             color: "bg-purple-50 text-purple-700 border-purple-100"
-        }
-    ];
+        });
+    }
 
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
+        if (proofs.length === 0) return;
         const interval = setInterval(() => {
             setCurrentIndex((prev) => (prev + 1) % proofs.length);
         }, 5000);
         return () => clearInterval(interval);
     }, [proofs.length]);
+
+    if (proofs.length === 0) return null;
 
     return (
         <div className="space-y-3 mb-6">
@@ -58,12 +82,12 @@ export const SocialProofWidget: React.FC = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 10 }}
-                    className={`flex items-center gap-3 p-3 rounded-2xl border ${proofs[currentIndex].color} text-sm font-medium shadow-sm`}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border ${proofs[currentIndex % proofs.length].color} text-sm font-medium shadow-sm`}
                 >
                     <div className="shrink-0">
-                        {proofs[currentIndex].icon}
+                        {proofs[currentIndex % proofs.length].icon}
                     </div>
-                    <p>{proofs[currentIndex].text}</p>
+                    <p>{proofs[currentIndex % proofs.length].text}</p>
                 </motion.div>
             </AnimatePresence>
         </div>

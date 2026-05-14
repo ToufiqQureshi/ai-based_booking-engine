@@ -51,10 +51,12 @@ export interface Hotel {
   contact: ContactInfo;
   settings: HotelSettings;
   photos: RoomPhoto[];
+  amenities: string[];
   feature_rate_shopper?: boolean;
   feature_ai_agent?: boolean;
   feature_guest_bot?: boolean;
   is_active?: boolean;
+  rate_plans?: RatePlan[];
   created_at: string;
   updated_at: string;
 }
@@ -92,6 +94,10 @@ export interface HotelSettings {
   important_info?: string;
   notify_new_booking?: boolean;
   notify_cancellation?: boolean;
+  show_viewers_count?: boolean;
+  show_last_booked?: boolean;
+  show_popular_badge?: boolean;
+  popular_badge_text?: string;
 }
 
 // ============== Room Types ==============
@@ -347,6 +353,8 @@ export interface RateOption {
   price_per_night: number;
   total_price: number;
   inclusions: string[];
+  is_refundable: boolean;
+  cancellation_policy?: string;
   savings_text?: string;
 }
 

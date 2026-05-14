@@ -49,6 +49,12 @@ class HotelSettings(SQLModel):
     important_info: Optional[str] = None
     notify_new_booking: bool = True
     notify_cancellation: bool = True
+    
+    # Social Proof / Marketing Control
+    show_viewers_count: bool = True
+    show_last_booked: bool = True
+    show_popular_badge: bool = True
+    popular_badge_text: str = "Popular choice! {count} bookings this month"
 
 
 
@@ -60,6 +66,7 @@ class HotelBase(SQLModel):
     star_rating: Optional[int] = Field(default=None, ge=1, le=5)
     logo_url: Optional[str] = None
     primary_color: Optional[str] = Field(default="#3B82F6")
+    amenities: List[str] = Field(default_factory=list, sa_column=Column(JSON)) # Property-level amenities like "Free Parking", "Pool"
     
     # Feature Flags (Controlled by Super Admin)
     feature_rate_shopper: bool = Field(default=True)
@@ -128,6 +135,7 @@ class HotelRead(HotelBase):
     contact: dict
     settings: dict
     photos: List[dict] = []
+    amenities: List[str] = []
     created_at: datetime
     updated_at: datetime
 

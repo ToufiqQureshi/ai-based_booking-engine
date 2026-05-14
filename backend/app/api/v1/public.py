@@ -24,6 +24,8 @@ class RateOption(BaseModel):
     price_per_night: float
     total_price: float
     inclusions: List[str]
+    is_refundable: bool = True
+    cancellation_policy: Optional[str] = None
     savings_text: Optional[str] = None # e.g. "Save INR 2,000"
 
 class PublicRoomSearchResult(RoomTypeRead):
@@ -359,12 +361,13 @@ async def search_public_rooms(
                 # Logic: Use explicitly configured Rate Plans
                 if rate_plans:
                     for plan in rate_plans:
-                        # No auto-inclusions based on code anymore
-                        inclusions = [] 
+                        # Dynamic Inclusions
+                        inclusions = plan.inclusions if plan.inclusions else []
+                        if not inclusions:
+                            inclusions.append("Free Wi-Fi") # Fallback
                         
-                        # Add generic defaults or parse description? 
-                        # For now, just simplistic
-                        inclusions.append("Free Wi-Fi")
+                        # Dynamic Cancellation Text
+                        cancel_text = f"Free cancellation up to {plan.cancellation_hours} hours before check-in" if plan.is_refundable else "Non-refundable"
 
                         # use the user-defined price adjustment
                         # Default is Room Base Price + Plan Adjustment
@@ -429,6 +432,8 @@ async def search_public_rooms(
                             price_per_night=plan_price_nightly,
                             total_price=plan_total,
                             inclusions=inclusions,
+                            is_refundable=plan.is_refundable,
+                            cancellation_policy=cancel_text,
                             savings_text=savings_text
                         ))
                 

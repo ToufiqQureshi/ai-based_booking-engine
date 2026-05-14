@@ -13,7 +13,7 @@ import { SocialProofWidget } from '@/components/public/SocialProofWidget';
 import { ChatWidget } from '@/components/public/ChatWidget';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { cn, getImageUrl } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import {
@@ -98,8 +98,17 @@ export default function BookingSelection() {
 
     // Default to Today/Tomorrow if no params
     const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrow = addDays(today, 1);
+
+    const formatCurrency = (amount: number) => {
+        const currencyCode = hotel?.settings?.currency || 'INR';
+        const locale = currencyCode === 'INR' ? 'en-IN' : 'en-US';
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: currencyCode,
+            maximumFractionDigits: 0
+        }).format(amount);
+    };
 
     // Extract params and init state
     const checkIn = searchParams.get('check_in') || format(today, 'yyyy-MM-dd');
@@ -222,10 +231,6 @@ export default function BookingSelection() {
         });
     };
 
-    const formatCurrency = (amount: number | undefined | null) => {
-        if (amount === undefined || amount === null || isNaN(amount)) return '₹0';
-        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
-    };
 
     // Calculate number of nights
     const numNights = checkInDate && checkOutDate
@@ -282,12 +287,14 @@ export default function BookingSelection() {
                                     <Badge className="bg-indigo-600/90 backdrop-blur-md border-indigo-400/30 text-white font-bold px-4 py-1.5 shadow-lg">
                                         {hotel.star_rating} Star Property
                                     </Badge>
-                                    <span className="text-sm font-semibold hidden md:flex items-center gap-2 backdrop-blur-sm bg-black/40 px-4 py-2 rounded-full border border-white/20 shadow-inner">
-                                        <Car className="w-4 h-4 text-indigo-400" /> Free Parking
-                                    </span>
-                                    <span className="text-sm font-semibold hidden md:flex items-center gap-2 backdrop-blur-sm bg-black/40 px-4 py-2 rounded-full border border-white/20 shadow-inner">
-                                        <Wifi className="w-4 h-4 text-indigo-400" /> High Speed Wi-Fi
-                                    </span>
+                                    {(hotel.amenities || []).slice(0, 3).map((amenity, idx) => {
+                                        const Icon = ICONS[amenity.toLowerCase()] || Check;
+                                        return (
+                                            <span key={idx} className="text-sm font-semibold hidden md:flex items-center gap-2 backdrop-blur-sm bg-black/40 px-4 py-2 rounded-full border border-white/20 shadow-inner">
+                                                <Icon className="w-4 h-4 text-indigo-400" /> {amenity}
+                                            </span>
+                                        );
+                                    })}
                                 </div>
                             </motion.div>
                         </div>
@@ -420,7 +427,7 @@ export default function BookingSelection() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Left Sidebar: Social Proof & Filters */}
                     <div className="lg:col-span-3 space-y-6">
-                        <SocialProofWidget />
+                        <SocialProofWidget hotel={hotel} />
                         
                         {/* Filters Card */}
                         <Card className="p-5 border-slate-200 shadow-sm rounded-xl bg-white sticky top-24">
@@ -598,12 +605,14 @@ export default function BookingSelection() {
                                                                 </button>
                                                             </div>
                                                             <div className="flex flex-wrap gap-3">
-                                                                <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                                                                    <Check className="w-3.5 h-3.5 text-green-500" /> Free Wi-Fi
-                                                                </div>
-                                                                {plan.meal_plan_code !== 'EP' && (
-                                                                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                                                                        <Check className="w-3.5 h-3.5 text-green-500" /> {plan.meal_plan_code === 'CP' ? 'Breakfast Included' : 'All Meals Included'}
+                                                                {(plan.inclusions || []).map((inclusion, idx) => (
+                                                                    <div key={idx} className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                                                        <Check className="w-3.5 h-3.5 text-green-500" /> {inclusion}
+                                                                    </div>
+                                                                ))}
+                                                                {plan.cancellation_policy && (
+                                                                    <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                                                                        <Info className="w-3 h-3" /> {plan.cancellation_policy}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -611,13 +620,15 @@ export default function BookingSelection() {
 
                                                         <div className="md:col-span-4 flex items-center justify-end gap-5">
                                                             <div className="text-right">
+                                                                <div className="text-[10px] font-bold text-slate-400 mb-0.5">
+                                                                    {formatCurrency(plan.price_per_night)} / night
+                                                                </div>
                                                                 <div className="flex items-baseline justify-end gap-1">
-                                                                    <span className="text-[10px] font-bold text-slate-400">INR</span>
                                                                     <span className="text-2xl font-black text-slate-900 leading-none">
-                                                                        {new Intl.NumberFormat('en-IN').format(plan.total_price)}
+                                                                        {formatCurrency(plan.total_price)}
                                                                     </span>
                                                                 </div>
-                                                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">Net Total / {numNights} Night{numNights > 1 ? 's' : ''}</p>
+                                                                <p className="text-[10px] font-bold text-indigo-600 uppercase mt-1 tracking-tighter">Total for {numNights} Night{numNights > 1 ? 's' : ''}</p>
                                                             </div>
 
                                                             <Button
@@ -737,7 +748,7 @@ export default function BookingSelection() {
                         </div>
                         <div className="bg-slate-50 p-3 rounded text-sm text-slate-600">
                             <strong>Cancellation Policy:</strong><br />
-                            Free cancellation up to 24 hours before check-in. Late cancellations or no-shows will be charged the first night's rate.
+                            {selectedRateInfo?.cancellation_policy || hotel?.settings?.cancellation_policy || "Standard cancellation policy applies."}
                         </div>
                     </div>
                 </DialogContent>
