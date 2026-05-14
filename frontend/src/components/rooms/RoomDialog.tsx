@@ -466,7 +466,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                         {/* Capacity & Pricing */}
                         <div className="space-y-4">
                             <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">Capacity & Pricing</h3>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="base_price"
