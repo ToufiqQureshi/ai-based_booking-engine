@@ -522,7 +522,10 @@ export default function BookingSelection() {
                     <div className="lg:col-span-9">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-lg font-bold text-slate-900">
-                                {rooms.length} Rooms Found
+                                {searchType === 'package' 
+                                    ? `${rooms.reduce((acc, r) => acc + r.rate_options.filter(o => o.is_package).length, 0)} Packages Found`
+                                    : `${rooms.length} Rooms Found`
+                                }
                             </h2>
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-slate-400 uppercase">Sort By:</span>
@@ -543,35 +546,132 @@ export default function BookingSelection() {
                                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                                     <Search className="w-6 h-6 text-slate-400" />
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-900">No rooms match your filters</h3>
+                                <h3 className="text-lg font-bold text-slate-900">No {searchType === 'package' ? 'packages' : 'rooms'} match your filters</h3>
                                 <p className="text-slate-500">Try adjusting your filters or search dates.</p>
                             </div>
                         ) : (
                             <div className="space-y-6">
-                                {rooms
-                                    .filter(room => {
-                                        const minPrice = Math.min(...room.rate_options.map(o => o.total_price));
-                                        const matchesPrice = minPrice <= priceRange[1];
-                                        const matchesMeal = selectedMealPlans.length === 0 || 
-                                            room.rate_options.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
-                                        return matchesPrice && matchesMeal;
-                                    })
-                                    .sort((a, b) => {
-                                        const aPrice = Math.min(...a.rate_options.map(o => o.total_price));
-                                        const bPrice = Math.min(...b.rate_options.map(o => o.total_price));
-                                        if (sortBy === 'price_asc') return aPrice - bPrice;
-                                        if (sortBy === 'price_desc') return bPrice - aPrice;
-                                        return 0;
-                                    })
-                                    .map((room) => {
-                                        // Filter rate options based on searchType
-                                        const filteredRates = room.rate_options.filter(o => 
-                                            searchType === 'package' ? o.is_package : !o.is_package
-                                        );
+                                {searchType === 'package' ? (
+                                    // Flattened Package View
+                                    rooms.flatMap(room => 
+                                        room.rate_options
+                                            .filter(o => o.is_package)
+                                            .map(plan => ({ room, plan }))
+                                    ).map(({ room, plan }) => (
+                                        <div key={plan.id} className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden flex flex-col md:flex-row mb-6 hover:shadow-md transition-shadow group">
+                                            {/* Left: Image Carousel */}
+                                            <div className="md:w-80 md:min-w-[20rem] h-64 md:h-auto bg-slate-100 relative group">
+                                                <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
+                                                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                                                    <Badge className="bg-amber-500 text-white border-0 rounded-md shadow-lg font-black px-3 py-1 uppercase text-[10px] tracking-widest">
+                                                        Special Package
+                                                    </Badge>
+                                                </div>
+                                            </div>
 
-                                        if (filteredRates.length === 0) return null;
+                                            {/* Right: Content */}
+                                            <div className="flex-1 flex flex-col">
+                                                <div className="p-5 border-b border-slate-100 bg-amber-50/20 flex justify-between items-start">
+                                                    <div>
+                                                        <h3 className="text-xl font-black text-slate-900 hover:text-amber-600 transition-colors cursor-pointer flex items-center gap-2" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
+                                                            {plan.name}
+                                                        </h3>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Valid for: {room.name}</span>
+                                                            <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                                                            <div className="flex items-center gap-1 text-[10px] font-black text-slate-500">
+                                                                <User className="h-3 w-3" /> {room.max_occupancy} Max
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="text-amber-600 font-bold text-xs hover:bg-amber-50"
+                                                        onClick={() => { setSelectedRateInfo(plan); setIsRateModalOpen(true); }}
+                                                    >
+                                                        Package Details
+                                                    </Button>
+                                                </div>
 
-                                        return (
+                                                <div className="p-5 flex-1 flex flex-col justify-between">
+                                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                                        <div className="space-y-2">
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">What's Included</p>
+                                                            <div className="space-y-1.5">
+                                                                {(plan.inclusions || []).slice(0, 3).map((inc, i) => (
+                                                                    <div key={i} className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                                                        <Check className="w-3.5 h-3.5 text-green-500" /> {inc}
+                                                                    </div>
+                                                                ))}
+                                                                {(plan.inclusions || []).length > 3 && (
+                                                                    <p className="text-[10px] text-indigo-600 font-bold ml-5">+{plan.inclusions.length - 3} more benefits</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Room Features</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {(room.amenities || []).slice(0, 4).map((am: any, i) => {
+                                                                    const Icon = ICONS[am.icon_slug || am.icon] || Wifi;
+                                                                    return (
+                                                                        <div key={i} className="bg-slate-50 p-1.5 rounded-lg border border-slate-100" title={am.name}>
+                                                                            <Icon className="w-3.5 h-3.5 text-slate-400" />
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="pt-5 border-t border-slate-100 flex items-center justify-between">
+                                                        <div className="text-left">
+                                                            <div className="text-[10px] font-bold text-slate-400 mb-0.5 line-through decoration-red-400/50">
+                                                                {formatCurrency(plan.price_per_night * 1.2)} / night
+                                                            </div>
+                                                            <div className="flex items-baseline gap-1">
+                                                                <span className="text-3xl font-black text-slate-900 leading-none">
+                                                                    {formatCurrency(plan.total_price)}
+                                                                </span>
+                                                                <span className="text-xs font-bold text-indigo-600">Total</span>
+                                                            </div>
+                                                            <p className="text-[10px] font-bold text-slate-500 uppercase mt-1 tracking-tighter italic">Limited time package deal</p>
+                                                        </div>
+
+                                                        <Button
+                                                            className="bg-amber-500 hover:bg-amber-600 text-white font-black px-8 shadow-md rounded-xl h-12 transition-all active:scale-95 group-hover:scale-105"
+                                                            onClick={() => handleSelectRate(room, plan)}
+                                                        >
+                                                            BOOK PACKAGE
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    // Standard Room View
+                                    rooms
+                                        .filter(room => {
+                                            const minPrice = Math.min(...room.rate_options.map(o => o.total_price));
+                                            const matchesPrice = minPrice <= priceRange[1];
+                                            const matchesMeal = selectedMealPlans.length === 0 || 
+                                                room.rate_options.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
+                                            return matchesPrice && matchesMeal;
+                                        })
+                                        .sort((a, b) => {
+                                            const aPrice = Math.min(...a.rate_options.map(o => o.total_price));
+                                            const bPrice = Math.min(...b.rate_options.map(o => o.total_price));
+                                            if (sortBy === 'price_asc') return aPrice - bPrice;
+                                            if (sortBy === 'price_desc') return bPrice - aPrice;
+                                            return 0;
+                                        })
+                                        .map((room) => {
+                                            // Filter rate options to NOT show packages in standard room view
+                                            const filteredRates = room.rate_options.filter(o => !o.is_package);
+                                            if (filteredRates.length === 0) return null;
+                                            
+                                            return (
                                             <div key={room.id} className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden flex flex-col md:flex-row mb-6 hover:shadow-md transition-shadow">
                                                 {/* Left: Image Carousel (Fixed Width) */}
                                                 <div className="md:w-80 md:min-w-[20rem] h-64 md:h-auto bg-slate-100 relative group">
