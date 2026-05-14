@@ -688,117 +688,101 @@ export default function BookingSelection() {
                                         })
                                         .map((room) => {
                                             return (
-                                                <div key={room.id} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group mb-8">
+                                                <div key={room.id} className="bg-white rounded-3xl overflow-hidden mb-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 hover:shadow-[0_20px_50px_rgba(79,70,229,0.08)] transition-all duration-500 group">
                                                     <div className="flex flex-col lg:flex-row">
-                                                        {/* Left: Visual Section (40%) */}
-                                                        <div className="lg:w-2/5 h-64 lg:h-auto bg-slate-100 relative overflow-hidden">
+                                                        {/* Visual Section: More Minimal */}
+                                                        <div className="lg:w-[42%] h-72 lg:h-auto bg-slate-50 relative overflow-hidden">
                                                             <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
-                                                            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-                                                                <Badge className="bg-white/90 backdrop-blur-md text-slate-900 border-0 rounded-lg shadow-sm font-black px-3 py-1.5 uppercase text-[10px] tracking-widest">
-                                                                    {room.name}
-                                                                </Badge>
-                                                                <div className="flex gap-1">
-                                                                    <div className="bg-slate-900/60 backdrop-blur-md text-white p-1.5 rounded-lg">
-                                                                        <User className="w-3.5 h-3.5" />
-                                                                    </div>
-                                                                    <div className="bg-slate-900/60 backdrop-blur-md text-white p-1.5 rounded-lg text-[10px] font-black flex items-center px-2">
-                                                                        {room.max_occupancy} ADULTS
-                                                                    </div>
+                                                            <div className="absolute top-6 left-6 z-10">
+                                                                <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm flex items-center gap-2 border border-white/50">
+                                                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                                                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Available</span>
                                                                 </div>
                                                             </div>
                                                         </div>
 
-                                                        {/* Right: Info & Rates Section (60%) */}
-                                                        <div className="lg:w-3/5 flex flex-col">
-                                                            {/* Room Header */}
-                                                            <div className="p-6 border-b border-slate-100">
-                                                                <div className="flex justify-between items-start mb-4">
-                                                                    <div>
-                                                                        <h3 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors cursor-pointer" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
-                                                                            {room.name}
-                                                                        </h3>
-                                                                        <p className="text-xs font-bold text-green-600 uppercase tracking-widest mt-1 flex items-center gap-1.5">
-                                                                            <Check className="w-3.5 h-3.5" /> Instant Confirmation Available
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-4">
-                                                                        <div className="text-right hidden sm:block">
-                                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Size</p>
-                                                                            <p className="text-sm font-bold text-slate-700 flex items-center justify-end gap-1">
-                                                                                <Maximize className="w-3.5 h-3.5" /> {room.room_size || 'N/A'} ft²
-                                                                            </p>
-                                                                        </div>
-                                                                        <div className="h-8 w-px bg-slate-100 hidden sm:block" />
-                                                                        <Button variant="ghost" size="sm" className="font-black text-[10px] uppercase tracking-widest text-indigo-600 hover:bg-indigo-50" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
-                                                                            View Gallery
-                                                                        </Button>
+                                                        {/* Content Section: Focused on Hierarchy */}
+                                                        <div className="flex-1 flex flex-col p-8 lg:p-10">
+                                                            {/* Header Area */}
+                                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
+                                                                <div className="space-y-2">
+                                                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors duration-300">
+                                                                        {room.name}
+                                                                    </h3>
+                                                                    <div className="flex items-center gap-4 text-slate-400 font-bold text-xs uppercase tracking-widest">
+                                                                        <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> {room.max_occupancy} Adults</span>
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                                                        <span className="flex items-center gap-1.5"><Maximize className="w-3.5 h-3.5" /> {room.room_size || '---'} ft²</span>
                                                                     </div>
                                                                 </div>
-
-                                                                {/* Amenities Row */}
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {(room.amenities || []).slice(0, 5).map((am: any, i) => {
-                                                                        const Icon = ICONS[am.icon_slug || am.icon] || Wifi;
-                                                                        return (
-                                                                            <div key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" title={am.name}>
-                                                                                <Icon className="w-3.5 h-3.5 text-slate-400" />
-                                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">{am.name}</span>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    size="sm" 
+                                                                    className="rounded-full border-slate-200 text-slate-600 font-black text-[10px] px-6 h-10 hover:bg-slate-50 hover:text-indigo-600 transition-all"
+                                                                    onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}
+                                                                >
+                                                                    ROOM DETAILS
+                                                                </Button>
                                                             </div>
 
-                                                            {/* Rate Plans List */}
-                                                            <div className="flex-1 bg-slate-50/30">
+                                                            {/* Amenities: Subtle & Clean */}
+                                                            <div className="flex flex-wrap gap-3 mb-10">
+                                                                {(room.amenities || []).slice(0, 4).map((am: any, i) => {
+                                                                    const Icon = ICONS[am.icon_slug || am.icon] || Wifi;
+                                                                    return (
+                                                                        <div key={i} className="flex items-center gap-2 py-1.5 pr-4 rounded-full" title={am.name}>
+                                                                            <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
+                                                                                <Icon className="w-4 h-4 text-indigo-500" />
+                                                                            </div>
+                                                                            <span className="text-[11px] font-bold text-slate-500">{am.name}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+
+                                                            {/* Rates: Minimal List with No Heavy Boxes */}
+                                                            <div className="space-y-4">
                                                                 {room.rate_options.map((plan, idx) => (
                                                                     <div 
                                                                         key={plan.id} 
                                                                         className={cn(
-                                                                            "p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors hover:bg-white",
-                                                                            idx !== room.rate_options.length - 1 && "border-b border-slate-100"
+                                                                            "flex flex-col sm:flex-row items-center justify-between p-6 rounded-2xl border border-transparent hover:border-slate-100 hover:bg-slate-50/50 transition-all duration-300",
+                                                                            idx === 0 && "bg-slate-50/30"
                                                                         )}
                                                                     >
-                                                                        <div className="flex-1 w-full sm:w-auto">
-                                                                            <div className="flex items-center gap-2 mb-1">
-                                                                                <span className="text-sm font-black text-slate-900 uppercase tracking-tight">{plan.name}</span>
-                                                                                <Button 
-                                                                                    variant="ghost" 
-                                                                                    className="h-6 px-2 text-[10px] font-black text-indigo-600 uppercase hover:bg-indigo-50"
-                                                                                    onClick={() => { setSelectedRateInfo(plan); setIsRateModalOpen(true); }}
-                                                                                >
-                                                                                    Details
-                                                                                </Button>
+                                                                        <div className="flex-1 w-full sm:w-auto mb-4 sm:mb-0">
+                                                                            <div className="flex items-center gap-3 mb-2">
+                                                                                <span className="text-base font-black text-slate-800 tracking-tight">{plan.name}</span>
+                                                                                {plan.savings_text && (
+                                                                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0 text-[10px] px-2 py-0.5 rounded-md font-black uppercase">
+                                                                                        {plan.savings_text}
+                                                                                    </Badge>
+                                                                                )}
                                                                             </div>
-                                                                            <div className="flex flex-wrap gap-x-4 gap-y-1">
-                                                                                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
-                                                                                    <Utensils className="w-3.5 h-3.5 text-slate-400" />
-                                                                                    {plan.meal_plan_code || 'Room Only'}
-                                                                                </div>
-                                                                                <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
-                                                                                    <CalendarIcon className="w-3.5 h-3.5" />
-                                                                                    Free Cancellation
-                                                                                </div>
+                                                                            <div className="flex flex-wrap gap-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                                <span className="flex items-center gap-1.5"><Utensils className="w-3.5 h-3.5" /> {plan.meal_plan_code}</span>
+                                                                                <span className="flex items-center gap-1.5 text-green-600/70"><Check className="w-3.5 h-3.5" /> Free Cancellation</span>
                                                                             </div>
                                                                         </div>
 
-                                                                        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                                                                        <div className="flex items-center justify-between sm:justify-end gap-8 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 pt-4 sm:pt-0">
                                                                             <div className="text-right">
-                                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest line-through decoration-red-400/30">
-                                                                                    {formatCurrency(plan.price_per_night * 1.15)}
+                                                                                <p className="text-[10px] font-bold text-slate-300 line-through mb-0.5">
+                                                                                    {formatCurrency(plan.total_price * 1.12)}
                                                                                 </p>
-                                                                                <div className="flex items-baseline gap-1">
-                                                                                    <span className="text-2xl font-black text-slate-900">
+                                                                                <div className="flex items-baseline gap-1.5">
+                                                                                    <span className="text-3xl font-black text-slate-900 tracking-tighter">
                                                                                         {formatCurrency(plan.total_price)}
                                                                                     </span>
-                                                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">/ Stay</span>
+                                                                                    <span className="text-[10px] font-black text-slate-400 uppercase">/ Total</span>
                                                                                 </div>
                                                                             </div>
                                                                             <Button 
-                                                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95"
+                                                                                className="bg-slate-900 hover:bg-indigo-600 text-white font-black px-10 h-14 rounded-2xl shadow-lg shadow-slate-200 transition-all duration-300 active:scale-95 group/btn"
                                                                                 onClick={() => handleSelectRate(room, plan)}
                                                                             >
-                                                                                SELECT
+                                                                                SELECT 
+                                                                                <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                                                                             </Button>
                                                                         </div>
                                                                     </div>
