@@ -676,14 +676,15 @@ export default function BookingSelection() {
                                     rooms
                                         .filter(room => {
                                             // Get relevant rates based on search type
-                                            const relevantRates = room.rate_options.filter(o => 
-                                                (searchType as string) === 'package' ? o.is_package : !o.is_package
-                                            );
+                                            const relevantRates = room.rate_options.filter(o => {
+                                                const isPkg = !!o.is_package;
+                                                return (searchType as string) === 'package' ? isPkg : !isPkg;
+                                            });
                                             
                                             if (relevantRates.length === 0) return false;
 
-                                            const minPrice = Math.min(...relevantRates.map(o => o.total_price));
-                                            const matchesPrice = minPrice <= priceRange[1];
+                                            const minPrice = Math.min(...relevantRates.map(o => o.total_price || 0));
+                                            const matchesPrice = minPrice <= priceRange[1] || priceRange[1] === 0;
                                             
                                             const matchesMeal = selectedMealPlans.length === 0 || 
                                                 relevantRates.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
@@ -691,24 +692,27 @@ export default function BookingSelection() {
                                             return matchesPrice && matchesMeal;
                                         })
                                         .sort((a, b) => {
-                                            const ratesA = a.rate_options.filter(o => (searchType as string) === 'package' ? o.is_package : !o.is_package);
-                                            const ratesB = b.rate_options.filter(o => (searchType as string) === 'package' ? o.is_package : !o.is_package);
-                                            const priceA = ratesA.length > 0 ? Math.min(...ratesA.map(o => o.total_price)) : 0;
-                                            const priceB = ratesB.length > 0 ? Math.min(...ratesB.map(o => o.total_price)) : 0;
-                                            return sortBy === 'price_asc' ? priceA - priceB : priceB - priceA;
+                                            const getMinPrice = (r: any) => {
+                                                const rates = r.rate_options.filter((o: any) => 
+                                                    (searchType as string) === 'package' ? !!o.is_package : !o.is_package
+                                                );
+                                                return rates.length > 0 ? Math.min(...rates.map((o: any) => o.total_price || 0)) : 0;
+                                            };
+                                            return sortBy === 'price_asc' ? getMinPrice(a) - getMinPrice(b) : getMinPrice(b) - getMinPrice(a);
                                         })
                                         .map((room) => {
-                                            const filteredRates = room.rate_options.filter(o => 
-                                                (searchType as string) === 'package' ? o.is_package : !o.is_package
-                                            );
+                                            const filteredRates = room.rate_options.filter(o => {
+                                                const isPkg = !!o.is_package;
+                                                return (searchType as string) === 'package' ? isPkg : !isPkg;
+                                            });
                                             
                                             if (filteredRates.length === 0) return null;
 
                                             return (
-                                                <div key={room.id} className="bg-white rounded-3xl overflow-hidden mb-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 hover:shadow-[0_20px_50px_rgba(79,70,229,0.08)] transition-all duration-500 group">
+                                                <div key={room.id} className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-indigo-200 transition-all duration-300 group">
                                                     <div className="flex flex-col lg:flex-row">
-                                                        {/* Visual Section: More Minimal */}
-                                                        <div className="lg:w-[42%] h-72 lg:h-auto bg-slate-50 relative overflow-hidden">
+                                                        {/* Visual Section */}
+                                                        <div className="lg:w-[35%] h-64 lg:h-auto bg-slate-50 relative overflow-hidden">
                                                             <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
                                                             <div className="absolute top-6 left-6 z-10">
                                                                 <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm flex items-center gap-2 border border-white/50">
