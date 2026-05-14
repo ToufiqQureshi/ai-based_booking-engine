@@ -79,6 +79,31 @@ export default function BookingSelection() {
     const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'recommended'>('recommended');
     const [searchType, setSearchType] = useState<'room' | 'package'>('room');
 
+    // Filtered rooms logic
+    const filteredRooms = rooms
+        .filter(room => {
+            const relevantRates = room.rate_options.filter(o => {
+                if ((searchType as string) === 'package') return !!o.is_package;
+                return !o.is_package;
+            });
+            
+            const displayRates = relevantRates.length > 0 ? relevantRates : room.rate_options;
+            if (displayRates.length === 0) return false;
+
+            const minPrice = Math.min(...displayRates.map(o => o.total_price || 0));
+            const matchesPrice = minPrice <= priceRange[1] || priceRange[1] === 0 || priceRange[1] >= 20000;
+            const matchesMeal = selectedMealPlans.length === 0 || displayRates.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
+                
+            return matchesPrice && matchesMeal;
+        })
+        .sort((a, b) => {
+            const getMinPrice = (r: any) => {
+                const rates = r.rate_options;
+                return rates.length > 0 ? Math.min(...rates.map((o: any) => o.total_price || 0)) : 0;
+            };
+            return sortBy === 'price_asc' ? getMinPrice(a) - getMinPrice(b) : getMinPrice(b) - getMinPrice(a);
+        });
+
     // Carousel State
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -165,9 +190,13 @@ export default function BookingSelection() {
                 setIsLoading(true);
                 const queryGuests = paramGuests || (adults + children).toString() || '1';
 
+                // Normalize dates to handle potential spaces from URL
+                const normalizedCheckIn = checkIn.replace(/\s+/g, '-');
+                const normalizedCheckOut = checkOut.replace(/\s+/g, '-');
+
                 const query = new URLSearchParams({
-                    check_in: checkIn,
-                    check_out: checkOut,
+                    check_in: normalizedCheckIn,
+                    check_out: normalizedCheckOut,
                     guests: queryGuests,
                     adults: paramAdults || adults.toString(),
                     children: paramChildren || children.toString(),
@@ -525,12 +554,12 @@ export default function BookingSelection() {
                                 {searchType === 'room' ? (
                                     <>
                                         <HotelIcon className="w-4 h-4 text-indigo-500" />
-                                        {rooms.length} Rooms Available
+                                        {filteredRooms.length} Rooms Available
                                     </>
                                 ) : (
                                     <>
                                         <Sparkles className="w-4 h-4 text-amber-500" />
-                                        {Array.from(new Set(rooms.flatMap(r => r.rate_options.filter(o => o.is_package).map(o => o.name)))).length} Unique Packages Found
+                                        {filteredRooms.length} Packages Found
                                     </>
                                 )}
                             </h2>
@@ -548,7 +577,7 @@ export default function BookingSelection() {
                             </div>
                         </div>
 
-                        {rooms.length === 0 ? (
+                        {filteredRooms.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200">
                                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                                     <Search className="w-6 h-6 text-slate-400" />
@@ -673,43 +702,16 @@ export default function BookingSelection() {
                                     ))
                                 ) : (
                                     // Standard Room View
-                                    rooms
-                                        .filter(room => {
-                                            // Get relevant rates based on search type
-                                            const relevantRates = room.rate_options.filter(o => {
-                                                const isPkg = !!o.is_package;
-                                                return (searchType as string) === 'package' ? isPkg : !isPkg;
+                                    filteredRooms.map((room) => {
+                                        const filteredRates = room.rate_options.filter(o => {
+                                                if ((searchType as string) === 'package') return !!o.is_package;
+                                                return !o.is_package;
                                             });
                                             
-                                            if (relevantRates.length === 0) return false;
-
-                                            const minPrice = Math.min(...relevantRates.map(o => o.total_price || 0));
-                                            const matchesPrice = minPrice <= priceRange[1] || priceRange[1] === 0;
-                                            
-                                            const matchesMeal = selectedMealPlans.length === 0 || 
-                                                relevantRates.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
-                                                
-                                            return matchesPrice && matchesMeal;
-                                        })
-                                        .sort((a, b) => {
-                                            const getMinPrice = (r: any) => {
-                                                const rates = r.rate_options.filter((o: any) => 
-                                                    (searchType as string) === 'package' ? !!o.is_package : !o.is_package
-                                                );
-                                                return rates.length > 0 ? Math.min(...rates.map((o: any) => o.total_price || 0)) : 0;
-                                            };
-                                            return sortBy === 'price_asc' ? getMinPrice(a) - getMinPrice(b) : getMinPrice(b) - getMinPrice(a);
-                                        })
-                                        .map((room) => {
-                                            const filteredRates = room.rate_options.filter(o => {
-                                                const isPkg = !!o.is_package;
-                                                return (searchType as string) === 'package' ? isPkg : !isPkg;
-                                            });
-                                            
-                                            if (filteredRates.length === 0) return null;
+                                            const displayRates = filteredRates.length > 0 ? filteredRates : room.rate_options;
 
                                             return (
-                                                <div key={room.id} className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-indigo-200 transition-all duration-300 group">
+                                                <div key={room.id} className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-indigo-100 transition-all duration-300 group">
                                                     <div className="flex flex-col lg:flex-row">
                                                         {/* Visual Section */}
                                                         <div className="lg:w-[35%] h-64 lg:h-auto bg-slate-50 relative overflow-hidden">
@@ -759,7 +761,7 @@ export default function BookingSelection() {
 
                                                             {/* Rates: Clean List Style */}
                                                             <div className="border-t border-slate-100 mt-auto pt-4 space-y-3">
-                                                                {filteredRates.map((plan, idx) => (
+                                                                {displayRates.map((plan, idx) => (
                                                                     <div 
                                                                         key={plan.id} 
                                                                         className="flex items-center justify-between group/rate py-2"
