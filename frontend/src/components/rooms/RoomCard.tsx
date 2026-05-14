@@ -22,58 +22,54 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
     const primaryPhoto = room.photos?.find(p => p.is_primary) || room.photos?.[0] || null;
 
     return (
-        <Card className="overflow-hidden group hover:shadow-[0_20px_50px_rgba(79,70,229,0.15)] transition-all duration-500 border-none bg-white/70 backdrop-blur-xl rounded-[32px] ring-1 ring-indigo-50/50 hover:ring-indigo-100/50 relative">
+        <Card className="overflow-hidden group hover:shadow-md transition-all duration-200 border border-slate-200 bg-white rounded-xl relative">
             {/* Image Section */}
-            <div className="aspect-[16/10] relative overflow-hidden bg-indigo-50/30">
+            <div className="aspect-[16/10] relative overflow-hidden bg-slate-100">
                 {primaryPhoto ? (
                     <img
                         src={getImageUrl(primaryPhoto.url)}
                         alt={room.name}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-indigo-200">
-                        <Bed className="h-16 w-16 mb-2 opacity-20" />
-                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40">No Visual Assets</span>
+                    <div className="flex flex-col items-center justify-center h-full text-slate-300">
+                        <Bed className="h-10 w-10 mb-2 opacity-20" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">No Image</span>
                     </div>
                 )}
                 
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
                 {/* Status Badges */}
-                <div className="absolute top-4 left-4 flex gap-2">
+                <div className="absolute top-3 left-3 flex gap-2">
                     {room.is_active ? (
-                        <div className="flex items-center gap-1.5 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg">
-                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        <Badge className="bg-green-500 hover:bg-green-600 text-white border-none text-[10px] font-bold px-2 py-0.5">
                             Active
-                        </div>
+                        </Badge>
                     ) : (
-                        <div className="bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
+                        <Badge variant="secondary" className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5">
                             Paused
-                        </div>
+                        </Badge>
                     )}
                 </div>
 
-                {/* Actions Dropdown Overlay */}
-                <div className="absolute top-4 right-4">
+                {/* Actions Dropdown */}
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/40 hover:scale-110 transition-all">
-                                <MoreHorizontal className="h-5 w-5" />
+                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-lg bg-white/90 backdrop-blur-sm border border-slate-200 shadow-sm">
+                                <MoreHorizontal className="h-4 w-4 text-slate-600" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-2xl border-indigo-50 shadow-2xl p-2 min-w-[160px]">
-                            <DropdownMenuItem onClick={() => onEdit(room)} className="rounded-xl focus:bg-indigo-50 cursor-pointer py-2.5 font-bold text-indigo-900">
-                                <Edit className="mr-3 h-4 w-4 text-indigo-500" />
-                                Edit Experience
+                        <DropdownMenuContent align="end" className="rounded-lg p-1 min-w-[140px]">
+                            <DropdownMenuItem onClick={() => onEdit(room)} className="rounded-md cursor-pointer text-sm font-medium">
+                                <Edit className="mr-2 h-4 w-4 text-slate-400" />
+                                Edit Room
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                className="rounded-xl text-rose-500 focus:text-rose-600 focus:bg-rose-50 cursor-pointer py-2.5 font-bold"
+                                className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-sm font-medium"
                                 onClick={() => onDelete(room.id)}
                             >
-                                <Trash2 className="mr-3 h-4 w-4" />
-                                Delete Concept
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -81,66 +77,65 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
             </div>
 
             {/* Content Section */}
-            <CardHeader className="p-6 pb-2">
+            <CardHeader className="p-4 pb-2">
                 <div className="space-y-1">
-                    <CardTitle className="text-xl font-black tracking-tight text-indigo-950 group-hover:text-indigo-600 transition-colors">
+                    <CardTitle className="text-lg font-bold text-slate-900 leading-tight">
                         {room.name}
                     </CardTitle>
-                    <CardDescription className="line-clamp-2 text-indigo-400 text-xs font-medium leading-relaxed">
-                        {room.description || 'Define a unique narrative for this room category to captivate guests.'}
+                    <CardDescription className="line-clamp-2 text-slate-500 text-xs font-medium leading-relaxed min-h-[32px]">
+                        {room.description || 'No description provided for this room category.'}
                     </CardDescription>
                 </div>
             </CardHeader>
 
-            <CardContent className="p-6 pt-2 space-y-6">
-                {/* Features Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-indigo-50/30 border border-indigo-100/20">
-                        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                            <Users className="h-4 w-4 text-indigo-500" />
-                        </div>
-                        <span className="text-[11px] font-bold text-indigo-900/70">{room.base_occupancy}-{room.max_occupancy} Pax</span>
+            <CardContent className="p-4 pt-2 space-y-4">
+                {/* Stats Row */}
+                <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
+                    <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-slate-400" />
+                        <span>{room.base_occupancy}-{room.max_occupancy} Pax</span>
                     </div>
-                    <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-violet-50/30 border border-violet-100/20">
-                        <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                            <BedDouble className="h-4 w-4 text-violet-500" />
-                        </div>
-                        <span className="text-[11px] font-bold text-violet-900/70">{room.bed_type || 'Master'}</span>
+                    <div className="w-1 h-1 rounded-full bg-slate-200" />
+                    <div className="flex items-center gap-1.5">
+                        <BedDouble className="h-3.5 w-3.5 text-slate-400" />
+                        <span>{room.bed_type || 'Double'}</span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-indigo-300 px-1">
+                <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                     {room.room_size && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                             <Ruler className="h-3 w-3" />
                             <span>{room.room_size} SQ FT</span>
                         </div>
                     )}
-                    <div className="w-1 h-1 rounded-full bg-indigo-200" />
-                    <span>Inventory: {room.total_inventory}</span>
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-slate-300" />
+                        <span>Inventory: {room.total_inventory}</span>
+                    </div>
                 </div>
 
                 {/* Price Footer */}
-                <div className="pt-4 border-t border-indigo-100/30 flex items-center justify-between">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                     <div className="flex flex-col">
-                        <span className="text-[10px] uppercase font-black text-indigo-300 tracking-[0.2em] mb-1">Nightly Yield</span>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-black text-indigo-600 tracking-tighter">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Price / Night</span>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-xl font-bold text-blue-600">
                                 {formatCurrency(room.base_price)}
                             </span>
                             {room.market_price && room.market_price > room.base_price && (
-                                <span className="text-xs font-bold text-indigo-300 line-through">
+                                <span className="text-xs font-medium text-slate-300 line-through">
                                     {formatCurrency(room.market_price)}
                                 </span>
                             )}
                         </div>
                     </div>
                     <Button 
+                        size="sm"
                         onClick={() => onEdit(room)}
-                        className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_10px_20px_rgba(79,70,229,0.2)] font-bold px-6 h-11 flex gap-2 group/btn"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-8 px-4"
                     >
                         Edit
-                        <ChevronRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
                     </Button>
                 </div>
             </CardContent>

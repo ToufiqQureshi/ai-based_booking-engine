@@ -1,4 +1,4 @@
-// Main Application Sidebar with all dashboard modules - Refined Ultra-Luxe Design
+// Main Application Sidebar with all dashboard modules - Human & Professional Design
 import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -39,27 +39,26 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-// Navigation items for the dashboard with descriptive colors
+// Navigation items for the dashboard - Professional Colors
 const mainNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard, color: 'text-blue-500' },
-  { title: 'Analytics & Reports', url: '/analytics', icon: LineChart, color: 'text-emerald-500' },
-  { title: 'AI Assistant', url: '/agent', icon: Bot, color: 'text-violet-500' },
-
-  { title: 'Rooms', url: '/rooms', icon: Bed, color: 'text-indigo-500' },
-  { title: 'Rates', url: '/rates', icon: IndianRupee, color: 'text-amber-500' },
-  { title: 'Rate Shopper', url: '/rate-shopper', icon: TrendingUp, color: 'text-rose-500' },
-  { title: 'Availability', url: '/availability', icon: Calendar, color: 'text-sky-500' },
-  { title: 'Bookings', url: '/bookings', icon: BookOpen, color: 'text-cyan-500' },
-  { title: 'Guests', url: '/guests', icon: Users, color: 'text-orange-500' },
-  { title: 'Payments', url: '/payments', icon: CreditCard, color: 'text-slate-500' },
-  { title: 'Amenities', url: '/amenities', icon: Coffee, color: 'text-brown-500' },
-  { title: 'Add-ons', url: '/addons', icon: Sparkles, color: 'text-yellow-500' },
-  { title: 'Channel Manager', url: '/channel-settings', icon: Link2, color: 'text-pink-500' },
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Analytics', url: '/analytics', icon: LineChart },
+  { title: 'AI Assistant', url: '/agent', icon: Bot },
+  { title: 'Rooms', url: '/rooms', icon: Bed },
+  { title: 'Rates', url: '/rates', icon: IndianRupee },
+  { title: 'Rate Shopper', url: '/rate-shopper', icon: TrendingUp },
+  { title: 'Availability', url: '/availability', icon: Calendar },
+  { title: 'Bookings', url: '/bookings', icon: BookOpen },
+  { title: 'Guests', url: '/guests', icon: Users },
+  { title: 'Payments', url: '/payments', icon: CreditCard },
+  { title: 'Amenities', url: '/amenities', icon: Coffee },
+  { title: 'Add-ons', url: '/addons', icon: Sparkles },
+  { title: 'Channel Manager', url: '/channel-settings', icon: Link2 },
 ];
 
 const settingsNavItems = [
-  { title: 'Integration', url: '/integration', icon: Plug, color: 'text-gray-500' },
-  { title: 'Settings', url: '/settings', icon: Settings, color: 'text-slate-700' },
+  { title: 'Integration', url: '/integration', icon: Plug },
+  { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -80,42 +79,39 @@ export function AppSidebar() {
   return (
     <Sidebar 
       collapsible="icon" 
-      className="border-r border-indigo-100/30 bg-white/40 backdrop-blur-3xl"
+      className="border-r border-slate-200 bg-white"
     >
       {/* Hotel Logo & Name */}
       <SidebarHeader className="p-6">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white shadow-[0_8px_20px_rgba(79,70,229,0.3)] overflow-hidden transition-all duration-300 group-hover:scale-105">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm overflow-hidden">
             {hotel?.logo_url ? (
               <img src={hotel.logo_url} alt="Logo" className="h-full w-full object-cover" />
             ) : (
-              <Building2 className="h-6 w-6" />
+              <Building2 className="h-5 w-5" />
             )}
           </div>
           {!collapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="truncate text-lg font-black tracking-tight text-indigo-950">
+              <span className="truncate text-base font-semibold text-slate-900">
                 {hotel?.name || 'Staybooker'}
               </span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="truncate text-[10px] font-bold uppercase tracking-widest text-indigo-400">
-                  {user?.role || 'Super Admin'}
-                </span>
-              </div>
+              <span className="truncate text-xs font-medium text-slate-500">
+                {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : user?.role || 'Admin'}
+              </span>
             </div>
           )}
         </div>
       </SidebarHeader>
 
       {/* Main Navigation */}
-      <SidebarContent className="scrollbar-none px-3 pb-6">
+      <SidebarContent className="px-3 pb-6 scrollbar-thin">
         <SidebarGroup>
-          <SidebarGroupLabel className="px-4 mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">
+          <SidebarGroupLabel className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
             {!collapsed && 'Main Menu'}
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-1.5">
+            <SidebarMenu className="gap-0.5">
               {mainNavItems.map((item) => {
                 const active = isActive(item.url);
                 return (
@@ -125,31 +121,23 @@ export function AppSidebar() {
                       isActive={active}
                       tooltip={collapsed ? item.title : undefined}
                       className={cn(
-                        "h-12 rounded-[14px] transition-all duration-200 px-4",
+                        "h-10 rounded-md transition-colors px-3",
                         active 
-                          ? "bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-[0_10px_20px_rgba(79,70,229,0.2)]" 
-                          : "text-indigo-900/60 hover:bg-indigo-50/50 hover:text-indigo-900"
+                          ? "bg-blue-50 text-blue-700 font-medium" 
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       )}
                     >
                       <NavLink
                         to={item.url}
                         className="flex items-center gap-3 w-full"
                       >
-                        <div className={cn(
-                          "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300",
-                          active ? "bg-white/20" : "bg-indigo-50/50 group-hover:bg-white"
-                        )}>
-                          <item.icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : item.color)} />
-                        </div>
+                        <item.icon className={cn("h-4 w-4 shrink-0", active ? "text-blue-600" : "text-slate-400")} />
                         {!collapsed && (
-                          <span className={cn(
-                            "flex-1 font-bold text-[13px] tracking-tight",
-                            active ? "text-white" : "text-indigo-900/70"
-                          )}>
+                          <span className="flex-1 text-sm">
                             {item.title}
                           </span>
                         )}
-                        {active && !collapsed && <ChevronRight className="w-4 h-4 text-white/50" />}
+                        {active && !collapsed && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -160,11 +148,11 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="px-4 mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">
+          <SidebarGroupLabel className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
             {!collapsed && 'System'}
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-1.5">
+            <SidebarMenu className="gap-0.5">
               {settingsNavItems.map((item) => {
                 const active = isActive(item.url);
                 return (
@@ -174,24 +162,19 @@ export function AppSidebar() {
                       isActive={active}
                       tooltip={collapsed ? item.title : undefined}
                       className={cn(
-                        "h-12 rounded-[14px] transition-all duration-200 px-4",
+                        "h-10 rounded-md transition-colors px-3",
                         active 
-                          ? "bg-gradient-to-r from-indigo-950 to-slate-900 text-white shadow-lg" 
-                          : "text-indigo-900/60 hover:bg-indigo-50/50 hover:text-indigo-900"
+                          ? "bg-slate-100 text-slate-900 font-medium" 
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       )}
                     >
                       <NavLink
                         to={item.url}
                         className="flex items-center gap-3 w-full"
                       >
-                        <div className={cn(
-                          "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300",
-                          active ? "bg-white/10" : "bg-indigo-50/50"
-                        )}>
-                          <item.icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : item.color)} />
-                        </div>
+                        <item.icon className={cn("h-4 w-4 shrink-0", active ? "text-slate-900" : "text-slate-400")} />
                         {!collapsed && (
-                          <span className="flex-1 font-bold text-[13px] tracking-tight">
+                          <span className="flex-1 text-sm font-medium">
                             {item.title}
                           </span>
                         )}
@@ -206,23 +189,23 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User Footer */}
-      <SidebarFooter className="p-6 bg-gradient-to-b from-transparent to-indigo-50/30 border-t border-indigo-100/20">
+      <SidebarFooter className="p-4 border-t border-slate-100">
         <div className={cn(
-          "flex items-center gap-3 p-3 rounded-[20px] bg-white/60 border border-indigo-100/50 shadow-sm",
+          "flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors",
           collapsed ? "justify-center" : ""
         )}>
-          <Avatar className="h-10 w-10 shrink-0 rounded-[14px] border-2 border-white shadow-sm">
+          <Avatar className="h-8 w-8 shrink-0 rounded-md">
             <AvatarImage src={user?.avatar_url} />
-            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-black">
+            <AvatarFallback className="bg-slate-200 text-slate-600 text-xs font-bold">
               {userInitials}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex flex-1 flex-col overflow-hidden">
-              <span className="truncate text-sm font-black text-indigo-950 leading-tight">
+              <span className="truncate text-sm font-semibold text-slate-900">
                 {user?.name || 'Toufiq Revmerito'}
               </span>
-              <span className="truncate text-[10px] font-bold text-indigo-400 uppercase tracking-tight">
+              <span className="truncate text-[11px] text-slate-500">
                 {user?.email || 'tech.revmerito@gmail.com'}
               </span>
             </div>
@@ -231,7 +214,7 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 shrink-0 text-indigo-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl"
+              className="h-8 w-8 shrink-0 text-slate-400 hover:text-red-600 hover:bg-red-50"
               onClick={logout}
             >
               <LogOut className="h-4 w-4" />

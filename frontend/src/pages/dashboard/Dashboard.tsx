@@ -1,4 +1,4 @@
-// Dashboard Home Page - Real API Integration
+// Dashboard Home Page - Clean & Professional Design
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -14,7 +14,7 @@ import {
   Sparkles,
   AlertTriangle
 } from 'lucide-react';
-import { motion, Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -39,29 +39,6 @@ interface RecentBooking {
   status: string;
 }
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const itemVariants: Variants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 15
-    }
-  }
-};
-
 export function DashboardPage() {
   const { hotel, user } = useAuth();
 
@@ -69,7 +46,7 @@ export function DashboardPage() {
   const { data: stats, isLoading: isStatsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboardStats'],
     queryFn: () => apiClient.get<DashboardStats>('/dashboard/stats'),
-    staleTime: 60000, // 1 minute stale time (no spamming requests)
+    staleTime: 60000,
     refetchOnWindowFocus: false
   });
 
@@ -92,11 +69,11 @@ export function DashboardPage() {
         return null;
       }
     },
-    staleTime: 300000, // 5 mins
+    staleTime: 300000,
     refetchOnWindowFocus: false
   });
   
-  // 4. Fetch Integration Settings (to check AI status)
+  // 4. Fetch Integration Settings
   const { data: integration } = useQuery<any>({
     queryKey: ['integrationSettings'],
     queryFn: () => apiClient.get<any>('/integration/settings'),
@@ -106,414 +83,242 @@ export function DashboardPage() {
 
   const aiNotConfigured = !integration?.ai_api_key || !integration?.ai_model;
 
-  const isLoading = isStatsLoading;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  if (isLoading) {
+  if (isStatsLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{
-            duration: 0.5,
-            repeat: Infinity,
-            repeatType: "reverse"
-          }}
-          className="flex flex-col items-center gap-2"
-        >
-          <Loader2 className="h-8 w-8 text-primary" />
-          <span className="text-muted-foreground font-medium">Dashboard Loading...</span>
-        </motion.div>
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+          <span className="text-slate-500 font-medium text-sm">Loading dashboard...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <motion.div
-      className="space-y-6"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="space-y-6">
       {/* Page Header */}
-      <motion.div variants={itemVariants}>
-        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
-          Dashboard
-        </h1>
-        <p className="text-muted-foreground">
-          Welcome back, {user?.name?.split(' ')[0] || 'User'}. Here's what's happening at {hotel?.name || 'your hotel'}.
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+        <p className="text-sm text-slate-500">
+          Welcome back, {user?.name?.split(' ')[0] || 'User'}. Here's what's happening today at {hotel?.name || 'your property'}.
         </p>
 
-        <motion.div
-          className="mt-4"
-          whileHover={{ scale: 1.01 }}
-          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-        >
-          <WelcomeCard message="Today is a great day to manage your hotel! 🚀" />
-        </motion.div>
+        <div className="mt-4">
+          <WelcomeCard message="Have a productive day managing your hotel! 👋" />
+        </div>
 
         {/* AI Configuration Alert */}
         {aiNotConfigured && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-4"
-          >
-            <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 shadow-sm">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <AlertTitle className="text-amber-800 dark:text-amber-300 font-bold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 animate-pulse" /> AI Concierge Inactive
-              </AlertTitle>
-              <AlertDescription className="text-amber-700 dark:text-amber-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1">
-                <span>Configure your AI API Key and Model to activate the Guest AI Concierge on your website.</span>
-                <Button variant="outline" size="sm" className="bg-white hover:bg-amber-100 text-amber-700 border-amber-200 h-8" asChild>
-                  <Link to="/settings/integration">Configure Now</Link>
-                </Button>
-              </AlertDescription>
-            </Alert>
-          </motion.div>
+          <Alert className="mt-4 border-amber-200 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800 font-semibold">AI Assistant Inactive</AlertTitle>
+            <AlertDescription className="text-amber-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1 text-sm">
+              <span>Configure your AI settings to activate the Guest Concierge on your website.</span>
+              <Button variant="outline" size="sm" className="bg-white hover:bg-amber-100 text-amber-700 border-amber-200 h-8" asChild>
+                <Link to="/settings/integration">Configure Now</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
-      </motion.div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Today's Arrivals */}
-        <motion.div variants={itemVariants} whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}>
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Arrivals</CardTitle>
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                <CalendarCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                <AnimatedCounter value={stats?.today_arrivals || 0} />
-              </div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                {stats?.trends?.arrivals !== undefined && (
-                  <>
-                    <span className={`flex items-center mr-1 font-medium px-1.5 py-0.5 rounded-md ${
-                      stats.trends.arrivals >= 0 ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-red-600 bg-red-100 dark:bg-red-900/30'
-                    }`}>
-                      {stats.trends.arrivals >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
-                      {Math.abs(stats.trends.arrivals)}%
-                    </span>
-                    <span>vs yesterday</span>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Today's Departures */}
-        <motion.div variants={itemVariants} whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}>
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Departures</CardTitle>
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-full">
-                <CalendarX className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                <AnimatedCounter value={stats?.today_departures || 0} />
-              </div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <span className="text-slate-500 flex items-center mr-1 font-medium bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">
-                   {stats?.today_departures || 0}
+        {/* Arrivals */}
+        <Card className="shadow-none border-slate-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Arrivals</CardTitle>
+            <CalendarCheck className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900">
+              <AnimatedCounter value={stats?.today_arrivals || 0} />
+            </div>
+            <div className="flex items-center text-xs mt-1">
+              {stats?.trends?.arrivals !== undefined && (
+                <span className={cn(
+                  "font-medium mr-1",
+                  stats.trends.arrivals >= 0 ? 'text-green-600' : 'text-red-600'
+                )}>
+                  {stats.trends.arrivals >= 0 ? '+' : ''}{stats.trends.arrivals}%
                 </span>
-                <span>scheduled check-outs</span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              )}
+              <span className="text-slate-400">vs yesterday</span>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Occupancy Rate */}
-        <motion.div variants={itemVariants} whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}>
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Current Occupancy</CardTitle>
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                <Bed className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                <AnimatedCounter value={stats?.current_occupancy || 0} />
-              </div>
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                {stats?.trends?.occupancy !== undefined && (
-                   <>
-                    <span className={`flex items-center mr-1 font-medium px-1.5 py-0.5 rounded-md ${
-                      stats.trends.occupancy >= 0 ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-red-600 bg-red-100 dark:bg-red-900/30'
-                    }`}>
-                      {stats.trends.occupancy >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
-                      {Math.abs(stats.trends.occupancy)}%
-                    </span>
-                    <span>vs yesterday</span>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {/* Departures */}
+        <Card className="shadow-none border-slate-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Departures</CardTitle>
+            <CalendarX className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900">
+              <AnimatedCounter value={stats?.today_departures || 0} />
+            </div>
+            <div className="flex items-center text-xs mt-1 text-slate-400">
+              <span>{stats?.today_departures || 0} scheduled today</span>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Today's Revenue */}
-        <motion.div variants={itemVariants} whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" }}>
-          <Card className="border-green-200 dark:border-green-900 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Today's Revenue</CardTitle>
-              <div className="p-2 bg-green-200 dark:bg-green-900 rounded-full">
-                <CreditCard className="h-4 w-4 text-green-700 dark:text-green-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-                <AnimatedCounter
-                  value={stats?.today_revenue || 0}
-                  formatter={(val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val)}
-                />
-              </div>
-              <div className="flex items-center text-xs text-green-600/80 dark:text-green-400/80 mt-1">
-                {stats?.trends?.revenue !== undefined && (
-                  <>
-                    <span className="flex items-center mr-1 font-bold">
-                      {stats.trends.revenue >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
-                      {Math.abs(stats.trends.revenue)}%
-                    </span>
-                    <span>growth today</span>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {/* Occupancy */}
+        <Card className="shadow-none border-slate-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Occupancy</CardTitle>
+            <Bed className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900">
+              <AnimatedCounter value={stats?.current_occupancy || 0} />
+            </div>
+            <div className="flex items-center text-xs mt-1 text-slate-400">
+              <span>{stats?.current_occupancy || 0} rooms occupied</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Revenue */}
+        <Card className="shadow-none border-slate-200 bg-blue-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Revenue</CardTitle>
+            <CreditCard className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-700">
+              <AnimatedCounter
+                value={stats?.today_revenue || 0}
+                formatter={(val) => `₹${val.toLocaleString('en-IN')}`}
+              />
+            </div>
+            <div className="flex items-center text-xs mt-1 text-blue-600/70">
+              <span>Today's total earnings</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-
-        {/* LEFT COLUMN (Main Stats & Tables) - Spans 4/7 */}
-        <div className="space-y-6 lg:col-span-4">
-
-          {/* Market Rate Analysis - Made Wider */}
-          <motion.div variants={itemVariants} whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 300 }}>
-            <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-900 overflow-hidden">
-              <CardHeader className="pb-2 border-b border-blue-100 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-900/10">
-                <CardTitle className="text-base font-semibold text-blue-700 dark:text-blue-400 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Market Rate Analysis
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50" asChild>
-                    <Link to="/rate-shopper">Full Report <ExternalLink className="ml-1 h-3 w-3" /></Link>
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {rateAnalysis ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Rate</p>
-                      <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                        ₹{rateAnalysis.my_price}
-                      </div>
-                      <Badge variant={
-                        rateAnalysis.market_position === 'Premium' ? 'default' :
-                          rateAnalysis.market_position === 'Budget' ? 'secondary' : 'outline'
-                      } className="mt-1">
-                        {rateAnalysis.market_position} Position
-                      </Badge>
-                    </div>
-                    <div className="space-y-1 text-right border-l pl-4 dark:border-slate-800">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Market Avg</p>
-                      <div className="text-2xl font-semibold text-slate-600 dark:text-slate-400">
-                        ₹{rateAnalysis.average_market_price}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-[150px] ml-auto leading-tight">
-                        {rateAnalysis.suggestion}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-6 text-center">
-                    <div className="bg-blue-100 dark:bg-blue-900/50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-200">No market data available</p>
-                    <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto">
-                      Connect to OTA channels to start tracking competitor rates automatically.
-                    </p>
-                    <Button size="sm" asChild>
-                      <Link to="/rate-shopper">Setup Rate Shopper</Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Recent Bookings List */}
-          <motion.div variants={itemVariants}>
-            <Card className="overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50 dark:bg-slate-900/50 px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-primary/10 rounded-md">
-                    <CalendarCheck className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Recent Bookings</CardTitle>
-                    <CardDescription className="text-xs">Latest activity at your property</CardDescription>
-                  </div>
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Recent Bookings */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="shadow-none border-slate-200">
+            <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-4">
+              <div>
+                <CardTitle className="text-base font-bold">Recent Bookings</CardTitle>
+                <CardDescription className="text-xs">Latest guest activity</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" asChild className="h-8">
+                <Link to="/bookings">View All</Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              {recentBookings.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 italic text-sm">
+                  No bookings found
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/bookings">View All</Link>
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                {recentBookings.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p>No bookings yet</p>
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {recentBookings.map((booking, index) => (
-                      <motion.div
-                        key={booking.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors group"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium">
-                            {booking.guest?.first_name?.[0]}{booking.guest?.last_name?.[0]}
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm text-slate-900 dark:text-slate-100">
-                              {booking.guest?.first_name} {booking.guest?.last_name}
-                            </p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>#{booking.booking_number}</span>
-                              <span>•</span>
-                              <span>{booking.rooms?.[0]?.room_type_name || 'Room'}</span>
-                            </div>
-                          </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {recentBookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 font-semibold text-xs">
+                          {booking.guest?.first_name?.[0]}{booking.guest?.last_name?.[0]}
                         </div>
-                        <div className="text-right">
-                          <span
-                            className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${booking.status === 'confirmed'
-                              ? 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-900/20 dark:text-green-400'
-                              : booking.status === 'checked_in'
-                                ? 'bg-blue-50 text-blue-700 ring-blue-700/10 dark:bg-blue-900/20 dark:text-blue-400'
-                                : 'bg-yellow-50 text-yellow-800 ring-yellow-600/20 dark:bg-yellow-900/20 dark:text-yellow-400'
-                              }`}
-                          >
-                            {booking.status}
-                          </span>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {booking.check_in}
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {booking.guest?.first_name} {booking.guest?.last_name}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            #{booking.booking_number} • {booking.rooms?.[0]?.room_type_name || 'Room'}
                           </p>
                         </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className={cn(
+                          "text-[10px] uppercase px-2 py-0 h-5",
+                          booking.status === 'confirmed' ? 'text-green-600 bg-green-50 border-green-100' : 
+                          booking.status === 'checked_in' ? 'text-blue-600 bg-blue-50 border-blue-100' : 
+                          'text-slate-500 bg-slate-50 border-slate-100'
+                        )}>
+                          {booking.status}
+                        </Badge>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          {booking.check_in}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* RIGHT COLUMN (Sidebar Widgets) - Spans 3/7 */}
-        <div className="space-y-6 lg:col-span-3">
-
-          {/* Property Status */}
-          <motion.div variants={itemVariants} whileHover={{ y: -2 }}>
-            <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Property Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">Active</div>
-                  <span className="relative flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
-                  </span>
+        {/* Side Panel */}
+        <div className="space-y-6">
+          {/* Rate Analysis */}
+          <Card className="shadow-none border-slate-200 bg-slate-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+                Market Insight
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {rateAnalysis ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-xs text-slate-500 uppercase">Your Price</span>
+                    <span className="text-xl font-bold text-slate-900">₹{rateAnalysis.my_price}</span>
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-xs text-slate-500 uppercase">Market Avg</span>
+                    <span className="text-sm font-medium text-slate-600">₹{rateAnalysis.average_market_price}</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200">
+                    <p className="text-xs text-slate-600 leading-relaxed italic">
+                      "{rateAnalysis.suggestion}"
+                    </p>
+                  </div>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 text-xs font-bold uppercase" asChild>
+                    <Link to="/rate-shopper">View Competitors →</Link>
+                  </Button>
                 </div>
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
-                  <p className="text-sm text-emerald-800 dark:text-emerald-400 flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Accepting new bookings normally.
-                  </p>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs text-slate-500">No market data yet</p>
                 </div>
-                <Button variant="outline" size="sm" className="w-full mt-4" asChild>
-                  <Link to="/settings">Manage Availability</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Pending Bookings */}
-          <motion.div variants={itemVariants} whileHover={{ y: -2 }}>
-            <Card className="border-l-4 border-l-yellow-400">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Action Required</CardTitle>
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-100">
-                    Pending
-                  </Badge>
+          {/* Action Required */}
+          <Card className="shadow-none border-slate-200 border-l-4 border-l-blue-600">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Action Needed</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-3xl font-bold text-slate-900">
+                  <AnimatedCounter value={stats?.pending_bookings || 0} />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-4xl font-bold text-slate-900 dark:text-white">
-                    <AnimatedCounter value={stats?.pending_bookings || 0} />
-                  </span>
-                  <span className="text-sm text-muted-foreground">bookings</span>
-                </div>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Guests are waiting for your confirmation.
-                </p>
-                <Button className="w-full bg-yellow-600 hover:bg-yellow-700 text-white" size="sm" asChild>
-                  <Link to="/bookings?status=pending">Review Pending</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Quick Actions / Help Stub */}
-          <motion.div variants={itemVariants}>
-            <Card className="bg-slate-50 dark:bg-slate-900 border-dashed">
-              <CardContent className="p-6 text-center">
-                <p className="text-sm font-medium text-slate-900 dark:text-slate-200 mb-1">Need Help?</p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Ask the AI Assistant for reports or insights.
-                </p>
-                <Button variant="secondary" size="sm" className="w-full gap-2" asChild>
-                  <Link to="/agent">
-                    <Users className="h-4 w-4" /> Ask AI Agent
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-
+                <Badge className="bg-blue-600">Pending</Badge>
+              </div>
+              <p className="text-xs text-slate-500 mb-4">Confirm bookings to secure your revenue.</p>
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 h-9 text-xs font-bold" asChild>
+                <Link to="/bookings?status=pending">Review All</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
