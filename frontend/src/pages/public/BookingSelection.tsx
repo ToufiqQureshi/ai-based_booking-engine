@@ -725,7 +725,7 @@ export default function BookingSelection() {
                                                                         <div className="text-right hidden sm:block">
                                                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Size</p>
                                                                             <p className="text-sm font-bold text-slate-700 flex items-center justify-end gap-1">
-                                                                                <Maximize className="w-3.5 h-3.5" /> {room.size_sq_ft} ft²
+                                                                                <Maximize className="w-3.5 h-3.5" /> {room.room_size || 'N/A'} ft²
                                                                             </p>
                                                                         </div>
                                                                         <div className="h-8 w-px bg-slate-100 hidden sm:block" />
@@ -773,7 +773,7 @@ export default function BookingSelection() {
                                                                             <div className="flex flex-wrap gap-x-4 gap-y-1">
                                                                                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
                                                                                     <Utensils className="w-3.5 h-3.5 text-slate-400" />
-                                                                                    {plan.meal_plan || 'Room Only'}
+                                                                                    {plan.meal_plan_code || 'Room Only'}
                                                                                 </div>
                                                                                 <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
                                                                                     <CalendarIcon className="w-3.5 h-3.5" />
