@@ -47,6 +47,10 @@ class RoomTypeBase(SQLModel):
     extra_person_price: float = Field(default=0.0, ge=0)
     extra_adult_price: float = Field(default=0.0, ge=0)
     extra_child_price: float = Field(default=0.0, ge=0)
+    view: Optional[str] = Field(default=None, description="e.g. Garden View, Pool View")
+    floor: Optional[str] = Field(default=None, description="Floor level")
+    smoking_allowed: bool = Field(default=False)
+    is_pet_friendly: bool = Field(default=False)
 
 
 class RoomType(RoomTypeBase, table=True):

@@ -32,7 +32,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { apiClient } from '@/api/client';
-import { RoomType, Amenity } from '@/types/api';
+import { RoomType, Amenity, RoomPhoto } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
 import { RoomImageUploader } from './RoomImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,6 +53,10 @@ const roomSchema = z.object({
     extra_child_price: z.coerce.number().min(0, 'Cannot be negative'),
     bed_type: z.string().optional(),
     room_size: z.coerce.number().optional(),
+    view: z.string().optional(),
+    floor: z.string().optional(),
+    smoking_allowed: z.boolean().default(false),
+    is_pet_friendly: z.boolean().default(false),
     photos: z.array(z.object({
         id: z.string().optional(),
         url: z.string(),
@@ -90,6 +94,10 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
             extra_child_price: 500,
             bed_type: 'Queen',
             room_size: undefined,
+            view: '',
+            floor: '',
+            smoking_allowed: false,
+            is_pet_friendly: false,
             photos: [],
         },
     });
@@ -126,6 +134,10 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     extra_child_price: initialData.extra_child_price || 0,
                     bed_type: initialData.bed_type || 'Queen',
                     room_size: initialData.room_size,
+                    view: initialData.view || '',
+                    floor: initialData.floor || '',
+                    smoking_allowed: initialData.smoking_allowed || false,
+                    is_pet_friendly: initialData.is_pet_friendly || false,
                     photos: initialData.photos || [],
                     // Map existing Linked Amenities to IDs
                     // If backend sends 'amenities' as objects, we map them to IDs
@@ -146,6 +158,10 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     extra_child_price: 0,
                     bed_type: 'Queen',
                     room_size: undefined,
+                    view: '',
+                    floor: '',
+                    smoking_allowed: false,
+                    is_pet_friendly: false,
                     photos: [],
                     amenity_ids: [],
                 });
@@ -265,6 +281,82 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                     )}
                                 />
                             </div>
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                <FormField
+                                    control={form.control}
+                                    name="view"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Room View</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select view" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Garden View">Garden View</SelectItem>
+                                                    <SelectItem value="Pool View">Pool View</SelectItem>
+                                                    <SelectItem value="Sea View">Sea View</SelectItem>
+                                                    <SelectItem value="City View">City View</SelectItem>
+                                                    <SelectItem value="Mountain View">Mountain View</SelectItem>
+                                                    <SelectItem value="Courtyard View">Courtyard View</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="floor"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Floor / Level</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. 1st Floor, Penthouse" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                <FormField
+                                    control={form.control}
+                                    name="smoking_allowed"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <div className="space-y-1 leading-none">
+                                                <FormLabel className="text-xs">Smoking Allowed</FormLabel>
+                                            </div>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="is_pet_friendly"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <div className="space-y-1 leading-none">
+                                                <FormLabel className="text-xs">Pet Friendly</FormLabel>
+                                            </div>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
 
                         {/* Images */}
@@ -277,7 +369,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                     <FormItem>
                                         <FormControl>
                                             <RoomImageUploader
-                                                images={field.value}
+                                                images={field.value as RoomPhoto[]}
                                                 onChange={field.onChange}
                                             />
                                         </FormControl>

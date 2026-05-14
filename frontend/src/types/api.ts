@@ -117,6 +117,10 @@ export interface RoomType {
   extra_person_price?: number;
   extra_adult_price?: number;
   extra_child_price?: number;
+  view?: string;
+  floor?: string;
+  smoking_allowed?: boolean;
+  is_pet_friendly?: boolean;
   photos: RoomPhoto[];
   amenities: Amenity[];
   is_active: boolean;
@@ -156,6 +160,8 @@ export interface RatePlan {
   min_los?: number;
   advance_purchase_days?: number;
   inclusions?: string[];
+  is_package?: boolean;
+  package_items?: string[];
   created_at: string;
 }
 

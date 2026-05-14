@@ -45,6 +45,8 @@ const ratePlanSchema = z.object({
     min_los: z.coerce.number().min(1),
     advance_purchase_days: z.coerce.number().min(0),
     inclusions: z.string().optional(), // Comma-separated string, will be converted to array
+    is_package: z.boolean().default(false),
+    package_items: z.string().optional(), // Comma-separated string for package components
 });
 
 interface RatePlanDialogProps {
@@ -52,9 +54,10 @@ interface RatePlanDialogProps {
     onOpenChange: (open: boolean) => void;
     planToEdit?: RatePlan | null; // If present, we are editing
     onSuccess: () => void;
+    defaultIsPackage?: boolean;
 }
 
-export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: RatePlanDialogProps) {
+export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defaultIsPackage = false }: RatePlanDialogProps) {
     const { toast } = useToast();
     const isEditing = !!planToEdit;
 
@@ -71,6 +74,8 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: Ra
             min_los: 1,
             advance_purchase_days: 0,
             inclusions: '',
+            is_package: false,
+            package_items: '',
         },
     });
 
@@ -87,6 +92,8 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: Ra
                 min_los: planToEdit.min_los || 1,
                 advance_purchase_days: planToEdit.advance_purchase_days || 0,
                 inclusions: (planToEdit.inclusions || []).join(', '),
+                is_package: planToEdit.is_package || false,
+                package_items: (planToEdit.package_items || []).join(', '),
             });
         } else {
             form.reset({
@@ -100,6 +107,8 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: Ra
                 min_los: 1,
                 advance_purchase_days: 0,
                 inclusions: '',
+                is_package: defaultIsPackage,
+                package_items: '',
             });
         }
     }, [planToEdit, form, open]);
@@ -111,6 +120,9 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: Ra
                 ...values,
                 inclusions: values.inclusions
                     ? values.inclusions.split(',').map(s => s.trim()).filter(Boolean)
+                    : [],
+                package_items: values.package_items
+                    ? values.package_items.split(',').map(s => s.trim()).filter(Boolean)
                     : []
             };
 
@@ -283,6 +295,46 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: Ra
                                 </FormItem>
                             )}
                         />
+
+                        <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/20">
+                            <FormField
+                                control={form.control}
+                                name="is_package"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg p-0">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-base text-primary font-bold">Mark as Package</FormLabel>
+                                            <FormDescription>
+                                                Bundled deals like Stay + Food + Activities
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+
+                            {form.watch('is_package') && (
+                                <FormField
+                                    control={form.control}
+                                    name="package_items"
+                                    render={({ field }) => (
+                                        <FormItem className="mt-2 p-3 bg-primary/5 rounded-md border border-primary/10">
+                                            <FormLabel className="text-xs font-bold text-primary">Package Inclusions (Exclusive Items)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g. 1-Day City Tour, Candle Light Dinner, Spa Coupon" {...field} />
+                                            </FormControl>
+                                            <FormDescription className="text-[10px]">Add items unique to this package</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+                        </div>
 
                         <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/20">
                             <FormField
