@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -524,7 +524,7 @@ export default function BookingSelection() {
                             <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                 {searchType === 'room' ? (
                                     <>
-                                        <Hotel className="w-4 h-4 text-indigo-500" />
+                                        <HotelIcon className="w-4 h-4 text-indigo-500" />
                                         {rooms.length} Rooms Available
                                     </>
                                 ) : (
