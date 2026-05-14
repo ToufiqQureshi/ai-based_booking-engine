@@ -675,18 +675,35 @@ export default function BookingSelection() {
                                     // Standard Room View
                                     rooms
                                         .filter(room => {
-                                            const minPrice = Math.min(...room.rate_options.map(o => o.total_price));
+                                            // Get relevant rates based on search type
+                                            const relevantRates = room.rate_options.filter(o => 
+                                                searchType === 'package' ? o.is_package : !o.is_package
+                                            );
+                                            
+                                            if (relevantRates.length === 0) return false;
+
+                                            const minPrice = Math.min(...relevantRates.map(o => o.total_price));
                                             const matchesPrice = minPrice <= priceRange[1];
+                                            
                                             const matchesMeal = selectedMealPlans.length === 0 || 
-                                                room.rate_options.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
+                                                relevantRates.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
+                                                
                                             return matchesPrice && matchesMeal;
                                         })
                                         .sort((a, b) => {
-                                            const priceA = Math.min(...a.rate_options.map(o => o.total_price));
-                                            const priceB = Math.min(...b.rate_options.map(o => o.total_price));
+                                            const ratesA = a.rate_options.filter(o => searchType === 'package' ? o.is_package : !o.is_package);
+                                            const ratesB = b.rate_options.filter(o => searchType === 'package' ? o.is_package : !o.is_package);
+                                            const priceA = ratesA.length > 0 ? Math.min(...ratesA.map(o => o.total_price)) : 0;
+                                            const priceB = ratesB.length > 0 ? Math.min(...ratesB.map(o => o.total_price)) : 0;
                                             return sortBy === 'price_asc' ? priceA - priceB : priceB - priceA;
                                         })
                                         .map((room) => {
+                                            const filteredRates = room.rate_options.filter(o => 
+                                                searchType === 'package' ? o.is_package : !o.is_package
+                                            );
+                                            
+                                            if (filteredRates.length === 0) return null;
+
                                             return (
                                                 <div key={room.id} className="bg-white rounded-3xl overflow-hidden mb-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 hover:shadow-[0_20px_50px_rgba(79,70,229,0.08)] transition-all duration-500 group">
                                                     <div className="flex flex-col lg:flex-row">
@@ -742,7 +759,7 @@ export default function BookingSelection() {
 
                                                             {/* Rates: Minimal List with No Heavy Boxes */}
                                                             <div className="space-y-4">
-                                                                {room.rate_options.map((plan, idx) => (
+                                                                {filteredRates.map((plan, idx) => (
                                                                     <div 
                                                                         key={plan.id} 
                                                                         className={cn(
