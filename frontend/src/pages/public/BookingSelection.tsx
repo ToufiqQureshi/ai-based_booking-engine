@@ -677,7 +677,7 @@ export default function BookingSelection() {
                                         .filter(room => {
                                             // Get relevant rates based on search type
                                             const relevantRates = room.rate_options.filter(o => 
-                                                searchType === 'package' ? o.is_package : !o.is_package
+                                                (searchType as string) === 'package' ? o.is_package : !o.is_package
                                             );
                                             
                                             if (relevantRates.length === 0) return false;
@@ -691,15 +691,15 @@ export default function BookingSelection() {
                                             return matchesPrice && matchesMeal;
                                         })
                                         .sort((a, b) => {
-                                            const ratesA = a.rate_options.filter(o => searchType === 'package' ? o.is_package : !o.is_package);
-                                            const ratesB = b.rate_options.filter(o => searchType === 'package' ? o.is_package : !o.is_package);
+                                            const ratesA = a.rate_options.filter(o => (searchType as string) === 'package' ? o.is_package : !o.is_package);
+                                            const ratesB = b.rate_options.filter(o => (searchType as string) === 'package' ? o.is_package : !o.is_package);
                                             const priceA = ratesA.length > 0 ? Math.min(...ratesA.map(o => o.total_price)) : 0;
                                             const priceB = ratesB.length > 0 ? Math.min(...ratesB.map(o => o.total_price)) : 0;
                                             return sortBy === 'price_asc' ? priceA - priceB : priceB - priceA;
                                         })
                                         .map((room) => {
                                             const filteredRates = room.rate_options.filter(o => 
-                                                searchType === 'package' ? o.is_package : !o.is_package
+                                                (searchType as string) === 'package' ? o.is_package : !o.is_package
                                             );
                                             
                                             if (filteredRates.length === 0) return null;
