@@ -770,7 +770,7 @@ export default function BookingSelection() {
                                                 </div>
                                             </div>
                                         );
-                                    })}
+                                    })
                                 )}
                             </div>
                         )}
