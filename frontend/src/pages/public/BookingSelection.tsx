@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon } from 'lucide-react';
+import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -682,117 +682,133 @@ export default function BookingSelection() {
                                             return matchesPrice && matchesMeal;
                                         })
                                         .sort((a, b) => {
-                                            const aPrice = Math.min(...a.rate_options.map(o => o.total_price));
-                                            const bPrice = Math.min(...b.rate_options.map(o => o.total_price));
-                                            if (sortBy === 'price_asc') return aPrice - bPrice;
-                                            if (sortBy === 'price_desc') return bPrice - aPrice;
-                                            return 0;
+                                            const priceA = Math.min(...a.rate_options.map(o => o.total_price));
+                                            const priceB = Math.min(...b.rate_options.map(o => o.total_price));
+                                            return sortBy === 'price_asc' ? priceA - priceB : priceB - priceA;
                                         })
                                         .map((room) => {
-                                            // Filter rate options to NOT show packages in standard room view
-                                            const filteredRates = room.rate_options.filter(o => !o.is_package);
-                                            if (filteredRates.length === 0) return null;
-                                            
                                             return (
-                                            <div key={room.id} className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden flex flex-col md:flex-row mb-6 hover:shadow-md transition-shadow">
-                                                {/* Left: Image Carousel (Fixed Width) */}
-                                                <div className="md:w-80 md:min-w-[20rem] h-64 md:h-auto bg-slate-100 relative group">
-                                                    <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
-                                                    <div className="absolute top-2 left-2 z-10">
-                                                        <Badge className="bg-indigo-600/90 text-white border-0 rounded-md shadow-lg">
-                                                            {room.name || 'Standard'}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-
-                                                {/* Right: Content */}
-                                                <div className="flex-1 flex flex-col">
-                                                    {/* Room Header Info */}
-                                                    <div className="p-5 border-b border-slate-100 bg-slate-50/30 flex justify-between items-start">
-                                                        <div>
-                                                            <h3 className="text-xl font-black text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer flex items-center gap-2" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
-                                                                {room.name}
-                                                            </h3>
-                                                            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-tighter">Instant Confirmation Available</p>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-slate-600">
-                                                            <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm" title="Occupancy">
-                                                                <User className="h-3.5 w-3.5 text-indigo-500" />
-                                                                <span className="text-xs font-black">{room.max_occupancy}</span>
+                                                <div key={room.id} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group mb-8">
+                                                    <div className="flex flex-col lg:flex-row">
+                                                        {/* Left: Visual Section (40%) */}
+                                                        <div className="lg:w-2/5 h-64 lg:h-auto bg-slate-100 relative overflow-hidden">
+                                                            <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
+                                                            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+                                                                <Badge className="bg-white/90 backdrop-blur-md text-slate-900 border-0 rounded-lg shadow-sm font-black px-3 py-1.5 uppercase text-[10px] tracking-widest">
+                                                                    {room.name}
+                                                                </Badge>
+                                                                <div className="flex gap-1">
+                                                                    <div className="bg-slate-900/60 backdrop-blur-md text-white p-1.5 rounded-lg">
+                                                                        <User className="w-3.5 h-3.5" />
+                                                                    </div>
+                                                                    <div className="bg-slate-900/60 backdrop-blur-md text-white p-1.5 rounded-lg text-[10px] font-black flex items-center px-2">
+                                                                        {room.max_occupancy} ADULTS
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            {room.room_size && (
-                                                                <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
-                                                                    <Waves className="h-3.5 w-3.5 text-indigo-500" />
-                                                                    <span className="text-xs font-black">{room.room_size} ft²</span>
-                                                                </div>
-                                                            )}
                                                         </div>
-                                                    </div>
 
-                                                    {/* Rate Plans List */}
-                                                    <div className="divide-y divide-slate-100">
-                                                        {filteredRates.map((plan) => (
-                                                            <div key={plan.id} className="p-5 hover:bg-slate-50/50 transition-colors grid grid-cols-1 md:grid-cols-12 gap-4 items-center group/plan">
-                                                                <div className="md:col-span-8 space-y-1.5">
-                                                                    <div className="font-black text-slate-800 flex items-center gap-2">
-                                                                        <div className={cn(
-                                                                            "w-2 h-2 rounded-full",
-                                                                            plan.meal_plan_code === 'EP' ? 'bg-slate-300' : 'bg-green-500 animate-pulse'
-                                                                        )} />
-                                                                        {plan.name}
-                                                                        {plan.is_package && (
-                                                                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] py-0 px-2 h-5 font-black uppercase shadow-sm">
-                                                                                Package
-                                                                            </Badge>
-                                                                        )}
-                                                                        <button 
-                                                                            className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider hover:bg-indigo-100 transition-colors"
-                                                                            onClick={() => { setSelectedRateInfo(plan); setIsRateModalOpen(true); }}
-                                                                        >
-                                                                            Details
-                                                                        </button>
+                                                        {/* Right: Info & Rates Section (60%) */}
+                                                        <div className="lg:w-3/5 flex flex-col">
+                                                            {/* Room Header */}
+                                                            <div className="p-6 border-b border-slate-100">
+                                                                <div className="flex justify-between items-start mb-4">
+                                                                    <div>
+                                                                        <h3 className="text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors cursor-pointer" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
+                                                                            {room.name}
+                                                                        </h3>
+                                                                        <p className="text-xs font-bold text-green-600 uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                                                                            <Check className="w-3.5 h-3.5" /> Instant Confirmation Available
+                                                                        </p>
                                                                     </div>
-                                                                    <div className="flex flex-wrap gap-3">
-                                                                        {(plan.inclusions || []).map((inclusion, idx) => (
-                                                                            <div key={idx} className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                                                                                <Check className="w-3.5 h-3.5 text-green-500" /> {inclusion}
-                                                                            </div>
-                                                                        ))}
-                                                                        {plan.cancellation_policy && (
-                                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                                                                                <Info className="w-3 h-3" /> {plan.cancellation_policy}
-                                                                            </div>
-                                                                        )}
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="text-right hidden sm:block">
+                                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Size</p>
+                                                                            <p className="text-sm font-bold text-slate-700 flex items-center justify-end gap-1">
+                                                                                <Maximize className="w-3.5 h-3.5" /> {room.size_sq_ft} ft²
+                                                                            </p>
+                                                                        </div>
+                                                                        <div className="h-8 w-px bg-slate-100 hidden sm:block" />
+                                                                        <Button variant="ghost" size="sm" className="font-black text-[10px] uppercase tracking-widest text-indigo-600 hover:bg-indigo-50" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
+                                                                            View Gallery
+                                                                        </Button>
                                                                     </div>
                                                                 </div>
 
-                                                                <div className="md:col-span-4 flex items-center justify-end gap-5">
-                                                                    <div className="text-right">
-                                                                        <div className="text-[10px] font-bold text-slate-400 mb-0.5">
-                                                                            {formatCurrency(plan.price_per_night)} / night
-                                                                        </div>
-                                                                        <div className="flex items-baseline justify-end gap-1">
-                                                                            <span className="text-2xl font-black text-slate-900 leading-none">
-                                                                                {formatCurrency(plan.total_price)}
-                                                                            </span>
-                                                                        </div>
-                                                                        <p className="text-[10px] font-bold text-indigo-600 uppercase mt-1 tracking-tighter">Total for {numNights} Night{numNights > 1 ? 's' : ''}</p>
-                                                                    </div>
+                                                                {/* Amenities Row */}
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {(room.amenities || []).slice(0, 5).map((am: any, i) => {
+                                                                        const Icon = ICONS[am.icon_slug || am.icon] || Wifi;
+                                                                        return (
+                                                                            <div key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-lg" title={am.name}>
+                                                                                <Icon className="w-3.5 h-3.5 text-slate-400" />
+                                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">{am.name}</span>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
 
-                                                                    <Button
-                                                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 shadow-md rounded-xl h-11 min-w-[100px] transition-all active:scale-95"
-                                                                        onClick={() => handleSelectRate(room, plan)}
+                                                            {/* Rate Plans List */}
+                                                            <div className="flex-1 bg-slate-50/30">
+                                                                {room.rate_options.map((plan, idx) => (
+                                                                    <div 
+                                                                        key={plan.id} 
+                                                                        className={cn(
+                                                                            "p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors hover:bg-white",
+                                                                            idx !== room.rate_options.length - 1 && "border-b border-slate-100"
+                                                                        )}
                                                                     >
-                                                                        BOOK
-                                                                    </Button>
-                                                                </div>
+                                                                        <div className="flex-1 w-full sm:w-auto">
+                                                                            <div className="flex items-center gap-2 mb-1">
+                                                                                <span className="text-sm font-black text-slate-900 uppercase tracking-tight">{plan.name}</span>
+                                                                                <Button 
+                                                                                    variant="ghost" 
+                                                                                    className="h-6 px-2 text-[10px] font-black text-indigo-600 uppercase hover:bg-indigo-50"
+                                                                                    onClick={() => { setSelectedRateInfo(plan); setIsRateModalOpen(true); }}
+                                                                                >
+                                                                                    Details
+                                                                                </Button>
+                                                                            </div>
+                                                                            <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                                                                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+                                                                                    <Utensils className="w-3.5 h-3.5 text-slate-400" />
+                                                                                    {plan.meal_plan || 'Room Only'}
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
+                                                                                    <CalendarIcon className="w-3.5 h-3.5" />
+                                                                                    Free Cancellation
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                                                                            <div className="text-right">
+                                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest line-through decoration-red-400/30">
+                                                                                    {formatCurrency(plan.price_per_night * 1.15)}
+                                                                                </p>
+                                                                                <div className="flex items-baseline gap-1">
+                                                                                    <span className="text-2xl font-black text-slate-900">
+                                                                                        {formatCurrency(plan.total_price)}
+                                                                                    </span>
+                                                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">/ Stay</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <Button 
+                                                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95"
+                                                                                onClick={() => handleSelectRate(room, plan)}
+                                                                            >
+                                                                                SELECT
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
                                                             </div>
-                                                        ))}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })
+                                            );
+                                        })
                                 )}
                             </div>
                         )}
