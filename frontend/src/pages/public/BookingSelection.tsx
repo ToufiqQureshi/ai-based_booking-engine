@@ -718,86 +718,80 @@ export default function BookingSelection() {
                                                             </div>
                                                         </div>
 
-                                                        {/* Content Section: More Compact & Professional */}
-                                                        <div className="flex-1 flex flex-col p-6 lg:p-7">
+                                                        {/* Content Section: Minimalist & Clean */}
+                                                        <div className="flex-1 flex flex-col p-5 lg:p-6">
                                                             {/* Header Area */}
-                                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-5">
-                                                                <div className="space-y-1">
-                                                                    <h3 className="text-xl font-black text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors duration-300">
+                                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
+                                                                <div className="space-y-0.5">
+                                                                    <h3 className="text-lg font-bold text-slate-800 tracking-tight leading-snug group-hover:text-indigo-600 transition-colors duration-200">
                                                                         {room.name}
                                                                     </h3>
-                                                                    <div className="flex items-center gap-3 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
-                                                                        <span className="flex items-center gap-1.5"><User className="w-3 h-3" /> {room.max_occupancy} Adults</span>
-                                                                        <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                                        <span className="flex items-center gap-1.5"><Maximize className="w-3 h-3" /> {room.room_size || '---'} ft²</span>
+                                                                    <div className="flex items-center gap-3 text-slate-500 text-[11px] font-medium">
+                                                                        <span className="flex items-center gap-1"><User className="w-3 h-3" /> {room.max_occupancy} Adults</span>
+                                                                        <span className="text-slate-300">•</span>
+                                                                        <span className="flex items-center gap-1"><Maximize className="w-3 h-3" /> {room.room_size || '---'} ft²</span>
                                                                     </div>
                                                                 </div>
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="sm" 
-                                                                    className="rounded-full text-indigo-600 font-black text-[10px] px-4 h-8 hover:bg-indigo-50 transition-all"
+                                                                <button 
+                                                                    className="text-indigo-600 font-semibold text-xs hover:underline transition-all"
                                                                     onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}
                                                                 >
-                                                                    DETAILS
-                                                                </Button>
+                                                                    Room Details
+                                                                </button>
                                                             </div>
 
-                                                            {/* Amenities: Compact List */}
-                                                            <div className="flex flex-wrap gap-2 mb-6">
-                                                                {(room.amenities || []).slice(0, 5).map((am: any, i) => {
+                                                            {/* Amenities: Minimal & Gray */}
+                                                            <div className="flex flex-wrap gap-x-4 gap-y-2 mb-6">
+                                                                {(room.amenities || []).slice(0, 4).map((am: any, i) => {
                                                                     const Icon = ICONS[am.icon_slug || am.icon] || Wifi;
                                                                     return (
-                                                                        <div key={i} className="flex items-center gap-1.5 bg-slate-50/80 px-2.5 py-1 rounded-lg border border-slate-100" title={am.name}>
+                                                                        <div key={i} className="flex items-center gap-1.5" title={am.name}>
                                                                             <Icon className="w-3 h-3 text-slate-400" />
-                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase">{am.name}</span>
+                                                                            <span className="text-[11px] text-slate-500">{am.name}</span>
                                                                         </div>
                                                                     );
                                                                 })}
                                                             </div>
 
-                                                            {/* Rates: Sleek & Integrated */}
-                                                            <div className="space-y-2.5">
+                                                            {/* Rates: Clean List Style */}
+                                                            <div className="border-t border-slate-100 mt-auto pt-4 space-y-3">
                                                                 {filteredRates.map((plan, idx) => (
                                                                     <div 
                                                                         key={plan.id} 
-                                                                        className={cn(
-                                                                            "flex flex-col sm:flex-row items-center justify-between p-4 rounded-xl border border-slate-100/60 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-300",
-                                                                            idx === 0 && "bg-slate-50/50"
-                                                                        )}
+                                                                        className="flex items-center justify-between group/rate py-2"
                                                                     >
-                                                                        <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
-                                                                            <div className="flex items-center gap-2 mb-1">
-                                                                                <span className="text-sm font-black text-slate-800 tracking-tight uppercase">{plan.name}</span>
+                                                                        <div className="flex-1">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-sm font-semibold text-slate-700">{plan.name}</span>
                                                                                 {plan.savings_text && (
-                                                                                    <span className="bg-green-100 text-green-700 text-[9px] px-1.5 py-0.5 rounded font-black uppercase">
+                                                                                    <span className="text-[10px] font-bold text-green-600">
                                                                                         {plan.savings_text}
                                                                                     </span>
                                                                                 )}
                                                                             </div>
-                                                                            <div className="flex flex-wrap gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                                                <span className="flex items-center gap-1.5"><Utensils className="w-3 h-3" /> {plan.meal_plan_code}</span>
-                                                                                <span className="flex items-center gap-1.5 text-green-600/80"><Check className="w-3 h-3" /> Free Cancellation</span>
+                                                                            <div className="flex gap-3 mt-0.5">
+                                                                                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{plan.meal_plan_code}</span>
+                                                                                <span className="text-[10px] text-emerald-600 font-medium">Free Cancellation</span>
                                                                             </div>
                                                                         </div>
 
-                                                                        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto border-t sm:border-t-0 border-slate-100/60 pt-3 sm:pt-0">
+                                                                        <div className="flex items-center gap-5">
                                                                             <div className="text-right">
-                                                                                <p className="text-[10px] font-bold text-slate-300 line-through mb-0">
-                                                                                    {formatCurrency(plan.total_price * 1.12)}
-                                                                                </p>
-                                                                                <div className="flex items-baseline gap-1">
-                                                                                    <span className="text-xl font-black text-slate-900 tracking-tight">
+                                                                                <div className="flex items-baseline justify-end gap-1">
+                                                                                    <span className="text-lg font-bold text-slate-900">
                                                                                         {formatCurrency(plan.total_price)}
                                                                                     </span>
-                                                                                    <span className="text-[9px] font-black text-slate-400 uppercase">/ Total</span>
+                                                                                    <span className="text-[10px] text-slate-400 font-medium">total</span>
                                                                                 </div>
+                                                                                <p className="text-[10px] text-slate-300 line-through">
+                                                                                    {formatCurrency(plan.total_price * 1.12)}
+                                                                                </p>
                                                                             </div>
                                                                             <Button 
-                                                                                className="bg-slate-900 hover:bg-indigo-600 text-white font-black px-6 h-11 rounded-xl shadow-md shadow-slate-200 transition-all duration-300 active:scale-95 group/btn"
+                                                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 h-9 rounded-lg shadow-sm transition-all active:scale-95"
                                                                                 onClick={() => handleSelectRate(room, plan)}
                                                                             >
-                                                                                SELECT 
-                                                                                <ArrowRight className="w-3.5 h-3.5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                                                                                Select
                                                                             </Button>
                                                                         </div>
                                                                     </div>
