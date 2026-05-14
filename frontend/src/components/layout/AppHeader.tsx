@@ -82,208 +82,184 @@ export function AppHeader() {
     .slice(0, 2) || 'U';
 
   return (
-    <header className="sticky top-0 z-40 flex h-20 items-center gap-4 bg-white/60 backdrop-blur-2xl px-8 border-b border-indigo-100/30">
-      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-violet-500/5 pointer-events-none" />
+    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 bg-white px-8 border-b border-slate-200">
       
-      {/* Sidebar Trigger - Premium Styled */}
-      <SidebarTrigger className="-ml-2 h-10 w-10 rounded-xl hover:bg-indigo-50 transition-colors">
-        <Menu className="h-5 w-5 text-indigo-950" />
+      {/* Sidebar Trigger */}
+      <SidebarTrigger className="-ml-2 h-9 w-9 rounded-lg hover:bg-slate-50 transition-colors">
+        <Menu className="h-5 w-5 text-slate-600" />
       </SidebarTrigger>
 
-      {/* Property Architecture Selector */}
+      {/* Property Selector */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-12 px-5 gap-3 rounded-2xl hover:bg-white/80 border border-transparent hover:border-indigo-100/50 transition-all group">
-            <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+          <Button variant="ghost" className="h-10 px-3 gap-3 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all group">
+            <div className="h-7 w-7 rounded-md bg-blue-600 flex items-center justify-center shadow-sm">
                 <Building2 className="h-4 w-4 text-white" />
             </div>
             <div className="flex flex-col items-start">
-                <span className="text-xs font-black text-indigo-950 tracking-tight leading-none mb-1 uppercase">{hotel?.name || 'Select Entity'}</span>
-                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest leading-none">Global Node</span>
+                <span className="text-xs font-bold text-slate-900 leading-none mb-1">{hotel?.name || 'Select Hotel'}</span>
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none">Main Branch</span>
             </div>
-            <ChevronDown className="h-4 w-4 text-indigo-300 group-hover:text-indigo-600 transition-colors" />
+            <ChevronDown className="h-3 w-3 text-slate-400 group-hover:text-blue-600 transition-colors" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-72 p-2 rounded-3xl border-indigo-100 shadow-2xl bg-white/95 backdrop-blur-xl">
-          <div className="px-4 py-3 mb-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Infrastructure Management</p>
-            <p className="text-xs font-bold text-indigo-950">Switch Active Property</p>
+        <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-xl border-slate-200 shadow-xl bg-white">
+          <div className="px-3 py-2 mb-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Your Properties</p>
           </div>
-          <DropdownMenuSeparator className="bg-indigo-50" />
+          <DropdownMenuSeparator className="bg-slate-100" />
 
-          <div className="max-h-[300px] overflow-y-auto space-y-1 my-2 pr-1">
+          <div className="max-h-[300px] overflow-y-auto space-y-0.5 my-1">
             {properties.map(p => (
                 <DropdownMenuItem key={p.id} className={cn(
-                    "flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all",
-                    p.is_current ? "bg-indigo-50 text-indigo-950" : "hover:bg-indigo-50/50 text-slate-600"
+                    "flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all",
+                    p.is_current ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-600"
                 )} onClick={() => handleSwitchProperty(p.id)}>
                 <div className={cn(
-                    "h-8 w-8 rounded-xl flex items-center justify-center font-black text-xs",
-                    p.is_current ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" : "bg-indigo-100 text-indigo-600"
+                    "h-7 w-7 rounded-md flex items-center justify-center font-bold text-xs",
+                    p.is_current ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
                 )}>
                     {p.name[0]}
                 </div>
                 <div className="flex flex-col">
-                    <span className="font-bold text-sm tracking-tight">{p.name}</span>
-                    {p.is_current && <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Current Node</span>}
+                    <span className="font-semibold text-sm">{p.name}</span>
+                    {p.is_current && <span className="text-[9px] font-bold uppercase text-blue-500">Current</span>}
                 </div>
-                {p.is_current && <div className="ml-auto h-2 w-2 rounded-full bg-indigo-600 animate-pulse" />}
                 </DropdownMenuItem>
             ))}
           </div>
 
-          <DropdownMenuSeparator className="bg-indigo-50" />
-          <DropdownMenuItem className="p-3 rounded-2xl text-indigo-600 font-black uppercase tracking-widest text-[10px] cursor-pointer hover:bg-indigo-600 hover:text-white transition-all gap-3" onSelect={(e) => { e.preventDefault(); setIsAddPropertyOpen(true); }}>
-            <div className="h-6 w-6 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-white group-hover:text-indigo-600">
-                <Plus className="h-4 w-4" />
-            </div>
-            Initialize New Entity
+          <DropdownMenuSeparator className="bg-slate-100" />
+          <DropdownMenuItem className="p-2.5 rounded-lg text-blue-600 font-bold text-xs cursor-pointer hover:bg-blue-600 hover:text-white transition-all gap-2" onSelect={(e) => { e.preventDefault(); setIsAddPropertyOpen(true); }}>
+            <Plus className="h-4 w-4" />
+            Add New Property
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Global Intelligence Search */}
-      <div className="hidden flex-1 md:flex md:max-w-xl mx-4">
+      {/* Global Search */}
+      <div className="hidden flex-1 md:flex md:max-w-md mx-4">
         <div className="relative w-full group">
-          <div className="absolute inset-0 bg-indigo-500/5 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
-          <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-300 group-focus-within:text-indigo-600 transition-colors" />
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
           <Input
             type="search"
-            placeholder="Search bookings, neural patterns, guest IDs..."
-            className="w-full h-12 pl-14 bg-white/50 border border-indigo-50/50 rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:bg-white transition-all font-bold text-indigo-950 placeholder:text-indigo-200 placeholder:font-medium"
+            placeholder="Search bookings, rooms, guests..."
+            className="w-full h-10 pl-11 bg-slate-50/50 border border-slate-200 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600/10 focus-visible:bg-white transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400"
           />
-          <div className="absolute right-5 top-1/2 -translate-y-1/2 flex gap-1">
-             <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-indigo-100 bg-white px-1.5 font-mono text-[10px] font-black text-indigo-300 uppercase opacity-100">
-                <span className="text-xs">⌘</span>K
-             </kbd>
-          </div>
         </div>
       </div>
 
       {/* Control Cluster */}
-      <div className="ml-auto flex items-center gap-4">
-        <div className="flex items-center bg-white/80 rounded-2xl p-1 border border-indigo-50/50 shadow-sm">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all" onClick={() => setIsHelpOpen(true)}>
-                <HelpCircle className="h-5 w-5" />
-            </Button>
-            <div className="w-[1px] h-4 bg-indigo-50" />
-            <NotificationPopover />
-        </div>
+      <div className="ml-auto flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition-all" onClick={() => setIsHelpOpen(true)}>
+            <HelpCircle className="h-5 w-5" />
+        </Button>
+        <NotificationPopover />
 
-        {/* User Identity Module */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-12 pl-2 pr-4 gap-3 rounded-2xl hover:bg-white/80 border border-transparent hover:border-indigo-100/50 transition-all">
-              <Avatar className="h-9 w-9 rounded-xl border-2 border-white shadow-lg shadow-indigo-500/10 transition-transform hover:scale-105">
-                <AvatarFallback className="bg-indigo-600 text-white text-[10px] font-black uppercase">
+            <Button variant="ghost" className="h-10 pl-1 pr-2 gap-2 rounded-lg hover:bg-slate-50 border border-transparent transition-all">
+              <Avatar className="h-8 w-8 rounded-lg shadow-sm">
+                <AvatarFallback className="bg-blue-600 text-white text-[10px] font-bold uppercase">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden flex-col items-start text-left md:flex">
-                <span className="text-xs font-black text-indigo-950 tracking-tight leading-none mb-1 uppercase">{user?.name || 'Authorized User'}</span>
-                <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest leading-none">{user?.role || 'Manager'}</span>
-                </div>
+                <span className="text-xs font-bold text-slate-900 leading-none mb-1">{user?.name || 'User'}</span>
+                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider leading-none">{user?.role || 'Staff'}</span>
               </div>
-              <ChevronDown className="h-4 w-4 text-indigo-200" />
+              <ChevronDown className="h-3 w-3 text-slate-300" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64 p-2 rounded-3xl border-indigo-100 shadow-2xl bg-white/95 backdrop-blur-xl">
-            <DropdownMenuLabel className="px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">System Identity</p>
-                <p className="text-xs font-bold text-indigo-950">{user?.email}</p>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-indigo-50" />
-            <DropdownMenuItem className="p-3 rounded-2xl cursor-pointer hover:bg-indigo-50 text-slate-700 font-bold text-sm gap-3 transition-all" onSelect={() => navigate('/profile')}>
-              <User className="h-4 w-4 text-indigo-400" /> Profile Settings
+          <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl border-slate-200 shadow-xl bg-white">
+            <DropdownMenuLabel className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Account</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-slate-100" />
+            <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 text-slate-700 font-semibold text-sm gap-2.5" onSelect={() => navigate('/profile')}>
+              <User className="h-4 w-4 text-slate-400" /> My Profile
             </DropdownMenuItem>
-            <DropdownMenuItem className="p-3 rounded-2xl cursor-pointer hover:bg-indigo-50 text-slate-700 font-bold text-sm gap-3 transition-all" onSelect={() => navigate('/settings?tab=notifications')}>
-              <Bell className="h-4 w-4 text-indigo-400" /> Notifications
+            <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 text-slate-700 font-semibold text-sm gap-2.5" onSelect={() => navigate('/settings?tab=notifications')}>
+              <Bell className="h-4 w-4 text-slate-400" /> Notifications
             </DropdownMenuItem>
-            <DropdownMenuItem className="p-3 rounded-2xl cursor-pointer hover:bg-indigo-50 text-slate-700 font-bold text-sm gap-3 transition-all" onSelect={() => setIsHelpOpen(true)}>
-              <ShieldCheck className="h-4 w-4 text-indigo-400" /> Help & Support
+            <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 text-slate-700 font-semibold text-sm gap-2.5" onSelect={() => setIsHelpOpen(true)}>
+              <ShieldCheck className="h-4 w-4 text-slate-400" /> Help & Support
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-indigo-50" />
+            <DropdownMenuSeparator className="bg-slate-100" />
             <DropdownMenuItem
-              className="p-3 rounded-2xl cursor-pointer hover:bg-rose-50 text-rose-600 font-black uppercase tracking-widest text-[10px] gap-3 transition-all"
+              className="p-2.5 rounded-lg cursor-pointer hover:bg-rose-50 text-rose-600 font-bold text-xs uppercase tracking-wider gap-2.5"
               onSelect={logout}
             >
-              <LogOut className="h-4 w-4" /> Terminate Session
+              <LogOut className="h-4 w-4" /> Log Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Premium Dialogs */}
+      {/* Dialogs */}
       <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
-        <DialogContent className="rounded-[40px] p-0 overflow-hidden bg-white/95 backdrop-blur-2xl border-none shadow-2xl max-w-md">
-            <div className="bg-indigo-600 p-8 text-white relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10"><Building2 className="h-20 w-20" /></div>
-                <DialogTitle className="text-2xl font-black tracking-tight mb-2">Initialize Entity</DialogTitle>
-                <DialogDescription className="text-indigo-100 font-medium opacity-80">Expand your hospitality infrastructure with a new node.</DialogDescription>
+        <DialogContent className="rounded-2xl p-0 overflow-hidden bg-white border-none shadow-2xl max-w-md">
+            <div className="bg-blue-600 p-8 text-white">
+                <DialogTitle className="text-xl font-bold mb-1">Add New Property</DialogTitle>
+                <DialogDescription className="text-blue-100 text-sm">Fill in the details below to add another hotel to your account.</DialogDescription>
             </div>
             <div className="p-8 space-y-6">
                 <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Property Name</Label>
-                    <Input className="h-12 rounded-2xl border-indigo-100 bg-indigo-50/30 font-bold text-indigo-950" value={newPropName} onChange={(e) => {
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Property Name</Label>
+                    <Input className="h-11 rounded-lg border-slate-200 bg-slate-50/50 font-medium text-slate-900" value={newPropName} onChange={(e) => {
                         setNewPropName(e.target.value);
                         setNewPropSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-'));
                     }} placeholder="e.g. The Grand Plaza" />
                 </div>
                 <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Neural Slug (URL)</Label>
-                    <Input className="h-12 rounded-2xl border-indigo-100 bg-indigo-50/30 font-bold text-indigo-400" value={newPropSlug} onChange={(e) => setNewPropSlug(e.target.value)} placeholder="e.g. grand-plaza" />
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Property URL Slug</Label>
+                    <Input className="h-11 rounded-lg border-slate-200 bg-slate-50/50 font-medium text-slate-400" value={newPropSlug} onChange={(e) => setNewPropSlug(e.target.value)} placeholder="e.g. grand-plaza" />
                 </div>
             </div>
-            <DialogFooter className="p-8 bg-indigo-50/50 flex gap-3">
-                <Button variant="ghost" className="rounded-2xl font-bold text-indigo-400" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
-                <Button className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 h-12 px-8 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-500/20" onClick={handleAddProperty} disabled={isCreating}>
-                    {isCreating ? 'Deploying...' : 'Deploy Entity'}
+            <DialogFooter className="p-6 bg-slate-50 flex gap-3">
+                <Button variant="ghost" className="rounded-lg font-bold text-slate-500" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
+                <Button className="rounded-lg bg-blue-600 hover:bg-blue-700 h-11 px-8 font-bold text-sm shadow-sm" onClick={handleAddProperty} disabled={isCreating}>
+                    {isCreating ? 'Saving...' : 'Add Property'}
                 </Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
-        <DialogContent className="rounded-[40px] p-0 overflow-hidden bg-white/95 backdrop-blur-2xl border-none shadow-2xl max-w-md">
-            <div className="bg-indigo-950 p-8 text-white relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10"><Zap className="h-20 w-20 text-indigo-500" /></div>
-                <DialogTitle className="text-2xl font-black tracking-tight mb-2">Protocol Assistance</DialogTitle>
-                <DialogDescription className="text-indigo-200/50 font-medium">Neural support nodes active 24/7 for system integrity.</DialogDescription>
+        <DialogContent className="rounded-2xl p-0 overflow-hidden bg-white border-none shadow-2xl max-w-md">
+            <div className="bg-slate-900 p-8 text-white">
+                <DialogTitle className="text-xl font-bold mb-1">Help & Support</DialogTitle>
+                <DialogDescription className="text-slate-400 text-sm">Need help? Our team is available 24/7 to assist you.</DialogDescription>
             </div>
-            <div className="p-8 space-y-4">
+            <div className="p-6 space-y-3">
                 {[
-                    { icon: Phone, label: 'Voice Support', val: '+91 98765 43210', color: 'indigo' },
-                    { icon: Mail, label: 'Email Protocol', val: 'ops@staybooker.ai', color: 'violet' },
+                    { icon: Phone, label: 'Call Support', val: '+91 98765 43210' },
+                    { icon: Mail, label: 'Email Support', val: 'support@staybooker.ai' },
                 ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-4 p-5 rounded-[24px] bg-indigo-50/30 border border-indigo-100/50 group hover:bg-white transition-all">
-                        <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-600">
-                            <item.icon className="h-5 w-5" />
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <div className="h-10 w-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-blue-600 border border-slate-100">
+                            <item.icon className="h-4 w-4" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-0.5">{item.label}</p>
-                            <p className="font-bold text-indigo-950">{item.val}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">{item.label}</p>
+                            <p className="font-bold text-slate-900 text-sm">{item.val}</p>
                         </div>
                     </div>
                 ))}
 
                 <button 
-                    className="w-full flex items-center gap-4 p-5 rounded-[24px] bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 group text-left"
+                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all mt-2 group text-left"
                     onClick={() => { setIsHelpOpen(false); setIsChatOpen(true); }}
                 >
-                    <div className="h-12 w-12 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center">
-                        <MessageSquare className="h-5 w-5 text-white" />
+                    <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
+                        <MessageSquare className="h-4 w-4 text-white" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-0.5">Neural Chat</p>
-                        <p className="font-bold text-white">Initialize Live Support</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-blue-200 mb-0.5">Live Chat</p>
+                        <p className="font-bold text-white text-sm">Start a Conversation</p>
                     </div>
-                    <Sparkles className="ml-auto h-5 w-5 text-indigo-300 opacity-50 group-hover:opacity-100 group-hover:animate-pulse" />
                 </button>
             </div>
-            <div className="p-6 text-center">
-                <Button variant="ghost" className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300 hover:text-indigo-600" onClick={() => setIsHelpOpen(false)}>Close Assistance</Button>
+            <div className="p-4 text-center border-t border-slate-100">
+                <Button variant="ghost" className="text-xs font-bold text-slate-400 hover:text-blue-600" onClick={() => setIsHelpOpen(false)}>Close</Button>
             </div>
         </DialogContent>
       </Dialog>

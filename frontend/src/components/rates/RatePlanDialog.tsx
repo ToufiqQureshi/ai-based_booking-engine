@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Sparkles, ShieldCheck, Zap, TrendingUp, Info, Clock, Calendar, CheckCircle2, Package, LayoutGrid, DollarSign, HelpCircle } from 'lucide-react';
+import { Loader2, TrendingUp, Info, Clock, Calendar, Package, DollarSign, HelpCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -34,7 +34,6 @@ import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { RatePlan } from '@/types/api';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 const ratePlanSchema = z.object({
@@ -56,14 +55,14 @@ const ratePlanSchema = z.object({
 interface RatePlanDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    planToEdit?: RatePlan | null;
+    initialData?: RatePlan | null;
     onSuccess: () => void;
     defaultIsPackage?: boolean;
 }
 
-export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defaultIsPackage = false }: RatePlanDialogProps) {
+export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, defaultIsPackage = false }: RatePlanDialogProps) {
     const { toast } = useToast();
-    const isEditing = !!planToEdit;
+    const isEditing = !!initialData;
 
     const form = useForm<z.infer<typeof ratePlanSchema>>({
         resolver: zodResolver(ratePlanSchema),
@@ -85,21 +84,21 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
     });
 
     useEffect(() => {
-        if (planToEdit) {
+        if (initialData) {
             form.reset({
-                name: planToEdit.name,
-                description: planToEdit.description || '',
-                meal_plan: planToEdit.meal_plan || 'EP',
-                price_adjustment: planToEdit.price_adjustment || 0,
-                is_refundable: planToEdit.is_refundable,
-                cancellation_hours: planToEdit.cancellation_hours,
-                is_active: planToEdit.is_active,
-                min_los: planToEdit.min_los || 1,
-                advance_purchase_days: planToEdit.advance_purchase_days || 0,
-                inclusions: (planToEdit.inclusions || []).join(', '),
-                is_package: planToEdit.is_package || false,
-                package_items: (planToEdit.package_items || []).join(', '),
-                market_price: planToEdit.market_price,
+                name: initialData.name,
+                description: initialData.description || '',
+                meal_plan: initialData.meal_plan || 'EP',
+                price_adjustment: initialData.price_adjustment || 0,
+                is_refundable: initialData.is_refundable,
+                cancellation_hours: initialData.cancellation_hours,
+                is_active: initialData.is_active,
+                min_los: initialData.min_los || 1,
+                advance_purchase_days: initialData.advance_purchase_days || 0,
+                inclusions: (initialData.inclusions || []).join(', '),
+                is_package: initialData.is_package || false,
+                package_items: (initialData.package_items || []).join(', '),
+                market_price: initialData.market_price,
             });
         } else {
             form.reset({
@@ -118,7 +117,7 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                 market_price: undefined,
             });
         }
-    }, [planToEdit, form, open, defaultIsPackage]);
+    }, [initialData, form, open, defaultIsPackage]);
 
     const onSubmit = async (values: z.infer<typeof ratePlanSchema>) => {
         try {
@@ -133,16 +132,16 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
             };
 
             if (isEditing) {
-                await apiClient.patch(`/rates/plans/${planToEdit.id}`, payload);
+                await apiClient.patch(`/rates/plans/${initialData.id}`, payload);
                 toast({
-                    title: 'Strategy Updated',
-                    description: 'Rate plan parameters synchronized across distribution channels.',
+                    title: 'Success',
+                    description: 'Rate plan updated successfully.',
                 });
             } else {
                 await apiClient.post('/rates/plans', payload);
                 toast({
-                    title: 'Strategy Deployed',
-                    description: 'New pricing architecture is now live.',
+                    title: 'Success',
+                    description: 'New rate plan created successfully.',
                 });
             }
             onSuccess();
@@ -150,60 +149,55 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
         } catch (error) {
             toast({
                 variant: 'destructive',
-                title: 'Deployment Failed',
-                description: `Unable to ${isEditing ? 'modify' : 'initialize'} rate plan logic.`,
+                title: 'Error',
+                description: `Failed to ${isEditing ? 'update' : 'create'} rate plan.`,
             });
         }
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden bg-white/95 backdrop-blur-2xl border-none shadow-[0_30px_70px_rgba(0,0,0,0.2)] rounded-[40px]">
-                {/* Header Section */}
-                <div className="bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-950 p-8 sm:p-10 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-white/5 to-transparent pointer-events-none" />
-                    <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px]" />
-                    
-                    <div className="relative z-10 space-y-4">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">
-                            <TrendingUp className="w-3 h-3" />
-                            Revenue Optimization Strategy
+            <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl">
+                {/* Header */}
+                <div className="bg-slate-50 p-6 sm:p-8 border-b border-slate-100">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-blue-600 mb-2">
+                            <TrendingUp className="w-4 h-4" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Rate Management</span>
                         </div>
-                        <DialogTitle className="text-4xl sm:text-5xl font-black tracking-tighter text-white">
-                            {isEditing ? 'Refine Strategy' : 'Craft Strategy'}
+                        <DialogTitle className="text-2xl font-bold text-slate-900">
+                            {isEditing ? 'Edit Rate Plan' : 'Add Rate Plan'}
                         </DialogTitle>
-                        <DialogDescription className="text-indigo-200/60 max-w-lg font-medium leading-relaxed">
+                        <DialogDescription className="text-slate-500 text-sm">
                             {isEditing 
-                                ? 'Adjust pricing logic and distribution rules to maximize yield and booking velocity.' 
-                                : 'Initialize a new revenue model to attract high-value guests and optimize inventory flow.'}
+                                ? 'Update your pricing rules and cancellation policies.' 
+                                : 'Create a new pricing plan for your rooms.'}
                         </DialogDescription>
                     </div>
                 </div>
 
-                <div className="max-h-[65vh] overflow-y-auto px-8 sm:px-10 py-8 scrollbar-none">
+                <div className="max-h-[60vh] overflow-y-auto px-6 sm:px-8 py-6">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-12">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                             
-                            {/* Section 1: Identity & Narrative */}
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                                        <Info className="h-5 w-5 text-indigo-600" />
-                                    </div>
-                                    <h3 className="text-xl font-black text-indigo-950 tracking-tight">Identity & Narrative</h3>
+                            {/* Section 1: Basic Info */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-slate-900">
+                                    <Info className="h-4 w-4" />
+                                    <h3 className="text-base font-bold">Basic Information</h3>
                                 </div>
                                 
-                                <div className="grid gap-6">
+                                <div className="grid gap-4">
                                     <FormField
                                         control={form.control}
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Plan Designation</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Plan Name</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="e.g. Royal Breakfast Deal, Summer Luxury Escape" className="h-14 rounded-2xl border-indigo-100 bg-indigo-50/30 font-bold text-indigo-950 focus-visible:ring-indigo-500/20 px-6" {...field} />
+                                                    <Input placeholder="e.g. Early Bird Offer, Winter Special" className="h-10 border-slate-200 focus-visible:ring-blue-600" {...field} />
                                                 </FormControl>
-                                                <FormMessage className="font-bold text-rose-500" />
+                                                <FormMessage />
                                             </FormItem>
                                         )}
                                     />
@@ -213,9 +207,9 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                         name="description"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Strategic Context</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Short Description</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Define the unique value proposition for guests..." className="h-14 rounded-2xl border-indigo-100 bg-indigo-50/30 font-bold text-indigo-950 focus-visible:ring-indigo-500/20 px-6" {...field} />
+                                                    <Input placeholder="What makes this plan special?" className="h-10 border-slate-200 focus-visible:ring-blue-600" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -224,31 +218,29 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                 </div>
                             </div>
 
-                            <Separator className="bg-indigo-50" />
+                            <Separator className="bg-slate-100" />
 
-                            {/* Section 2: Pricing Logic */}
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                                        <DollarSign className="h-5 w-5 text-emerald-600" />
-                                    </div>
-                                    <h3 className="text-xl font-black text-indigo-950 tracking-tight">Pricing & Yield Engine</h3>
+                            {/* Section 2: Pricing */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-slate-900">
+                                    <DollarSign className="h-4 w-4" />
+                                    <h3 className="text-base font-bold">Pricing Rules</h3>
                                 </div>
 
-                                <div className="grid sm:grid-cols-2 gap-8 bg-indigo-50/30 p-8 rounded-[32px] border border-indigo-100/50">
+                                <div className="grid sm:grid-cols-2 gap-6 p-6 rounded-xl bg-slate-50/50 border border-slate-100">
                                     <FormField
                                         control={form.control}
                                         name="price_adjustment"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Incremental Rate (Markup)</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Markup / Add-on Price</FormLabel>
                                                 <FormControl>
-                                                    <div className="relative group">
-                                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-indigo-300">₹</div>
-                                                        <Input type="number" className="h-14 rounded-2xl border-indigo-100 bg-white font-black text-indigo-600 focus-visible:ring-indigo-500/20 pl-12 pr-6 shadow-sm" {...field} />
+                                                    <div className="relative">
+                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</div>
+                                                        <Input type="number" className="h-10 border-slate-200 pl-7" {...field} />
                                                     </div>
                                                 </FormControl>
-                                                <FormDescription className="text-[10px] font-medium text-indigo-400">Added to base room rate per night</FormDescription>
+                                                <FormDescription className="text-[10px]">Added to room base price</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -259,14 +251,14 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                         name="market_price"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Market Benchmark (RRP)</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Display Price (M.R.P.)</FormLabel>
                                                 <FormControl>
-                                                    <div className="relative group">
-                                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-indigo-300">₹</div>
-                                                        <Input type="number" placeholder="Original price..." className="h-14 rounded-2xl border-indigo-100 bg-white font-black text-indigo-400/50 focus-visible:ring-indigo-500/20 pl-12 pr-6 shadow-sm" {...field} value={field.value ?? ''} />
+                                                    <div className="relative">
+                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</div>
+                                                        <Input type="number" placeholder="Original price..." className="h-10 border-slate-200 pl-7" {...field} value={field.value ?? ''} />
                                                     </div>
                                                 </FormControl>
-                                                <FormDescription className="text-[10px] font-medium text-indigo-400 italic">Enables strike-through visual on public site</FormDescription>
+                                                <FormDescription className="text-[10px]">For strike-through display</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -277,18 +269,18 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                         name="meal_plan"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Gastronomy Protocol</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Meal Plan</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl>
-                                                        <SelectTrigger className="h-14 rounded-2xl border-indigo-100 bg-white font-bold text-indigo-950 focus:ring-indigo-500/20 px-6 shadow-sm">
-                                                            <SelectValue placeholder="Select plan" />
+                                                        <SelectTrigger className="h-10 border-slate-200">
+                                                            <SelectValue placeholder="Select meal plan" />
                                                         </SelectTrigger>
                                                     </FormControl>
-                                                    <SelectContent className="rounded-2xl">
-                                                        <SelectItem value="EP" className="font-bold">EP (Room Only)</SelectItem>
-                                                        <SelectItem value="CP" className="font-bold">CP (Continental Breakfast)</SelectItem>
-                                                        <SelectItem value="MAP" className="font-bold text-indigo-600">MAP (Half Board)</SelectItem>
-                                                        <SelectItem value="AP" className="font-bold text-violet-600">AP (Full Board / Inclusive)</SelectItem>
+                                                    <SelectContent>
+                                                        <SelectItem value="EP">EP (Room Only)</SelectItem>
+                                                        <SelectItem value="CP">CP (Breakfast Only)</SelectItem>
+                                                        <SelectItem value="MAP">MAP (Breakfast & Dinner)</SelectItem>
+                                                        <SelectItem value="AP">AP (All Meals)</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
@@ -301,12 +293,9 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                         name="min_los"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Stay Duration Filter</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Min. Nights Stay</FormLabel>
                                                 <FormControl>
-                                                    <div className="relative">
-                                                        <Input type="number" className="h-14 rounded-2xl border-indigo-100 bg-white font-black text-indigo-950 px-6 pr-16 shadow-sm" {...field} />
-                                                        <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-300 uppercase">Nights</span>
-                                                    </div>
+                                                    <Input type="number" className="h-10 border-slate-200" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -315,27 +304,24 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                 </div>
                             </div>
 
-                            {/* Section 3: Distribution & Policy */}
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-violet-50 flex items-center justify-center">
-                                        <ShieldCheck className="h-5 w-5 text-violet-600" />
-                                    </div>
-                                    <h3 className="text-xl font-black text-indigo-950 tracking-tight">Policies & Thresholds</h3>
+                            {/* Section 3: Policies */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-slate-900">
+                                    <Clock className="h-4 w-4" />
+                                    <h3 className="text-base font-bold">Cancellation & Booking Policies</h3>
                                 </div>
 
-                                <div className="grid sm:grid-cols-2 gap-6">
+                                <div className="grid sm:grid-cols-2 gap-4">
                                     <FormField
                                         control={form.control}
                                         name="cancellation_hours"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Risk Mitigation (Cancel Window)</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Free Cancellation Before</FormLabel>
                                                 <FormControl>
                                                     <div className="relative">
-                                                        <Clock className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-300" />
-                                                        <Input type="number" className="h-14 rounded-2xl border-indigo-100 bg-indigo-50/30 font-black text-indigo-950 pl-14 pr-6 focus-visible:ring-indigo-500/20" {...field} />
-                                                        <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-300 uppercase">Hours</span>
+                                                        <Input type="number" className="h-10 border-slate-200 pr-14" {...field} />
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">Hours</span>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -348,12 +334,11 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                         name="advance_purchase_days"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Advanced Procurement Filter</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Advance Booking Req.</FormLabel>
                                                 <FormControl>
                                                     <div className="relative">
-                                                        <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-300" />
-                                                        <Input type="number" className="h-14 rounded-2xl border-indigo-100 bg-indigo-50/30 font-black text-indigo-950 pl-14 pr-6 focus-visible:ring-indigo-500/20" {...field} />
-                                                        <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-300 uppercase">Days</span>
+                                                        <Input type="number" className="h-10 border-slate-200 pr-14" {...field} />
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">Days</span>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -362,34 +347,34 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                     />
                                 </div>
 
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="flex items-center justify-between p-6 rounded-[24px] bg-emerald-50/30 border border-emerald-100/30 group hover:bg-emerald-50 transition-colors">
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-black text-emerald-900 tracking-tight">Active Deployment</p>
-                                            <p className="text-[10px] font-medium text-emerald-600/70 uppercase tracking-widest">Visibility on Booking Nodes</p>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-bold text-slate-900">Active Status</p>
+                                            <p className="text-[10px] text-slate-500">Show this plan to guests</p>
                                         </div>
                                         <FormField
                                             control={form.control}
                                             name="is_active"
                                             render={({ field }) => (
                                                 <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-emerald-500 shadow-lg" />
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                                                 </FormControl>
                                             )}
                                         />
                                     </div>
 
-                                    <div className="flex items-center justify-between p-6 rounded-[24px] bg-rose-50/30 border border-rose-100/30 group hover:bg-rose-50 transition-colors">
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-black text-rose-900 tracking-tight">Refund Protocol</p>
-                                            <p className="text-[10px] font-medium text-rose-600/70 uppercase tracking-widest">Flexible Cancellation Allowed</p>
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-bold text-slate-900">Refundable</p>
+                                            <p className="text-[10px] text-slate-500">Allow refunds on cancellation</p>
                                         </div>
                                         <FormField
                                             control={form.control}
                                             name="is_refundable"
                                             render={({ field }) => (
                                                 <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-rose-500 shadow-lg" />
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                                                 </FormControl>
                                             )}
                                         />
@@ -397,52 +382,46 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                 </div>
                             </div>
 
-                            {/* Section 4: Experience Design (Packages) */}
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center">
-                                        <Package className="h-5 w-5 text-amber-600" />
-                                    </div>
-                                    <h3 className="text-xl font-black text-indigo-950 tracking-tight">Curated Experience Architecture</h3>
+                            {/* Section 4: Package Inclusions */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-slate-900">
+                                    <Package className="h-4 w-4" />
+                                    <h3 className="text-base font-bold">Bundle Package Details</h3>
                                 </div>
 
                                 <div className={cn(
-                                    "p-8 rounded-[32px] border transition-all duration-500",
+                                    "p-6 rounded-xl border transition-all",
                                     form.watch('is_package') 
-                                        ? "bg-gradient-to-br from-amber-50/50 to-orange-50/50 border-amber-200 shadow-xl" 
-                                        : "bg-indigo-50/20 border-indigo-100"
+                                        ? "bg-blue-50/30 border-blue-100" 
+                                        : "bg-slate-50 border-slate-100"
                                 )}>
                                     <FormField
                                         control={form.control}
                                         name="is_package"
                                         render={({ field }) => (
-                                            <FormItem className="flex items-center justify-between mb-8">
-                                                <div className="space-y-1">
-                                                    <FormLabel className="text-lg font-black text-indigo-950 tracking-tight flex items-center gap-2">
-                                                        Neural Bundle Strategy
-                                                        <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                                                    </FormLabel>
-                                                    <FormDescription className="text-xs font-medium text-indigo-400">Enable high-conversion bundled inventory</FormDescription>
+                                            <FormItem className="flex items-center justify-between mb-4">
+                                                <div className="space-y-0.5">
+                                                    <FormLabel className="text-sm font-bold text-slate-900">Enable as Package</FormLabel>
+                                                    <FormDescription className="text-[10px]">Bundle extra services with room stay</FormDescription>
                                                 </div>
                                                 <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-amber-600" />
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                                                 </FormControl>
                                             </FormItem>
                                         )}
                                     />
 
                                     {form.watch('is_package') && (
-                                        <div className="space-y-6 animate-enter">
+                                        <div className="space-y-4">
                                             <FormField
                                                 control={form.control}
                                                 name="package_items"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-amber-600">Exclusive Bundle Components</FormLabel>
+                                                        <FormLabel className="text-xs font-semibold text-slate-600">Package Inclusions (Comma separated)</FormLabel>
                                                         <FormControl>
-                                                            <Input placeholder="e.g. VIP City Tour, Spa Ritual, Sunset Yacht Access" className="h-14 rounded-2xl border-amber-200 bg-white font-bold text-indigo-950 shadow-sm" {...field} />
+                                                            <Input placeholder="e.g. Free Sightseeing, Spa Session, Welcome Drink" className="h-10 border-slate-200" {...field} />
                                                         </FormControl>
-                                                        <FormDescription className="text-[10px] font-bold text-amber-500/70 uppercase tracking-widest">Comma-separated luxury assets</FormDescription>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -450,15 +429,15 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                                         </div>
                                     )}
 
-                                    <div className="mt-6">
+                                    <div className="mt-4">
                                         <FormField
                                             control={form.control}
                                             name="inclusions"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Standard Amenities & Perks</FormLabel>
+                                                    <FormLabel className="text-xs font-semibold text-slate-600">Standard Amenities (Comma separated)</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder="e.g. High-Speed WiFi, Welcome Libation, Turndown Service" className="h-14 rounded-2xl border-indigo-100 bg-white font-bold text-indigo-950 shadow-sm" {...field} />
+                                                        <Input placeholder="e.g. Free WiFi, AC, Geyser" className="h-10 border-slate-200" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -471,26 +450,26 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess, defa
                     </Form>
                 </div>
 
-                <DialogFooter className="p-8 sm:p-10 bg-indigo-50/50 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between border-t border-indigo-100">
-                    <div className="flex items-center gap-2 text-indigo-400">
+                <DialogFooter className="p-6 bg-slate-50 flex items-center justify-between border-t border-slate-100">
+                    <div className="flex items-center gap-2 text-slate-400">
                         <HelpCircle className="h-4 w-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">All changes synchronized across global nodes</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Updates will sync instantly</span>
                     </div>
-                    <div className="flex gap-4">
-                        <Button variant="ghost" className="rounded-2xl font-black uppercase tracking-widest text-[10px] px-8 h-12 text-indigo-400 hover:bg-indigo-100 transition-all" onClick={() => onOpenChange(false)}>
-                            Abort Protocol
+                    <div className="flex gap-3">
+                        <Button variant="ghost" className="rounded-lg text-sm font-semibold" onClick={() => onOpenChange(false)}>
+                            Cancel
                         </Button>
                         <Button 
                             disabled={form.formState.isSubmitting}
                             onClick={form.handleSubmit(onSubmit)}
-                            className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 h-12 px-10 font-black uppercase tracking-widest text-[10px] shadow-[0_10px_20px_rgba(79,70,229,0.2)] flex gap-2 group transition-all"
+                            className="rounded-lg bg-blue-600 hover:bg-blue-700 h-10 px-8 font-bold text-sm shadow-sm flex gap-2"
                         >
                             {form.formState.isSubmitting ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                                <Zap className="h-4 w-4 group-hover:scale-125 transition-transform" />
+                                <Check className="h-4 w-4" />
                             )}
-                            {isEditing ? 'Finalize Strategy' : 'Deploy Strategy'}
+                            {isEditing ? 'Save Changes' : 'Create Plan'}
                         </Button>
                     </div>
                 </DialogFooter>

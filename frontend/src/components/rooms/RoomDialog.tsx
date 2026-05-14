@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info, Image as ImageIcon, DollarSign, ListChecks, Check } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +38,7 @@ import { apiClient } from '@/api/client';
 import { RoomType, Amenity, RoomPhoto, RoomAmenity } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
 import { RoomImageUploader } from './RoomImageUploader';
+import { cn } from '@/lib/utils';
 
 const roomSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -181,15 +182,14 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
         try {
             if (isEditing && initialData) {
                 await apiClient.patch(`/rooms/${initialData.id}`, values);
-                toast({ title: 'Room Updated', description: 'Room details have been saved.' });
+                toast({ title: 'Success', description: 'Room details updated successfully.' });
             } else {
                 await apiClient.post('/rooms', values);
-                toast({ title: 'Room Created', description: 'New room type has been added.' });
+                toast({ title: 'Success', description: 'New room type added successfully.' });
             }
             onOpenChange(false);
             onSuccess();
         } catch (error) {
-            console.error(error);
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -200,40 +200,49 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 rounded-2xl">
+            <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl rounded-2xl bg-white">
                 {/* Header */}
-                <DialogHeader className="px-6 py-5 border-b bg-white">
-                    <DialogTitle className="text-xl font-bold">
+                <div className="px-8 py-6 border-b bg-slate-50/50">
+                    <DialogTitle className="text-2xl font-bold text-slate-900">
                         {isEditing ? 'Edit Room Type' : 'Add New Room Type'}
                     </DialogTitle>
-                    <DialogDescription className="text-sm text-muted-foreground">
-                        {isEditing ? 'Update room details and settings.' : 'Create a new room category for your hotel.'}
+                    <DialogDescription className="text-sm text-slate-500 mt-1">
+                        {isEditing ? 'Update your room category details and inventory.' : 'Define a new room category for your property.'}
                     </DialogDescription>
-                </DialogHeader>
+                </div>
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
-                            <TabsList className="grid grid-cols-4 mx-6 mt-4 mb-2 h-10 rounded-xl bg-muted/60">
-                                <TabsTrigger value="basic" className="rounded-lg text-xs font-semibold">Basic Info</TabsTrigger>
-                                <TabsTrigger value="photos" className="rounded-lg text-xs font-semibold">Photos</TabsTrigger>
-                                <TabsTrigger value="pricing" className="rounded-lg text-xs font-semibold">Pricing</TabsTrigger>
-                                <TabsTrigger value="amenities" className="rounded-lg text-xs font-semibold">Amenities</TabsTrigger>
-                            </TabsList>
+                            <div className="px-8 pt-4">
+                                <TabsList className="grid grid-cols-4 w-full h-11 bg-slate-100/80 p-1 rounded-xl">
+                                    <TabsTrigger value="basic" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                                        <Info className="w-3.5 h-3.5 mr-2" /> Basic Info
+                                    </TabsTrigger>
+                                    <TabsTrigger value="photos" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                                        <ImageIcon className="w-3.5 h-3.5 mr-2" /> Photos
+                                    </TabsTrigger>
+                                    <TabsTrigger value="pricing" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                                        <DollarSign className="w-3.5 h-3.5 mr-2" /> Pricing
+                                    </TabsTrigger>
+                                    <TabsTrigger value="amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                                        <ListChecks className="w-3.5 h-3.5 mr-2" /> Amenities
+                                    </TabsTrigger>
+                                </TabsList>
+                            </div>
 
                             {/* ── TAB 1: BASIC INFO ── */}
-                            <TabsContent value="basic" className="flex-1 overflow-y-auto px-6 pb-4 space-y-5 mt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4">
-                                    {/* Room Name */}
+                            <TabsContent value="basic" className="flex-1 overflow-y-auto px-8 pb-8 space-y-6 mt-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="md:col-span-2">
                                         <FormField
                                             control={form.control}
                                             name="name"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Room Name *</FormLabel>
+                                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">Room Category Name *</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder="e.g. Deluxe King Room" {...field} />
+                                                        <Input placeholder="e.g. Deluxe Balcony Room" className="h-11 rounded-xl border-slate-200 focus-visible:ring-blue-600/10 focus-visible:border-blue-600" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -241,18 +250,17 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         />
                                     </div>
 
-                                    {/* Description */}
                                     <div className="md:col-span-2">
                                         <FormField
                                             control={form.control}
                                             name="description"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Description</FormLabel>
+                                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</FormLabel>
                                                     <FormControl>
                                                         <Textarea
-                                                            placeholder="Describe the room features and highlights..."
-                                                            className="min-h-[100px] resize-none"
+                                                            placeholder="Describe the room highlights (e.g. view, special features)..."
+                                                            className="min-h-[100px] rounded-xl border-slate-200 focus-visible:ring-blue-600/10 focus-visible:border-blue-600 resize-none p-4"
                                                             {...field}
                                                         />
                                                     </FormControl>
@@ -262,20 +270,19 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         />
                                     </div>
 
-                                    {/* Bed Type */}
                                     <FormField
                                         control={form.control}
                                         name="bed_type"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Bed Type</FormLabel>
+                                                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">Primary Bed Type</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value || ''}>
                                                     <FormControl>
-                                                        <SelectTrigger>
+                                                        <SelectTrigger className="h-11 rounded-xl border-slate-200">
                                                             <SelectValue placeholder="Select bed type" />
                                                         </SelectTrigger>
                                                     </FormControl>
-                                                    <SelectContent>
+                                                    <SelectContent className="rounded-xl">
                                                         <SelectItem value="Single">Single Bed</SelectItem>
                                                         <SelectItem value="Double">Double Bed</SelectItem>
                                                         <SelectItem value="Queen">Queen Bed</SelectItem>
@@ -289,35 +296,36 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         )}
                                     />
 
-                                    {/* Room Size */}
                                     <FormField
                                         control={form.control}
                                         name="room_size"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Room Size (sq ft)</FormLabel>
+                                                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">Room Area (sq ft)</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" placeholder="e.g. 300" {...field} />
+                                                    <div className="relative">
+                                                        <Input type="number" placeholder="e.g. 300" className="h-11 rounded-xl border-slate-200 pr-12" {...field} />
+                                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">SQ FT</span>
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
 
-                                    {/* View */}
                                     <FormField
                                         control={form.control}
                                         name="view"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Room View</FormLabel>
+                                                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">View from Room</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                                                     <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select view type" />
+                                                        <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                                                            <SelectValue placeholder="Select view" />
                                                         </SelectTrigger>
                                                     </FormControl>
-                                                    <SelectContent>
+                                                    <SelectContent className="rounded-xl">
                                                         <SelectItem value="Garden View">Garden View</SelectItem>
                                                         <SelectItem value="Sea View">Sea View</SelectItem>
                                                         <SelectItem value="City View">City View</SelectItem>
@@ -331,35 +339,30 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         )}
                                     />
 
-                                    {/* Floor */}
                                     <FormField
                                         control={form.control}
                                         name="floor"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Floor / Level</FormLabel>
+                                                <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider">Floor Level</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="e.g. Ground Floor, 2nd Floor" {...field} />
+                                                    <Input placeholder="e.g. 1st Floor, Top Floor" className="h-11 rounded-xl border-slate-200" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
 
-                                    {/* Toggles Row */}
-                                    <div className="md:col-span-2 flex flex-wrap gap-4 pt-2">
+                                    <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                                         <FormField
                                             control={form.control}
                                             name="smoking_allowed"
                                             render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border rounded-xl px-4 py-3 flex-1 min-w-[180px]">
+                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-slate-100 rounded-xl px-4 py-3 bg-slate-50/30">
                                                     <FormControl>
-                                                        <Checkbox
-                                                            checked={field.value}
-                                                            onCheckedChange={field.onChange}
-                                                        />
+                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
                                                     </FormControl>
-                                                    <FormLabel className="font-medium cursor-pointer">Smoking Allowed</FormLabel>
+                                                    <FormLabel className="font-semibold text-slate-700 text-xs cursor-pointer">Smoking OK</FormLabel>
                                                 </FormItem>
                                             )}
                                         />
@@ -367,14 +370,11 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                             control={form.control}
                                             name="is_pet_friendly"
                                             render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border rounded-xl px-4 py-3 flex-1 min-w-[180px]">
+                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-slate-100 rounded-xl px-4 py-3 bg-slate-50/30">
                                                     <FormControl>
-                                                        <Checkbox
-                                                            checked={field.value}
-                                                            onCheckedChange={field.onChange}
-                                                        />
+                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
                                                     </FormControl>
-                                                    <FormLabel className="font-medium cursor-pointer">Pet Friendly</FormLabel>
+                                                    <FormLabel className="font-semibold text-slate-700 text-xs cursor-pointer">Pet Friendly</FormLabel>
                                                 </FormItem>
                                             )}
                                         />
@@ -382,14 +382,11 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                             control={form.control}
                                             name="extra_bed_allowed"
                                             render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border rounded-xl px-4 py-3 flex-1 min-w-[180px]">
+                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-slate-100 rounded-xl px-4 py-3 bg-slate-50/30">
                                                     <FormControl>
-                                                        <Checkbox
-                                                            checked={field.value}
-                                                            onCheckedChange={field.onChange}
-                                                        />
+                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
                                                     </FormControl>
-                                                    <FormLabel className="font-medium cursor-pointer">Extra Bed Allowed</FormLabel>
+                                                    <FormLabel className="font-semibold text-slate-700 text-xs cursor-pointer">Extra Bed OK</FormLabel>
                                                 </FormItem>
                                             )}
                                         />
@@ -398,43 +395,45 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                             </TabsContent>
 
                             {/* ── TAB 2: PHOTOS ── */}
-                            <TabsContent value="photos" className="flex-1 overflow-y-auto px-6 pb-4 mt-0">
-                                <div className="pt-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="photos"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="text-base font-semibold">Room Photos</FormLabel>
-                                                <FormDescription>Upload photos for this room. First photo will be shown as the main image.</FormDescription>
-                                                <FormControl>
-                                                    <RoomImageUploader
-                                                        images={field.value as RoomPhoto[]}
-                                                        onChange={field.onChange}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                            <TabsContent value="photos" className="flex-1 overflow-y-auto px-8 pb-8 mt-6">
+                                <FormField
+                                    control={form.control}
+                                    name="photos"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <div className="mb-6">
+                                                <h3 className="text-sm font-bold text-slate-900 mb-1">Room Gallery</h3>
+                                                <p className="text-xs text-slate-500">Upload high-quality photos of the room. The first photo will be your cover image.</p>
+                                            </div>
+                                            <FormControl>
+                                                <RoomImageUploader
+                                                    images={field.value as RoomPhoto[]}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </TabsContent>
 
                             {/* ── TAB 3: PRICING & OCCUPANCY ── */}
-                            <TabsContent value="pricing" className="flex-1 overflow-y-auto px-6 pb-4 mt-0">
-                                <div className="space-y-6 pt-4">
-                                    {/* Pricing */}
-                                    <div>
-                                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Pricing</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <TabsContent value="pricing" className="flex-1 overflow-y-auto px-8 pb-8 mt-6">
+                                <div className="space-y-8">
+                                    <div className="p-6 rounded-2xl bg-blue-50/30 border border-blue-100">
+                                        <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-5">Standard Pricing & Inventory</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <FormField
                                                 control={form.control}
                                                 name="base_price"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Base Price (₹) *</FormLabel>
+                                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Room Rate (Base) *</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" {...field} />
+                                                            <div className="relative">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">₹</span>
+                                                                <Input type="number" className="h-11 rounded-xl border-slate-200 pl-7" {...field} />
+                                                            </div>
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -445,16 +444,14 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                 name="market_price"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Market Price (₹)</FormLabel>
+                                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Original Price (MRP)</FormLabel>
                                                         <FormControl>
-                                                            <Input
-                                                                type="number"
-                                                                placeholder="Strike-through price"
-                                                                {...field}
-                                                                value={field.value ?? ''}
-                                                            />
+                                                            <div className="relative">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">₹</span>
+                                                                <Input type="number" placeholder="Optional..." className="h-11 rounded-xl border-slate-200 pl-7" {...field} value={field.value ?? ''} />
+                                                            </div>
                                                         </FormControl>
-                                                        <FormDescription className="text-xs">Shown as crossed-out price</FormDescription>
+                                                        <FormDescription className="text-[10px]">For strike-through display</FormDescription>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -464,9 +461,9 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                 name="total_inventory"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Total Rooms *</FormLabel>
+                                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Rooms *</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" {...field} />
+                                                            <Input type="number" className="h-11 rounded-xl border-slate-200" {...field} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -475,20 +472,19 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         </div>
                                     </div>
 
-                                    {/* Occupancy */}
-                                    <div>
-                                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Occupancy</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                    <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                                        <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-5">Occupancy Settings</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <FormField
                                                 control={form.control}
                                                 name="base_occupancy"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Base Guests</FormLabel>
+                                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Base Guests</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" {...field} />
+                                                            <Input type="number" className="h-11 rounded-xl border-slate-200" {...field} />
                                                         </FormControl>
-                                                        <FormDescription className="text-xs">Included in base price</FormDescription>
+                                                        <FormDescription className="text-[10px]">Included in base rate</FormDescription>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -498,9 +494,9 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                 name="max_occupancy"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Max Adults</FormLabel>
+                                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Max Adults</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" {...field} />
+                                                            <Input type="number" className="h-11 rounded-xl border-slate-200" {...field} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -511,9 +507,9 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                 name="max_children"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Max Children</FormLabel>
+                                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Max Children</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" {...field} />
+                                                            <Input type="number" className="h-11 rounded-xl border-slate-200" {...field} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -522,18 +518,17 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         </div>
                                     </div>
 
-                                    {/* Extra Charges */}
                                     <div>
-                                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Extra Guest Charges</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Extra Charges (Per Night)</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <FormField
                                                 control={form.control}
                                                 name="extra_adult_price"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Extra Adult Charge (₹)</FormLabel>
+                                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Extra Adult (₹)</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" {...field} />
+                                                            <Input type="number" className="h-11 rounded-xl border-slate-200" {...field} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -544,9 +539,9 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                 name="extra_child_price"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Extra Child Charge (₹)</FormLabel>
+                                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Extra Child (₹)</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" {...field} />
+                                                            <Input type="number" className="h-11 rounded-xl border-slate-200" {...field} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -558,56 +553,58 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                             </TabsContent>
 
                             {/* ── TAB 4: AMENITIES ── */}
-                            <TabsContent value="amenities" className="flex-1 overflow-y-auto px-6 pb-4 mt-0">
-                                <div className="pt-4">
-                                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Room Amenities</h3>
-                                    <FormField
-                                        control={form.control}
-                                        name="amenity_ids"
-                                        render={() => (
-                                            <FormItem>
-                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                                    {availableAmenities.filter(a => a.scope === 'room').map((amenity) => (
-                                                        <FormField
-                                                            key={amenity.id}
-                                                            control={form.control}
-                                                            name="amenity_ids"
-                                                            render={({ field }) => (
-                                                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 border rounded-xl p-3 hover:bg-muted/40 cursor-pointer transition-colors">
-                                                                    <FormControl>
-                                                                        <Checkbox
-                                                                            checked={field.value?.includes(amenity.id)}
-                                                                            onCheckedChange={(checked) => {
-                                                                                return checked
-                                                                                    ? field.onChange([...field.value, amenity.id])
-                                                                                    : field.onChange(field.value?.filter(val => val !== amenity.id));
-                                                                            }}
-                                                                        />
-                                                                    </FormControl>
-                                                                    <FormLabel className="font-medium text-sm cursor-pointer flex items-center gap-2">
-                                                                        {amenity.name}
-                                                                        {amenity.is_featured && <Badge className="bg-amber-100 text-amber-700 text-[9px] h-4 border-none">Featured</Badge>}
-                                                                    </FormLabel>
-                                                                </FormItem>
-                                                            )}
-                                                        />
-                                                    ))}
+                            <TabsContent value="amenities" className="flex-1 overflow-y-auto px-8 pb-8 mt-6">
+                                <FormField
+                                    control={form.control}
+                                    name="amenity_ids"
+                                    render={() => (
+                                        <FormItem>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                {availableAmenities.filter(a => a.scope === 'room').map((amenity) => (
+                                                    <FormField
+                                                        key={amenity.id}
+                                                        control={form.control}
+                                                        name="amenity_ids"
+                                                        render={({ field }) => (
+                                                            <FormItem className={cn(
+                                                                "flex flex-row items-center space-x-3 space-y-0 border rounded-xl p-3.5 cursor-pointer transition-all hover:border-blue-200",
+                                                                field.value?.includes(amenity.id) ? "bg-blue-50 border-blue-200" : "bg-slate-50/50 border-slate-100"
+                                                            )}>
+                                                                <FormControl>
+                                                                    <Checkbox
+                                                                        checked={field.value?.includes(amenity.id)}
+                                                                        onCheckedChange={(checked) => {
+                                                                            return checked
+                                                                                ? field.onChange([...field.value, amenity.id])
+                                                                                : field.onChange(field.value?.filter(val => val !== amenity.id));
+                                                                        }}
+                                                                        className="rounded-md border-slate-300"
+                                                                    />
+                                                                </FormControl>
+                                                                <FormLabel className="font-bold text-xs text-slate-700 cursor-pointer flex items-center gap-2">
+                                                                    {amenity.name}
+                                                                    {amenity.is_featured && <Sparkles className="w-3 h-3 text-amber-500" />}
+                                                                </FormLabel>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                ))}
+                                            </div>
+                                            {availableAmenities.filter(a => a.scope === 'room').length === 0 && (
+                                                <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                                    <p className="text-sm text-slate-400 font-medium">No amenities available.</p>
+                                                    <Button variant="link" className="text-blue-600 font-bold" onClick={() => navigate('/amenities')}>Add Amenities</Button>
                                                 </div>
-                                                {availableAmenities.filter(a => a.scope === 'room').length === 0 && (
-                                                    <p className="text-sm text-muted-foreground text-center py-8">
-                                                        No room amenities found. <a href="/amenities" target="_blank" className="text-primary underline">Add amenities</a> first.
-                                                    </p>
-                                                )}
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                                            )}
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </TabsContent>
                         </Tabs>
 
                         {/* Footer */}
-                        <div className="flex items-center justify-between px-6 py-4 border-t bg-white gap-4 shrink-0">
+                        <div className="flex items-center justify-between px-8 py-5 border-t bg-slate-50/80 gap-4 shrink-0">
                             <FormField
                                 control={form.control}
                                 name="is_active"
@@ -617,12 +614,12 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                             <Switch
                                                 checked={!!field.value}
                                                 onCheckedChange={field.onChange}
-                                                className="data-[state=checked]:bg-green-500"
+                                                className="data-[state=checked]:bg-blue-600"
                                             />
                                         </FormControl>
-                                        <div>
-                                            <FormLabel className="font-semibold text-sm">Active</FormLabel>
-                                            <FormDescription className="text-xs">Show this room in booking engine</FormDescription>
+                                        <div className="flex flex-col">
+                                            <FormLabel className="font-bold text-xs text-slate-900">Online Status</FormLabel>
+                                            <span className="text-[10px] text-slate-400 font-medium">Visible to guests</span>
                                         </div>
                                     </FormItem>
                                 )}
@@ -631,18 +628,22 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                             <div className="flex gap-3">
                                 <Button
                                     type="button"
-                                    variant="outline"
+                                    variant="ghost"
                                     onClick={() => onOpenChange(false)}
-                                    className="px-6"
+                                    className="px-6 font-bold text-slate-500"
                                 >
                                     Cancel
                                 </Button>
                                 <Button
                                     type="submit"
                                     disabled={form.formState.isSubmitting}
-                                    className="px-8 bg-indigo-600 hover:bg-indigo-700"
+                                    className="px-8 bg-blue-600 hover:bg-blue-700 h-11 rounded-xl font-bold shadow-lg shadow-blue-100 flex gap-2"
                                 >
-                                    {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                                    {form.formState.isSubmitting ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Check className="h-4 w-4" />
+                                    )}
                                     {isEditing ? 'Save Changes' : 'Create Room'}
                                 </Button>
                             </div>
