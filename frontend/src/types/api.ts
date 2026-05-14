@@ -362,6 +362,7 @@ export interface RateOption {
   is_refundable: boolean;
   cancellation_policy?: string;
   savings_text?: string;
+  is_package?: boolean;
 }
 
 export interface PublicRoomSearchResult extends RoomType {

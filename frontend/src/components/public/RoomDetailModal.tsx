@@ -149,16 +149,21 @@ export function RoomDetailModal({ room, open, onOpenChange, onBook, guests }: Ro
                                             className="border rounded-xl p-4 hover:border-primary/50 hover:shadow-md transition-all bg-white group"
                                         >
                                             <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <h4 className="font-bold text-slate-900">
-                                                        {MEAL_PLAN_NAMES[plan.name.toUpperCase()] || plan.name}
-                                                    </h4>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-bold text-slate-900">
+                                                            {MEAL_PLAN_NAMES[plan.name.toUpperCase()] || plan.name}
+                                                        </h4>
+                                                        {plan.is_package && (
+                                                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] py-0 px-2 h-5 font-black uppercase">
+                                                                Package
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                     {plan.savings_text && (
-                                                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                                                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full mt-1 inline-block">
                                                             {plan.savings_text}
                                                         </span>
                                                     )}
-                                                </div>
                                             </div>
 
                                             <ul className="space-y-1 mb-4">

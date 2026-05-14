@@ -77,6 +77,7 @@ export default function BookingSelection() {
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 20000]);
     const [selectedMealPlans, setSelectedMealPlans] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'recommended'>('recommended');
+    const [searchType, setSearchType] = useState<'room' | 'package'>('room');
 
     // Carousel State
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -333,7 +334,29 @@ export default function BookingSelection() {
 
             <div className="max-w-7xl mx-auto px-4 mt-8">
                 {/* Inline Search Modifier (Always Visible) */}
-                <div id="search-bar" className="bg-white border border-slate-200 p-4 lg:p-6 rounded-xl shadow-sm mb-8">
+                <div id="search-bar" className="bg-white border border-slate-200 p-4 lg:p-6 rounded-xl shadow-sm mb-8 relative">
+                    {/* Room/Package Toggle */}
+                    <div className="absolute -top-12 right-0 flex bg-white border border-slate-200 p-1 rounded-full shadow-sm">
+                        <button
+                            onClick={() => setSearchType('room')}
+                            className={cn(
+                                "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                                searchType === 'room' ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
+                            )}
+                        >
+                            Room
+                        </button>
+                        <button
+                            onClick={() => setSearchType('package')}
+                            className={cn(
+                                "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                                searchType === 'package' ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
+                            )}
+                        >
+                            Package
+                        </button>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         {/* Check In */}
                         <div className="space-y-1.5">
@@ -540,110 +563,114 @@ export default function BookingSelection() {
                                         if (sortBy === 'price_desc') return bPrice - aPrice;
                                         return 0;
                                     })
-                                    .map((room) => (
-                                    <div key={room.id} className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden flex flex-col md:flex-row mb-6 hover:shadow-md transition-shadow">
-                                        {/* Left: Image (Fixed Width) */}
-                                        <div className="md:w-80 md:min-w-[20rem] bg-slate-100 relative group cursor-pointer" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
-                                            {room.photos && room.photos.length > 0 ? (
-                                                <img src={room.photos[0].url} alt={room.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center flex-col text-slate-400 p-4 text-center">
-                                                    <Bed className="w-8 h-8 mb-2 opacity-50" />
-                                                    <span className="text-xs">No Photos Available</span>
-                                                </div>
-                                            )}
-                                            <div className="absolute top-2 left-2">
-                                                <Badge className="bg-indigo-600/90 text-white border-0 rounded-md shadow-lg">
-                                                    {room.name || 'Standard'}
-                                                </Badge>
-                                            </div>
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                <Button size="sm" variant="secondary" className="shadow-lg font-bold">View Gallery</Button>
-                                            </div>
-                                        </div>
+                                    .map((room) => {
+                                        // Filter rate options based on searchType
+                                        const filteredRates = room.rate_options.filter(o => 
+                                            searchType === 'package' ? o.is_package : !o.is_package
+                                        );
 
-                                        {/* Right: Content */}
-                                        <div className="flex-1 flex flex-col">
-                                            {/* Room Header Info */}
-                                            <div className="p-5 border-b border-slate-100 bg-slate-50/30 flex justify-between items-start">
-                                                <div>
-                                                    <h3 className="text-xl font-black text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer flex items-center gap-2" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
-                                                        {room.name}
-                                                    </h3>
-                                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-tighter">Instant Confirmation Available</p>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-slate-600">
-                                                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm" title="Occupancy">
-                                                        <User className="h-3.5 w-3.5 text-indigo-500" />
-                                                        <span className="text-xs font-black">{room.max_occupancy}</span>
+                                        if (filteredRates.length === 0) return null;
+
+                                        return (
+                                            <div key={room.id} className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden flex flex-col md:flex-row mb-6 hover:shadow-md transition-shadow">
+                                                {/* Left: Image Carousel (Fixed Width) */}
+                                                <div className="md:w-80 md:min-w-[20rem] h-64 md:h-auto bg-slate-100 relative group">
+                                                    <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
+                                                    <div className="absolute top-2 left-2 z-10">
+                                                        <Badge className="bg-indigo-600/90 text-white border-0 rounded-md shadow-lg">
+                                                            {room.name || 'Standard'}
+                                                        </Badge>
                                                     </div>
-                                                    {room.room_size && (
-                                                        <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
-                                                            <Waves className="h-3.5 w-3.5 text-indigo-500" />
-                                                            <span className="text-xs font-black">{room.room_size} ft²</span>
-                                                        </div>
-                                                    )}
                                                 </div>
-                                            </div>
 
-                                            {/* Rate Plans List */}
-                                            <div className="divide-y divide-slate-100">
-                                                {(room.rate_options || []).map((plan) => (
-                                                    <div key={plan.id} className="p-5 hover:bg-slate-50/50 transition-colors grid grid-cols-1 md:grid-cols-12 gap-4 items-center group/plan">
-                                                        <div className="md:col-span-8 space-y-1.5">
-                                                            <div className="font-black text-slate-800 flex items-center gap-2">
-                                                                <div className={cn(
-                                                                    "w-2 h-2 rounded-full",
-                                                                    plan.meal_plan_code === 'EP' ? 'bg-slate-300' : 'bg-green-500 animate-pulse'
-                                                                )} />
-                                                                {plan.name}
-                                                                <button 
-                                                                    className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider hover:bg-indigo-100 transition-colors"
-                                                                    onClick={() => { setSelectedRateInfo(plan); setIsRateModalOpen(true); }}
-                                                                >
-                                                                    Details
-                                                                </button>
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-3">
-                                                                {(plan.inclusions || []).map((inclusion, idx) => (
-                                                                    <div key={idx} className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                                                                        <Check className="w-3.5 h-3.5 text-green-500" /> {inclusion}
-                                                                    </div>
-                                                                ))}
-                                                                {plan.cancellation_policy && (
-                                                                    <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                                                                        <Info className="w-3 h-3" /> {plan.cancellation_policy}
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                {/* Right: Content */}
+                                                <div className="flex-1 flex flex-col">
+                                                    {/* Room Header Info */}
+                                                    <div className="p-5 border-b border-slate-100 bg-slate-50/30 flex justify-between items-start">
+                                                        <div>
+                                                            <h3 className="text-xl font-black text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer flex items-center gap-2" onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}>
+                                                                {room.name}
+                                                            </h3>
+                                                            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-tighter">Instant Confirmation Available</p>
                                                         </div>
-
-                                                        <div className="md:col-span-4 flex items-center justify-end gap-5">
-                                                            <div className="text-right">
-                                                                <div className="text-[10px] font-bold text-slate-400 mb-0.5">
-                                                                    {formatCurrency(plan.price_per_night)} / night
-                                                                </div>
-                                                                <div className="flex items-baseline justify-end gap-1">
-                                                                    <span className="text-2xl font-black text-slate-900 leading-none">
-                                                                        {formatCurrency(plan.total_price)}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-[10px] font-bold text-indigo-600 uppercase mt-1 tracking-tighter">Total for {numNights} Night{numNights > 1 ? 's' : ''}</p>
+                                                        <div className="flex items-center gap-2 text-slate-600">
+                                                            <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm" title="Occupancy">
+                                                                <User className="h-3.5 w-3.5 text-indigo-500" />
+                                                                <span className="text-xs font-black">{room.max_occupancy}</span>
                                                             </div>
-
-                                                            <Button
-                                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 shadow-md rounded-xl h-11 min-w-[100px] transition-all active:scale-95"
-                                                                onClick={() => handleSelectRate(room, plan)}
-                                                            >
-                                                                BOOK
-                                                            </Button>
+                                                            {room.room_size && (
+                                                                <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
+                                                                    <Waves className="h-3.5 w-3.5 text-indigo-500" />
+                                                                    <span className="text-xs font-black">{room.room_size} ft²</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                ))}
+
+                                                    {/* Rate Plans List */}
+                                                    <div className="divide-y divide-slate-100">
+                                                        {filteredRates.map((plan) => (
+                                                            <div key={plan.id} className="p-5 hover:bg-slate-50/50 transition-colors grid grid-cols-1 md:grid-cols-12 gap-4 items-center group/plan">
+                                                                <div className="md:col-span-8 space-y-1.5">
+                                                                    <div className="font-black text-slate-800 flex items-center gap-2">
+                                                                        <div className={cn(
+                                                                            "w-2 h-2 rounded-full",
+                                                                            plan.meal_plan_code === 'EP' ? 'bg-slate-300' : 'bg-green-500 animate-pulse'
+                                                                        )} />
+                                                                        {plan.name}
+                                                                        {plan.is_package && (
+                                                                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] py-0 px-2 h-5 font-black uppercase shadow-sm">
+                                                                                Package
+                                                                            </Badge>
+                                                                        )}
+                                                                        <button 
+                                                                            className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider hover:bg-indigo-100 transition-colors"
+                                                                            onClick={() => { setSelectedRateInfo(plan); setIsRateModalOpen(true); }}
+                                                                        >
+                                                                            Details
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-3">
+                                                                        {(plan.inclusions || []).map((inclusion, idx) => (
+                                                                            <div key={idx} className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                                                                <Check className="w-3.5 h-3.5 text-green-500" /> {inclusion}
+                                                                            </div>
+                                                                        ))}
+                                                                        {plan.cancellation_policy && (
+                                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                                                                                <Info className="w-3 h-3" /> {plan.cancellation_policy}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="md:col-span-4 flex items-center justify-end gap-5">
+                                                                    <div className="text-right">
+                                                                        <div className="text-[10px] font-bold text-slate-400 mb-0.5">
+                                                                            {formatCurrency(plan.price_per_night)} / night
+                                                                        </div>
+                                                                        <div className="flex items-baseline justify-end gap-1">
+                                                                            <span className="text-2xl font-black text-slate-900 leading-none">
+                                                                                {formatCurrency(plan.total_price)}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="text-[10px] font-bold text-indigo-600 uppercase mt-1 tracking-tighter">Total for {numNights} Night{numNights > 1 ? 's' : ''}</p>
+                                                                    </div>
+
+                                                                    <Button
+                                                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 shadow-md rounded-xl h-11 min-w-[100px] transition-all active:scale-95"
+                                                                        onClick={() => handleSelectRate(room, plan)}
+                                                                    >
+                                                                        BOOK
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                        );
+                                    })}
                             </div>
                         )}
                     </div>
@@ -756,6 +783,67 @@ export default function BookingSelection() {
 
             {/* AI Chat Widget */}
             <ChatWidget hotelSlug={hotelSlug || ''} />
+        </div>
+    );
+}
+
+// --- Component: RoomImageCarousel ---
+function RoomImageCarousel({ photos, roomName, onClick }: { photos: any[], roomName: string, onClick: () => void }) {
+    const [index, setIndex] = useState(0);
+
+    if (!photos || photos.length === 0) {
+        return (
+            <div className="w-full h-full flex items-center justify-center flex-col text-slate-400 p-4 text-center" onClick={onClick}>
+                <Bed className="w-8 h-8 mb-2 opacity-50" />
+                <span className="text-xs">No Photos Available</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full h-full relative overflow-hidden">
+            <AnimatePresence mode="wait">
+                <motion.img
+                    key={index}
+                    src={photos[index].url}
+                    alt={`${roomName} - ${index + 1}`}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={onClick}
+                />
+            </AnimatePresence>
+
+            {photos.length > 1 && (
+                <>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setIndex(prev => (prev - 1 + photos.length) % photos.length); }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/20 hover:bg-black/40 p-1.5 rounded-full text-white transition-all opacity-0 group-hover:opacity-100"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setIndex(prev => (prev + 1) % photos.length); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/20 hover:bg-black/40 p-1.5 rounded-full text-white transition-all opacity-0 group-hover:opacity-100"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex gap-1">
+                        {photos.map((_, idx) => (
+                            <div
+                                key={idx}
+                                className={cn(
+                                    "h-1 rounded-full transition-all duration-300",
+                                    idx === index ? "w-4 bg-white" : "w-1 bg-white/50"
+                                )}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

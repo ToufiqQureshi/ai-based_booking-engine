@@ -27,6 +27,7 @@ class RateOption(BaseModel):
     is_refundable: bool = True
     cancellation_policy: Optional[str] = None
     savings_text: Optional[str] = None # e.g. "Save INR 2,000"
+    is_package: bool = False
 
 class PublicRoomSearchResult(RoomTypeRead):
     """
@@ -434,7 +435,8 @@ async def search_public_rooms(
                             inclusions=inclusions,
                             is_refundable=plan.is_refundable,
                             cancellation_policy=cancel_text,
-                            savings_text=savings_text
+                            savings_text=savings_text,
+                            is_package=getattr(plan, 'is_package', False)
                         ))
                 
                 else:
