@@ -1,5 +1,4 @@
-// Application Header with hotel selector and user menu
-import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare } from 'lucide-react';
+import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -26,23 +25,21 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { NotificationPopover } from '@/components/notifications/NotificationPopover';
-
 import { ChatWidget } from '@/components/support/ChatWidget';
+import { cn } from '@/lib/utils';
 
 export function AppHeader() {
   const { user, hotel, logout } = useAuth();
   const [properties, setProperties] = React.useState<any[]>([]);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = React.useState(false);
   const [isHelpOpen, setIsHelpOpen] = React.useState(false);
-  const [isChatOpen, setIsChatOpen] = React.useState(false); // Chat state
+  const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [newPropName, setNewPropName] = React.useState('');
   const [newPropSlug, setNewPropSlug] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
   const navigate = useNavigate();
 
-  // ... (fetch properties effect)
   React.useEffect(() => {
-    // Only fetch if user is logged in
     if (user) {
       import('@/api/client').then(({ apiClient }) => {
         apiClient.get('/properties')
@@ -59,7 +56,6 @@ export function AppHeader() {
       window.location.reload();
     } catch (error) {
       console.error("Failed to switch property", error);
-      alert("Failed to switch property");
     }
   };
 
@@ -72,10 +68,8 @@ export function AppHeader() {
         name: newPropName,
         slug: newPropSlug
       });
-      window.location.reload(); // Reload to switch to new property automatically
+      window.location.reload();
     } catch (error) {
-      console.error("Failed to create property", error);
-      alert("Failed to create property. Slug might be taken.");
       setIsCreating(false);
     }
   };
@@ -88,178 +82,211 @@ export function AppHeader() {
     .slice(0, 2) || 'U';
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6 shadow-sm">
-      {/* Sidebar Toggle */}
-      <SidebarTrigger className="-ml-2">
-        <Menu className="h-5 w-5" />
-        <span className="sr-only">Toggle sidebar</span>
+    <header className="sticky top-0 z-40 flex h-20 items-center gap-4 bg-white/60 backdrop-blur-2xl px-8 border-b border-indigo-100/30">
+      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-transparent to-violet-500/5 pointer-events-none" />
+      
+      {/* Sidebar Trigger - Premium Styled */}
+      <SidebarTrigger className="-ml-2 h-10 w-10 rounded-xl hover:bg-indigo-50 transition-colors">
+        <Menu className="h-5 w-5 text-indigo-950" />
       </SidebarTrigger>
 
-      {/* Hotel Selector (for multi-property users) */}
+      {/* Property Architecture Selector */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="gap-2 font-medium">
-            <span className="hidden sm:inline">{hotel?.name || 'Select Hotel'}</span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <Button variant="ghost" className="h-12 px-5 gap-3 rounded-2xl hover:bg-white/80 border border-transparent hover:border-indigo-100/50 transition-all group">
+            <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+                <Building2 className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex flex-col items-start">
+                <span className="text-xs font-black text-indigo-950 tracking-tight leading-none mb-1 uppercase">{hotel?.name || 'Select Entity'}</span>
+                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest leading-none">Global Node</span>
+            </div>
+            <ChevronDown className="h-4 w-4 text-indigo-300 group-hover:text-indigo-600 transition-colors" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Switch Property</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+        <DropdownMenuContent align="start" className="w-72 p-2 rounded-3xl border-indigo-100 shadow-2xl bg-white/95 backdrop-blur-xl">
+          <div className="px-4 py-3 mb-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Infrastructure Management</p>
+            <p className="text-xs font-bold text-indigo-950">Switch Active Property</p>
+          </div>
+          <DropdownMenuSeparator className="bg-indigo-50" />
 
-          {properties.map(p => (
-            <DropdownMenuItem key={p.id} className="gap-2" onClick={() => handleSwitchProperty(p.id)}>
-              <Badge variant={p.is_current ? "default" : "outline"} className="h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs">
-                {p.name[0]}
-              </Badge>
-              {p.name}
-              {p.is_current && <span className="ml-auto text-xs opacity-50">Active</span>}
-            </DropdownMenuItem>
-          ))}
+          <div className="max-h-[300px] overflow-y-auto space-y-1 my-2 pr-1">
+            {properties.map(p => (
+                <DropdownMenuItem key={p.id} className={cn(
+                    "flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all",
+                    p.is_current ? "bg-indigo-50 text-indigo-950" : "hover:bg-indigo-50/50 text-slate-600"
+                )} onClick={() => handleSwitchProperty(p.id)}>
+                <div className={cn(
+                    "h-8 w-8 rounded-xl flex items-center justify-center font-black text-xs",
+                    p.is_current ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" : "bg-indigo-100 text-indigo-600"
+                )}>
+                    {p.name[0]}
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-bold text-sm tracking-tight">{p.name}</span>
+                    {p.is_current && <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Current Node</span>}
+                </div>
+                {p.is_current && <div className="ml-auto h-2 w-2 rounded-full bg-indigo-600 animate-pulse" />}
+                </DropdownMenuItem>
+            ))}
+          </div>
 
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-primary cursor-pointer" onSelect={(e) => { e.preventDefault(); setIsAddPropertyOpen(true); }}>
-            + Add New Property
+          <DropdownMenuSeparator className="bg-indigo-50" />
+          <DropdownMenuItem className="p-3 rounded-2xl text-indigo-600 font-black uppercase tracking-widest text-[10px] cursor-pointer hover:bg-indigo-600 hover:text-white transition-all gap-3" onSelect={(e) => { e.preventDefault(); setIsAddPropertyOpen(true); }}>
+            <div className="h-6 w-6 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-white group-hover:text-indigo-600">
+                <Plus className="h-4 w-4" />
+            </div>
+            Initialize New Entity
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Add Property Dialog */}
-      <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Property</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="prop-name">Hotel Name</Label>
-              <Input id="prop-name" value={newPropName} onChange={(e) => {
-                setNewPropName(e.target.value);
-                // Auto-generate slug
-                setNewPropSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-'));
-              }} placeholder="e.g. Lagoona Goa" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="prop-slug">URL Slug</Label>
-              <Input id="prop-slug" value={newPropSlug} onChange={(e) => setNewPropSlug(e.target.value)} placeholder="e.g. lagoona-goa" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddProperty} disabled={isCreating}>
-              {isCreating ? 'Creating...' : 'Create Property'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Help Dialog */}
-      <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Help & Support</DialogTitle>
-            <DialogDescription>
-              Need assistance? We are here to help you 24/7.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
-              <div className="bc-primary/10 p-2 rounded-full text-primary">
-                <Phone className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Call Us</p>
-                <p className="text-sm text-muted-foreground">+91 98765 43210</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
-              <div className="bc-primary/10 p-2 rounded-full text-primary">
-                <Mail className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Email Support</p>
-                <p className="text-sm text-muted-foreground">support@hotelierhub.com</p>
-              </div>
-            </div>
-
-            <div
-              className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-              onClick={() => {
-                setIsHelpOpen(false);
-                setIsChatOpen(true);
-              }}
-            >
-              <div className="bc-primary/10 p-2 rounded-full text-primary group-hover:bg-primary/20">
-                <MessageSquare className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Live Chat</p>
-                <p className="text-sm text-muted-foreground">Chat with our support team</p>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsHelpOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Search (Desktop) */}
-      <div className="hidden flex-1 md:flex md:max-w-md">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      {/* Global Intelligence Search */}
+      <div className="hidden flex-1 md:flex md:max-w-xl mx-4">
+        <div className="relative w-full group">
+          <div className="absolute inset-0 bg-indigo-500/5 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-indigo-300 group-focus-within:text-indigo-600 transition-colors" />
           <Input
             type="search"
-            placeholder="Search bookings, guests..."
-            className="w-full pl-10 bg-muted/50 border-0 focus-visible:ring-1"
+            placeholder="Search bookings, neural patterns, guest IDs..."
+            className="w-full h-12 pl-14 bg-white/50 border border-indigo-50/50 rounded-2xl focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:bg-white transition-all font-bold text-indigo-950 placeholder:text-indigo-200 placeholder:font-medium"
           />
+          <div className="absolute right-5 top-1/2 -translate-y-1/2 flex gap-1">
+             <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-indigo-100 bg-white px-1.5 font-mono text-[10px] font-black text-indigo-300 uppercase opacity-100">
+                <span className="text-xs">⌘</span>K
+             </kbd>
+          </div>
         </div>
       </div>
 
-      {/* Right Section */}
-      <div className="ml-auto flex items-center gap-2">
-        {/* Notifications */}
-        <NotificationPopover />
+      {/* Control Cluster */}
+      <div className="ml-auto flex items-center gap-4">
+        <div className="flex items-center bg-white/80 rounded-2xl p-1 border border-indigo-50/50 shadow-sm">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all" onClick={() => setIsHelpOpen(true)}>
+                <HelpCircle className="h-5 w-5" />
+            </Button>
+            <div className="w-[1px] h-4 bg-indigo-50" />
+            <NotificationPopover />
+        </div>
 
-        {/* User Menu */}
+        {/* User Identity Module */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 pl-2 pr-1">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+            <Button variant="ghost" className="h-12 pl-2 pr-4 gap-3 rounded-2xl hover:bg-white/80 border border-transparent hover:border-indigo-100/50 transition-all">
+              <Avatar className="h-9 w-9 rounded-xl border-2 border-white shadow-lg shadow-indigo-500/10 transition-transform hover:scale-105">
+                <AvatarFallback className="bg-indigo-600 text-white text-[10px] font-black uppercase">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden flex-col items-start text-left md:flex">
-                <span className="text-sm font-medium">{user?.name || 'User'}</span>
-                <span className="text-xs text-muted-foreground">{user?.role || 'Manager'}</span>
+                <span className="text-xs font-black text-indigo-950 tracking-tight leading-none mb-1 uppercase">{user?.name || 'Authorized User'}</span>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest leading-none">{user?.role || 'Manager'}</span>
+                </div>
               </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-4 w-4 text-indigo-200" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => navigate('/profile')}>
-              Profile Settings
+          <DropdownMenuContent align="end" className="w-64 p-2 rounded-3xl border-indigo-100 shadow-2xl bg-white/95 backdrop-blur-xl">
+            <DropdownMenuLabel className="px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">System Identity</p>
+                <p className="text-xs font-bold text-indigo-950">{user?.email}</p>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-indigo-50" />
+            <DropdownMenuItem className="p-3 rounded-2xl cursor-pointer hover:bg-indigo-50 text-slate-700 font-bold text-sm gap-3 transition-all" onSelect={() => navigate('/profile')}>
+              <User className="h-4 w-4 text-indigo-400" /> Profile Settings
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => navigate('/settings?tab=notifications')}>
-              Notification Preferences
+            <DropdownMenuItem className="p-3 rounded-2xl cursor-pointer hover:bg-indigo-50 text-slate-700 font-bold text-sm gap-3 transition-all" onSelect={() => navigate('/settings?tab=notifications')}>
+              <Bell className="h-4 w-4 text-indigo-400" /> Notifications
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setIsHelpOpen(true)}>
-              Help & Support
+            <DropdownMenuItem className="p-3 rounded-2xl cursor-pointer hover:bg-indigo-50 text-slate-700 font-bold text-sm gap-3 transition-all" onSelect={() => setIsHelpOpen(true)}>
+              <ShieldCheck className="h-4 w-4 text-indigo-400" /> Help & Support
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-indigo-50" />
             <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
+              className="p-3 rounded-2xl cursor-pointer hover:bg-rose-50 text-rose-600 font-black uppercase tracking-widest text-[10px] gap-3 transition-all"
               onSelect={logout}
             >
-              Sign Out
+              <LogOut className="h-4 w-4" /> Terminate Session
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Premium Dialogs */}
+      <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
+        <DialogContent className="rounded-[40px] p-0 overflow-hidden bg-white/95 backdrop-blur-2xl border-none shadow-2xl max-w-md">
+            <div className="bg-indigo-600 p-8 text-white relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10"><Building2 className="h-20 w-20" /></div>
+                <DialogTitle className="text-2xl font-black tracking-tight mb-2">Initialize Entity</DialogTitle>
+                <DialogDescription className="text-indigo-100 font-medium opacity-80">Expand your hospitality infrastructure with a new node.</DialogDescription>
+            </div>
+            <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Property Name</Label>
+                    <Input className="h-12 rounded-2xl border-indigo-100 bg-indigo-50/30 font-bold text-indigo-950" value={newPropName} onChange={(e) => {
+                        setNewPropName(e.target.value);
+                        setNewPropSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-'));
+                    }} placeholder="e.g. The Grand Plaza" />
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Neural Slug (URL)</Label>
+                    <Input className="h-12 rounded-2xl border-indigo-100 bg-indigo-50/30 font-bold text-indigo-400" value={newPropSlug} onChange={(e) => setNewPropSlug(e.target.value)} placeholder="e.g. grand-plaza" />
+                </div>
+            </div>
+            <DialogFooter className="p-8 bg-indigo-50/50 flex gap-3">
+                <Button variant="ghost" className="rounded-2xl font-bold text-indigo-400" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
+                <Button className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 h-12 px-8 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-500/20" onClick={handleAddProperty} disabled={isCreating}>
+                    {isCreating ? 'Deploying...' : 'Deploy Entity'}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
+        <DialogContent className="rounded-[40px] p-0 overflow-hidden bg-white/95 backdrop-blur-2xl border-none shadow-2xl max-w-md">
+            <div className="bg-indigo-950 p-8 text-white relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10"><Zap className="h-20 w-20 text-indigo-500" /></div>
+                <DialogTitle className="text-2xl font-black tracking-tight mb-2">Protocol Assistance</DialogTitle>
+                <DialogDescription className="text-indigo-200/50 font-medium">Neural support nodes active 24/7 for system integrity.</DialogDescription>
+            </div>
+            <div className="p-8 space-y-4">
+                {[
+                    { icon: Phone, label: 'Voice Support', val: '+91 98765 43210', color: 'indigo' },
+                    { icon: Mail, label: 'Email Protocol', val: 'ops@staybooker.ai', color: 'violet' },
+                ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-4 p-5 rounded-[24px] bg-indigo-50/30 border border-indigo-100/50 group hover:bg-white transition-all">
+                        <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-600">
+                            <item.icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-0.5">{item.label}</p>
+                            <p className="font-bold text-indigo-950">{item.val}</p>
+                        </div>
+                    </div>
+                ))}
+
+                <button 
+                    className="w-full flex items-center gap-4 p-5 rounded-[24px] bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 group text-left"
+                    onClick={() => { setIsHelpOpen(false); setIsChatOpen(true); }}
+                >
+                    <div className="h-12 w-12 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center">
+                        <MessageSquare className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-0.5">Neural Chat</p>
+                        <p className="font-bold text-white">Initialize Live Support</p>
+                    </div>
+                    <Sparkles className="ml-auto h-5 w-5 text-indigo-300 opacity-50 group-hover:opacity-100 group-hover:animate-pulse" />
+                </button>
+            </div>
+            <div className="p-6 text-center">
+                <Button variant="ghost" className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300 hover:text-indigo-600" onClick={() => setIsHelpOpen(false)}>Close Assistance</Button>
+            </div>
+        </DialogContent>
+      </Dialog>
 
       <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </header>

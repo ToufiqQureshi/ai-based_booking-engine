@@ -1,5 +1,5 @@
-// Rooms Page - Room Types Management with Real API
-import { Plus, Search, Grid, List, Bed, Loader2, Package } from 'lucide-react';
+// Rooms Page - Room Types Management with Ultra-Premium UI
+import { Plus, Search, Grid, List, Bed, Loader2, Package, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -67,15 +67,15 @@ export function RoomsPage() {
     try {
       await apiClient.delete(`/rooms/${roomId}`);
       toast({
-        title: 'Deleted',
-        description: 'Room type deleted successfully!',
+        title: 'Inventory Updated',
+        description: 'Room category has been successfully removed.',
       });
       refetchRooms();
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to delete room',
+        title: 'Operation Failed',
+        description: 'Encountered an issue while deleting the room category.',
       });
     }
   };
@@ -102,40 +102,63 @@ export function RoomsPage() {
   const originalItems = activeTab === 'room' ? rooms : packages;
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Room Types</h1>
-          <p className="text-muted-foreground">
-            Manage your room categories and inventory
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex p-1 bg-muted rounded-full">
-            <button
-              onClick={() => setActiveTab('room')}
-              className={cn(
-                "px-6 py-1.5 rounded-full text-sm font-medium transition-all",
-                activeTab === 'room' ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Room
-            </button>
-            <button
-              onClick={() => setActiveTab('package')}
-              className={cn(
-                "px-6 py-1.5 rounded-full text-sm font-medium transition-all",
-                activeTab === 'package' ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Package
-            </button>
+    <div className="space-y-8 pb-10">
+      {/* Premium Page Header */}
+      <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-950 p-8 sm:p-12 shadow-2xl">
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px]" />
+        
+        <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">
+              <Sparkles className="w-3 h-3 text-indigo-400" />
+              Inventory Intelligence
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-white">
+              {activeTab === 'room' ? 'Room Architecture' : 'Signature Packages'}
+            </h1>
+            <p className="text-indigo-200/70 max-w-xl text-sm sm:text-base font-medium leading-relaxed">
+              {activeTab === 'room' 
+                ? 'Design and manage high-conversion room categories with precision analytics and real-time inventory control.' 
+                : 'Curate exclusive experiences that combine luxury stay with premium add-ons to drive higher revenue per guest.'}
+            </p>
           </div>
-          <Button className="gap-2" onClick={handleCreateOpen}>
-            <Plus className="h-4 w-4" />
-            {activeTab === 'room' ? 'Add Room Type' : 'Create Package'}
-          </Button>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {/* Custom Premium Tabs */}
+            <div className="flex p-1.5 bg-black/20 backdrop-blur-xl border border-white/10 rounded-[20px]">
+              <button
+                onClick={() => setActiveTab('room')}
+                className={cn(
+                  "px-8 py-2.5 rounded-[14px] text-xs font-black uppercase tracking-widest transition-all duration-300",
+                  activeTab === 'room' 
+                    ? "bg-white text-indigo-950 shadow-lg scale-105" 
+                    : "text-white/50 hover:text-white"
+                )}
+              >
+                Rooms
+              </button>
+              <button
+                onClick={() => setActiveTab('package')}
+                className={cn(
+                  "px-8 py-2.5 rounded-[14px] text-xs font-black uppercase tracking-widest transition-all duration-300",
+                  activeTab === 'package' 
+                    ? "bg-white text-indigo-950 shadow-lg scale-105" 
+                    : "text-white/50 hover:text-white"
+                )}
+              >
+                Packages
+              </button>
+            </div>
+
+            <Button 
+              onClick={handleCreateOpen}
+              className="h-14 px-8 rounded-[20px] bg-indigo-500 hover:bg-indigo-400 text-white shadow-[0_15px_30px_rgba(99,102,241,0.3)] font-black uppercase tracking-widest text-xs flex gap-3 group transition-all active:scale-95"
+            >
+              <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+              {activeTab === 'room' ? 'Architect Room' : 'Craft Package'}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -154,59 +177,82 @@ export function RoomsPage() {
         defaultIsPackage={activeTab === 'package'}
       />
 
-      {/* Filters & Search */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sticky top-0 bg-background/95 backdrop-blur z-10 py-2">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={activeTab === 'room' ? "Search room types..." : "Search packages..."}
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      {/* Control Bar: Search & View Mode */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between sticky top-6 z-30 px-2">
+        <div className="relative flex-1 max-w-xl group">
+          <div className="absolute inset-0 bg-indigo-500/5 rounded-[22px] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <div className="relative flex items-center bg-white/80 backdrop-blur-xl border border-indigo-100/50 rounded-[22px] px-5 py-1 shadow-sm focus-within:shadow-xl focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all duration-300">
+            <Search className="h-5 w-5 text-indigo-400 mr-3" />
+            <Input
+              placeholder={activeTab === 'room' ? "Search room categories, descriptions..." : "Search curated packages..."}
+              className="border-none bg-transparent focus-visible:ring-0 text-indigo-950 font-bold h-12"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="h-8 w-[1px] bg-indigo-100 mx-2" />
+            <Button variant="ghost" size="icon" className="text-indigo-400 hover:text-indigo-600 rounded-xl">
+              <SlidersHorizontal className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 border rounded-md p-1 bg-muted/20">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="sm"
-            className="h-8 px-2"
+
+        <div className="flex items-center gap-3 bg-white/60 backdrop-blur-lg border border-indigo-100/50 p-2 rounded-[22px] shadow-sm">
+          <button
             onClick={() => setViewMode('grid')}
+            className={cn(
+              "flex items-center justify-center h-11 px-6 rounded-[16px] text-xs font-black uppercase tracking-widest transition-all",
+              viewMode === 'grid' ? "bg-indigo-600 text-white shadow-lg" : "text-indigo-400 hover:text-indigo-900 hover:bg-indigo-50"
+            )}
           >
             <Grid className="h-4 w-4 mr-2" />
             Grid
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="sm"
-            className="h-8 px-2"
+          </button>
+          <button
             onClick={() => setViewMode('list')}
-            disabled={activeTab === 'package'} // Packages only in grid for now
+            className={cn(
+              "flex items-center justify-center h-11 px-6 rounded-[16px] text-xs font-black uppercase tracking-widest transition-all",
+              viewMode === 'list' ? "bg-indigo-600 text-white shadow-lg" : "text-indigo-400 hover:text-indigo-900 hover:bg-indigo-50",
+              activeTab === 'package' && "opacity-50 cursor-not-allowed"
+            )}
+            disabled={activeTab === 'package'}
           >
             <List className="h-4 w-4 mr-2" />
             List
-          </Button>
+          </button>
         </div>
       </div>
 
       {isLoading && originalItems.length === 0 ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading {activeTab === 'room' ? 'rooms' : 'packages'}...</span>
+        <div className="flex flex-col items-center justify-center h-96 space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-20 animate-pulse" />
+            <Loader2 className="h-12 w-12 animate-spin text-indigo-600 relative" />
+          </div>
+          <span className="text-indigo-900/40 text-xs font-black uppercase tracking-[0.2em]">Synchronizing Inventory...</span>
         </div>
       ) : (
-        <>
+        <div className="px-2">
           {/* Empty State */}
           {originalItems.length === 0 && !isLoading && (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                {activeTab === 'room' ? <Bed className="h-12 w-12 text-muted-foreground mb-4" /> : <Package className="h-12 w-12 text-muted-foreground mb-4" />}
-                <h3 className="text-lg font-medium">No {activeTab === 'room' ? 'Room Types' : 'Packages'} Yet</h3>
-                <p className="text-muted-foreground text-center mt-1">
-                  Get started by adding your first {activeTab === 'room' ? 'room type' : 'package'}.
+            <Card className="border-2 border-dashed border-indigo-100 bg-indigo-50/20 rounded-[40px] overflow-hidden">
+              <CardContent className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="w-24 h-24 rounded-[32px] bg-white shadow-2xl flex items-center justify-center mb-8 rotate-6 hover:rotate-0 transition-transform duration-500">
+                  {activeTab === 'room' ? (
+                    <Bed className="h-10 w-10 text-indigo-500" />
+                  ) : (
+                    <Package className="h-10 w-10 text-indigo-500" />
+                  )}
+                </div>
+                <h3 className="text-2xl font-black text-indigo-950 tracking-tight">Your Inventory is Vacant</h3>
+                <p className="text-indigo-400 max-w-sm mt-3 font-medium">
+                  Initialize your revenue engine by creating your first {activeTab === 'room' ? 'room architecture' : 'luxury package'}.
                 </p>
-                <Button className="mt-4" onClick={handleCreateOpen}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add {activeTab === 'room' ? 'Room Type' : 'Package'}
+                <Button 
+                  className="mt-8 h-12 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 font-bold"
+                  onClick={handleCreateOpen}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Create First {activeTab === 'room' ? 'Room' : 'Package'}
                 </Button>
               </CardContent>
             </Card>
@@ -214,14 +260,16 @@ export function RoomsPage() {
 
           {/* No Search Results */}
           {originalItems.length > 0 && displayItems.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              No {activeTab === 'room' ? 'rooms' : 'packages'} found matching "{searchQuery}"
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="text-indigo-950 text-xl font-black tracking-tight">No match discovered</div>
+              <p className="text-indigo-400 mt-2 font-medium">We couldn't find any {activeTab === 'room' ? 'rooms' : 'packages'} matching "{searchQuery}"</p>
+              <Button variant="link" className="mt-4 text-indigo-600 font-bold" onClick={() => setSearchQuery('')}>Clear all filters</Button>
             </div>
           )}
 
           {/* Room Types/Packages Grid */}
           {displayItems.length > 0 && viewMode === 'grid' && (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 animate-enter">
               {activeTab === 'room' ? (
                 (displayItems as RoomType[]).map((room) => (
                   <RoomCard
@@ -239,7 +287,7 @@ export function RoomsPage() {
                     pkg={pkg}
                     onEdit={handleEditOpen}
                     onDelete={(id) => {
-                      if (confirm("Delete this package?")) {
+                      if (confirm("Permanently remove this package?")) {
                         apiClient.delete(`/rates/plans/${id}`).then(() => refetchRates());
                       }
                     }}
@@ -251,23 +299,21 @@ export function RoomsPage() {
 
           {/* List View (Rooms only) */}
           {activeTab === 'room' && displayItems.length > 0 && viewMode === 'list' && (
-            <Card>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {(displayItems as RoomType[]).map((room) => (
-                    <RoomListItem
-                      key={room.id}
-                      room={room}
-                      onEdit={handleEditOpen}
-                      onDelete={handleDeleteRoom}
-                      formatCurrency={formatCurrency}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="bg-white/70 backdrop-blur-xl border border-indigo-100/50 rounded-[32px] overflow-hidden shadow-sm animate-enter">
+              <div className="divide-y divide-indigo-50">
+                {(displayItems as RoomType[]).map((room) => (
+                  <RoomListItem
+                    key={room.id}
+                    room={room}
+                    onEdit={handleEditOpen}
+                    onDelete={handleDeleteRoom}
+                    formatCurrency={formatCurrency}
+                  />
+                ))}
+              </div>
+            </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

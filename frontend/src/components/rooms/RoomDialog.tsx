@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Ruler, BedDouble } from 'lucide-react';
+import { Loader2, Ruler, BedDouble, Info, LayoutGrid, CreditCard, Users, Zap } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,16 +21,13 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
     FormMessage,
+    FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { apiClient } from '@/api/client';
 import { RoomType, Amenity, RoomPhoto } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
@@ -66,6 +63,7 @@ const roomSchema = z.object({
     })).default([]),
     amenity_ids: z.array(z.string()).default([]),
     market_price: z.coerce.number().min(0).optional().nullable(),
+    is_active: z.boolean().default(true),
 });
 
 interface RoomDialogProps {
@@ -101,6 +99,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
             is_pet_friendly: false,
             photos: [],
             market_price: undefined,
+            is_active: true,
         },
     });
 
@@ -142,9 +141,9 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     is_pet_friendly: initialData.is_pet_friendly || false,
                     photos: initialData.photos || [],
                     market_price: initialData.market_price,
-                    // Map existing Linked Amenities to IDs
                     // If backend sends 'amenities' as objects, we map them to IDs
                     amenity_ids: initialData.amenities?.map(a => a.id) || [],
+                    is_active: initialData.is_active ?? true,
                 });
             } else {
                 form.reset({
@@ -168,6 +167,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     photos: [],
                     amenity_ids: [],
                     market_price: undefined,
+                    is_active: true,
                 });
             }
         }
@@ -196,115 +196,138 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{isEditing ? 'Edit Room Type' : 'Add Room Type'}</DialogTitle>
-                    <DialogDescription>
-                        {isEditing ? 'Modify existing room details.' : 'Create a new room category for your hotel.'}
-                    </DialogDescription>
+            <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-2xl border-white/40 shadow-[0_30px_70px_rgba(0,0,0,0.15)] rounded-[32px] p-0 gap-0 border">
+                <DialogHeader className="p-10 pb-6 bg-gradient-to-br from-indigo-50/80 to-white/20 border-b border-indigo-100/20 sticky top-0 z-10">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <DialogTitle className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-950 via-indigo-800 to-violet-900 bg-clip-text text-transparent">
+                                {isEditing ? 'Refine Experience' : 'New Room Class'}
+                            </DialogTitle>
+                            <DialogDescription className="text-indigo-600/60 font-semibold text-base mt-2">
+                                Design a bespoke sanctuary for your premier guests.
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
-                        {/* Basic Info */}
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">Basic Information</h3>
-                            <div className="grid grid-cols-2 gap-4">
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="p-10 pt-8 space-y-12">
+                        {/* Basic Information Section */}
+                        <section className="space-y-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-100/50 flex items-center justify-center shadow-sm">
+                                    <Info className="w-6 h-6 text-indigo-600" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-indigo-950 tracking-tight">Identity & Atmosphere</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 bg-indigo-50/10 p-8 rounded-[24px] border border-indigo-100/30">
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
-                                        <FormItem className="col-span-2">
-                                            <FormLabel>Room Name</FormLabel>
+                                        <FormItem>
+                                            <FormLabel className="text-indigo-900/70 font-bold uppercase text-[11px] tracking-widest">Designation</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. Deluxe Suite" {...field} />
+                                                <Input 
+                                                    placeholder="e.g. Royal Zenith Suite" 
+                                                    {...field} 
+                                                    className="bg-white border-indigo-100/50 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 rounded-2xl h-14 text-lg font-medium transition-all"
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem className="col-span-2">
-                                            <FormLabel>Description</FormLabel>
-                                            <FormControl>
-                                                <Textarea placeholder="Room amenities and details..." {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Room Specifics */}
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">Room Specifics</h3>
-                            <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="bed_type"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Bed Type</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormLabel className="text-indigo-900/70 font-bold uppercase text-[11px] tracking-widest">Curation</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select bed type" />
+                                                    <SelectTrigger className="bg-white border-indigo-100/50 rounded-2xl h-14 text-lg font-medium">
+                                                        <SelectValue placeholder="Select Bed" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Single">Single Bed</SelectItem>
-                                                    <SelectItem value="Double">Double Bed</SelectItem>
-                                                    <SelectItem value="Queen">Queen Bed</SelectItem>
-                                                    <SelectItem value="King">King Bed</SelectItem>
-                                                    <SelectItem value="Twin">Twin Beds</SelectItem>
-                                                    <SelectItem value="Studio">Studio</SelectItem>
+                                                <SelectContent className="rounded-2xl border-indigo-50 shadow-2xl">
+                                                    <SelectItem value="Single Bed">Single Bed</SelectItem>
+                                                    <SelectItem value="Double Bed">Double Bed</SelectItem>
+                                                    <SelectItem value="Queen Bed">Queen Bed</SelectItem>
+                                                    <SelectItem value="King Bed">King Bed</SelectItem>
+                                                    <SelectItem value="Twin Bed">Twin Bed</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
+                                <div className="md:col-span-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-indigo-900/70 font-bold uppercase text-[11px] tracking-widest">The Narrative</FormLabel>
+                                                <FormControl>
+                                                    <Textarea 
+                                                        placeholder="Paint a picture of luxury..." 
+                                                        className="min-h-[140px] bg-white border-indigo-100/50 rounded-2xl resize-none p-5 text-base leading-relaxed focus:ring-4 focus:ring-indigo-500/5 transition-all"
+                                                        {...field} 
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Room Specifics Section */}
+                        <section className="space-y-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-violet-100/50 flex items-center justify-center shadow-sm">
+                                    <LayoutGrid className="w-6 h-6 text-violet-600" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-indigo-950 tracking-tight">Dimensions & Access</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 bg-violet-50/10 p-8 rounded-[24px] border border-violet-100/30">
                                 <FormField
                                     control={form.control}
                                     name="room_size"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Room Size (sq ft)</FormLabel>
+                                            <FormLabel className="text-indigo-900/70 font-bold uppercase text-[11px] tracking-widest">Expanse (sq ft)</FormLabel>
                                             <FormControl>
-                                                <div className="relative">
-                                                    <Ruler className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                                    <Input type="number" className="pl-8" {...field} />
-                                                </div>
+                                                <Input 
+                                                    type="number" 
+                                                    {...field} 
+                                                    className="bg-white border-indigo-100/50 rounded-2xl h-13 font-bold text-lg"
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 mt-4">
                                 <FormField
                                     control={form.control}
                                     name="view"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Room View</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormLabel className="text-indigo-900/70 font-bold uppercase text-[11px] tracking-widest">Vista</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value || undefined}>
                                                 <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select view" />
+                                                    <SelectTrigger className="bg-white border-indigo-100/50 rounded-2xl h-13 font-medium">
+                                                        <SelectValue placeholder="Select View" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent>
+                                                <SelectContent className="rounded-2xl border-indigo-50 shadow-2xl">
                                                     <SelectItem value="Garden View">Garden View</SelectItem>
-                                                    <SelectItem value="Pool View">Pool View</SelectItem>
                                                     <SelectItem value="Sea View">Sea View</SelectItem>
                                                     <SelectItem value="City View">City View</SelectItem>
+                                                    <SelectItem value="Pool View">Pool View</SelectItem>
                                                     <SelectItem value="Mountain View">Mountain View</SelectItem>
-                                                    <SelectItem value="Courtyard View">Courtyard View</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -316,319 +339,300 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                     name="floor"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Floor / Level</FormLabel>
+                                            <FormLabel className="text-indigo-900/70 font-bold uppercase text-[11px] tracking-widest">Elevation</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. 1st Floor, Penthouse" {...field} />
+                                                <Input 
+                                                    placeholder="e.g. Skyline Level" 
+                                                    {...field} 
+                                                    className="bg-white border-indigo-100/50 rounded-2xl h-13 font-medium"
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
+                                <div className="flex gap-8 md:col-span-2 lg:col-span-3 pt-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="smoking_allowed"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-4 space-y-0 bg-white/80 p-5 rounded-2xl border border-indigo-100/40 flex-1 shadow-sm hover:shadow-md transition-shadow">
+                                                <FormControl>
+                                                    <Checkbox
+                                                        checked={field.value}
+                                                        onCheckedChange={field.onChange}
+                                                        className="h-6 w-6 data-[state=checked]:bg-indigo-600 rounded-lg border-indigo-200"
+                                                    />
+                                                </FormControl>
+                                                <FormLabel className="font-bold text-indigo-950 text-base cursor-pointer">Cigar Friendly</FormLabel>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="is_pet_friendly"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-4 space-y-0 bg-white/80 p-5 rounded-2xl border border-indigo-100/40 flex-1 shadow-sm hover:shadow-md transition-shadow">
+                                                <FormControl>
+                                                    <Checkbox
+                                                        checked={field.value}
+                                                        onCheckedChange={field.onChange}
+                                                        className="h-6 w-6 data-[state=checked]:bg-indigo-600 rounded-lg border-indigo-200"
+                                                    />
+                                                </FormControl>
+                                                <FormLabel className="font-bold text-indigo-950 text-base cursor-pointer">Pet Accommodating</FormLabel>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 mt-4">
+                        </section>
+
+                        {/* Capacity & Pricing Section */}
+                        <section className="space-y-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-rose-100/50 flex items-center justify-center shadow-sm">
+                                    <CreditCard className="w-6 h-6 text-rose-600" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-indigo-950 tracking-tight">Investment & Scale</h3>
+                            </div>
+                            <div className="bg-gradient-to-br from-rose-50/20 via-white/5 to-indigo-50/20 p-10 rounded-[32px] border border-rose-100/20 space-y-12 shadow-inner">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                                    <FormField
+                                        control={form.control}
+                                        name="base_price"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-rose-900/70 font-bold uppercase text-[11px] tracking-widest">Base Rate (₹)</FormLabel>
+                                                <FormControl>
+                                                    <Input 
+                                                        type="number" 
+                                                        {...field} 
+                                                        className="bg-white border-rose-100/50 focus:ring-rose-500/10 rounded-2xl h-16 text-2xl font-black text-rose-950 shadow-sm"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="market_price"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-indigo-900/70 font-bold uppercase text-[11px] tracking-widest">Market Value (₹)</FormLabel>
+                                                <FormControl>
+                                                    <Input 
+                                                        type="number" 
+                                                        placeholder="e.g. 25000" 
+                                                        {...field} 
+                                                        value={field.value ?? ''}
+                                                        className="bg-white/50 border-indigo-100/50 rounded-2xl h-16 text-xl font-bold text-indigo-400/70"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="total_inventory"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-indigo-900/70 font-bold uppercase text-[11px] tracking-widest">Key Count</FormLabel>
+                                                <FormControl>
+                                                    <Input 
+                                                        type="number" 
+                                                        {...field} 
+                                                        className="bg-white border-indigo-100/50 rounded-2xl h-16 text-xl font-bold text-indigo-950"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <div className="p-10 bg-white/40 backdrop-blur-md rounded-[24px] border border-white/60 shadow-xl space-y-10">
+                                    <div className="flex items-center gap-3 text-indigo-950 mb-4">
+                                        <Users className="w-6 h-6 text-indigo-600" />
+                                        <h4 className="font-extrabold uppercase tracking-[0.2em] text-[10px] text-indigo-900/50">Occupancy Logic</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                                        <FormField
+                                            control={form.control}
+                                            name="base_occupancy"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-bold text-indigo-900/60">Standard Guest Count</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" {...field} className="rounded-xl h-12 bg-white/70 font-bold" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="max_occupancy"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-bold text-indigo-900/60">Absolute Ceiling</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" {...field} className="rounded-xl h-12 bg-white/70 font-bold" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="max_children"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-bold text-indigo-900/60">Junior Guests</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" {...field} className="rounded-xl h-12 bg-white/70 font-bold" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6 border-t border-indigo-100/20">
+                                        <FormField
+                                            control={form.control}
+                                            name="extra_adult_price"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-bold text-indigo-900/60">Surcharge: Adult (₹)</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" {...field} className="rounded-xl h-12 bg-white/70 font-bold text-indigo-600" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="extra_child_price"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-bold text-indigo-900/60">Surcharge: Junior (₹)</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" {...field} className="rounded-xl h-12 bg-white/70 font-bold text-indigo-600" />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Amenities Section */}
+                        <section className="space-y-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-100/50 flex items-center justify-center shadow-sm">
+                                    <Zap className="w-6 h-6 text-emerald-600" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-indigo-950 tracking-tight">Luxury Features</h3>
+                            </div>
+                            <div className="p-10 bg-emerald-50/10 rounded-[32px] border border-emerald-100/30">
                                 <FormField
                                     control={form.control}
-                                    name="smoking_allowed"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
-                                            <FormControl>
-                                                <Checkbox
-                                                    checked={field.value}
-                                                    onCheckedChange={field.onChange}
-                                                />
-                                            </FormControl>
-                                            <div className="space-y-1 leading-none">
-                                                <FormLabel className="text-xs">Smoking Allowed</FormLabel>
-                                            </div>
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="is_pet_friendly"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
-                                            <FormControl>
-                                                <Checkbox
-                                                    checked={field.value}
-                                                    onCheckedChange={field.onChange}
-                                                />
-                                            </FormControl>
-                                            <div className="space-y-1 leading-none">
-                                                <FormLabel className="text-xs">Pet Friendly</FormLabel>
-                                            </div>
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Images */}
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">Room Photos</h3>
-                            <FormField
-                                control={form.control}
-                                name="photos"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormControl>
-                                            <RoomImageUploader
-                                                images={field.value as RoomPhoto[]}
-                                                onChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        {/* Amenities Selection */}
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between border-b pb-2">
-                                <h3 className="text-sm font-medium text-muted-foreground">Room Amenities</h3>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-7 text-[10px] uppercase font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    onClick={() => window.open('/amenities', '_blank')}
-                                >
-                                    Manage Library
-                                </Button>
-                            </div>
-                            <FormField
-                                control={form.control}
-                                name="amenity_ids"
-                                render={() => (
-                                    <FormItem>
-                                        <div className="mb-4">
-                                            <FormLabel className="text-base font-bold">Select Room Features</FormLabel>
-                                            <DialogDescription className="text-xs">
-                                                Choose which amenities are available specifically for this room type.
-                                            </DialogDescription>
-                                        </div>
-                                        {availableAmenities.filter(a => a.scope === 'room').length > 0 ? (
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    name="amenity_ids"
+                                    render={() => (
+                                        <FormItem>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                                                 {availableAmenities.filter(a => a.scope === 'room').map((amenity) => (
                                                     <FormField
                                                         key={amenity.id}
                                                         control={form.control}
                                                         name="amenity_ids"
-                                                        render={({ field }) => {
-                                                            return (
-                                                                <FormItem
-                                                                    key={amenity.id}
-                                                                    className="flex flex-row items-start space-x-3 space-y-0 p-2 rounded-lg border border-transparent hover:border-slate-100 hover:bg-slate-50 transition-all"
-                                                                >
-                                                                    <FormControl>
-                                                                        <Checkbox
-                                                                            checked={field.value?.includes(amenity.id)}
-                                                                            onCheckedChange={(checked) => {
-                                                                                return checked
-                                                                                    ? field.onChange([...field.value, amenity.id])
-                                                                                    : field.onChange(
-                                                                                        field.value?.filter(
-                                                                                            (value) => value !== amenity.id
-                                                                                        )
-                                                                                    )
-                                                                            }}
-                                                                        />
-                                                                    </FormControl>
-                                                                    <FormLabel className="font-medium text-sm cursor-pointer flex items-center gap-2">
-                                                                        {amenity.name}
-                                                                        {amenity.is_featured && <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[8px] h-3.5 uppercase px-1">Featured</Badge>}
-                                                                    </FormLabel>
-                                                                </FormItem>
-                                                            )
-                                                        }}
+                                                        render={({ field }) => (
+                                                            <FormItem className="flex flex-row items-center space-x-4 bg-white/60 p-4 rounded-2xl border border-indigo-50 shadow-sm hover:border-indigo-200 hover:bg-white transition-all cursor-pointer">
+                                                                <FormControl>
+                                                                    <Checkbox
+                                                                        checked={field.value?.includes(amenity.id)}
+                                                                        onCheckedChange={(checked) => {
+                                                                            return checked
+                                                                                ? field.onChange([...field.value, amenity.id])
+                                                                                : field.onChange(field.value?.filter(val => val !== amenity.id))
+                                                                        }}
+                                                                        className="h-5 w-5 data-[state=checked]:bg-emerald-600 border-emerald-100"
+                                                                    />
+                                                                </FormControl>
+                                                                <FormLabel className="font-bold text-sm text-indigo-900 cursor-pointer flex items-center gap-2">
+                                                                    {amenity.name}
+                                                                    {amenity.is_featured && <Badge className="bg-amber-400 text-amber-950 text-[9px] font-black h-4 uppercase">Elite</Badge>}
+                                                                </FormLabel>
+                                                            </FormItem>
+                                                        )}
                                                     />
                                                 ))}
                                             </div>
-                                        ) : (
-                                            <div className="text-center py-6 border-2 border-dashed rounded-xl bg-slate-50/50">
-                                                <p className="text-sm text-slate-500 mb-3">No room-level amenities found.</p>
-                                                <Button 
-                                                    type="button"
-                                                    variant="outline" 
-                                                    size="sm"
-                                                    onClick={() => window.location.href = '/amenities'}
-                                                >
-                                                    Go to Amenities Manager
-                                                </Button>
-                                            </div>
-                                        )}
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        {/* Capacity & Pricing */}
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-medium text-muted-foreground border-b pb-2">Capacity & Pricing</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="base_price"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Base Price (₹)</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" {...field} />
-                                            </FormControl>
-                                            <p className="text-[10px] text-muted-foreground">Standard room rate for base occupancy.</p>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="market_price"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Market Price (Strike-through) (₹)</FormLabel>
-                                            <FormControl>
-                                                <Input 
-                                                    type="number" 
-                                                    placeholder="e.g. 15000" 
-                                                    {...field} 
-                                                    value={field.value ?? ''}
-                                                />
-                                            </FormControl>
-                                            <p className="text-[10px] text-muted-foreground">Optional original price for strike-through.</p>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="total_inventory"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Total Number of Rooms</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                <Button 
+                                    type="button"
+                                    variant="ghost" 
+                                    className="mt-8 text-indigo-600 font-black tracking-widest text-xs uppercase hover:bg-indigo-50"
+                                    onClick={() => window.open('/amenities', '_blank')}
+                                >
+                                    Define More Luxuries
+                                </Button>
                             </div>
+                        </section>
 
-                            {/* Guest Capacity */}
-                            <div className="bg-muted/30 p-4 rounded-lg space-y-4">
-                                <h4 className="text-sm font-semibold flex items-center gap-2">
-                                    <BedDouble className="h-4 w-4" /> Guest Capacity & Extra Charges
-                                </h4>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="base_occupancy"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Includes Guests</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <p className="text-[10px] text-muted-foreground">Adults included in base price.</p>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="max_occupancy"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Guests</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <p className="text-[10px] text-muted-foreground">Total capacity of room.</p>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="max_children"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Children</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <p className="text-[10px] text-muted-foreground">Limit for children (0-12 yrs).</p>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="extra_adult_price"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Extra Adult Price (₹)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <p className="text-[10px] text-muted-foreground">Charge per extra adult.</p>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="extra_child_price"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Extra Child Price (₹)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <p className="text-[10px] text-muted-foreground">Charge per extra child.</p>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                            </div>
+                        <div className="flex items-center justify-between pt-12 border-t border-indigo-100/30">
                             <FormField
                                 control={form.control}
-                                name="extra_bed_allowed"
+                                name="is_active"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                    <FormItem className="flex flex-row items-center space-x-5 bg-indigo-50/30 p-5 rounded-[20px] border border-indigo-100/50 pr-10">
                                         <FormControl>
-                                            <Checkbox
-                                                checked={field.value}
+                                            <Switch
+                                                checked={!!field.value}
                                                 onCheckedChange={field.onChange}
+                                                className="data-[state=checked]:bg-emerald-500 scale-125"
                                             />
                                         </FormControl>
-                                        <div className="space-y-1 leading-none">
-                                            <FormLabel>
-                                                Extra Bed Allowed
-                                            </FormLabel>
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="font-black text-indigo-950 uppercase text-xs tracking-widest">Experience Status</FormLabel>
+                                            <FormDescription className="text-indigo-400 text-xs font-medium">Live on the high-fidelity engine</FormDescription>
                                         </div>
                                     </FormItem>
                                 )}
                             />
-                        </div>
 
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isEditing ? 'Save Changes' : 'Create Room'}
-                            </Button>
-                        </DialogFooter>
+                            <div className="flex gap-6">
+                                <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    onClick={() => onOpenChange(false)}
+                                    className="rounded-[20px] text-indigo-900/50 font-bold px-10 h-16 hover:text-indigo-950 transition-colors"
+                                >
+                                    Discard
+                                </Button>
+                                <Button 
+                                    type="submit" 
+                                    disabled={form.formState.isSubmitting}
+                                    className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 hover:scale-[1.03] active:scale-[0.97] text-white font-extrabold rounded-[24px] px-12 h-16 shadow-[0_20px_40px_rgba(79,70,229,0.3)] transition-all duration-300 ease-out flex gap-3"
+                                >
+                                    {form.formState.isSubmitting && <Loader2 className="h-5 w-5 animate-spin" />}
+                                    <span className="tracking-tight text-lg">
+                                        {isEditing ? 'Finalize Experience' : 'Deploy Room Concept'}
+                                    </span>
+                                </Button>
+                            </div>
+                        </div>
                     </form>
                 </Form>
             </DialogContent>
-        </Dialog >
+        </Dialog>
     );
 }
