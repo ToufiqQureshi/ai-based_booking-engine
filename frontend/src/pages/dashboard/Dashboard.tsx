@@ -26,6 +26,7 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { cn } from '@/lib/utils';
 
 interface RecentBooking {
   id: string;

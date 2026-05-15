@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { NavLink } from '@/components/layout/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
