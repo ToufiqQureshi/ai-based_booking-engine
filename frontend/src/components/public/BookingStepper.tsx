@@ -1,7 +1,6 @@
-import { Check, MapPin } from 'lucide-react';
+import { Check, MapPin, Calendar as CalendarIcon, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { format } from 'date-fns';
 
 interface BookingStepperProps {
     currentStep: 1 | 2 | 3 | 4;
@@ -10,23 +9,22 @@ interface BookingStepperProps {
 export function BookingStepper({ currentStep }: BookingStepperProps) {
     const { hotelSlug } = useParams();
     const navigate = useNavigate();
-    const location = useLocation();
 
     // Helper to get search params from location to preserve state when clicking back
     const [searchParams] = useSearchParams();
     const queryString = searchParams.toString() ? `?${searchParams.toString()}` : '';
 
     const steps = [
-        { id: 1, label: 'Search', path: `/book/${hotelSlug}/rooms${queryString}` }, // Redirects to rooms effectively
+        { id: 1, label: 'Search', path: `/book/${hotelSlug}/rooms${queryString}` }, 
         { id: 2, label: 'Select Rooms', path: `/book/${hotelSlug}/rooms${queryString}` },
         { id: 3, label: 'Enhance Stay', path: null },
         { id: 4, label: 'Guest Info', path: `/book/${hotelSlug}/checkout${queryString}` },
     ];
 
     return (
-        <div className="w-full bg-white border-b border-slate-200 shadow-sm mb-6">
+        <div className="w-full bg-white border-b border-slate-200 shadow-sm mb-0">
             <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-4 divide-x divide-slate-100">
+                <div className="flex justify-between md:grid md:grid-cols-4 md:divide-x divide-slate-100">
                     {steps.map((step) => {
                         const isActive = step.id === currentStep;
                         const isCompleted = step.id < currentStep;
@@ -36,8 +34,8 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                             <div
                                 key={step.id}
                                 className={cn(
-                                    "relative flex items-center justify-center p-3 md:p-4 text-sm font-medium transition-colors select-none",
-                                    isActive ? "bg-slate-800 text-white" : "bg-white text-slate-500",
+                                    "relative flex-1 flex items-center justify-center p-4 md:p-5 text-sm font-medium transition-all select-none border-b-2 md:border-b-0",
+                                    isActive ? "border-blue-600 bg-blue-50/30 text-blue-700" : "bg-white text-slate-400 border-transparent",
                                     isClickable ? "cursor-pointer hover:bg-slate-50" : "cursor-default"
                                 )}
                                 onClick={() => {
@@ -46,22 +44,22 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                                     }
                                 }}
                             >
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                     <div className={cn(
-                                        "flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold border",
-                                        isActive ? "border-white bg-white text-slate-900" :
-                                            isCompleted ? "border-green-600 bg-green-600 text-white" : "border-slate-300 bg-slate-100 text-slate-400"
+                                        "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all border",
+                                        isActive ? "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100" :
+                                            isCompleted ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-200 bg-slate-50 text-slate-400"
                                     )}>
-                                        {isCompleted ? <Check className="w-3.5 h-3.5" /> : step.id}
+                                        {isCompleted ? <Check className="w-4 h-4" /> : step.id}
                                     </div>
-                                    <span className={cn("hidden md:inline", isActive || isCompleted ? "font-bold" : "font-medium")}>
+                                    <span className={cn("hidden md:inline text-[13px] tracking-wide", isActive ? "font-bold text-slate-900" : "font-semibold")}>
                                         {step.label}
                                     </span>
                                 </div>
 
-                                {/* Arrow pointer for active step */}
+                                {/* Active indicator for desktop */}
                                 {isActive && (
-                                    <div className="absolute -bottom-[9px] left-1/2 -translate-x-1/2 w-4 h-4 bg-slate-800 rotate-45 border-r border-b border-white hidden md:block z-10" />
+                                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 hidden md:block" />
                                 )}
                             </div>
                         );
@@ -69,18 +67,33 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                 </div>
             </div>
 
-            {/* Context Bar */}
+            {/* Property Context Bar - Clean & Informative */}
             {currentStep > 1 && (
-                <div className="bg-slate-50 border-b border-slate-200 py-2">
-                    <div className="max-w-7xl mx-auto px-4 flex justify-between items-center text-xs md:text-sm">
-                        <div className="flex items-center gap-4 text-slate-600">
-                            <span className="font-bold text-slate-900 flex items-center">
-                                <MapPin className="w-3.5 h-3.5 mr-1" />
-                                {hotelSlug?.replace(/-/g, ' ').toUpperCase() || 'STAYBOOKER'}
-                            </span>
+                <div className="bg-slate-50/80 border-b border-slate-200 py-3">
+                    <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+                        <div className="flex items-center gap-6 overflow-hidden">
+                            <div className="flex items-center text-xs font-bold text-slate-900 uppercase tracking-widest whitespace-nowrap">
+                                <MapPin className="w-4 h-4 mr-2 text-blue-600" />
+                                {hotelSlug?.replace(/-/g, ' ') || 'Staybooker'}
+                            </div>
+                            
+                            <div className="hidden md:flex items-center gap-6 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <div className="flex items-center gap-2 border-l border-slate-200 pl-6">
+                                    <CalendarIcon className="w-3.5 h-3.5" />
+                                    <span>{searchParams.get('check_in') || '---'} — {searchParams.get('check_out') || '---'}</span>
+                                </div>
+                                <div className="flex items-center gap-2 border-l border-slate-200 pl-6">
+                                    <User className="w-3.5 h-3.5" />
+                                    <span>{searchParams.get('adults') || '2'} Adults, {searchParams.get('children') || '0'} Children</span>
+                                </div>
+                            </div>
                         </div>
+                        
                         <div className="flex gap-4">
-                            <button className="text-primary font-semibold hover:underline" onClick={() => document.getElementById('search-bar')?.scrollIntoView({ behavior: 'smooth' })}>
+                            <button 
+                                className="text-blue-600 text-[11px] font-black uppercase tracking-widest hover:text-blue-700 transition-colors" 
+                                onClick={() => document.getElementById('search-bar')?.scrollIntoView({ behavior: 'smooth' })}
+                            >
                                 Modify Search
                             </button>
                         </div>

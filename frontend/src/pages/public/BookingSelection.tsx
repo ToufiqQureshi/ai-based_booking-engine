@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize } from 'lucide-react';
+import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -363,103 +363,108 @@ export default function BookingSelection() {
 
             <div className="max-w-7xl mx-auto px-4 mt-8">
                 {/* Inline Search Modifier (Always Visible) */}
-                <div id="search-bar" className="bg-white border border-slate-200 p-4 lg:p-6 rounded-xl shadow-sm mb-8 relative">
-                    {/* Room/Package Toggle */}
-                    <div className="absolute -top-12 right-0 flex bg-white border border-slate-200 p-1 rounded-full shadow-sm">
-                        <button
-                            onClick={() => setSearchType('room')}
-                            className={cn(
-                                "px-6 py-2 rounded-full text-sm font-bold transition-all",
-                                searchType === 'room' ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
-                            )}
-                        >
-                            Room
-                        </button>
-                        <button
-                            onClick={() => setSearchType('package')}
-                            className={cn(
-                                "px-6 py-2 rounded-full text-sm font-bold transition-all",
-                                searchType === 'package' ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
-                            )}
-                        >
-                            Package
-                        </button>
+                <div id="search-bar" className="bg-white border border-slate-200 p-6 lg:p-8 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.03)] mb-10 relative transition-all duration-300">
+                    {/* Premium Room/Package Switch */}
+                    <div className="flex justify-center mb-8">
+                        <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/50 backdrop-blur-sm">
+                            <button
+                                onClick={() => setSearchType('room')}
+                                className={cn(
+                                    "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
+                                    searchType === 'room' ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
+                                )}
+                            >
+                                <HotelIcon className="w-3.5 h-3.5" />
+                                Room Categories
+                            </button>
+                            <button
+                                onClick={() => setSearchType('package')}
+                                className={cn(
+                                    "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
+                                    searchType === 'package' ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
+                                )}
+                            >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                Special Packages
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
                         {/* Check In */}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Check In</label>
+                        <div className="md:col-span-3 space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Arrival Date</label>
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full justify-start text-left font-semibold h-12 border-slate-200 bg-slate-50/50">
-                                        <CalendarIcon className="mr-2 h-4 w-4 text-indigo-600" />
-                                        {checkInDate ? format(checkInDate, "PPP") : <span>Pick a date</span>}
+                                    <Button variant="outline" className="w-full justify-start text-left font-bold h-14 border-slate-200 bg-slate-50/30 rounded-2xl hover:bg-white hover:border-blue-200 transition-all">
+                                        <CalendarIcon className="mr-3 h-5 w-5 text-blue-600" />
+                                        {checkInDate ? format(checkInDate, "MMM dd, yyyy") : <span>Select Date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
+                                <PopoverContent className="w-auto p-0 rounded-2xl overflow-hidden shadow-2xl border-slate-100" align="start">
                                     <Calendar mode="single" selected={checkInDate} onSelect={setCheckInDate} initialFocus disabled={(date) => date < new Date()} />
                                 </PopoverContent>
                             </Popover>
                         </div>
 
                         {/* Check Out */}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Check Out</label>
+                        <div className="md:col-span-3 space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Departure Date</label>
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full justify-start text-left font-semibold h-12 border-slate-200 bg-slate-50/50">
-                                        <CalendarIcon className="mr-2 h-4 w-4 text-indigo-600" />
-                                        {checkOutDate ? format(checkOutDate, "PPP") : <span>Pick a date</span>}
+                                    <Button variant="outline" className="w-full justify-start text-left font-bold h-14 border-slate-200 bg-slate-50/30 rounded-2xl hover:bg-white hover:border-blue-200 transition-all">
+                                        <CalendarIcon className="mr-3 h-5 w-5 text-blue-600" />
+                                        {checkOutDate ? format(checkOutDate, "MMM dd, yyyy") : <span>Select Date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
+                                <PopoverContent className="w-auto p-0 rounded-2xl overflow-hidden shadow-2xl border-slate-100" align="start">
                                     <Calendar mode="single" selected={checkOutDate} onSelect={setCheckOutDate} initialFocus disabled={(date) => date <= (checkInDate || new Date())} />
                                 </PopoverContent>
                             </Popover>
                         </div>
 
-                        {/* Guests - Smart Selector */}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Guests</label>
+                        {/* Guests */}
+                        <div className="md:col-span-3 space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Guest Configuration</label>
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full justify-between font-semibold h-12 border-slate-200 bg-slate-50/50 px-3">
+                                    <Button variant="outline" className="w-full justify-between font-bold h-14 border-slate-200 bg-slate-50/30 rounded-2xl px-4 hover:bg-white hover:border-blue-200 transition-all">
                                         <div className="flex items-center">
-                                            <User className="mr-2 h-4 w-4 text-indigo-600" />
-                                            <span>{adults} Adult, {children} Child</span>
+                                            <User className="mr-3 h-5 w-5 text-blue-600" />
+                                            <span>{adults} {adults === 1 ? 'Adult' : 'Adults'}{children > 0 && `, ${children} ${children === 1 ? 'Child' : 'Children'}`}</span>
                                         </div>
+                                        <ChevronDown className="h-4 w-4 text-slate-300" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-72 p-4 bg-white border-slate-100 shadow-xl rounded-xl" align="center">
-                                    <div className="space-y-4">
+                                <PopoverContent className="w-80 p-6 bg-white border-slate-100 shadow-2xl rounded-3xl" align="center">
+                                    <div className="space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="font-semibold text-sm text-slate-900">Adults</p>
-                                                <p className="text-xs text-slate-500">Ages 13+</p>
+                                                <p className="font-bold text-sm text-slate-900">Adults</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Ages 13+</p>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setAdults(Math.max(1, adults - 1))} disabled={adults <= 1}>
+                                            <div className="flex items-center gap-4 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setAdults(Math.max(1, adults - 1))} disabled={adults <= 1}>
                                                     <Minus className="h-3 w-3" />
                                                 </Button>
-                                                <span className="w-4 text-center text-sm font-semibold">{adults}</span>
-                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setAdults(Math.min(10, adults + 1))}>
+                                                <span className="w-4 text-center text-sm font-black text-slate-900">{adults}</span>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setAdults(Math.min(10, adults + 1))}>
                                                     <Plus className="h-3 w-3" />
                                                 </Button>
                                             </div>
                                         </div>
-                                        <div className="h-px bg-slate-100" />
+                                        <div className="h-px bg-slate-50" />
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="font-semibold text-sm text-slate-900">Children</p>
-                                                <p className="text-xs text-slate-500">Ages 0-12</p>
+                                                <p className="font-bold text-sm text-slate-900">Children</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Ages 0-12</p>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setChildren(Math.max(0, children - 1))} disabled={children <= 0}>
+                                            <div className="flex items-center gap-4 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setChildren(Math.max(0, children - 1))} disabled={children <= 0}>
                                                     <Minus className="h-3 w-3" />
                                                 </Button>
-                                                <span className="w-4 text-center text-sm font-semibold">{children}</span>
-                                                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setChildren(Math.min(6, children + 1))}>
+                                                <span className="w-4 text-center text-sm font-black text-slate-900">{children}</span>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setChildren(Math.min(6, children + 1))}>
                                                     <Plus className="h-3 w-3" />
                                                 </Button>
                                             </div>
@@ -470,9 +475,16 @@ export default function BookingSelection() {
                         </div>
 
                         {/* Update Button */}
-                        <Button size="lg" className="h-12 w-full font-bold shadow-md bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSearch}>
-                            Update Search
-                        </Button>
+                        <div className="md:col-span-3">
+                            <Button 
+                                size="lg" 
+                                className="h-14 w-full font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-100 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex gap-3 transition-all active:scale-[0.98]" 
+                                onClick={handleSearch}
+                            >
+                                <Search className="w-4 h-4" />
+                                Check Availability
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
@@ -549,26 +561,30 @@ export default function BookingSelection() {
 
                     {/* Right Side: Room List */}
                     <div className="lg:col-span-9">
-                        <div className="mb-6 flex items-center justify-between">
-                            <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
                                 {searchType === 'room' ? (
                                     <>
-                                        <HotelIcon className="w-4 h-4 text-indigo-500" />
-                                        {filteredRooms.length} Rooms Available
+                                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                            <HotelIcon className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                        {filteredRooms.length} Categories Available
                                     </>
                                 ) : (
                                     <>
-                                        <Sparkles className="w-4 h-4 text-amber-500" />
-                                        {filteredRooms.length} Packages Found
+                                        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                                            <Sparkles className="w-4 h-4 text-amber-500" />
+                                        </div>
+                                        {filteredRooms.length} Special Offers
                                     </>
                                 )}
                             </h2>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-slate-400 uppercase">Sort By:</span>
+                            <div className="flex items-center gap-3 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort By</span>
                                 <select 
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value as any)}
-                                    className="bg-transparent text-sm font-bold text-indigo-600 focus:outline-none cursor-pointer"
+                                    className="bg-transparent text-xs font-bold text-blue-700 focus:outline-none cursor-pointer"
                                 >
                                     <option value="recommended">Recommended</option>
                                     <option value="price_asc">Price: Low to High</option>
@@ -578,15 +594,44 @@ export default function BookingSelection() {
                         </div>
 
                         {filteredRooms.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200">
-                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                                    <Search className="w-6 h-6 text-slate-400" />
+                            <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] px-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-8 relative">
+                                    <div className="absolute inset-0 bg-blue-100/50 rounded-full animate-ping opacity-20" />
+                                    <Search className="w-10 h-10 text-slate-300 relative" />
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-900">No {searchType === 'package' ? 'packages' : 'rooms'} match your filters</h3>
-                                <p className="text-slate-500">Try adjusting your filters or search dates.</p>
+                                <h3 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">No availability for these criteria</h3>
+                                <p className="text-slate-500 max-w-md mx-auto mb-10 font-medium leading-relaxed">
+                                    We couldn't find any {searchType === 'package' ? 'packages' : 'rooms'} matching your current search. Try adjusting your dates or resetting filters to see more options.
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <Button 
+                                        variant="outline" 
+                                        className="rounded-xl px-10 font-bold text-slate-500 h-14 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                                        onClick={() => {
+                                            setPriceRange([0, 20000]);
+                                            setSelectedMealPlans([]);
+                                        }}
+                                    >
+                                        Clear All Filters
+                                    </Button>
+                                    <Button 
+                                        className="rounded-xl px-10 font-bold bg-blue-600 hover:bg-blue-700 text-white h-14 shadow-xl shadow-blue-100 flex gap-2 transition-all active:scale-95"
+                                        onClick={() => {
+                                            const searchElement = document.getElementById('search-bar');
+                                            if (searchElement) {
+                                                searchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                searchElement.classList.add('ring-2', 'ring-blue-500', 'ring-offset-8');
+                                                setTimeout(() => searchElement.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-8'), 2000);
+                                            }
+                                        }}
+                                    >
+                                        <CalendarIcon className="w-4 h-4" />
+                                        Modify Search Dates
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
-                            <div className="space-y-6">
+                            <div className="space-y-8">
                                 {searchType === 'package' ? (
                                     // Professional Grouped Package View
                                     Object.values(
