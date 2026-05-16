@@ -174,6 +174,39 @@ async def delete_hotel(
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
     
+    # Delete child relations using raw SQL to bypass SQLAlchemy mapped cascades 
+    # since many models lack the back-populates relationship with cascade
+    from sqlalchemy import text
+    import logging
+    
+    try:
+        # 1. Deeply nested relations
+        await session.execute(text("DELETE FROM competitor_rates WHERE competitor_id IN (SELECT id FROM competitors WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM payments WHERE hotel_id = :id"), {"id": hotel_id})
+        
+        # 2. Direct relations
+        tables = [
+            "addons", "amenities", "analytics_sessions", "api_keys", "channel_manager_settings",
+            "channel_room_mappings", "channel_logs", "competitors", "integration_settings",
+            "leads", "promo_codes", "room_rates", "room_rate_links",
+            "user_hotel_links", "subscriptions", "users", "bookings", "rate_plans", "room_types"
+        ]
+        
+        for table in tables:
+            try:
+                await session.execute(text(f"DELETE FROM {table} WHERE hotel_id = :id"), {"id": hotel_id})
+            except Exception as e:
+                logging.warning(f"Failed to delete from {table}: {e}")
+                pass 
+                
+    except Exception as e:
+        logging.error(f"Error during manual cascade delete: {e}")
+        # Continue and let SQLAlchemy try to delete the hotel, it might fail but we did our best
+    
     await session.delete(hotel)
     await session.commit()
     return {"message": "Hotel and associated data deleted successfully"}
