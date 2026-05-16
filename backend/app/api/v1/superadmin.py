@@ -192,7 +192,8 @@ async def delete_hotel(
     
     for query in deep_queries:
         try:
-            await session.execute(text(query), {"id": hotel_id})
+            async with session.begin_nested():
+                await session.execute(text(query), {"id": hotel_id})
         except Exception as e:
             logging.warning(f"Failed executing deep relation cleanup: {e}")
             pass
@@ -213,7 +214,8 @@ async def delete_hotel(
     
     for table in tables:
         try:
-            await session.execute(text(f"DELETE FROM {table} WHERE hotel_id = :id"), {"id": hotel_id})
+            async with session.begin_nested():
+                await session.execute(text(f"DELETE FROM {table} WHERE hotel_id = :id"), {"id": hotel_id})
         except Exception as e:
             logging.warning(f"Failed to delete from {table}: {e}")
             pass 
