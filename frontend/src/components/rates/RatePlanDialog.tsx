@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, TrendingUp, Info, Clock, Calendar, Package, DollarSign, HelpCircle, Check } from 'lucide-react';
+import { Loader2, TrendingUp, Info, Clock, Calendar, Package, DollarSign, HelpCircle, Check, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -82,6 +82,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
             market_price: undefined,
         },
     });
+
+    const isRefundable = form.watch('is_refundable');
+    const cancellationHours = form.watch('cancellation_hours');
 
     useEffect(() => {
         if (initialData) {
@@ -378,6 +381,27 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                                 </FormControl>
                                             )}
                                         />
+                                    </div>
+                                </div>
+
+                                {/* Guest Live Preview Banner */}
+                                <div className="mt-2 p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                            <Eye className="w-4 h-4 text-indigo-600" />
+                                            Guest View Live Preview on Booking Engine
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded-full bg-white text-[10px] text-indigo-700 font-bold border border-indigo-200">Live Preview</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-0.5">
+                                        <span className="text-xs text-slate-500 font-medium">Cancellation Policy Display:</span>
+                                        <span className={`text-xs font-bold px-3 py-1 rounded-md shadow-xs border ${
+                                            isRefundable 
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                                                : "bg-rose-50 text-rose-700 border-rose-200"
+                                        }`}>
+                                            {isRefundable ? `Free cancellation up to ${cancellationHours || 0} hours before check-in` : 'Non-Refundable'}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
