@@ -179,43 +179,50 @@ async def delete_hotel(
     from sqlalchemy import text
     import logging
     
-    try:
-        # 1. Deeply nested relations
-        await session.execute(text("DELETE FROM competitor_rates WHERE competitor_id IN (SELECT id FROM competitors WHERE hotel_id = :id)"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM payments WHERE hotel_id = :id"), {"id": hotel_id})
-        
-        # Suspend users rather than deleting them, so they see "Suspended" page on login
-        await session.execute(text("UPDATE users SET is_active = false, hotel_id = NULL WHERE hotel_id = :id"), {"id": hotel_id})
-
-        # 2. Direct relations (ORDER MATTERS: Delete children first)
-        tables = [
-            # Level 1: Most dependent
-            "channel_logs", "channel_room_mappings", "room_rates", "room_blocks", "room_rate_links",
-            # Level 2: Bookings depend on guests, room_types, etc.
-            "bookings", 
-            # Level 3: Guests and other intermediate parents
-            "guests", "rate_plans", "room_types", "competitors", "analytics_sessions",
-            # Level 4: Independent relations
-            "addons", "amenities", "api_keys", "channel_manager_settings", 
-            "integration_settings", "leads", "promo_codes", 
-            "user_hotel_links", "subscriptions"
-        ]
-        
-        for table in tables:
-            try:
-                await session.execute(text(f"DELETE FROM {table} WHERE hotel_id = :id"), {"id": hotel_id})
-            except Exception as e:
-                logging.warning(f"Failed to delete from {table}: {e}")
-                pass 
-                
-    except Exception as e:
-        logging.error(f"Error during manual cascade delete: {e}")
-        # Continue and let SQLAlchemy try to delete the hotel, it might fail but we did our best
+    # 1. Deeply nested relations
+    deep_queries = [
+        "DELETE FROM competitor_rates WHERE competitor_id IN (SELECT id FROM competitors WHERE hotel_id = :id)",
+        "DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)",
+        "DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)",
+        "DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)",
+        "DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)",
+        "DELETE FROM payments WHERE hotel_id = :id",
+        "UPDATE users SET is_active = false, hotel_id = NULL WHERE hotel_id = :id"
+    ]
     
-    await session.delete(hotel)
-    await session.commit()
-    return {"message": "Hotel and associated data deleted successfully"}
+    for query in deep_queries:
+        try:
+            await session.execute(text(query), {"id": hotel_id})
+        except Exception as e:
+            logging.warning(f"Failed executing deep relation cleanup: {e}")
+            pass
+
+    # 2. Direct relations (ORDER MATTERS: Delete children first)
+    tables = [
+        # Level 1: Most dependent
+        "channel_logs", "channel_room_mappings", "room_rates", "room_blocks", "room_rate_links",
+        # Level 2: Bookings depend on guests, room_types, etc.
+        "bookings", 
+        # Level 3: Guests and other intermediate parents
+        "guests", "rate_plans", "room_types", "competitors", "analytics_sessions",
+        # Level 4: Independent relations
+        "addons", "amenities", "api_keys", "channel_manager_settings", 
+        "integration_settings", "leads", "promo_codes", 
+        "user_hotel_links", "subscriptions"
+    ]
+    
+    for table in tables:
+        try:
+            await session.execute(text(f"DELETE FROM {table} WHERE hotel_id = :id"), {"id": hotel_id})
+        except Exception as e:
+            logging.warning(f"Failed to delete from {table}: {e}")
+            pass 
+                
+    try:
+        await session.delete(hotel)
+        await session.commit()
+        return {"message": "Hotel and associated data deleted successfully"}
+    except Exception as e:
+        await session.rollback()
+        logging.error(f"Error during final hotel delete: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete hotel: {str(e)}")
