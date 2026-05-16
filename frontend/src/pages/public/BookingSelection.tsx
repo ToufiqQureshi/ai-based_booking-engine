@@ -822,7 +822,13 @@ export default function BookingSelection() {
                                                                             </div>
                                                                             <div className="flex gap-3 mt-0.5">
                                                                                 <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{plan.meal_plan_code}</span>
-                                                                                <span className="text-[10px] text-emerald-600 font-medium">Free Cancellation</span>
+                                                                                {plan.is_refundable ? (
+                                                                                    <span className="text-[10px] text-emerald-600 font-medium">
+                                                                                        {plan.cancellation_policy || 'Free Cancellation'}
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <span className="text-[10px] text-rose-600 font-medium">Non-Refundable</span>
+                                                                                )}
                                                                             </div>
                                                                         </div>
 
