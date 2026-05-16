@@ -11,21 +11,25 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-# Supabase/PgBouncer Compatibility Configuration
-connect_args = {
-    "prepared_statement_cache_size": 0,
-    "statement_cache_size": 0,
-    "server_settings": {"jit": "off"}
-}
+is_sqlite = "sqlite" in settings.DATABASE_URL
 
-engine_args = {
-    "echo": False,
-    "future": True,
-    "pool_size": 20,
-    "max_overflow": 10,
-    "pool_timeout": 30,
-    "pool_pre_ping": True,
-}
+if is_sqlite:
+    connect_args = {"check_same_thread": False}
+    engine_args = {"echo": False, "future": True}
+else:
+    connect_args = {
+        "prepared_statement_cache_size": 0,
+        "statement_cache_size": 0,
+        "server_settings": {"jit": "off"}
+    }
+    engine_args = {
+        "echo": False,
+        "future": True,
+        "pool_size": 20,
+        "max_overflow": 10,
+        "pool_timeout": 30,
+        "pool_pre_ping": True,
+    }
 
 engine = create_async_engine(
     settings.DATABASE_URL,

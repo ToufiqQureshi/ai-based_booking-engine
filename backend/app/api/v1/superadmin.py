@@ -5,7 +5,10 @@ from app.api.deps import CurrentUser, DbSession
 from app.models.user import User, UserRole
 from app.models.hotel import Hotel, HotelUpdate
 from app.models.subscription import Subscription
+from app.models.audit import AuditLog, SystemBroadcast
+from app.core.config import get_settings
 from datetime import datetime
+from jose import jwt
 
 router = APIRouter(prefix="/superadmin", tags=["Super Admin"])
 
@@ -54,8 +57,14 @@ async def list_hotels(
             "subscription": {
                 "plan": sub.plan_name if sub else "None",
                 "status": sub.status if sub else "inactive",
-                "end_date": sub.end_date.isoformat() if sub and sub.end_date else None
-            } if sub else None
+                "end_date": sub.end_date.isoformat() if sub and sub.end_date else None,
+                "whatsapp_credits": sub.whatsapp_credits if sub else 1000,
+                "sms_credits": sub.sms_credits if sub else 1000,
+                "ai_usage_limit": sub.ai_usage_limit if sub else 50000,
+            } if sub else {
+                "plan": "None", "status": "inactive", "end_date": None,
+                "whatsapp_credits": 1000, "sms_credits": 1000, "ai_usage_limit": 50000
+            }
         })
     
     return final_result
@@ -186,8 +195,7 @@ async def delete_hotel(
         "DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)",
         "DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)",
         "DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)",
-        "DELETE FROM payments WHERE hotel_id = :id",
-        "UPDATE users SET is_active = false, hotel_id = NULL WHERE hotel_id = :id"
+        "DELETE FROM payments WHERE hotel_id = :id"
     ]
     
     for query in deep_queries:
@@ -197,6 +205,13 @@ async def delete_hotel(
         except Exception as e:
             logging.warning(f"Failed executing deep relation cleanup: {e}")
             pass
+
+    # Suspend all users belonging to this hotel using ORM
+    users_res = await session.execute(select(User).where(User.hotel_id == hotel_id))
+    for u in users_res.scalars().all():
+        u.is_active = False
+        u.hotel_id = None
+        session.add(u)
 
     # 2. Direct relations (ORDER MATTERS: Delete children first)
     tables = [
@@ -228,3 +243,153 @@ async def delete_hotel(
         await session.rollback()
         logging.error(f"Error during final hotel delete: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to delete hotel: {str(e)}")
+
+@router.post("/impersonate/{hotel_id}")
+async def impersonate_hotel(
+    hotel_id: str,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    """Generate impersonation token to login as hotel owner"""
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+        
+    # Find primary owner or any active user
+    result = await session.execute(
+        select(User).where(User.hotel_id == hotel_id, User.is_active == True)
+    )
+    users = result.scalars().all()
+    if not users:
+        raise HTTPException(status_code=400, detail="No active users found for this hotel")
+        
+    target_user = next((u for u in users if u.role == UserRole.OWNER), users[0])
+    
+    settings = get_settings()
+    secret = settings.SUPABASE_JWT_SECRET or settings.SECRET_KEY
+    payload = {
+        "sub": target_user.supabase_id or target_user.id,
+        "email": target_user.email,
+        "role": target_user.role.value if hasattr(target_user.role, 'value') else str(target_user.role),
+        "type": "access",
+        "user_metadata": {
+            "name": target_user.name,
+            "hotel_name": hotel.name,
+            "impersonated_by": super_admin.email
+        }
+    }
+    token = jwt.encode(payload, secret, algorithm="HS256")
+    
+    # Audit log
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="IMPERSONATE",
+        description=f"Super admin impersonated hotel '{hotel.name}' via user '{target_user.email}'",
+        ip_address="127.0.0.1"
+    )
+    session.add(audit)
+    await session.commit()
+    
+    return {
+        "access_token": token,
+        "token_type": "Bearer",
+        "target_email": target_user.email,
+        "target_name": target_user.name,
+        "hotel_name": hotel.name
+    }
+
+@router.get("/audit-logs")
+async def get_audit_logs(
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+    limit: int = 50
+):
+    """Get system audit activity logs"""
+    result = await session.execute(
+        select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)
+    )
+    return result.scalars().all()
+
+@router.get("/broadcasts")
+async def get_broadcasts(session: DbSession):
+    """Get active broadcasts for display in hotelier dashboard"""
+    result = await session.execute(
+        select(SystemBroadcast).where(SystemBroadcast.is_active == True).order_by(SystemBroadcast.created_at.desc())
+    )
+    return result.scalars().all()
+
+@router.post("/broadcasts")
+async def create_broadcast(
+    data: dict,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    """Create a new system-wide announcement banner"""
+    broadcast = SystemBroadcast(
+        title=data["title"],
+        message=data["message"],
+        type=data.get("type", "info"),
+        is_active=data.get("is_active", True)
+    )
+    session.add(broadcast)
+    
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="CREATE_BROADCAST",
+        description=f"Created system broadcast: '{broadcast.title}'",
+        ip_address="127.0.0.1"
+    )
+    session.add(audit)
+    await session.commit()
+    await session.refresh(broadcast)
+    return broadcast
+
+@router.delete("/broadcasts/{broadcast_id}")
+async def delete_broadcast(
+    broadcast_id: str,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    broadcast = await session.get(SystemBroadcast, broadcast_id)
+    if not broadcast:
+        raise HTTPException(status_code=404, detail="Broadcast not found")
+    await session.delete(broadcast)
+    await session.commit()
+    return {"message": "Broadcast removed"}
+
+@router.patch("/hotels/{hotel_id}/quotas")
+async def update_quotas(
+    hotel_id: str,
+    data: dict,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    sub_res = await session.execute(
+        select(Subscription).where(Subscription.hotel_id == hotel_id)
+    )
+    sub = sub_res.scalar_one_or_none()
+    if not sub:
+        sub = Subscription(hotel_id=hotel_id)
+        
+    if "whatsapp_credits" in data: sub.whatsapp_credits = data["whatsapp_credits"]
+    if "sms_credits" in data: sub.sms_credits = data["sms_credits"]
+    if "ai_usage_limit" in data: sub.ai_usage_limit = data["ai_usage_limit"]
+    sub.updated_at = datetime.utcnow()
+    
+    session.add(sub)
+    
+    hotel = await session.get(Hotel, hotel_id)
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="UPDATE_QUOTAS",
+        description=f"Updated quotas for hotel '{hotel.name if hotel else hotel_id}': WA={sub.whatsapp_credits}, SMS={sub.sms_credits}, AI={sub.ai_usage_limit}",
+        ip_address="127.0.0.1"
+    )
+    session.add(audit)
+    await session.commit()
+    return {"message": "Quotas updated successfully", "quotas": sub}

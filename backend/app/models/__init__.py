@@ -13,6 +13,7 @@ from app.models.notification import Notification
 from app.models.subscription import Subscription
 from app.models.timeline import BookingTimeline
 from app.models.lead import Lead
+from app.models.audit import AuditLog, SystemBroadcast
 
 __all__ = [
     "User", "UserRole",
@@ -27,5 +28,6 @@ __all__ = [
     "Notification",
     "Subscription",
     "BookingTimeline",
-    "Lead"
+    "Lead",
+    "AuditLog", "SystemBroadcast"
 ]

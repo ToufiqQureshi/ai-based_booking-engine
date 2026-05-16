@@ -22,6 +22,11 @@ class Subscription(SQLModel, table=True):
     amount: float = Field(default=0.0)
     currency: str = Field(default="INR")
     
+    # Quotas & Credits governance
+    whatsapp_credits: int = Field(default=1000)
+    sms_credits: int = Field(default=1000)
+    ai_usage_limit: int = Field(default=50000) # Tokens / requests limit
+    
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
