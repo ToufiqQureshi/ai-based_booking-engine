@@ -4,17 +4,20 @@ Current user profile aur management.
 """
 from fastapi import APIRouter
 
-from app.api.deps import CurrentUser, DbSession
-from app.models.user import UserRead
+from app.api.deps import CurrentUser, DbSession, get_current_user
+from app.models.user import UserRead, User
+from typing import Annotated
+from fastapi import Depends
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get("/me", response_model=UserRead)
-async def get_current_user_profile(current_user: CurrentUser):
+async def get_current_user_profile(current_user: Annotated[User, Depends(get_current_user)]):
     """
     Get logged in user's profile.
     Frontend isko use karta hai auth state verify karne ke liye.
+    Returns user even if inactive (suspended) so frontend can show correct screen.
     """
     return current_user
 

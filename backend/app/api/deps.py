@@ -155,12 +155,6 @@ async def get_current_user(
         await session.refresh(user)
         logger.info(f"MASTER ADMIN AUTO-PROMOTED: {effective_email}")
 
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is deactivated"
-        )
-    
     return user
 
 
@@ -168,6 +162,11 @@ async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)]
 ) -> User:
     """Shortcut dependency for active user"""
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is deactivated"
+        )
     return current_user
 
 

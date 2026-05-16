@@ -57,7 +57,7 @@ export function DashboardLayout() {
   }
 
   // Deactivated State (Professional)
-  if (hotel && hotel.is_active === false) {
+  if ((hotel && hotel.is_active === false) || (user && user.is_active === false)) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 p-6 text-center relative overflow-hidden">
         <div className="relative z-10 max-w-2xl w-full bg-white p-12 rounded-3xl shadow-xl border border-slate-100">

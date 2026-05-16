@@ -10,6 +10,7 @@ export interface User {
   name: string;
   role: UserRole;
   hotel_id: string;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }

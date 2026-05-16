@@ -188,12 +188,15 @@ async def delete_hotel(
         await session.execute(text("DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)"), {"id": hotel_id})
         await session.execute(text("DELETE FROM payments WHERE hotel_id = :id"), {"id": hotel_id})
         
+        # Suspend users rather than deleting them, so they see "Suspended" page on login
+        await session.execute(text("UPDATE users SET is_active = false, hotel_id = NULL WHERE hotel_id = :id"), {"id": hotel_id})
+
         # 2. Direct relations
         tables = [
             "addons", "amenities", "analytics_sessions", "api_keys", "channel_manager_settings",
             "channel_room_mappings", "channel_logs", "competitors", "integration_settings",
             "leads", "promo_codes", "room_rates", "room_rate_links",
-            "user_hotel_links", "subscriptions", "users", "bookings", "rate_plans", "room_types"
+            "user_hotel_links", "subscriptions", "bookings", "rate_plans", "room_types"
         ]
         
         for table in tables:
