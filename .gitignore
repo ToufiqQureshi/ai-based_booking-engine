@@ -33,3 +33,9 @@ Thumbs.db
 *.sw?
 *.log
 cloudflared_config.yml
+
+# Databases & Cache
+*.db
+*.sqlite
+*.sqlite3
+.pytest_cache/
