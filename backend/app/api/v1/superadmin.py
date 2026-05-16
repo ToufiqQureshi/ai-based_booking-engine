@@ -191,12 +191,18 @@ async def delete_hotel(
         # Suspend users rather than deleting them, so they see "Suspended" page on login
         await session.execute(text("UPDATE users SET is_active = false, hotel_id = NULL WHERE hotel_id = :id"), {"id": hotel_id})
 
-        # 2. Direct relations
+        # 2. Direct relations (ORDER MATTERS: Delete children first)
         tables = [
-            "addons", "amenities", "analytics_sessions", "api_keys", "channel_manager_settings",
-            "channel_room_mappings", "channel_logs", "competitors", "integration_settings",
-            "leads", "promo_codes", "room_rates", "room_rate_links",
-            "user_hotel_links", "subscriptions", "bookings", "rate_plans", "room_types"
+            # Level 1: Most dependent
+            "channel_logs", "channel_room_mappings", "room_rates", "room_blocks", "room_rate_links",
+            # Level 2: Bookings depend on guests, room_types, etc.
+            "bookings", 
+            # Level 3: Guests and other intermediate parents
+            "guests", "rate_plans", "room_types", "competitors", "analytics_sessions",
+            # Level 4: Independent relations
+            "addons", "amenities", "api_keys", "channel_manager_settings", 
+            "integration_settings", "leads", "promo_codes", 
+            "user_hotel_links", "subscriptions"
         ]
         
         for table in tables:
