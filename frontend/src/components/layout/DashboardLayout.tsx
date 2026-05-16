@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export function DashboardLayout() {
-  const { isAuthenticated, isLoading, hotel, logout } = useAuth();
+  const { isAuthenticated, isLoading, hotel, user, logout } = useAuth();
 
   // Professional loading state
   if (isLoading) {
