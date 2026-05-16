@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     OLLAMA_API_KEY: str | None = None
     OLLAMA_HOST: str = "http://localhost:11434"
     GROQ_API_KEY: str | None = None
+    JULES_API_KEY: str | None = None
 
     # Redis Configuration (Support for Railway REDIS_URL)
     REDIS_URL: Optional[str] = None

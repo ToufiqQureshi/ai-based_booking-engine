@@ -102,11 +102,19 @@ async def health_check():
     return {"status": "healthy", "version": settings.APP_VERSION}
 
 
-# Cache-Control middleware for performance
+# Cache-Control and Advanced Enterprise Security Headers middleware
 @app.middleware("http")
-async def add_cache_headers(request: Request, call_next):
+async def add_security_and_cache_headers(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
+
+    # Security Headers (OWASP Recommended)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
 
     # Cacheable read-only endpoints (60 seconds)
     cacheable_prefixes = [
