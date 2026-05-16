@@ -1,6 +1,6 @@
-import { Check, MapPin, Calendar as CalendarIcon, User } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 interface BookingStepperProps {
     currentStep: 1 | 2 | 3 | 4;
@@ -66,40 +66,7 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                     })}
                 </div>
             </div>
-
-            {/* Property Context Bar - Clean & Informative */}
-            {currentStep > 1 && (
-                <div className="bg-slate-50/80 border-b border-slate-200 py-3">
-                    <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-                        <div className="flex items-center gap-6 overflow-hidden">
-                            <div className="flex items-center text-xs font-bold text-slate-900 uppercase tracking-widest whitespace-nowrap">
-                                <MapPin className="w-4 h-4 mr-2 text-blue-600" />
-                                {hotelSlug?.replace(/-/g, ' ') || 'Staybooker'}
-                            </div>
-                            
-                            <div className="hidden md:flex items-center gap-6 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                <div className="flex items-center gap-2 border-l border-slate-200 pl-6">
-                                    <CalendarIcon className="w-3.5 h-3.5" />
-                                    <span>{searchParams.get('check_in') || '---'} — {searchParams.get('check_out') || '---'}</span>
-                                </div>
-                                <div className="flex items-center gap-2 border-l border-slate-200 pl-6">
-                                    <User className="w-3.5 h-3.5" />
-                                    <span>{searchParams.get('adults') || '2'} Adults, {searchParams.get('children') || '0'} Children</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="flex gap-4">
-                            <button 
-                                className="text-blue-600 text-[11px] font-black uppercase tracking-widest hover:text-blue-700 transition-colors" 
-                                onClick={() => document.getElementById('search-bar')?.scrollIntoView({ behavior: 'smooth' })}
-                            >
-                                Modify Search
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
+
