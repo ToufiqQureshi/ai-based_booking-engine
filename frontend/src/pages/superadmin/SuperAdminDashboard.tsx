@@ -99,8 +99,24 @@ export default function SuperAdminDashboard() {
     const updateMutation = useMutation({
         mutationFn: ({ id, data }: { id: string, data: any }) =>
             apiClient.patch(`/superadmin/hotels/${id}`, data),
-        onSuccess: () => {
+        onMutate: async ({ id, data }) => {
+            await queryClient.cancelQueries({ queryKey: ['superadmin-hotels'] });
+            const previousHotels = queryClient.getQueryData<HotelAdminData[]>(['superadmin-hotels']);
+            queryClient.setQueryData<HotelAdminData[]>(['superadmin-hotels'], old => 
+                old ? old.map(hotel => hotel.id === id ? { ...hotel, ...data } : hotel) : []
+            );
+            return { previousHotels };
+        },
+        onError: (err, newHotel, context) => {
+            if (context?.previousHotels) {
+                queryClient.setQueryData(['superadmin-hotels'], context.previousHotels);
+            }
+            toast({ title: 'Error', description: 'Failed to update hotel configuration.', variant: 'destructive' });
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+        },
+        onSuccess: () => {
             toast({ title: 'Updated', description: 'Hotel configuration saved successfully.' });
         }
     });
@@ -108,20 +124,49 @@ export default function SuperAdminDashboard() {
     const updateRoleMutation = useMutation({
         mutationFn: ({ id, role }: { id: string, role: string }) =>
             apiClient.patch(`/superadmin/users/${id}/role?role=${role}`, {}),
-        onSuccess: (res: any) => {
+        onMutate: async ({ id, role }) => {
+            await queryClient.cancelQueries({ queryKey: ['superadmin-users', userSearchQuery] });
+            const previousUsers = queryClient.getQueryData<UserAdminData[]>(['superadmin-users', userSearchQuery]);
+            queryClient.setQueryData<UserAdminData[]>(['superadmin-users', userSearchQuery], old => 
+                old ? old.map(u => u.id === id ? { ...u, role } : u) : []
+            );
+            return { previousUsers };
+        },
+        onError: (err, variables, context) => {
+            if (context?.previousUsers) {
+                queryClient.setQueryData(['superadmin-users', userSearchQuery], context.previousUsers);
+            }
+            toast({ title: 'Error', description: 'Failed to update user role.', variant: 'destructive' });
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
-            toast({ title: 'Role Updated', description: res.message });
+        },
+        onSuccess: () => {
+            toast({ title: 'Role Updated', description: 'User role updated successfully.' });
         }
     });
 
     const deleteHotelMutation = useMutation({
         mutationFn: (id: string) => apiClient.delete(`/superadmin/hotels/${id}`),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
-            toast({ title: 'Deleted', description: 'Hotel has been removed from the system.' });
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: ['superadmin-hotels'] });
+            const previousHotels = queryClient.getQueryData<HotelAdminData[]>(['superadmin-hotels']);
+            queryClient.setQueryData<HotelAdminData[]>(['superadmin-hotels'], old => 
+                old ? old.filter(hotel => hotel.id !== id) : []
+            );
+            return { previousHotels };
         },
-        onError: () => {
+        onError: (err, id, context) => {
+            if (context?.previousHotels) {
+                queryClient.setQueryData(['superadmin-hotels'], context.previousHotels);
+            }
             toast({ title: 'Error', description: 'Failed to delete hotel.', variant: 'destructive' });
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+        },
+        onSuccess: () => {
+            toast({ title: 'Deleted', description: 'Hotel has been removed from the system.' });
         }
     });
 
