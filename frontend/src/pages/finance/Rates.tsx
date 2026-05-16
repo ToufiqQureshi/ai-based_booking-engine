@@ -116,7 +116,7 @@ export function RatesPage() {
       <RatePlanDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        planToEdit={selectedPlan}
+        initialData={selectedPlan}
         onSuccess={fetchRatePlans}
       />
 
