@@ -15,6 +15,7 @@ interface Message {
 interface ChatWidgetProps {
     hotelSlug: string;
     primaryColor?: string;
+    bottomOffset?: string;
 }
 
 // Helper to determine text color based on background
@@ -31,7 +32,7 @@ function getContrastText(hexcolor: string) {
     }
 }
 
-export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c3aed' }: ChatWidgetProps) {
+export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c3aed', bottomOffset = 'bottom-4' }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [hotelInfo, setHotelInfo] = useState<{ name: string, primary_color: string, logo_url?: string } | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -111,7 +112,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
     };
 
     return (
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end font-sans">
+        <div className={`fixed ${bottomOffset} right-4 z-50 flex flex-col items-end font-sans transition-all duration-300`}>
             <AnimatePresence>
                 {isOpen && (
                     <motion.div

@@ -1339,7 +1339,10 @@ export default function BookingSelection() {
             </Sheet>
 
             {/* AI Chat Widget */}
-            <ChatWidget hotelSlug={hotelSlug || ''} />
+            <ChatWidget 
+                hotelSlug={hotelSlug || ''} 
+                bottomOffset={cart.length > 0 ? "bottom-24" : "bottom-4"} 
+            />
         </div>
     );
 }
