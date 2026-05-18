@@ -141,7 +141,8 @@ export default function BookingSelection() {
     const today = new Date();
     const tomorrow = addDays(today, 1);
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number | undefined | null) => {
+        if (amount === undefined || amount === null || isNaN(amount)) return '₹0';
         const currencyCode = hotel?.settings?.currency || 'INR';
         const locale = currencyCode === 'INR' ? 'en-IN' : 'en-US';
         return new Intl.NumberFormat(locale, {
@@ -1024,7 +1025,7 @@ export default function BookingSelection() {
                                                                                 )}
                                                                             </div>
                                                                             <Button 
-                                                                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 h-9 rounded-lg shadow-sm transition-all active:scale-95"
+                                                                                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs px-6 h-10 rounded-xl shadow-md shadow-violet-600/20 transition-all active:scale-95"
                                                                                 onClick={() => handleSelectRate(room, plan)}
                                                                             >
                                                                                 Select
@@ -1106,19 +1107,30 @@ export default function BookingSelection() {
                         )}
                     </div>
 
-                    <SheetFooter className="p-6 border-t bg-white flex-col gap-4">
-                        <div className="flex justify-between items-end">
-                            <div className="text-sm">
-                                <p className="text-slate-500">Room Total</p>
-                                <p className="font-bold">{formatCurrency(selectedRatePlan?.total_price)}</p>
+                    <SheetFooter className="p-6 border-t bg-white flex flex-col gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
+                        <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Room & Extra Add-ons</p>
+                                <p className="text-sm font-extrabold text-slate-800">{pendingRoom?.name}</p>
+                                {selectedAddons.length > 0 ? (
+                                    <p className="text-[11px] font-bold text-violet-600 mt-0.5">
+                                        +{selectedAddons.length} {selectedAddons.length === 1 ? 'Add-on' : 'Add-ons'} (₹{selectedAddons.reduce((s, a) => s + a.price, 0).toLocaleString('en-IN')})
+                                    </p>
+                                ) : (
+                                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">No optional add-ons selected</p>
+                                )}
                             </div>
                             <div className="text-right">
-                                <p className="text-slate-400 text-xs uppercase font-bold">Grand Total</p>
-                                <p className="text-2xl font-bold text-slate-900">{formatCurrency(grandTotal)}</p>
+                                <span className="text-[10px] uppercase font-black text-indigo-600 tracking-widest block">Item Total</span>
+                                <span className="text-3xl font-black text-slate-900 leading-tight">
+                                    {formatCurrency(grandTotal)}
+                                </span>
                             </div>
                         </div>
-                        <Button size="lg" className="w-full font-bold text-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/30 rounded-2xl h-14" onClick={handleProceedToCheckout}>
-                            {hotel?.settings?.multi_room_cart !== false ? "Add to Stay Cart & Continue" : "Confirm & Checkout"} <ArrowRight className="ml-2 w-5 h-5" />
+                        <Button size="lg" className="w-full font-extrabold text-base bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-xl shadow-violet-600/25 rounded-2xl h-14 flex items-center justify-center gap-2 transition-all active:scale-[0.99]" onClick={handleProceedToCheckout}>
+                            <ShoppingBag className="w-5 h-5" />
+                            <span>{hotel?.settings?.multi_room_cart !== false ? "Add to Stay Cart & Continue" : "Confirm & Checkout"}</span>
+                            <ArrowRight className="w-5 h-5" />
                         </Button>
                     </SheetFooter>
                 </SheetContent>
@@ -1253,31 +1265,26 @@ export default function BookingSelection() {
                     </div>
 
                     {cart.length > 0 && (
-                        <SheetFooter className="p-6 border-t bg-white flex-col gap-4">
-                            <div className="flex justify-between items-end">
-                                <div className="text-sm">
-                                    <p className="text-slate-500 font-medium">Total for {cart.length} {cart.length === 1 ? 'Room' : 'Rooms'}</p>
-                                    <p className="text-xs text-green-600 font-bold">Taxes & fees included</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-slate-400 text-xs uppercase font-bold tracking-wider">Grand Total</p>
-                                    <p className="text-3xl font-black text-indigo-600">
-                                        ₹{cart.reduce((s, item) => s + item.ratePlan.total_price + item.addons.reduce((as, a) => as + a.price, 0), 0).toLocaleString('en-IN')}
+                        <SheetFooter className="p-6 border-t bg-white flex flex-col gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
+                            <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Stay Cart Summary</p>
+                                    <p className="text-sm font-extrabold text-slate-800">{cart.length} {cart.length === 1 ? 'Room' : 'Rooms'} Selected</p>
+                                    <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
+                                        <Check className="w-3 h-3" /> Taxes & fees included
                                     </p>
                                 </div>
+                                <div className="text-right">
+                                    <span className="text-[10px] uppercase font-black text-indigo-600 tracking-widest block">Grand Total</span>
+                                    <span className="text-3xl font-black text-slate-900 leading-tight">
+                                        ₹{cart.reduce((s, item) => s + item.ratePlan.total_price + item.addons.reduce((as, a) => as + a.price, 0), 0).toLocaleString('en-IN')}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <Button 
-                                    variant="outline" 
-                                    size="lg" 
-                                    className="font-bold text-slate-700 rounded-2xl h-14" 
-                                    onClick={() => setIsCartSheetOpen(false)}
-                                >
-                                    + Add More Rooms
-                                </Button>
+                            <div className="flex flex-col gap-3">
                                 <Button 
                                     size="lg" 
-                                    className="font-black text-base bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-600/30 rounded-2xl h-14" 
+                                    className="w-full font-black text-base bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-xl shadow-violet-600/25 rounded-2xl h-14 flex items-center justify-center gap-2 transition-all active:scale-[0.99]" 
                                     onClick={() => {
                                         setIsCartSheetOpen(false);
                                         navigate(`/book/${hotelSlug}/checkout`, {
@@ -1298,7 +1305,17 @@ export default function BookingSelection() {
                                         });
                                     }}
                                 >
-                                    Proceed to Secure Checkout <ArrowRight className="ml-2 w-5 h-5" />
+                                    <span>Proceed to Secure Checkout</span>
+                                    <ArrowRight className="w-5 h-5 ml-1" />
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="lg" 
+                                    className="w-full font-bold text-slate-700 hover:text-violet-700 hover:bg-violet-50/50 border-slate-200 rounded-2xl h-12 transition-colors flex items-center justify-center gap-2" 
+                                    onClick={() => setIsCartSheetOpen(false)}
+                                >
+                                    <Plus className="w-4 h-4 text-violet-600" />
+                                    <span>Add Another Room to Stay</span>
                                 </Button>
                             </div>
                         </SheetFooter>
