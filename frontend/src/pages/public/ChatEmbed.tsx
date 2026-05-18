@@ -36,7 +36,7 @@ export default function ChatEmbed() {
             <div className="pointer-events-auto">
                 <ChatWidget
                     hotelSlug={hotelSlug || ''}
-                    primaryColor={config?.widget_background_color || '#3B82F6'}
+                    primaryColor={config?.widget_primary_color || '#7c3aed'}
                 />
             </div>
         </div>

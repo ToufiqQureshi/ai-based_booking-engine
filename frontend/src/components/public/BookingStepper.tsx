@@ -23,10 +23,7 @@ export function BookingStepper({ currentStep, primaryColor }: BookingStepperProp
     ];
 
     const getNormalizedColor = (col?: string | null) => {
-        if (!col || ['#3b82f6', '#ef4444', '#2563eb', '#0f172a'].includes(col.toLowerCase())) {
-            return '#7c3aed';
-        }
-        return col;
+        return '#7c3aed';
     };
     const activeColor = getNormalizedColor(primaryColor);
 

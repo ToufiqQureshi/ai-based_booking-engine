@@ -31,7 +31,7 @@ function getContrastText(hexcolor: string) {
     }
 }
 
-export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#3B82F6' }: ChatWidgetProps) {
+export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c3aed' }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [hotelInfo, setHotelInfo] = useState<{ name: string, primary_color: string, logo_url?: string } | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -41,10 +41,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#3B
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const getNormalizedColor = (col?: string | null) => {
-        if (!col || ['#3b82f6', '#ef4444', '#2563eb', '#0f172a'].includes(col.toLowerCase())) {
-            return '#7c3aed';
-        }
-        return col;
+        return '#7c3aed';
     };
     const primaryColor = getNormalizedColor(hotelInfo?.primary_color || initialPrimaryColor);
 
