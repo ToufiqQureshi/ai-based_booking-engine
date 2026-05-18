@@ -40,7 +40,13 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#3B
     const [isVisible, setIsVisible] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    const primaryColor = hotelInfo?.primary_color || initialPrimaryColor;
+    const getNormalizedColor = (col?: string | null) => {
+        if (!col || ['#3b82f6', '#ef4444', '#2563eb', '#0f172a'].includes(col.toLowerCase())) {
+            return '#7c3aed';
+        }
+        return col;
+    };
+    const primaryColor = getNormalizedColor(hotelInfo?.primary_color || initialPrimaryColor);
 
     // Fetch Hotel Config
     useEffect(() => {

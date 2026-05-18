@@ -104,6 +104,14 @@ export default function BookingConfirmation() {
         doc.save(`Invoice_${booking.booking_number}.pdf`);
     };
 
+    const getNormalizedColor = (col?: string | null) => {
+        if (!col || ['#3b82f6', '#ef4444', '#2563eb', '#0f172a'].includes(col.toLowerCase())) {
+            return '#7c3aed';
+        }
+        return col;
+    };
+    const themeColor = getNormalizedColor(hotel?.primary_color);
+
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-4 selection:bg-primary/10">
             <div className="max-w-3xl mx-auto space-y-8 animate-enter">
@@ -126,7 +134,7 @@ export default function BookingConfirmation() {
                 {/* Ticket Card */}
                 <Card className="overflow-hidden border-0 shadow-2xl shadow-slate-200/50 rounded-3xl bg-white relative">
                     {/* Decorative top border */}
-                    <div className="absolute top-0 inset-x-0 h-2" style={{ backgroundColor: hotel?.primary_color || '#2563eb' }} />
+                    <div className="absolute top-0 inset-x-0 h-2" style={{ backgroundColor: themeColor }} />
 
                     <div className="p-8 pb-0">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -138,7 +146,7 @@ export default function BookingConfirmation() {
                                 <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full border-slate-200 hover:bg-slate-50">
                                     <Printer className="mr-2 h-4 w-4" /> Print
                                 </Button>
-                                <Button size="sm" onClick={handleDownloadInvoice} className="rounded-full shadow-lg text-white hover:-translate-y-0.5 transition-transform" style={{ backgroundColor: hotel?.primary_color || '#2563eb' }}>
+                                <Button size="sm" onClick={handleDownloadInvoice} className="rounded-full shadow-lg text-white hover:-translate-y-0.5 transition-transform" style={{ backgroundColor: themeColor }}>
                                     <Download className="mr-2 h-4 w-4" /> Invoice
                                 </Button>
                             </div>
@@ -195,7 +203,7 @@ export default function BookingConfirmation() {
 
                         <div className="flex justify-between items-center pt-8 mt-4 border-t border-slate-200 border-dashed">
                             <p className="text-slate-500 font-medium">Total Paid</p>
-                            <p className="text-3xl font-bold tracking-tight" style={{ color: hotel?.primary_color || '#2563eb' }}>
+                            <p className="text-3xl font-bold tracking-tight" style={{ color: themeColor }}>
                                 {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount)}
                             </p>
                         </div>

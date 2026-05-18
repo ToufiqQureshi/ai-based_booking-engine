@@ -69,7 +69,7 @@ class HotelBase(SQLModel):
     description: Optional[str] = None
     star_rating: Optional[int] = Field(default=None, ge=1, le=5)
     logo_url: Optional[str] = None
-    primary_color: Optional[str] = Field(default="#3B82F6")
+    primary_color: Optional[str] = Field(default="#7C3AED")
     amenities: List[str] = Field(default_factory=list, sa_column=Column(JSON)) # Property-level amenities like "Free Parking", "Pool"
     
     # Feature Flags (Controlled by Super Admin)

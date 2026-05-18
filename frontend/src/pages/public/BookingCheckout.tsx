@@ -275,10 +275,18 @@ function BookingCheckoutInner() {
         }
     };
 
+    const getNormalizedColor = (col?: string | null) => {
+        if (!col || ['#3b82f6', '#ef4444', '#2563eb', '#0f172a'].includes(col.toLowerCase())) {
+            return '#7c3aed';
+        }
+        return col;
+    };
+    const themeColor = getNormalizedColor(hotel?.primary_color);
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20 selection:bg-primary/10">
             {/* Stepper Header */}
-            <BookingStepper currentStep={4} primaryColor={hotel?.primary_color || undefined} />
+            <BookingStepper currentStep={4} primaryColor={themeColor} />
 
             <div className="max-w-6xl mx-auto px-4 mt-8">
                 <div className="mb-10 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -531,7 +539,7 @@ function BookingCheckoutInner() {
                                                 Clear
                                             </Button>
                                         ) : (
-                                            <Button type="button" size="lg" className="rounded-xl px-8 font-bold text-white" style={{ backgroundColor: hotel?.primary_color || '#2563eb' }} onClick={() => handleApplyPromo()} disabled={isValidating || !promoCode}>
+                                            <Button type="button" size="lg" className="rounded-xl px-8 font-bold text-white" style={{ backgroundColor: themeColor }} onClick={() => handleApplyPromo()} disabled={isValidating || !promoCode}>
                                                 {isValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                                             </Button>
                                         )}
@@ -570,7 +578,7 @@ function BookingCheckoutInner() {
                                 {/* Submit Button */}
                                 <Button
                                     className="w-full h-16 text-xl font-black rounded-2xl shadow-2xl text-white hover:-translate-y-1 active:translate-y-0 transition-all uppercase tracking-tight"
-                                    style={{ backgroundColor: hotel?.primary_color || '#2563eb' }}
+                                    style={{ backgroundColor: themeColor }}
                                     type="submit"
                                     form="booking-form"
                                     disabled={isSubmitting}

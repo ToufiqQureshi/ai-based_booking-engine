@@ -22,7 +22,13 @@ export function BookingStepper({ currentStep, primaryColor }: BookingStepperProp
         { id: 4, label: 'Guest Info', path: `/book/${hotelSlug}/checkout${queryString}` },
     ];
 
-    const activeColor = primaryColor || '#2563eb';
+    const getNormalizedColor = (col?: string | null) => {
+        if (!col || ['#3b82f6', '#ef4444', '#2563eb', '#0f172a'].includes(col.toLowerCase())) {
+            return '#7c3aed';
+        }
+        return col;
+    };
+    const activeColor = getNormalizedColor(primaryColor);
 
     return (
         <div className="w-full bg-white border-b border-slate-200 shadow-sm mb-0">

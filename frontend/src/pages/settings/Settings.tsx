@@ -106,7 +106,7 @@ export function SettingsPage() {
       check_out_time: hotel?.settings?.check_out_time || '11:00',
       currency: hotel?.settings?.currency || 'INR',
       timezone: hotel?.settings?.timezone || 'Asia/Kolkata',
-      primary_color: hotel?.primary_color || '#3B82F6',
+      primary_color: hotel?.primary_color || '#7C3AED',
       logo_url: hotel?.logo_url || '',
       notify_new_booking: hotel?.settings?.notify_new_booking !== false,
       notify_cancellation: hotel?.settings?.notify_cancellation !== false,
@@ -504,13 +504,13 @@ export function SettingsPage() {
                         id="primaryColor"
                         type="color"
                         className="w-12 h-10 p-1 cursor-pointer"
-                        value={formData.settings.primary_color || '#3B82F6'}
+                        value={formData.settings.primary_color || '#7C3AED'}
                         onChange={(e) => handleUpdate('settings', 'primary_color', e.target.value)}
                       />
                       <Input
-                        value={formData.settings.primary_color || '#3B82F6'}
+                        value={formData.settings.primary_color || '#7C3AED'}
                         onChange={(e) => handleUpdate('settings', 'primary_color', e.target.value)}
-                        placeholder="#3B82F6"
+                        placeholder="#7C3AED"
                       />
                     </div>
                     <p className="text-sm text-muted-foreground">

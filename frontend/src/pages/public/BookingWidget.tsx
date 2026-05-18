@@ -112,7 +112,13 @@ export default function BookingWidget() {
         }
     };
 
-    const primaryHex = config?.primary_color || '#3b82f6';
+    const getNormalizedColor = (col?: string | null) => {
+        if (!col || ['#3b82f6', '#ef4444', '#2563eb', '#0f172a'].includes(col.toLowerCase())) {
+            return '#7c3aed';
+        }
+        return col;
+    };
+    const primaryHex = getNormalizedColor(config?.primary_color);
     const bgColor = config?.widget_background_color || '#ffffff';
 
     return (

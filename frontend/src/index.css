@@ -17,8 +17,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary: Vibrant Royal Blue for Trust & Action */
-    --primary: 221 83% 53%;
+    /* Primary: Vibrant Premium Purple (#7c3aed) for Elegance & Action */
+    --primary: 262 83% 58%;
     --primary-foreground: 210 40% 98%;
 
     /* Secondary: very subtle cool gray */
@@ -45,7 +45,7 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --ring: 262 83% 58%;
 
     --radius: 0.75rem;
     /* Slightly softer corners for "organic" feel */
@@ -53,16 +53,16 @@
     /* Sidebar - keeping it clean */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 40% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-ring: 262 83% 58%;
     --sidebar-muted: 215 16% 47%;
 
     /* Chart colors */
-    --chart-1: 221 83% 53%;
+    --chart-1: 262 83% 58%;
     --chart-2: 142 76% 36%;
     --chart-3: 38 92% 50%;
     --chart-4: 280 65% 60%;
@@ -80,7 +80,7 @@
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 262 83% 65%;
     --primary-foreground: 222 47% 6%;
 
     --secondary: 217 33% 17%;
@@ -106,16 +106,16 @@
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --ring: 262 83% 65%;
 
     --sidebar-background: 222 47% 4%;
     --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 262 83% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 12%;
     --sidebar-accent-foreground: 210 40% 96%;
     --sidebar-border: 217 33% 12%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 262 83% 65%;
     --sidebar-muted: 215 20% 50%;
   }
 }
