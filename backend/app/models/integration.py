@@ -115,6 +115,7 @@ class IntegrationSettingsRead(BaseModel):
     widget_enabled: bool
     widget_theme: str
     widget_primary_color: str
+    widget_background_color: str
     widget_position: str
     widget_layout: Optional[str] = "modern"
     widget_logo_url: Optional[str] = None
@@ -135,6 +136,7 @@ class IntegrationSettingsUpdate(BaseModel):
     widget_enabled: Optional[bool] = None
     widget_theme: Optional[str] = None
     widget_primary_color: Optional[str] = None
+    widget_background_color: Optional[str] = None
     widget_position: Optional[str] = None
     widget_layout: Optional[str] = None
     widget_logo_url: Optional[str] = None

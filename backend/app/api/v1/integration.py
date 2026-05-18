@@ -94,7 +94,7 @@ async def update_integration_settings(
             setattr(settings, key, value)
         settings.updated_at = datetime.utcnow()
     
-    # Sync AI parameters into Hotel table for synchronous background accesses
+    # Sync AI parameters and primary color into Hotel table for synchronous background accesses
     from app.models.hotel import Hotel
     hotel_query = select(Hotel).where(Hotel.id == current_user.hotel_id)
     hotel_res = await session.execute(hotel_query)
@@ -109,6 +109,8 @@ async def update_integration_settings(
             hotel.ai_model = updates_dict['ai_model']
         if 'ai_base_url' in updates_dict:
             hotel.ai_base_url = updates_dict['ai_base_url']
+        if 'widget_primary_color' in updates_dict and updates_dict['widget_primary_color']:
+            hotel.primary_color = updates_dict['widget_primary_color']
         session.add(hotel)
 
     await session.commit()
