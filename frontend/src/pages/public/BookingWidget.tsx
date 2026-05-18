@@ -79,12 +79,13 @@ export default function BookingWidget() {
     // Dynamic Resizing Logic
     useEffect(() => {
         const baseHeight = 100; // Compact height
-        const expandedHeight = 600; // Use expanded height when popovers are open
+        const expandedHeight = 750; // Use expanded height when popovers are open to prevent price clipping
         const isOpen = isCheckInOpen || isCheckOutOpen || isGuestOpen;
         const height = isOpen ? expandedHeight : baseHeight;
 
         if (window.parent !== window) {
             window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, '*');
+            window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, '*');
         }
     }, [isCheckInOpen, isCheckOutOpen, isGuestOpen]);
 

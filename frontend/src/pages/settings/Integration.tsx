@@ -455,7 +455,7 @@ const IntegrationPage = () => {
     <iframe 
         id="hotelier-search-widget"
         src="${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget" 
-        style="width: 100%; height: 600px; border: none; position: absolute; top: 0; left: 0; overflow: visible;" 
+        style="width: 100%; height: 750px; border: none; position: absolute; top: 0; left: 0; overflow: visible;" 
         scrolling="no" 
         title="Book Now">
     </iframe>
@@ -470,7 +470,7 @@ const IntegrationPage = () => {
     <iframe 
         id="hotelier-search-widget"
         src="${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget" 
-        style="width: 100%; height: 600px; border: none; position: absolute; top: 0; left: 0; overflow: visible;" 
+        style="width: 100%; height: 750px; border: none; position: absolute; top: 0; left: 0; overflow: visible;" 
         scrolling="no" 
         title="Book Now">
     </iframe>
