@@ -138,12 +138,12 @@ export default function BookingWidget() {
                                     </div>
                                 </button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-6 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
-                                <div className="mb-4 text-center">
-                                    <Badge className="bg-violet-100 text-violet-700 px-3.5 py-1 font-black text-[10px] tracking-widest uppercase">
+                            <PopoverContent className="w-auto p-4 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
+                                <div className="mb-3 text-center">
+                                    <Badge className="bg-violet-100 text-violet-700 px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase">
                                         Dynamic Pricing Engine
                                     </Badge>
-                                    <p className="text-xs font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
+                                    <p className="text-[11px] font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
                                 </div>
                                 <Calendar
                                     mode="single"
@@ -161,14 +161,14 @@ export default function BookingWidget() {
                                     initialFocus
                                     className="p-0"
                                     classNames={{
-                                        cell: "h-14 w-14 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-14 w-14 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
+                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
                                         day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
                                         day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
-                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[11px] w-14 pb-3 text-center",
-                                        caption: "flex justify-center py-3 px-4 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-4 shadow-md",
-                                        caption_label: "text-sm font-extrabold tracking-wide uppercase",
-                                        nav_button: "h-8 w-8 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
+                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2 text-center",
+                                        caption: "flex justify-center py-2 px-3 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-3 shadow-sm",
+                                        caption_label: "text-xs font-extrabold tracking-wide uppercase",
+                                        nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
                                     }}
                                     components={{
                                         DayContent: ({ date }: any) => {
@@ -181,11 +181,11 @@ export default function BookingWidget() {
                                             const isSoldOut = date.getDate() === 13;
 
                                             return (
-                                                <div className="flex flex-col items-center justify-center h-full w-full p-1">
-                                                    <span className="text-sm font-bold leading-none">{date.getDate()}</span>
+                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
+                                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
                                                     {!isPast && (
                                                         <span className={cn(
-                                                            "text-[10px] font-black leading-none mt-1.5",
+                                                            "text-[9px] font-extrabold leading-none mt-1",
                                                             isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
                                                         )}>
                                                             {isSoldOut ? "Sold Out" : `₹${price}`}
@@ -196,8 +196,8 @@ export default function BookingWidget() {
                                         }
                                     }}
                                 />
-                                <div className="border-t border-slate-100 pt-4 mt-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2 font-bold tracking-wide">
-                                    <X className="w-4 h-4 text-red-500 stroke-[3]" /> SOLD OUT
+                                <div className="border-t border-slate-100 pt-3 mt-3 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
+                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
                                 </div>
                             </PopoverContent>
                         </Popover>
@@ -222,12 +222,12 @@ export default function BookingWidget() {
                                     </div>
                                 </button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-6 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
-                                <div className="mb-4 text-center">
-                                    <Badge className="bg-violet-100 text-violet-700 px-3.5 py-1 font-black text-[10px] tracking-widest uppercase">
+                            <PopoverContent className="w-auto p-4 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
+                                <div className="mb-3 text-center">
+                                    <Badge className="bg-violet-100 text-violet-700 px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase">
                                         Dynamic Pricing Engine
                                     </Badge>
-                                    <p className="text-xs font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
+                                    <p className="text-[11px] font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
                                 </div>
                                 <Calendar
                                     mode="single"
@@ -240,14 +240,14 @@ export default function BookingWidget() {
                                     initialFocus
                                     className="p-0"
                                     classNames={{
-                                        cell: "h-14 w-14 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-14 w-14 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
+                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
                                         day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
                                         day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
-                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[11px] w-14 pb-3 text-center",
-                                        caption: "flex justify-center py-3 px-4 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-4 shadow-md",
-                                        caption_label: "text-sm font-extrabold tracking-wide uppercase",
-                                        nav_button: "h-8 w-8 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
+                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2 text-center",
+                                        caption: "flex justify-center py-2 px-3 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-3 shadow-sm",
+                                        caption_label: "text-xs font-extrabold tracking-wide uppercase",
+                                        nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
                                     }}
                                     components={{
                                         DayContent: ({ date }: any) => {
@@ -260,11 +260,11 @@ export default function BookingWidget() {
                                             const isSoldOut = date.getDate() === 13;
 
                                             return (
-                                                <div className="flex flex-col items-center justify-center h-full w-full p-1">
-                                                    <span className="text-sm font-bold leading-none">{date.getDate()}</span>
+                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
+                                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
                                                     {!isPast && (
                                                         <span className={cn(
-                                                            "text-[10px] font-black leading-none mt-1.5",
+                                                            "text-[9px] font-extrabold leading-none mt-1",
                                                             isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
                                                         )}>
                                                             {isSoldOut ? "Sold Out" : `₹${price}`}
@@ -275,8 +275,8 @@ export default function BookingWidget() {
                                         }
                                     }}
                                 />
-                                <div className="border-t border-slate-100 pt-4 mt-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2 font-bold tracking-wide">
-                                    <X className="w-4 h-4 text-red-500 stroke-[3]" /> SOLD OUT
+                                <div className="border-t border-slate-100 pt-3 mt-3 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
+                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
                                 </div>
                             </PopoverContent>
                         </Popover>
