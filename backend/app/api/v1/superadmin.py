@@ -82,6 +82,15 @@ async def update_hotel_status(
         raise HTTPException(status_code=404, detail="Hotel not found")
     
     db_data = update_data.model_dump(exclude_unset=True)
+
+    if "slug" in db_data and db_data["slug"]:
+        new_slug = db_data["slug"].lower().strip()
+        if new_slug != hotel.slug:
+            existing = await session.execute(select(Hotel).where(Hotel.slug == new_slug))
+            if existing.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="This URL Slug is already taken by another hotel property")
+            db_data["slug"] = new_slug
+
     for key, value in db_data.items():
         setattr(hotel, key, value)
     

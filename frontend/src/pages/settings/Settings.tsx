@@ -90,6 +90,7 @@ export function SettingsPage() {
 
   const [formData, setFormData] = useState({
     name: hotel?.name || '',
+    slug: hotel?.slug || '',
     star_rating: hotel?.star_rating || 3,
     description: hotel?.description || '',
     address: {
@@ -143,6 +144,7 @@ export function SettingsPage() {
       setIsSaving(true);
       const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
         name: formData.name,
+        slug: formData.slug || undefined,
         star_rating: Number(formData.star_rating),
         description: formData.description,
         address: formData.address,
@@ -156,13 +158,14 @@ export function SettingsPage() {
       setHotel(updatedHotel);
       toast({
         title: 'Settings saved',
-        description: 'Your hotel profile has been updated.',
+        description: 'Your hotel profile has been updated successfully.',
       });
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || 'Failed to save settings. URL slug might already be taken.';
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to save settings.',
+        title: 'Error saving settings',
+        description: errorMsg,
       });
     } finally {
       setIsSaving(false);
@@ -273,7 +276,35 @@ export function SettingsPage() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2">
+
+                <div className="space-y-2 pt-2 border-t mt-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="hotelSlug" className="font-semibold text-slate-800 dark:text-slate-200">Custom Booking Link (URL Slug)</Label>
+                    <span className="text-[10px] text-violet-700 bg-violet-100 dark:bg-violet-950 dark:text-violet-300 px-2.5 py-0.5 rounded-full font-bold tracking-wide uppercase border border-violet-200 dark:border-violet-800">
+                      White-label Link
+                    </span>
+                  </div>
+                  <div className="flex rounded-xl shadow-sm border border-input focus-within:ring-2 focus-within:ring-violet-600 focus-within:border-violet-600 overflow-hidden transition-all bg-background">
+                    <span className="px-4 bg-slate-100 dark:bg-slate-900 text-slate-500 flex items-center text-xs font-mono border-r select-none">
+                      {window.location.host}/book/
+                    </span>
+                    <Input
+                      id="hotelSlug"
+                      className="border-0 shadow-none focus-visible:ring-0 rounded-none font-mono text-sm px-3 flex-1 font-semibold text-violet-600 dark:text-violet-400"
+                      placeholder="grand-plaza"
+                      value={formData.slug}
+                      onChange={(e) => handleUpdate('root', 'slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    />
+                    <span className="px-4 bg-slate-100 dark:bg-slate-900 text-slate-500 flex items-center text-xs font-mono border-l select-none">
+                      /rooms
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Customize your direct booking URL matching your hotel's actual branding (e.g. <code className="font-bold text-violet-700 dark:text-violet-400 bg-violet-50 dark:bg-violet-950 px-1 py-0.5 rounded">grand-plaza</code> or <code className="font-bold text-violet-700 dark:text-violet-400 bg-violet-50 dark:bg-violet-950 px-1 py-0.5 rounded">lagoona-resort</code>). Only lowercase letters, numbers, and hyphens allowed.
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t mt-4">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"

@@ -147,6 +147,7 @@ class HotelRead(HotelBase):
 class HotelUpdate(SQLModel):
     """Partial update schema"""
     name: Optional[str] = None
+    slug: Optional[str] = None
     description: Optional[str] = None
     star_rating: Optional[int] = None
     logo_url: Optional[str] = None

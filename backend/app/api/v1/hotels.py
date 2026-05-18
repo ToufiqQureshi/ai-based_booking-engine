@@ -67,6 +67,19 @@ async def update_my_hotel(
     
     # Update only provided fields
     update_data = hotel_update.model_dump(exclude_unset=True)
+
+    if "slug" in update_data and update_data["slug"]:
+        new_slug = update_data["slug"].lower().strip()
+        if new_slug != hotel.slug:
+            # Check uniqueness
+            existing = await session.execute(select(Hotel).where(Hotel.slug == new_slug))
+            if existing.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This URL Slug is already taken by another hotel property"
+                )
+            update_data["slug"] = new_slug
+
     for field, value in update_data.items():
         setattr(hotel, field, value)
     
