@@ -431,10 +431,19 @@ function BookingCheckoutInner() {
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                 <div className="absolute bottom-6 left-8 right-8 text-white">
-                                    <h3 className="font-black text-2xl mb-2 tracking-tight">{room.name}</h3>
-                                    <Badge className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border-0 font-bold px-4 py-1.5 rounded-full">
-                                        {room.rate_plan_name || room.rate_options?.[0]?.name || 'Standard Rate'}
-                                    </Badge>
+                                    <h3 className="font-black text-2xl mb-1 tracking-tight">
+                                        {state.rooms.length > 1 ? `${state.rooms.length} Rooms Selected` : room.name}
+                                    </h3>
+                                    <p className="text-xs text-white/90 font-medium mb-3 line-clamp-1">
+                                        {state.rooms.map(r => r.name || r.room_type_name).join(' • ')}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {state.rooms.map((r, idx) => (
+                                            <Badge key={idx} className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border-0 font-bold px-3 py-1 rounded-full text-[11px]">
+                                                {r.rate_plan_name || r.rate_options?.[0]?.name || 'Standard Rate'}
+                                            </Badge>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
@@ -460,9 +469,16 @@ function BookingCheckoutInner() {
 
                                 {/* Price Breakdown */}
                                 <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-slate-500 font-bold text-sm">{room.name} <span className="text-xs opacity-60">({nights} {nights === 1 ? 'night' : 'nights'})</span></span>
-                                        <span className="font-bold text-slate-900">{formatCurrency(state.totalRoomPrice)}</span>
+                                    <div className="space-y-3 pb-2 border-b border-dashed border-slate-100">
+                                        {state.rooms.map((r: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between items-start text-sm">
+                                                <div>
+                                                    <span className="text-slate-800 font-bold block">{r.name || r.room_type_name}</span>
+                                                    <span className="text-xs text-slate-400 font-medium">{r.rate_plan_name || r.rate_options?.[0]?.name || 'Standard Rate'} • ({nights} {nights === 1 ? 'night' : 'nights'})</span>
+                                                </div>
+                                                <span className="font-bold text-slate-900">{formatCurrency(r.total_price || (r.rate_options?.[0]?.total_price))}</span>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     {state.addons && state.addons.length > 0 && (

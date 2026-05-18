@@ -1,6 +1,6 @@
 // Settings Page - Real API Integration
 import { useState } from 'react';
-import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image } from 'lucide-react';
+import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -78,6 +78,15 @@ export function SettingsPage() {
   const { hotel, user, setHotel } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [rooms, setRooms] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (hotel?.slug) {
+      apiClient.get<any[]>(`/public/hotels/${hotel.slug}/rooms`)
+        .then(res => setRooms(res || []))
+        .catch(() => {});
+    }
+  }, [hotel?.slug]);
 
   const [formData, setFormData] = useState({
     name: hotel?.name || '',
@@ -105,6 +114,8 @@ export function SettingsPage() {
       child_policy: hotel?.settings?.child_policy || '',
       privacy_policy: hotel?.settings?.privacy_policy || '',
       important_info: hotel?.settings?.important_info || '',
+      multi_room_cart: hotel?.settings?.multi_room_cart !== false,
+      featured_room_type_id: hotel?.settings?.featured_room_type_id || '',
     },
     photos: hotel?.photos || []
   });
@@ -555,6 +566,60 @@ export function SettingsPage() {
                   <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     Save Branding
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6 border-indigo-100 shadow-sm">
+              <CardHeader className="bg-indigo-50/50 rounded-t-xl pb-4">
+                <CardTitle className="flex items-center gap-2 text-indigo-950">
+                  <ShoppingBag className="w-5 h-5 text-indigo-600" />
+                  STAAH Multi-Room & Starting Price Engine
+                </CardTitle>
+                <CardDescription className="text-indigo-900/70">
+                  Enable OTA-like multi-room cart selection and configure starting rate highlight on the public booking engine.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-bold text-slate-900">Multi-Room Cart Bar</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow guests to select and combine multiple room types (e.g. Deluxe + Executive) in a persistent floating cart.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.settings.multi_room_cart !== false}
+                    onCheckedChange={(checked) => handleUpdate('settings', 'multi_room_cart', checked)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="featuredRoom" className="text-slate-900 font-bold">Featured Category for Starting Price Display</Label>
+                  <Select
+                    value={formData.settings.featured_room_type_id || ''}
+                    onValueChange={(val) => handleUpdate('settings', 'featured_room_type_id', val)}
+                  >
+                    <SelectTrigger className="w-full bg-white">
+                      <SelectValue placeholder="Select room category to highlight..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lowest">Dynamic Lowest Price (Automatic)</SelectItem>
+                      {rooms.map(r => (
+                        <SelectItem key={r.id} value={r.id}>{r.name} - ({r.base_price ? `₹${r.base_price}/night` : 'Custom Rates'})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    If set, the public booking calendar and top header will highlight starting prices from this specific room category. Otherwise, it defaults to the lowest available rate.
+                  </p>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button onClick={handleSave} disabled={isSaving} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save Booking Engine Settings
                   </Button>
                 </div>
               </CardContent>

@@ -99,6 +99,8 @@ export interface HotelSettings {
   show_last_booked?: boolean;
   show_popular_badge?: boolean;
   popular_badge_text?: string;
+  multi_room_cart?: boolean;
+  featured_room_type_id?: string;
 }
 
 // ============== Room Types ==============

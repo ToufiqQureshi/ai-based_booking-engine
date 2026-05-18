@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize, ChevronDown } from 'lucide-react';
+import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize, ChevronDown, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -64,6 +64,18 @@ export default function BookingSelection() {
     const [selectedRatePlan, setSelectedRatePlan] = useState<RateOption | null>(null);
     const [selectedAddons, setSelectedAddons] = useState<AddOn[]>([]);
     const [pendingRoom, setPendingRoom] = useState<PublicRoomSearchResult | null>(null);
+
+    // Cart State (STAAH Multi-Room Booking)
+    interface CartItem {
+        id: string;
+        room: PublicRoomSearchResult;
+        ratePlan: RateOption;
+        addons: AddOn[];
+        adults: number;
+        children: number;
+    }
+    const [cart, setCart] = useState<CartItem[]>([]);
+    const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
 
     // Search State
     const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
@@ -243,6 +255,21 @@ export default function BookingSelection() {
     const handleProceedToCheckout = () => {
         if (!pendingRoom || !selectedRatePlan) return;
 
+        if (hotel?.settings?.multi_room_cart !== false) {
+            const newItem = {
+                id: Math.random().toString(36).substring(2, 9),
+                room: pendingRoom,
+                ratePlan: selectedRatePlan,
+                addons: selectedAddons,
+                adults,
+                children
+            };
+            setCart(prev => [...prev, newItem]);
+            setIsAddonSheetOpen(false);
+            setIsCartSheetOpen(true);
+            return;
+        }
+
         navigate(`/book/${hotelSlug}/checkout`, {
             state: {
                 checkInDate,
@@ -260,6 +287,31 @@ export default function BookingSelection() {
             }
         });
     };
+
+    // STAAH Starting Rate Calculation
+    const startingRoom = (() => {
+        if (!rooms || rooms.length === 0) return null;
+        if (hotel?.settings?.featured_room_type_id && hotel.settings.featured_room_type_id !== 'lowest') {
+            const featured = rooms.find(r => r.id === hotel.settings.featured_room_type_id);
+            if (featured) return featured;
+        }
+        let lowestRoom = rooms[0];
+        let lowestPrice = Infinity;
+        rooms.forEach(r => {
+            r.rate_options?.forEach(o => {
+                if (o.price_per_night < lowestPrice) {
+                    lowestPrice = o.price_per_night;
+                    lowestRoom = r;
+                }
+            });
+        });
+        return lowestRoom;
+    })();
+
+    const startingPrice = (() => {
+        if (!startingRoom || !startingRoom.rate_options || startingRoom.rate_options.length === 0) return 0;
+        return Math.min(...startingRoom.rate_options.map(o => o.price_per_night));
+    })();
 
 
     // Calculate number of nights
@@ -364,6 +416,13 @@ export default function BookingSelection() {
             <div className="max-w-7xl mx-auto px-4 mt-8">
                 {/* Inline Search Modifier (Always Visible) */}
                 <div id="search-bar" className="bg-white border border-slate-200 p-6 lg:p-8 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.03)] mb-10 relative transition-all duration-300">
+                    {/* STAAH Starting Rate Banner */}
+                    {startingRoom && startingPrice > 0 && (
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-black px-6 py-2 rounded-full shadow-lg flex items-center gap-2 tracking-wide uppercase border border-white/20 animate-bounce">
+                            <Sparkles className="w-3.5 h-3.5 fill-yellow-300 text-yellow-300 shrink-0" />
+                            <span className="truncate">STAAH Best Rate Guarantee: Starting from ₹{startingPrice.toLocaleString('en-IN')}/night for {startingRoom.name}</span>
+                        </div>
+                    )}
                     {/* Premium Room/Package Switch */}
                     <div className="flex justify-center mb-8">
                         <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/50 backdrop-blur-sm">
@@ -940,8 +999,8 @@ export default function BookingSelection() {
                                 <p className="text-2xl font-bold text-slate-900">{formatCurrency(grandTotal)}</p>
                             </div>
                         </div>
-                        <Button size="lg" className="w-full font-bold text-lg" onClick={handleProceedToCheckout}>
-                            Confirm & Checkout <ArrowRight className="ml-2 w-4 h-4" />
+                        <Button size="lg" className="w-full font-bold text-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/30 rounded-2xl h-14" onClick={handleProceedToCheckout}>
+                            {hotel?.settings?.multi_room_cart !== false ? "Add to Stay Cart & Continue" : "Confirm & Checkout"} <ArrowRight className="ml-2 w-5 h-5" />
                         </Button>
                     </SheetFooter>
                 </SheetContent>
@@ -971,6 +1030,163 @@ export default function BookingSelection() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* STAAH Multi-Room Floating Bottom Bar */}
+            {cart.length > 0 && (
+                <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 text-white py-4 px-6 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] animate-slide-up">
+                    <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                                <ShoppingBag className="w-6 h-6 animate-pulse" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-black text-lg">{cart.length} {cart.length === 1 ? 'Room' : 'Rooms'} Selected</span>
+                                    <Badge className="bg-indigo-500 text-white font-bold px-2 py-0.5 text-xs border-0">Multi-Room Cart</Badge>
+                                </div>
+                                <p className="text-xs text-white/70 font-medium line-clamp-1">
+                                    {cart.map(c => `${c.room.name} (${c.ratePlan.name})`).join(' + ')}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 shrink-0">
+                            <div className="text-right hidden sm:block">
+                                <span className="text-[10px] uppercase font-black tracking-wider text-white/60 block">Estimated Total</span>
+                                <span className="text-xl font-black text-yellow-300">₹{cart.reduce((s, item) => s + item.ratePlan.total_price + item.addons.reduce((as, a) => as + a.price, 0), 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <Button 
+                                onClick={() => setIsCartSheetOpen(true)}
+                                className="h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl px-6 text-base shadow-lg shadow-indigo-600/30 gap-2"
+                            >
+                                <span>View Cart ({cart.length})</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* STAAH Multi-Room Cart Sheet Drawer */}
+            <Sheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
+                <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col border-l shadow-2xl bg-slate-50 z-50">
+                    <SheetHeader className="p-6 border-b bg-white">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <ShoppingBag className="w-5 h-5 text-indigo-600" />
+                                <SheetTitle className="text-xl font-bold text-slate-900">Your Booking Cart</SheetTitle>
+                            </div>
+                            <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-0 font-bold">{cart.length} {cart.length === 1 ? 'Item' : 'Items'}</Badge>
+                        </div>
+                        <SheetDescription className="text-xs text-slate-500 mt-1">Review and manage all selected rooms and packages before secure checkout.</SheetDescription>
+                    </SheetHeader>
+
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        {cart.length === 0 ? (
+                            <div className="text-center py-16 space-y-3">
+                                <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mx-auto text-indigo-400">
+                                    <ShoppingBag className="w-8 h-8" />
+                                </div>
+                                <p className="font-bold text-slate-700 text-base">Your booking cart is empty</p>
+                                <p className="text-xs text-slate-400 max-w-xs mx-auto">Select a room and rate plan from the list to start building your multi-room stay.</p>
+                            </div>
+                        ) : (
+                            cart.map((item) => (
+                                <div key={item.id} className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm relative group space-y-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h4 className="font-black text-slate-900 text-base">{item.room.name}</h4>
+                                            <Badge className="mt-1 bg-slate-100 text-slate-700 border-0 text-[11px] font-semibold">{item.ratePlan.name}</Badge>
+                                        </div>
+                                        <button
+                                            onClick={() => setCart(prev => prev.filter(i => i.id !== item.id))}
+                                            className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                            title="Remove room"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl text-xs">
+                                        <div>
+                                            <span className="text-slate-400 block font-medium">Guests</span>
+                                            <span className="font-bold text-slate-700">{item.adults} Adults{item.children > 0 ? `, ${item.children} Children` : ''}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-slate-400 block font-medium">Room Total</span>
+                                            <span className="font-bold text-slate-900">₹{item.ratePlan.total_price.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    </div>
+
+                                    {item.addons.length > 0 && (
+                                        <div className="text-xs border-t pt-2 space-y-1">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Selected Add-ons</span>
+                                            {item.addons.map(a => (
+                                                <div key={a.id} className="flex justify-between text-slate-600">
+                                                    <span>• {a.name}</span>
+                                                    <span className="font-semibold text-slate-800">₹{a.price.toLocaleString('en-IN')}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {cart.length > 0 && (
+                        <SheetFooter className="p-6 border-t bg-white flex-col gap-4">
+                            <div className="flex justify-between items-end">
+                                <div className="text-sm">
+                                    <p className="text-slate-500 font-medium">Total for {cart.length} {cart.length === 1 ? 'Room' : 'Rooms'}</p>
+                                    <p className="text-xs text-green-600 font-bold">Taxes & fees included</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-slate-400 text-xs uppercase font-bold tracking-wider">Grand Total</p>
+                                    <p className="text-3xl font-black text-indigo-600">
+                                        ₹{cart.reduce((s, item) => s + item.ratePlan.total_price + item.addons.reduce((as, a) => as + a.price, 0), 0).toLocaleString('en-IN')}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button 
+                                    variant="outline" 
+                                    size="lg" 
+                                    className="font-bold text-slate-700 rounded-2xl h-14" 
+                                    onClick={() => setIsCartSheetOpen(false)}
+                                >
+                                    + Add More Rooms
+                                </Button>
+                                <Button 
+                                    size="lg" 
+                                    className="font-black text-base bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-600/30 rounded-2xl h-14" 
+                                    onClick={() => {
+                                        setIsCartSheetOpen(false);
+                                        navigate(`/book/${hotelSlug}/checkout`, {
+                                            state: {
+                                                checkInDate: checkInDate || new Date(),
+                                                checkOutDate: checkOutDate || addDays(new Date(), 1),
+                                                guests: (adults + children).toString() || '1',
+                                                rooms: cart.map(item => ({
+                                                    ...item.room,
+                                                    price_per_night: item.ratePlan.price_per_night,
+                                                    total_price: item.ratePlan.total_price,
+                                                    rate_plan_id: item.ratePlan.id,
+                                                    rate_plan_name: item.ratePlan.name
+                                                })),
+                                                addons: cart.flatMap(item => item.addons),
+                                                totalRoomPrice: cart.reduce((sum, item) => sum + item.ratePlan.total_price, 0)
+                                            }
+                                        });
+                                    }}
+                                >
+                                    Proceed to Secure Checkout <ArrowRight className="ml-2 w-5 h-5" />
+                                </Button>
+                            </div>
+                        </SheetFooter>
+                    )}
+                </SheetContent>
+            </Sheet>
 
             {/* AI Chat Widget */}
             <ChatWidget hotelSlug={hotelSlug || ''} />

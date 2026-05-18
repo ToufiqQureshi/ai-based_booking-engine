@@ -55,6 +55,10 @@ class HotelSettings(SQLModel):
     show_last_booked: bool = True
     show_popular_badge: bool = True
     popular_badge_text: str = "Popular choice! {count} bookings this month"
+    
+    # STAAH & Multi-Room Booking Controls
+    multi_room_cart: bool = True
+    featured_room_type_id: Optional[str] = None
 
 
 
