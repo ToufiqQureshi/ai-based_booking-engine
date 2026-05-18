@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { CheckCircle2, Calendar, MapPin, Printer, Home, Download, FileText, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,10 +7,21 @@ import { Separator } from '@/components/ui/separator';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+import { apiClient } from '@/api/client';
 
 export default function BookingConfirmation() {
     const { hotelSlug } = useParams();
     const location = useLocation();
+
+    const [hotel, setHotel] = useState<any>(null);
+
+    useEffect(() => {
+        if (hotelSlug) {
+            apiClient.get(`/public/hotels/${hotelSlug}`)
+                .then(res => setHotel(res))
+                .catch(console.error);
+        }
+    }, [hotelSlug]);
 
     const booking = location.state?.booking;
 
@@ -114,7 +126,7 @@ export default function BookingConfirmation() {
                 {/* Ticket Card */}
                 <Card className="overflow-hidden border-0 shadow-2xl shadow-slate-200/50 rounded-3xl bg-white relative">
                     {/* Decorative top border */}
-                    <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-primary via-purple-500 to-primary" />
+                    <div className="absolute top-0 inset-x-0 h-2" style={{ backgroundColor: hotel?.primary_color || '#2563eb' }} />
 
                     <div className="p-8 pb-0">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -126,7 +138,7 @@ export default function BookingConfirmation() {
                                 <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full border-slate-200 hover:bg-slate-50">
                                     <Printer className="mr-2 h-4 w-4" /> Print
                                 </Button>
-                                <Button size="sm" onClick={handleDownloadInvoice} className="rounded-full shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-transform">
+                                <Button size="sm" onClick={handleDownloadInvoice} className="rounded-full shadow-lg text-white hover:-translate-y-0.5 transition-transform" style={{ backgroundColor: hotel?.primary_color || '#2563eb' }}>
                                     <Download className="mr-2 h-4 w-4" /> Invoice
                                 </Button>
                             </div>
@@ -183,7 +195,7 @@ export default function BookingConfirmation() {
 
                         <div className="flex justify-between items-center pt-8 mt-4 border-t border-slate-200 border-dashed">
                             <p className="text-slate-500 font-medium">Total Paid</p>
-                            <p className="text-3xl font-bold text-primary tracking-tight">
+                            <p className="text-3xl font-bold tracking-tight" style={{ color: hotel?.primary_color || '#2563eb' }}>
                                 {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount)}
                             </p>
                         </div>

@@ -46,7 +46,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#3B
     useEffect(() => {
         const fetchConfig = async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'}/public/hotels/slug/${hotelSlug}/widget-config`);
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://ai-basedbooking-engine-production.up.railway.app/api/v1'}/public/hotels/slug/${hotelSlug}/widget-config`);
                 if (res.ok) {
                     const data = await res.json();
                     setHotelInfo({ name: data.hotel_name, primary_color: data.primary_color, logo_url: data.logo_url });
@@ -85,7 +85,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#3B
         try {
             const history = messages.map(m => ({ role: m.role, content: m.content }));
 
-            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'}/public/chat/guest`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://ai-basedbooking-engine-production.up.railway.app/api/v1'}/public/chat/guest`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

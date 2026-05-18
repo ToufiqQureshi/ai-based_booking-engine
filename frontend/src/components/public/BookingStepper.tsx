@@ -4,9 +4,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 interface BookingStepperProps {
     currentStep: 1 | 2 | 3 | 4;
+    primaryColor?: string;
 }
 
-export function BookingStepper({ currentStep }: BookingStepperProps) {
+export function BookingStepper({ currentStep, primaryColor }: BookingStepperProps) {
     const { hotelSlug } = useParams();
     const navigate = useNavigate();
 
@@ -20,6 +21,8 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
         { id: 3, label: 'Enhance Stay', path: null },
         { id: 4, label: 'Guest Info', path: `/book/${hotelSlug}/checkout${queryString}` },
     ];
+
+    const activeColor = primaryColor || '#2563eb';
 
     return (
         <div className="w-full bg-white border-b border-slate-200 shadow-sm mb-0">
@@ -35,9 +38,10 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                                 key={step.id}
                                 className={cn(
                                     "relative flex-1 flex items-center justify-center p-4 md:p-5 text-sm font-medium transition-all select-none border-b-2 md:border-b-0",
-                                    isActive ? "border-blue-600 bg-blue-50/30 text-blue-700" : "bg-white text-slate-400 border-transparent",
+                                    isActive ? "bg-slate-50/50 text-slate-900" : "bg-white text-slate-400 border-transparent",
                                     isClickable ? "cursor-pointer hover:bg-slate-50" : "cursor-default"
                                 )}
+                                style={isActive && primaryColor ? { borderColor: activeColor, color: activeColor } : {}}
                                 onClick={() => {
                                     if (isClickable && step.path) {
                                         navigate(step.path);
@@ -45,21 +49,24 @@ export function BookingStepper({ currentStep }: BookingStepperProps) {
                                 }}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={cn(
-                                        "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all border",
-                                        isActive ? "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100" :
-                                            isCompleted ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-200 bg-slate-50 text-slate-400"
-                                    )}>
+                                    <div 
+                                        className={cn(
+                                            "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all border",
+                                            isActive ? "text-white shadow-md" :
+                                                isCompleted ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-200 bg-slate-50 text-slate-400"
+                                        )}
+                                        style={isActive ? { backgroundColor: activeColor, borderColor: activeColor } : {}}
+                                    >
                                         {isCompleted ? <Check className="w-4 h-4" /> : step.id}
                                     </div>
-                                    <span className={cn("hidden md:inline text-[13px] tracking-wide", isActive ? "font-bold text-slate-900" : "font-semibold")}>
+                                    <span className={cn("hidden md:inline text-[13px] tracking-wide", isActive ? "font-bold text-slate-900" : "font-semibold")} style={isActive && primaryColor ? { color: activeColor } : {}}>
                                         {step.label}
                                     </span>
                                 </div>
 
                                 {/* Active indicator for desktop */}
                                 {isActive && (
-                                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 hidden md:block" />
+                                    <div className="absolute bottom-0 left-0 w-full h-0.5 hidden md:block" style={{ backgroundColor: activeColor }} />
                                 )}
                             </div>
                         );

@@ -9,7 +9,7 @@ export default function ChatEmbed() {
     // Fetch config for colors
     useEffect(() => {
         if (!hotelSlug) return;
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
         fetch(`${apiUrl}/public/hotels/slug/${hotelSlug}/widget-config`)
             .then(res => res.json())
             .then(data => setConfig(data))

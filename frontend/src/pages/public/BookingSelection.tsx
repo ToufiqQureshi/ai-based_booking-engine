@@ -345,7 +345,7 @@ export default function BookingSelection() {
     return (
         <div className="min-h-screen bg-slate-50/50 pb-20 font-sans">
             {/* 1. Header with Stepper */}
-            <BookingStepper currentStep={2} />
+            <BookingStepper currentStep={2} primaryColor={hotel?.primary_color || undefined} />
 
             {/* 2. Property Hero/Banner Slider */}
             {hotel && hotel.photos && hotel.photos.length > 0 && (
@@ -648,7 +648,8 @@ export default function BookingSelection() {
                         <div className="flex items-center">
                             <Button 
                                 onClick={handleSearch}
-                                className="w-full lg:w-auto h-full min-h-[72px] px-10 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold uppercase text-sm tracking-widest rounded-2xl shadow-xl shadow-violet-600/25 shrink-0 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5"
+                                className="w-full lg:w-auto h-full min-h-[72px] px-10 text-white font-extrabold uppercase text-sm tracking-widest rounded-2xl shadow-xl shrink-0 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5"
+                                style={{ backgroundColor: hotel?.primary_color || '#6d28d9' }}
                             >
                                 <Search className="w-5 h-5 stroke-[2.5]" />
                                 Search
@@ -918,7 +919,8 @@ export default function BookingSelection() {
                                                             View Details
                                                         </Button>
                                                         <Button
-                                                            className="flex-1 sm:flex-none bg-slate-900 hover:bg-black text-white font-black px-10 shadow-xl rounded-xl h-14 transition-all active:scale-95"
+                                                            className="flex-1 sm:flex-none text-white font-black px-10 shadow-xl rounded-xl h-14 transition-all active:scale-95"
+                                                            style={{ backgroundColor: hotel?.primary_color || '#0f172a' }}
                                                             onClick={() => handleSelectRate(room, plan)}
                                                         >
                                                             BOOK NOW
@@ -1030,7 +1032,8 @@ export default function BookingSelection() {
                                                                                 )}
                                                                             </div>
                                                                             <Button 
-                                                                                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs px-6 h-10 rounded-xl shadow-md shadow-violet-600/20 transition-all active:scale-95"
+                                                                                className="text-white font-extrabold text-xs px-6 h-10 rounded-xl shadow-md transition-all active:scale-95"
+                                                                                style={{ backgroundColor: hotel?.primary_color || '#6d28d9' }}
                                                                                 onClick={() => handleSelectRate(room, plan)}
                                                                             >
                                                                                 Select
@@ -1132,7 +1135,7 @@ export default function BookingSelection() {
                                 </span>
                             </div>
                         </div>
-                        <Button size="lg" className="w-full font-extrabold text-base bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-xl shadow-violet-600/25 rounded-2xl h-14 flex items-center justify-center gap-2 transition-all active:scale-[0.99]" onClick={handleProceedToCheckout}>
+                        <Button size="lg" className="w-full font-extrabold text-base text-white shadow-xl rounded-2xl h-14 flex items-center justify-center gap-2 transition-all active:scale-[0.99]" style={{ backgroundColor: hotel?.primary_color || '#6d28d9' }} onClick={handleProceedToCheckout}>
                             <ShoppingBag className="w-5 h-5 shrink-0" />
                             <span className="truncate">{hotel?.settings?.multi_room_cart !== false ? "Add to Stay Cart & Continue" : "Confirm & Checkout"}</span>
                             <ArrowRight className="w-5 h-5 shrink-0" />
@@ -1192,7 +1195,8 @@ export default function BookingSelection() {
                             </div>
                             <Button 
                                 onClick={() => setIsCartSheetOpen(true)}
-                                className="h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl px-6 text-base shadow-lg shadow-indigo-600/30 gap-2"
+                                className="h-12 text-white font-bold rounded-2xl px-6 text-base shadow-lg gap-2"
+                                style={{ backgroundColor: hotel?.primary_color || '#6d28d9' }}
                             >
                                 <span>View Cart ({cart.length})</span>
                                 <ArrowRight className="w-4 h-4" />
@@ -1289,7 +1293,8 @@ export default function BookingSelection() {
                             <div className="flex flex-col gap-3 w-full">
                                 <Button 
                                     size="lg" 
-                                    className="w-full font-black text-base bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-xl shadow-violet-600/25 rounded-2xl h-14 flex items-center justify-center gap-2 transition-all active:scale-[0.99]" 
+                                    className="w-full font-black text-base text-white shadow-xl rounded-2xl h-14 flex items-center justify-center gap-2 transition-all active:scale-[0.99]" 
+                                    style={{ backgroundColor: hotel?.primary_color || '#6d28d9' }}
                                     onClick={() => {
                                         setIsCartSheetOpen(false);
                                         navigate(`/book/${hotelSlug}/checkout`, {

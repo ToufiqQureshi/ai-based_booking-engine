@@ -21,7 +21,7 @@ export default function BookingWidget() {
     // Fetch Widget Configuration and Starting Price
     useEffect(() => {
         if (!hotelSlug) return;
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'; // Fallback
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://ai-basedbooking-engine-production.up.railway.app/api/v1'; // Fallback
 
         // Fetch config
         fetch(`${apiUrl}/public/hotels/slug/${hotelSlug}/widget-config`)
@@ -112,10 +112,41 @@ export default function BookingWidget() {
         }
     };
 
+    const primaryHex = config?.primary_color || '#3b82f6';
+    const bgColor = config?.widget_background_color || '#ffffff';
+
     return (
         <div className="w-full flex justify-center font-sans p-2 lg:p-4">
+            <style>{`
+                .custom-theme-btn {
+                    background-color: ${primaryHex} !important;
+                    color: white !important;
+                }
+                .custom-theme-text {
+                    color: ${primaryHex} !important;
+                }
+                .custom-theme-bg-light {
+                    background-color: ${primaryHex}15 !important;
+                    color: ${primaryHex} !important;
+                }
+                .group:hover .group-hover\\:custom-theme-btn {
+                    background-color: ${primaryHex} !important;
+                    color: white !important;
+                }
+                .custom-theme-border:hover, .focus-within\\:custom-theme-border:focus-within {
+                    border-color: ${primaryHex} !important;
+                }
+                .rdp-day_selected {
+                    background-color: ${primaryHex} !important;
+                    color: white !important;
+                }
+                .rdp-caption {
+                    background-color: ${primaryHex} !important;
+                }
+            `}</style>
             {/* Main Container - Modern Floating Card */}
-            <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-3 lg:p-4 w-full max-w-6xl flex flex-col lg:flex-row items-stretch lg:items-center gap-3.5 lg:gap-5 border border-white/80 ring-1 ring-slate-100">
+            <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-3 lg:p-4 w-full max-w-6xl flex flex-col lg:flex-row items-stretch lg:items-center gap-3.5 lg:gap-5 border border-white/80 ring-1 ring-slate-100"
+                 style={{ backgroundColor: bgColor }}>
 
                 {/* DATE GROUP */}
                 <div className="flex flex-col sm:flex-row w-full lg:flex-[2] gap-3.5">
@@ -123,8 +154,9 @@ export default function BookingWidget() {
                     <div className="flex-1 relative group">
                         <Popover open={isCheckInOpen} onOpenChange={setIsCheckInOpen}>
                             <PopoverTrigger asChild>
-                                <button className="w-full flex items-start gap-3 bg-white p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 hover:border-violet-400 hover:shadow-md transition-all text-left group cursor-pointer">
-                                    <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                <button className="w-full flex items-start gap-3 p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
+                                        style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                                    <div className="w-10 h-10 rounded-xl custom-theme-bg-light group-hover:custom-theme-btn flex items-center justify-center shrink-0 mt-0.5 transition-colors">
                                         <CalendarIcon className="w-5 h-5" />
                                     </div>
                                     <div>
@@ -140,7 +172,7 @@ export default function BookingWidget() {
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-4 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
                                 <div className="mb-3 text-center">
-                                    <Badge className="bg-violet-100 text-violet-700 px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase">
+                                    <Badge className="custom-theme-bg-light px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase border-0">
                                         Dynamic Pricing Engine
                                     </Badge>
                                     <p className="text-[11px] font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
@@ -161,12 +193,12 @@ export default function BookingWidget() {
                                     initialFocus
                                     className="p-0"
                                     classNames={{
-                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
-                                        day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
-                                        day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
+                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-slate-50/50 [&:has([aria-selected])]:bg-slate-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                                        day_selected: "custom-theme-btn font-bold shadow-md",
+                                        day_today: "custom-theme-bg-light font-bold border",
                                         head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2 text-center",
-                                        caption: "flex justify-center py-2 px-3 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-3 shadow-sm",
+                                        caption: "flex justify-center py-2 px-3 relative items-center custom-theme-btn text-white rounded-xl mb-3 shadow-sm",
                                         caption_label: "text-xs font-extrabold tracking-wide uppercase",
                                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
                                     }}
@@ -207,8 +239,9 @@ export default function BookingWidget() {
                     <div className="flex-1 relative group">
                         <Popover open={isCheckOutOpen} onOpenChange={setIsCheckOutOpen}>
                             <PopoverTrigger asChild>
-                                <button className="w-full flex items-start gap-3 bg-white p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 hover:border-violet-400 hover:shadow-md transition-all text-left group cursor-pointer">
-                                    <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                <button className="w-full flex items-start gap-3 p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
+                                        style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                                    <div className="w-10 h-10 rounded-xl custom-theme-bg-light group-hover:custom-theme-btn flex items-center justify-center shrink-0 mt-0.5 transition-colors">
                                         <CalendarIcon className="w-5 h-5" />
                                     </div>
                                     <div>
@@ -224,7 +257,7 @@ export default function BookingWidget() {
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-4 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
                                 <div className="mb-3 text-center">
-                                    <Badge className="bg-violet-100 text-violet-700 px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase">
+                                    <Badge className="custom-theme-bg-light px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase border-0">
                                         Dynamic Pricing Engine
                                     </Badge>
                                     <p className="text-[11px] font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
@@ -240,12 +273,12 @@ export default function BookingWidget() {
                                     initialFocus
                                     className="p-0"
                                     classNames={{
-                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
-                                        day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
-                                        day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
+                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-slate-50/50 [&:has([aria-selected])]:bg-slate-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                                        day_selected: "custom-theme-btn font-bold shadow-md",
+                                        day_today: "custom-theme-bg-light font-bold border",
                                         head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2 text-center",
-                                        caption: "flex justify-center py-2 px-3 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-3 shadow-sm",
+                                        caption: "flex justify-center py-2 px-3 relative items-center custom-theme-btn text-white rounded-xl mb-3 shadow-sm",
                                         caption_label: "text-xs font-extrabold tracking-wide uppercase",
                                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
                                     }}
@@ -287,8 +320,9 @@ export default function BookingWidget() {
                 <div className="w-full lg:flex-1 relative group">
                     <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
                         <PopoverTrigger asChild>
-                            <button className="w-full flex items-start gap-3 bg-white p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 hover:border-violet-400 hover:shadow-md transition-all text-left group cursor-pointer">
-                                <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                            <button className="w-full flex items-start gap-3 p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
+                                    style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                                <div className="w-10 h-10 rounded-xl custom-theme-bg-light group-hover:custom-theme-btn flex items-center justify-center shrink-0 mt-0.5 transition-colors">
                                     <Users className="w-5 h-5" />
                                 </div>
                                 <div>
@@ -397,7 +431,8 @@ export default function BookingWidget() {
                 </div>
 
                 {/* PROMO CODE - Modern Input */}
-                <div className="w-full lg:w-48 flex flex-col justify-center bg-white p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 focus-within:border-violet-400 focus-within:shadow-md transition-all">
+                <div className="w-full lg:w-48 flex flex-col justify-center p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all"
+                     style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
                     <input
                         className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none placeholder:text-slate-400 placeholder:font-medium text-slate-800 w-full"
@@ -410,7 +445,7 @@ export default function BookingWidget() {
                 {/* SEARCH BUTTON */}
                 <div className="w-full lg:w-auto flex items-center">
                     <Button
-                        className="w-full lg:w-auto px-8 h-16 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-base shadow-xl shadow-violet-500/25 hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full lg:w-auto px-8 h-16 rounded-2xl custom-theme-btn font-bold text-base shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer border-0"
                         onClick={handleSearch}
                     >
                         <Search className="w-5 h-5" />

@@ -70,6 +70,7 @@ function BookingCheckoutInner() {
     const { register, setValue, watch, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>();
 
     const [state, setState] = useState<BookingState | null>(null);
+    const [hotel, setHotel] = useState<any>(null);
 
     // Promo state - MUST be before any early returns (React hooks rules)
     const [promoCode, setPromoCode] = useState('');
@@ -93,6 +94,14 @@ function BookingCheckoutInner() {
     const [hasCheckedLoyalty, setHasCheckedLoyalty] = useState(false);
 
     const emailValue = watch('email');
+
+    useEffect(() => {
+        if (hotelSlug) {
+            apiClient.get(`/public/hotels/${hotelSlug}`)
+                .then(res => setHotel(res))
+                .catch(console.error);
+        }
+    }, [hotelSlug]);
 
     useEffect(() => {
         if (location.state) {
@@ -269,7 +278,7 @@ function BookingCheckoutInner() {
     return (
         <div className="min-h-screen bg-slate-50 pb-20 selection:bg-primary/10">
             {/* Stepper Header */}
-            <BookingStepper currentStep={4} />
+            <BookingStepper currentStep={4} primaryColor={hotel?.primary_color || undefined} />
 
             <div className="max-w-6xl mx-auto px-4 mt-8">
                 <div className="mb-10 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -522,7 +531,7 @@ function BookingCheckoutInner() {
                                                 Clear
                                             </Button>
                                         ) : (
-                                            <Button type="button" size="lg" className="rounded-xl px-8 font-bold" onClick={() => handleApplyPromo()} disabled={isValidating || !promoCode}>
+                                            <Button type="button" size="lg" className="rounded-xl px-8 font-bold text-white" style={{ backgroundColor: hotel?.primary_color || '#2563eb' }} onClick={() => handleApplyPromo()} disabled={isValidating || !promoCode}>
                                                 {isValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                                             </Button>
                                         )}
@@ -560,7 +569,8 @@ function BookingCheckoutInner() {
 
                                 {/* Submit Button */}
                                 <Button
-                                    className="w-full h-16 text-xl font-black rounded-2xl shadow-2xl shadow-primary/30 hover:shadow-primary/40 hover:-translate-y-1 active:translate-y-0 transition-all uppercase tracking-tight"
+                                    className="w-full h-16 text-xl font-black rounded-2xl shadow-2xl text-white hover:-translate-y-1 active:translate-y-0 transition-all uppercase tracking-tight"
+                                    style={{ backgroundColor: hotel?.primary_color || '#2563eb' }}
                                     type="submit"
                                     form="booking-form"
                                     disabled={isSubmitting}
