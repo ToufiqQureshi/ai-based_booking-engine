@@ -27,16 +27,16 @@
     function renderWidget(container, hotelSlug, frontendUrl) {
         // Set container relative for absolute positioning of iframe
         container.style.position = 'relative';
-        container.style.zIndex = '50';
+        container.style.zIndex = '999999'; // Highest z-index to stay above all page sections
         // Force height to never collapse but never expand beyond bar
-        container.style.height = '100px';
+        container.style.height = '160px';
         container.style.display = 'block';
-        container.style.overflow = 'visible'; // Ensure content outside 100px is visible
+        container.style.overflow = 'visible'; // Ensure content outside 160px is visible
 
         // 1. Create Spacer (Fixed Height - NEVER CHANGES)
         var spacer = document.createElement('div');
         spacer.style.width = '100%';
-        spacer.style.height = '100px';
+        spacer.style.height = '160px';
         spacer.style.display = 'block';
 
         // 2. Create Iframe (Floats over content when expanded)
@@ -46,7 +46,7 @@
         iframe.style.top = '0';
         iframe.style.left = '0';
         iframe.style.width = '100%';
-        iframe.style.height = '100px'; // Initial height matching bar
+        iframe.style.height = '160px'; // Initial height matching bar
         iframe.style.border = 'none';
         iframe.style.overflow = 'visible';
         iframe.style.zIndex = '999999'; // Super High Z-Index

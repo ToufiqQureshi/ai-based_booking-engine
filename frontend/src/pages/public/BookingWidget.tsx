@@ -78,7 +78,7 @@ export default function BookingWidget() {
 
     // Dynamic Resizing Logic
     useEffect(() => {
-        const baseHeight = 100; // Compact height
+        const baseHeight = 160; // Perfect height to fit card and drop shadow without clipping
         const expandedHeight = 750; // Use expanded height when popovers are open to prevent price clipping
         const isOpen = isCheckInOpen || isCheckOutOpen || isGuestOpen;
         const height = isOpen ? expandedHeight : baseHeight;
