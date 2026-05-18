@@ -27,7 +27,7 @@
     function renderWidget(container, hotelSlug, frontendUrl) {
         // Set container relative for absolute positioning of iframe
         container.style.position = 'relative';
-        container.style.zIndex = '50';
+        container.style.zIndex = '999999'; // Highest z-index so overflowing card and shadow stay on top
         // Force height to never collapse but never expand beyond bar
         container.style.height = '100px';
         container.style.display = 'block';

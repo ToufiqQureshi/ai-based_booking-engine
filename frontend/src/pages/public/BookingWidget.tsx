@@ -78,7 +78,7 @@ export default function BookingWidget() {
 
     // Dynamic Resizing Logic
     useEffect(() => {
-        const baseHeight = 100; // Compact height matching hotelier banner
+        const baseHeight = 140; // Full height for card + drop shadow without shifting hotelier page
         const expandedHeight = 750; // Use expanded height when popovers are open to prevent price clipping
         const isOpen = isCheckInOpen || isCheckOutOpen || isGuestOpen;
         const height = isOpen ? expandedHeight : baseHeight;
