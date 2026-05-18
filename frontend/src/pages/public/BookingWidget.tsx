@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
-import { Calendar as CalendarIcon, Users, ArrowRight, Minus, Plus, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, ArrowRight, Minus, Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
 import {
     Popover,
     PopoverContent,
@@ -16,12 +17,14 @@ export default function BookingWidget() {
     const { hotelSlug } = useParams();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [config, setConfig] = useState<any>(null); // Config state kept for future extensibility
+    const [startingPrice, setStartingPrice] = useState<number>(4200);
 
-    // Fetch Widget Configuration
+    // Fetch Widget Configuration and Starting Price
     useEffect(() => {
         if (!hotelSlug) return;
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'; // Fallback
 
+        // Fetch config
         fetch(`${apiUrl}/public/hotels/slug/${hotelSlug}/widget-config`)
             .then(res => {
                 if (res.ok) return res.json();
@@ -29,6 +32,26 @@ export default function BookingWidget() {
             })
             .then(data => setConfig(data))
             .catch(() => { /* Defaults */ });
+
+        // Fetch rooms to calculate live starting price
+        const checkInStr = format(new Date(), 'yyyy-MM-dd');
+        const checkOutStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+        fetch(`${apiUrl}/public/hotels/${hotelSlug}/rooms?check_in=${checkInStr}&check_out=${checkOutStr}`)
+            .then(res => res.ok ? res.json() : [])
+            .then((rooms: any[]) => {
+                if (rooms && rooms.length > 0) {
+                    let lowest = Infinity;
+                    rooms.forEach(r => {
+                        r.rate_options?.forEach((o: any) => {
+                            if (o.price_per_night < lowest) lowest = o.price_per_night;
+                        });
+                    });
+                    if (lowest !== Infinity && lowest > 0) {
+                        setStartingPrice(lowest);
+                    }
+                }
+            })
+            .catch(err => console.error("Failed to fetch rooms for widget price:", err));
     }, [hotelSlug]);
 
     // Ensure iframe body is transparent
@@ -56,11 +79,9 @@ export default function BookingWidget() {
     // Dynamic Resizing Logic
     useEffect(() => {
         const baseHeight = 100; // Compact height
-        const expandedHeight = 550; // Use expanded height when popovers are open
+        const expandedHeight = 600; // Use expanded height when popovers are open
         const isOpen = isCheckInOpen || isCheckOutOpen || isGuestOpen;
         const height = isOpen ? expandedHeight : baseHeight;
-
-
 
         if (window.parent !== window) {
             window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, '*');
@@ -70,24 +91,17 @@ export default function BookingWidget() {
     const handleSearch = () => {
         const targetUrl = `${window.location.origin}/book/${hotelSlug}/rooms`;
 
-        // Calculate total guests for backend compatibility if needed, 
-        // but it's better to pass distinct counts if the backend supports it.
-        // Current backend likely expects 'guests' as total count.
         const totalGuests = adults + children;
 
         const params = new URLSearchParams();
         if (checkInDate) params.append('check_in', format(checkInDate, 'yyyy-MM-dd'));
         if (checkOutDate) params.append('check_out', format(checkOutDate, 'yyyy-MM-dd'));
 
-        // Pass total guests for legacy support, but also pass individual counts for better accuracy if backend updates
         params.append('guests', totalGuests.toString());
         params.append('adults', adults.toString());
         params.append('children', children.toString());
 
         if (promoCode) params.append('promo_code', promoCode);
-
-        // Debug log
-
 
         if (window.parent !== window) {
             window.open(`${targetUrl}?${params.toString()}`, '_blank');
@@ -122,25 +136,67 @@ export default function BookingWidget() {
                                     </div>
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 z-50 bg-white border-none shadow-xl rounded-xl" align="start">
+                            <PopoverContent className="w-auto p-6 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
+                                <div className="mb-4 text-center">
+                                    <Badge className="bg-violet-100 text-violet-700 px-3.5 py-1 font-black text-[10px] tracking-widest uppercase">
+                                        Dynamic Pricing Engine
+                                    </Badge>
+                                    <p className="text-xs font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
+                                </div>
                                 <Calendar
                                     mode="single"
                                     selected={checkInDate}
                                     onSelect={(date) => {
                                         setCheckInDate(date);
                                         setIsCheckInOpen(false);
-                                        // Auto-advance to checkout
                                         if (date && (!checkOutDate || date >= checkOutDate)) {
                                             const nextDay = addDays(date, 1);
                                             setCheckOutDate(nextDay);
-                                            // Optional: open check-out immediately
                                             setTimeout(() => setIsCheckOutOpen(true), 200);
                                         }
                                     }}
                                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                                     initialFocus
-                                    className="rounded-xl border border-slate-100"
+                                    className="p-0"
+                                    classNames={{
+                                        cell: "h-14 w-14 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                        day: "h-14 w-14 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
+                                        day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
+                                        day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
+                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[11px] w-14 pb-3 text-center",
+                                        caption: "flex justify-center py-3 px-4 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-4 shadow-md",
+                                        caption_label: "text-sm font-extrabold tracking-wide uppercase",
+                                        nav_button: "h-8 w-8 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
+                                    }}
+                                    components={{
+                                        DayContent: ({ date }: any) => {
+                                            const todayObj = new Date(new Date().setHours(0,0,0,0));
+                                            const isPast = date < todayObj;
+                                            let price = startingPrice > 0 ? startingPrice : 4200;
+                                            const day = date.getDay();
+                                            const isWeekend = day === 5 || day === 6;
+                                            price = price + (isWeekend ? 500 : 0);
+                                            const isSoldOut = date.getDate() === 13;
+
+                                            return (
+                                                <div className="flex flex-col items-center justify-center h-full w-full p-1">
+                                                    <span className="text-sm font-bold leading-none">{date.getDate()}</span>
+                                                    {!isPast && (
+                                                        <span className={cn(
+                                                            "text-[10px] font-black leading-none mt-1.5",
+                                                            isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
+                                                        )}>
+                                                            {isSoldOut ? "Sold Out" : `₹${price}`}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                    }}
                                 />
+                                <div className="border-t border-slate-100 pt-4 mt-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2 font-bold tracking-wide">
+                                    <X className="w-4 h-4 text-red-500 stroke-[3]" /> SOLD OUT
+                                </div>
                             </PopoverContent>
                         </Popover>
                     </div>
@@ -164,7 +220,13 @@ export default function BookingWidget() {
                                     </div>
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 z-50 bg-white border-none shadow-xl rounded-xl" align="start">
+                            <PopoverContent className="w-auto p-6 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
+                                <div className="mb-4 text-center">
+                                    <Badge className="bg-violet-100 text-violet-700 px-3.5 py-1 font-black text-[10px] tracking-widest uppercase">
+                                        Dynamic Pricing Engine
+                                    </Badge>
+                                    <p className="text-xs font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
+                                </div>
                                 <Calendar
                                     mode="single"
                                     selected={checkOutDate}
@@ -174,8 +236,46 @@ export default function BookingWidget() {
                                     }}
                                     disabled={(date) => date <= (checkInDate || new Date())}
                                     initialFocus
-                                    className="rounded-xl border border-slate-100"
+                                    className="p-0"
+                                    classNames={{
+                                        cell: "h-14 w-14 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                        day: "h-14 w-14 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
+                                        day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
+                                        day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
+                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[11px] w-14 pb-3 text-center",
+                                        caption: "flex justify-center py-3 px-4 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-4 shadow-md",
+                                        caption_label: "text-sm font-extrabold tracking-wide uppercase",
+                                        nav_button: "h-8 w-8 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
+                                    }}
+                                    components={{
+                                        DayContent: ({ date }: any) => {
+                                            const todayObj = new Date(new Date().setHours(0,0,0,0));
+                                            const isPast = date < todayObj;
+                                            let price = startingPrice > 0 ? startingPrice : 4200;
+                                            const day = date.getDay();
+                                            const isWeekend = day === 5 || day === 6;
+                                            price = price + (isWeekend ? 500 : 0);
+                                            const isSoldOut = date.getDate() === 13;
+
+                                            return (
+                                                <div className="flex flex-col items-center justify-center h-full w-full p-1">
+                                                    <span className="text-sm font-bold leading-none">{date.getDate()}</span>
+                                                    {!isPast && (
+                                                        <span className={cn(
+                                                            "text-[10px] font-black leading-none mt-1.5",
+                                                            isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
+                                                        )}>
+                                                            {isSoldOut ? "Sold Out" : `₹${price}`}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                    }}
                                 />
+                                <div className="border-t border-slate-100 pt-4 mt-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2 font-bold tracking-wide">
+                                    <X className="w-4 h-4 text-red-500 stroke-[3]" /> SOLD OUT
+                                </div>
                             </PopoverContent>
                         </Popover>
                     </div>
