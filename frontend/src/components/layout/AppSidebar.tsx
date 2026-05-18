@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+
 
 // Navigation items for the dashboard - Professional Colors
 const mainNavItems = [

@@ -163,6 +163,14 @@ async def get_public_hotel(hotel_identifier: str, session: DbSession):
 
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
+        
+    from app.models.integration import IntegrationSettings
+    settings_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
+    settings_res = await session.execute(settings_query)
+    settings = settings_res.scalar_one_or_none()
+    if settings and getattr(settings, 'widget_primary_color', None):
+        hotel.primary_color = settings.widget_primary_color
+        
     return hotel
 
 @router.get("/hotels/{hotel_identifier}/rooms", response_model=List[PublicRoomSearchResult])
@@ -291,10 +299,7 @@ async def search_public_rooms(
         from datetime import timedelta
         return d + timedelta(days=num)
 
-    # If no rate plans exist, create virtual ones for display logic
-    if not rate_plans:
-        # We will create a "Standard Rate" logic dynamically if DB is empty
-        pass
+    # If no rate plans exist, virtual "Standard Rate" will be generated per room below
 
     # 2. Get overlapping bookings
     booking_query = select(Booking).where(
@@ -440,9 +445,52 @@ async def search_public_rooms(
                         ))
                 
                 else:
-                    # Logic B: No Rate Plans ? Return NOTHING.
-                    # Hotelier has full control. If no rate plan, room is not sellable.
-                    pass
+                    # Logic B: No Rate Plans configured — auto-generate a virtual "Standard Rate"
+                    # using the room's base_price so rooms remain bookable & visible.
+                    total_standard_price = 0
+                    current_date = check_in
+                    while current_date < check_out:
+                        d_str = current_date.strftime("%Y-%m-%d")
+                        nightly_base = daily_price_map.get((rt.id, d_str), float(rt.base_price))
+                        # Extra person charges
+                        extra_adults = max(0, adults - rt.base_occupancy)
+                        remaining_base_slots = max(0, rt.base_occupancy - adults)
+                        extra_children = max(0, children - remaining_base_slots)
+                        if extra_adults > 0:
+                            rate_adult = float(rt.extra_adult_price) if rt.extra_adult_price else float(rt.extra_person_price or 1000.0)
+                            nightly_base += (extra_adults * rate_adult)
+                        if extra_children > 0:
+                            rate_child = float(rt.extra_child_price) if rt.extra_child_price else float(rt.extra_person_price or 500.0)
+                            nightly_base += (extra_children * rate_child)
+                        total_standard_price += nightly_base
+                        current_date = addDays(current_date, 1)
+
+                    standard_price_per_night = total_standard_price / nights
+
+                    # Apply promo if any
+                    savings_text = None
+                    if promo:
+                        discount = 0
+                        if promo.discount_type == "percentage":
+                            discount = total_standard_price * (promo.discount_value / 100)
+                        else:
+                            discount = promo.discount_value
+                        if discount > 0:
+                            savings_text = f"Save INR {int(discount)}"
+                            total_standard_price -= discount
+
+                    rate_options.append(RateOption(
+                        id=f"virtual-standard-{rt.id}",
+                        name="Standard Rate",
+                        meal_plan_code="EP",
+                        price_per_night=standard_price_per_night,
+                        total_price=total_standard_price,
+                        inclusions=["Free Wi-Fi", "Complimentary Breakfast"],
+                        is_refundable=True,
+                        cancellation_policy="Free cancellation up to 24 hours before check-in",
+                        savings_text=savings_text,
+                        is_package=False
+                    ))
 
                 if not rate_options:
                     continue
