@@ -158,6 +158,7 @@ export default function BookingSelection() {
     const paramGuests = searchParams.get('guests');
     const paramAdults = searchParams.get('adults');
     const paramChildren = searchParams.get('children');
+    const paramRooms = searchParams.get('rooms');
     const urlPromo = searchParams.get('promo_code');
 
     useEffect(() => {
@@ -170,14 +171,16 @@ export default function BookingSelection() {
         if (checkOut) setCheckOutDate(new Date(checkOut));
         else if (state?.checkOutDate) setCheckOutDate(new Date(state.checkOutDate));
 
-        // Smart Guest Logic
+        // Smart Guest & Rooms Logic
+        if (paramRooms) setRoomsCount(parseInt(paramRooms));
+
         if (paramAdults) setAdults(parseInt(paramAdults));
         else if (paramGuests && !paramAdults) setAdults(parseInt(paramGuests)); // Fallback if only 'guests' param exists
 
         if (paramChildren) setChildren(parseInt(paramChildren));
 
         if (urlPromo) setPromoCode(urlPromo);
-    }, [checkIn, checkOut, paramGuests, paramAdults, paramChildren, urlPromo, location.state]);
+    }, [checkIn, checkOut, paramGuests, paramAdults, paramChildren, paramRooms, urlPromo, location.state]);
 
     const handleSearch = () => {
         if (!hotelSlug || !checkInDate || !checkOutDate) return;
@@ -189,6 +192,7 @@ export default function BookingSelection() {
             guests: totalGuests.toString(),
             adults: adults.toString(),
             children: children.toString(),
+            rooms: roomsCount.toString(),
             promo_code: promoCode
         });
 
@@ -216,6 +220,7 @@ export default function BookingSelection() {
                     guests: queryGuests,
                     adults: paramAdults || adults.toString(),
                     children: paramChildren || children.toString(),
+                    rooms: paramRooms || roomsCount.toString(),
                     promo_code: urlPromo || ''
                 }).toString();
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
@@ -67,6 +66,7 @@ export default function BookingWidget() {
     // State
     const [checkInDate, setCheckInDate] = useState<Date | undefined>(new Date());
     const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(addDays(new Date(), 1));
+    const [roomsCount, setRoomsCount] = useState(1);
     const [adults, setAdults] = useState(2);
     const [children, setChildren] = useState(0);
     const [promoCode, setPromoCode] = useState('');
@@ -100,6 +100,7 @@ export default function BookingWidget() {
         params.append('guests', totalGuests.toString());
         params.append('adults', adults.toString());
         params.append('children', children.toString());
+        params.append('rooms', roomsCount.toString());
 
         if (promoCode) params.append('promo_code', promoCode);
 
@@ -113,28 +114,28 @@ export default function BookingWidget() {
     return (
         <div className="w-full flex justify-center font-sans p-2 lg:p-4">
             {/* Main Container - Modern Floating Card */}
-            <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-2 lg:p-3 w-full max-w-6xl flex flex-col lg:flex-row items-center gap-2 lg:gap-4 border border-white/20 ring-1 ring-black/5">
+            <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-3 lg:p-4 w-full max-w-6xl flex flex-col lg:flex-row items-stretch lg:items-center gap-3.5 lg:gap-5 border border-white/80 ring-1 ring-slate-100">
 
                 {/* DATE GROUP */}
-                <div className="flex w-full lg:flex-[2] gap-2">
+                <div className="flex flex-col sm:flex-row w-full lg:flex-[2] gap-3.5">
                     {/* Check In */}
                     <div className="flex-1 relative group">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-3 mb-1 block">Check In</label>
                         <Popover open={isCheckInOpen} onOpenChange={setIsCheckInOpen}>
                             <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className={cn(
-                                        "w-full h-14 justify-start text-left font-semibold border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 rounded-xl transition-all",
-                                        !checkInDate && "text-slate-400"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-3 h-5 w-5 text-indigo-600" />
-                                    <div className="flex flex-col items-start leading-none gap-1">
-                                        <span className="text-sm text-slate-900">{checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select Date"}</span>
-                                        <span className="text-[10px] font-normal text-slate-500">{checkInDate ? format(checkInDate, "EEEE") : "Day"}</span>
+                                <button className="w-full flex items-start gap-3 bg-white p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 hover:border-violet-400 hover:shadow-md transition-all text-left group cursor-pointer">
+                                    <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                        <CalendarIcon className="w-5 h-5" />
                                     </div>
-                                </Button>
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Check In</span>
+                                        <span className="text-sm font-extrabold text-slate-800 block">
+                                            {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select Date"}
+                                        </span>
+                                        <span className="text-xs font-medium text-slate-500 block mt-0.5">
+                                            {checkInDate ? format(checkInDate, "EEEE") : "Day"}
+                                        </span>
+                                    </div>
+                                </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-6 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
                                 <div className="mb-4 text-center">
@@ -203,22 +204,22 @@ export default function BookingWidget() {
 
                     {/* Check Out */}
                     <div className="flex-1 relative group">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-3 mb-1 block">Check Out</label>
                         <Popover open={isCheckOutOpen} onOpenChange={setIsCheckOutOpen}>
                             <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className={cn(
-                                        "w-full h-14 justify-start text-left font-semibold border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 rounded-xl transition-all",
-                                        !checkOutDate && "text-slate-400"
-                                    )}
-                                >
-                                    <ArrowRight className="mr-3 h-5 w-5 text-slate-400" />
-                                    <div className="flex flex-col items-start leading-none gap-1">
-                                        <span className="text-sm text-slate-900">{checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select Date"}</span>
-                                        <span className="text-[10px] font-normal text-slate-500">{checkOutDate ? format(checkOutDate, "EEEE") : "Day"}</span>
+                                <button className="w-full flex items-start gap-3 bg-white p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 hover:border-violet-400 hover:shadow-md transition-all text-left group cursor-pointer">
+                                    <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                        <CalendarIcon className="w-5 h-5" />
                                     </div>
-                                </Button>
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Check Out</span>
+                                        <span className="text-sm font-extrabold text-slate-800 block">
+                                            {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select Date"}
+                                        </span>
+                                        <span className="text-xs font-medium text-slate-500 block mt-0.5">
+                                            {checkOutDate ? format(checkOutDate, "EEEE") : "Day"}
+                                        </span>
+                                    </div>
+                                </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-6 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
                                 <div className="mb-4 text-center">
@@ -283,42 +284,76 @@ export default function BookingWidget() {
 
                 {/* GUESTS SELECTOR - Smart Combined */}
                 <div className="w-full lg:flex-1 relative group">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-3 mb-1 block">Guests</label>
                     <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full h-14 justify-between font-semibold border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 rounded-xl transition-all">
-                                <div className="flex items-center">
-                                    <Users className="mr-3 h-5 w-5 text-indigo-600" />
-                                    <div className="flex flex-col items-start leading-none gap-1">
-                                        <span className="text-sm text-slate-900">{adults + children} Guests</span>
-                                        <span className="text-[10px] font-normal text-slate-500">{adults} Adult, {children} Child</span>
+                            <button className="w-full flex items-start gap-3 bg-white p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 hover:border-violet-400 hover:shadow-md transition-all text-left group cursor-pointer">
+                                <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                    <Users className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Guests & Rooms</span>
+                                    <span className="text-sm font-extrabold text-slate-800 block">
+                                        {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
+                                    </span>
+                                    <span className="text-xs font-medium text-slate-500 block mt-0.5">
+                                        {roomsCount} {roomsCount === 1 ? 'Room' : 'Rooms'}, {adults} Adult{children > 0 ? `, ${children} Child` : ''}
+                                    </span>
+                                </div>
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-6 bg-white border-slate-100 shadow-2xl rounded-3xl" align="center">
+                            <div className="space-y-6">
+                                {/* Rooms Counter */}
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="font-bold text-sm text-slate-900">Rooms</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Rooms</p>
+                                    </div>
+                                    <div className="flex items-center gap-4 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
+                                            onClick={() => setRoomsCount(Math.max(1, roomsCount - 1))}
+                                            disabled={roomsCount <= 1}
+                                        >
+                                            <Minus className="h-3 w-3" />
+                                        </Button>
+                                        <span className="w-4 text-center text-sm font-black text-slate-900">{roomsCount}</span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
+                                            onClick={() => setRoomsCount(Math.min(5, roomsCount + 1))}
+                                        >
+                                            <Plus className="h-3 w-3" />
+                                        </Button>
                                     </div>
                                 </div>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-72 p-4 bg-white border-slate-100 shadow-xl rounded-xl" align="center">
-                            <div className="space-y-4">
+
+                                <div className="h-px bg-slate-50" />
+
                                 {/* Adults Counter */}
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="font-semibold text-sm text-slate-900">Adults</p>
-                                        <p className="text-xs text-slate-500">Ages 13 or above</p>
+                                        <p className="font-bold text-sm text-slate-900">Adults</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Ages 13+</p>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-4 bg-slate-50 p-1 rounded-xl border border-slate-100">
                                         <Button
-                                            variant="outline"
+                                            variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 rounded-full"
+                                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
                                             onClick={() => setAdults(Math.max(1, adults - 1))}
                                             disabled={adults <= 1}
                                         >
                                             <Minus className="h-3 w-3" />
                                         </Button>
-                                        <span className="w-4 text-center text-sm font-semibold">{adults}</span>
+                                        <span className="w-4 text-center text-sm font-black text-slate-900">{adults}</span>
                                         <Button
-                                            variant="outline"
+                                            variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 rounded-full"
+                                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
                                             onClick={() => setAdults(Math.min(10, adults + 1))}
                                         >
                                             <Plus className="h-3 w-3" />
@@ -326,29 +361,29 @@ export default function BookingWidget() {
                                     </div>
                                 </div>
 
-                                <div className="h-px bg-slate-100" />
+                                <div className="h-px bg-slate-50" />
 
                                 {/* Children Counter */}
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="font-semibold text-sm text-slate-900">Children</p>
-                                        <p className="text-xs text-slate-500">Ages 0-12</p>
+                                        <p className="font-bold text-sm text-slate-900">Children</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Ages 0-12</p>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-4 bg-slate-50 p-1 rounded-xl border border-slate-100">
                                         <Button
-                                            variant="outline"
+                                            variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 rounded-full"
+                                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
                                             onClick={() => setChildren(Math.max(0, children - 1))}
                                             disabled={children <= 0}
                                         >
                                             <Minus className="h-3 w-3" />
                                         </Button>
-                                        <span className="w-4 text-center text-sm font-semibold">{children}</span>
+                                        <span className="w-4 text-center text-sm font-black text-slate-900">{children}</span>
                                         <Button
-                                            variant="outline"
+                                            variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 rounded-full"
+                                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
                                             onClick={() => setChildren(Math.min(6, children + 1))}
                                         >
                                             <Plus className="h-3 w-3" />
@@ -361,22 +396,20 @@ export default function BookingWidget() {
                 </div>
 
                 {/* PROMO CODE - Modern Input */}
-                <div className="w-full lg:flex-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-3 mb-1 block">Promo Code</label>
-                    <div className="relative">
-                        <input
-                            className="w-full h-14 bg-slate-50/50 border border-slate-200 text-sm font-semibold text-slate-900 px-4 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
-                            placeholder="Optional code"
-                            value={promoCode}
-                            onChange={(e) => setPromoCode(e.target.value)}
-                        />
-                    </div>
+                <div className="w-full lg:w-48 flex flex-col justify-center bg-white p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 focus-within:border-violet-400 focus-within:shadow-md transition-all">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
+                    <input
+                        className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none placeholder:text-slate-400 placeholder:font-medium text-slate-800 w-full"
+                        placeholder="Optional code"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                    />
                 </div>
 
                 {/* SEARCH BUTTON */}
-                <div className="w-full lg:w-auto pt-4 lg:pt-6 lg:pb-1">
+                <div className="w-full lg:w-auto flex items-center">
                     <Button
-                        className="w-full lg:w-32 h-14 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-base shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2"
+                        className="w-full lg:w-auto px-8 h-16 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-base shadow-xl shadow-violet-500/25 hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
                         onClick={handleSearch}
                     >
                         <Search className="w-5 h-5" />
