@@ -72,22 +72,21 @@ export default function BookingWidget() {
     const [promoCode, setPromoCode] = useState('');
 
     // Calendar UI State
-    const [isCheckInOpen, setIsCheckInOpen] = useState(false);
-    const [isCheckOutOpen, setIsCheckOutOpen] = useState(false);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [isGuestOpen, setIsGuestOpen] = useState(false);
 
     // Dynamic Resizing Logic
     useEffect(() => {
         const baseHeight = 140; // Full height for card + drop shadow without shifting hotelier page
         const expandedHeight = 750; // Use expanded height when popovers are open to prevent price clipping
-        const isOpen = isCheckInOpen || isCheckOutOpen || isGuestOpen;
+        const isOpen = isCalendarOpen || isGuestOpen;
         const height = isOpen ? expandedHeight : baseHeight;
 
         if (window.parent !== window) {
             window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, '*');
             window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, '*');
         }
-    }, [isCheckInOpen, isCheckOutOpen, isGuestOpen]);
+    }, [isCalendarOpen, isGuestOpen]);
 
     const handleSearch = () => {
         const targetUrl = `${window.location.origin}/book/${hotelSlug}/rooms`;
@@ -147,18 +146,19 @@ export default function BookingWidget() {
                     background-color: ${primaryHex} !important;
                 }
             `}</style>
+
             {/* Main Container - Modern Floating Card */}
             <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-3 lg:p-4 w-full max-w-6xl flex flex-col lg:flex-row items-stretch lg:items-center gap-3.5 lg:gap-5 border border-white/80 ring-1 ring-slate-100"
                  style={{ backgroundColor: bgColor }}>
 
-                {/* DATE GROUP */}
-                <div className="flex flex-col sm:flex-row w-full lg:flex-[2] gap-3.5">
-                    {/* Check In */}
-                    <div className="flex-1 relative group">
-                        <Popover open={isCheckInOpen} onOpenChange={setIsCheckInOpen}>
-                            <PopoverTrigger asChild>
-                                <button className="w-full flex items-start gap-3 p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
-                                        style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                {/* DATE GROUP - Combined Check In & Out */}
+                <div className="w-full lg:flex-[2] relative group">
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                        <PopoverTrigger asChild>
+                            <button className="w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
+                                    style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                                {/* Check-In Section */}
+                                <div className="flex-1 flex items-start gap-3">
                                     <div className="w-10 h-10 rounded-xl custom-theme-bg-light group-hover:custom-theme-btn flex items-center justify-center shrink-0 mt-0.5 transition-colors">
                                         <CalendarIcon className="w-5 h-5" />
                                     </div>
@@ -171,79 +171,15 @@ export default function BookingWidget() {
                                             {checkInDate ? format(checkInDate, "EEEE") : "Day"}
                                         </span>
                                     </div>
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-4 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
-                                <div className="mb-3 text-center">
-                                    <Badge className="custom-theme-bg-light px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase border-0">
-                                        Dynamic Pricing Engine
-                                    </Badge>
-                                    <p className="text-[11px] font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
                                 </div>
-                                <Calendar
-                                    mode="single"
-                                    selected={checkInDate}
-                                    onSelect={(date) => {
-                                        setCheckInDate(date);
-                                        setIsCheckInOpen(false);
-                                        if (date && (!checkOutDate || date >= checkOutDate)) {
-                                            const nextDay = addDays(date, 1);
-                                            setCheckOutDate(nextDay);
-                                            setTimeout(() => setIsCheckOutOpen(true), 200);
-                                        }
-                                    }}
-                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                    initialFocus
-                                    className="p-0"
-                                    classNames={{
-                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-slate-50/50 [&:has([aria-selected])]:bg-slate-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
-                                        day_selected: "custom-theme-btn font-bold shadow-md",
-                                        day_today: "custom-theme-bg-light font-bold border",
-                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2 text-center",
-                                        caption: "flex justify-center py-2 px-3 relative items-center custom-theme-btn text-white rounded-xl mb-3 shadow-sm",
-                                        caption_label: "text-xs font-extrabold tracking-wide uppercase",
-                                        nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
-                                    }}
-                                    components={{
-                                        DayContent: ({ date }: any) => {
-                                            const todayObj = new Date(new Date().setHours(0,0,0,0));
-                                            const isPast = date < todayObj;
-                                            let price = startingPrice > 0 ? startingPrice : 4200;
-                                            const day = date.getDay();
-                                            const isWeekend = day === 5 || day === 6;
-                                            price = price + (isWeekend ? 500 : 0);
-                                            const isSoldOut = date.getDate() === 13;
 
-                                            return (
-                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                                    {!isPast && (
-                                                        <span className={cn(
-                                                            "text-[9px] font-extrabold leading-none mt-1",
-                                                            isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
-                                                        )}>
-                                                            {isSoldOut ? "Sold Out" : `₹${price}`}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            );
-                                        }
-                                    }}
-                                />
-                                <div className="border-t border-slate-100 pt-3 mt-3 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
+                                {/* Separator Arrow */}
+                                <div className="hidden sm:flex items-center justify-center px-2 text-slate-300 group-hover:text-slate-500 transition-colors animate-pulse">
+                                    <ArrowRight className="w-5 h-5" />
                                 </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
 
-                    {/* Check Out */}
-                    <div className="flex-1 relative group">
-                        <Popover open={isCheckOutOpen} onOpenChange={setIsCheckOutOpen}>
-                            <PopoverTrigger asChild>
-                                <button className="w-full flex items-start gap-3 p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
-                                        style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                                {/* Check-Out Section */}
+                                <div className="flex-1 flex items-start gap-3 sm:pl-3 border-t sm:border-t-0 sm:border-l border-slate-100 pt-3 sm:pt-0">
                                     <div className="w-10 h-10 rounded-xl custom-theme-bg-light group-hover:custom-theme-btn flex items-center justify-center shrink-0 mt-0.5 transition-colors">
                                         <CalendarIcon className="w-5 h-5" />
                                     </div>
@@ -256,67 +192,76 @@ export default function BookingWidget() {
                                             {checkOutDate ? format(checkOutDate, "EEEE") : "Day"}
                                         </span>
                                     </div>
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-4 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden" align="start">
-                                <div className="mb-3 text-center">
-                                    <Badge className="custom-theme-bg-light px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase border-0">
-                                        Dynamic Pricing Engine
-                                    </Badge>
-                                    <p className="text-[11px] font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
                                 </div>
-                                <Calendar
-                                    mode="single"
-                                    selected={checkOutDate}
-                                    onSelect={(date) => {
-                                        setCheckOutDate(date);
-                                        setIsCheckOutOpen(false);
-                                    }}
-                                    disabled={(date) => date <= (checkInDate || new Date())}
-                                    initialFocus
-                                    className="p-0"
-                                    classNames={{
-                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-slate-50/50 [&:has([aria-selected])]:bg-slate-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
-                                        day_selected: "custom-theme-btn font-bold shadow-md",
-                                        day_today: "custom-theme-bg-light font-bold border",
-                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2 text-center",
-                                        caption: "flex justify-center py-2 px-3 relative items-center custom-theme-btn text-white rounded-xl mb-3 shadow-sm",
-                                        caption_label: "text-xs font-extrabold tracking-wide uppercase",
-                                        nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
-                                    }}
-                                    components={{
-                                        DayContent: ({ date }: any) => {
-                                            const todayObj = new Date(new Date().setHours(0,0,0,0));
-                                            const isPast = date < todayObj;
-                                            let price = startingPrice > 0 ? startingPrice : 4200;
-                                            const day = date.getDay();
-                                            const isWeekend = day === 5 || day === 6;
-                                            price = price + (isWeekend ? 500 : 0);
-                                            const isSoldOut = date.getDate() === 13;
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-4 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden max-w-[95vw]" align="start">
+                            <div className="mb-3 text-center">
+                                <Badge className="custom-theme-bg-light px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase border-0">
+                                    Dynamic Pricing Engine
+                                </Badge>
+                                <p className="text-[11px] font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
+                            </div>
+                            <Calendar
+                                mode="range"
+                                selected={{
+                                    from: checkInDate,
+                                    to: checkOutDate
+                                }}
+                                onSelect={(range: any) => {
+                                    if (range?.from) setCheckInDate(range.from);
+                                    if (range?.to) {
+                                        setCheckOutDate(range.to);
+                                        setIsCalendarOpen(false);
+                                    } else {
+                                        setCheckOutDate(undefined);
+                                    }
+                                }}
+                                numberOfMonths={2}
+                                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                className="p-0"
+                                classNames={{
+                                    cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-slate-50/50 [&:has([aria-selected])]:bg-slate-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                    day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                                    day_selected: "custom-theme-btn font-bold shadow-md",
+                                    day_today: "custom-theme-bg-light font-bold border",
+                                    head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2.5 text-center",
+                                    caption: "flex justify-center py-2.5 px-3 relative items-center custom-theme-btn text-white rounded-xl mb-3 shadow-sm",
+                                    caption_label: "text-xs font-extrabold tracking-wide uppercase",
+                                    nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
+                                    months: "flex flex-col md:flex-row space-y-4 md:space-x-6 md:space-y-0"
+                                }}
+                                components={{
+                                    DayContent: ({ date }: any) => {
+                                        const todayObj = new Date(new Date().setHours(0,0,0,0));
+                                        const isPast = date < todayObj;
+                                        let price = startingPrice > 0 ? startingPrice : 4200;
+                                        const day = date.getDay();
+                                        const isWeekend = day === 5 || day === 6;
+                                        price = price + (isWeekend ? 500 : 0);
+                                        const isSoldOut = date.getDate() === 13;
 
-                                            return (
-                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                                    {!isPast && (
-                                                        <span className={cn(
-                                                            "text-[9px] font-extrabold leading-none mt-1",
-                                                            isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
-                                                        )}>
-                                                            {isSoldOut ? "Sold Out" : `₹${price}`}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            );
-                                        }
-                                    }}
-                                />
-                                <div className="border-t border-slate-100 pt-3 mt-3 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                                        return (
+                                            <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
+                                                <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                                {!isPast && (
+                                                    <span className={cn(
+                                                        "text-[9px] font-extrabold leading-none mt-1",
+                                                        isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
+                                                    )}>
+                                                        {isSoldOut ? "Sold Out" : `₹${price}`}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+                                }}
+                            />
+                            <div className="border-t border-slate-100 pt-3 mt-3 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
+                                <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 {/* GUESTS SELECTOR - Smart Combined */}
