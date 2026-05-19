@@ -18,11 +18,8 @@ from app.core.redis_client import redis_client
 
 def clear_availability_cache(hotel_id: str):
     try:
-        r = redis_client.get_instance()
-        if r:
-            keys = r.keys(f"availability:{hotel_id}:*")
-            if keys:
-                r.delete(*keys)
+        redis_client.delete_pattern(f"availability:{hotel_id}:*")
+        redis_client.delete_pattern(f"public:rooms:{hotel_id}:*")
     except Exception as e:
         print(f"Failed clearing availability cache for hotel {hotel_id}: {e}")
 

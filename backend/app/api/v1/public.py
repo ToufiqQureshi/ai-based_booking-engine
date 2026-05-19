@@ -13,6 +13,8 @@ from app.models.room import RoomType, RoomTypeRead, RoomBlock
 from app.models.booking import Booking, BookingStatus, Guest
 from app.models.rates import RatePlan, RoomRate
 from app.models.promo import PromoCode
+from app.core.redis_client import redis_client
+import json
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -38,6 +40,30 @@ class PublicRoomSearchResult(RoomTypeRead):
     price_starting_at: float
     rate_options: List[RateOption]
 
+
+async def resolve_hotel_id(identifier: str, session: DbSession) -> str:
+    cache_key = f"public:slug-to-id:{identifier}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return cached
+    except Exception as e:
+        logger.error(f"Failed to get slug-to-id cache: {e}")
+
+    # Query DB
+    query = select(Hotel).where(or_(Hotel.slug == identifier, Hotel.id == identifier))
+    result = await session.execute(query)
+    hotel = result.scalar_one_or_none()
+    
+    if hotel:
+        # Cache mapping
+        try:
+            redis_client.set_value(f"public:slug-to-id:{hotel.slug}", hotel.id, expire=86400)
+            redis_client.set_value(f"public:slug-to-id:{hotel.id}", hotel.id, expire=86400)
+        except Exception as e:
+            logger.error(f"Failed to set slug-to-id cache: {e}")
+        return hotel.id
+    return identifier
 
 # --- Public Booking Schemas ---
 class PublicGuestCreate(BaseModel):
@@ -97,12 +123,24 @@ async def get_public_hotel_by_slug(hotel_slug: str, session: DbSession):
     Get hotel details by slug for public booking page.
     No authentication required.
     """
-    query = select(Hotel).where(Hotel.slug == hotel_slug)
-    result = await session.execute(query)
-    hotel = result.scalar_one_or_none()
-    
+    hotel_id = await resolve_hotel_id(hotel_slug, session)
+    cache_key = f"public:hotel-details:{hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return HotelRead.model_validate_json(cached)
+    except Exception as e:
+        logger.error(f"Failed to get cached hotel details: {e}")
+
+    hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
+        
+    try:
+        redis_client.set_value(cache_key, hotel.model_dump_json(), expire=600)
+    except Exception as e:
+        logger.error(f"Failed to cache hotel details: {e}")
+        
     return hotel
 
 
@@ -112,13 +150,19 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
     Get configuration for the booking widget.
     Includes allowed_domains for security check.
     """
+    hotel_id = await resolve_hotel_id(hotel_slug, session)
+    cache_key = f"public:widget-config:{hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception as e:
+        logger.error(f"Failed to get cached widget-config: {e}")
+
     from app.models.integration import IntegrationSettings
     
-    # Get Hotel (Allow matching by Slug OR ID)
-    query = select(Hotel).where(or_(Hotel.slug == hotel_slug, Hotel.id == hotel_slug))
-    result = await session.execute(query)
-    hotel = result.scalar_one_or_none()
-    
+    # Get Hotel by ID since we resolved it
+    hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
     
@@ -136,7 +180,7 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         allowed_domains = settings.allowed_domains or ""
         widget_enabled = settings.widget_enabled
         
-    return {
+    res_dict = {
         "hotel_name": hotel.name,
         "logo_url": (getattr(settings, 'widget_logo_url', None) or hotel.logo_url) if settings else hotel.logo_url,
         "primary_color": hotel.primary_color,
@@ -146,21 +190,30 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         "widget_enabled": widget_enabled
     }
 
+    try:
+        redis_client.set_value(cache_key, json.dumps(res_dict), expire=600)
+    except Exception as e:
+        logger.error(f"Failed to cache widget-config: {e}")
+
+    return res_dict
+
 @router.get("/hotels/{hotel_identifier}", response_model=HotelRead)
 async def get_public_hotel(hotel_identifier: str, session: DbSession):
     """
     Get hotel details for public booking page.
     Supports both ID (UUID) and Slug.
     """
-    # 1. Try by Slug first
-    query = select(Hotel).where(Hotel.slug == hotel_identifier)
-    result = await session.execute(query)
-    hotel = result.scalar_one_or_none()
-    
-    # 2. If not found, try by ID
-    if not hotel:
-        hotel = await session.get(Hotel, hotel_identifier)
+    hotel_id = await resolve_hotel_id(hotel_identifier, session)
+    cache_key = f"public:hotel-details:{hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return HotelRead.model_validate_json(cached)
+    except Exception as e:
+        logger.error(f"Failed to get cached hotel details: {e}")
 
+    # Get Hotel by ID since we resolved it
+    hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
         
@@ -170,6 +223,11 @@ async def get_public_hotel(hotel_identifier: str, session: DbSession):
     settings = settings_res.scalar_one_or_none()
     if settings and getattr(settings, 'widget_primary_color', None):
         hotel.primary_color = settings.widget_primary_color
+        
+    try:
+        redis_client.set_value(cache_key, hotel.model_dump_json(), expire=600)
+    except Exception as e:
+        logger.error(f"Failed to cache hotel details: {e}")
         
     return hotel
 
@@ -187,24 +245,17 @@ async def search_public_rooms(
     """
     Search available rooms for a hotel with multiple rate plans.
     """
-    # Resolve hotel_id from identifier (slug or uuid)
-    hotel_id = hotel_identifier
-    
-    # Check if it looks like a valid UUID? 
-    # Or just try to find by slug if it fails?
-    # Better: Try finding hotel by slug, if not found, assume it is ID.
-    
-    logger.debug("Searching rooms for identifier: %s", hotel_identifier)
-    hotel_query = select(Hotel).where(Hotel.slug == hotel_identifier)
-    hotel_res = await session.execute(hotel_query)
-    hotel = hotel_res.scalar_one_or_none()
-    
-    if hotel:
-        hotel_id = hotel.id
-        logger.debug("Found hotel by slug. ID: %s", hotel_id)
-    else:
-        logger.debug("Hotel not found by slug, using identifier: %s", hotel_identifier)
-        pass
+    hotel_id = await resolve_hotel_id(hotel_identifier, session)
+    cache_key = f"public:rooms:{hotel_id}:{check_in.isoformat()}:{check_out.isoformat()}:{guests}:{adults}:{children}:{promo_code or ''}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            data = json.loads(cached)
+            return [PublicRoomSearchResult(**item) for item in data]
+    except Exception as e:
+        logger.error(f"Failed to get cached public rooms search: {e}")
+
+    logger.debug("Searching rooms for resolved hotel ID: %s", hotel_id)
 
     # 1. Get all room types
     query = select(RoomType).where(
@@ -517,6 +568,12 @@ async def search_public_rooms(
                 )
                 available_rooms_list.append(room_res)
 
+    try:
+        rooms_dump = [item.model_dump(mode='json') for item in available_rooms_list]
+        redis_client.set_value(cache_key, json.dumps(rooms_dump), expire=120)
+    except Exception as e:
+        logger.error(f"Failed to cache public rooms search: {e}")
+
     return available_rooms_list
 
 
@@ -527,25 +584,32 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
     """
     Get active add-ons for a hotel by slug or ID.
     """
-    # Try finding by slug first
-    query = select(Hotel).where(Hotel.slug == hotel_identifier)
-    result = await session.execute(query)
-    hotel = result.scalar_one_or_none()
-    
-    hotel_id = None
-    if hotel:
-        hotel_id = hotel.id
-    else:
-        # If not found by slug, assume it's an ID
-        hotel_id = hotel_identifier
-        # Optional: Validate if hotel exists by ID to return 404 properly if invalid
-        hotel = await session.get(Hotel, hotel_id)
-        if not hotel:
-            raise HTTPException(status_code=404, detail="Hotel not found")
+    hotel_id = await resolve_hotel_id(hotel_identifier, session)
+    cache_key = f"public:addons:{hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            data = json.loads(cached)
+            return [AddOn(**item) for item in data]
+    except Exception as e:
+        logger.error(f"Failed to get cached addons: {e}")
+
+    # Validate hotel exists
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
         
     addon_query = select(AddOn).where(AddOn.hotel_id == hotel_id, AddOn.is_active == True)
     addon_res = await session.execute(addon_query)
-    return addon_res.scalars().all()
+    addons = addon_res.scalars().all()
+    
+    try:
+        addons_dump = [item.model_dump(mode='json') for item in addons]
+        redis_client.set_value(cache_key, json.dumps(addons_dump), expire=600)
+    except Exception as e:
+        logger.error(f"Failed to cache addons: {e}")
+        
+    return addons
 
 
 @router.post("/bookings", response_model=PublicBookingResponse)
@@ -619,6 +683,14 @@ async def create_public_booking(
         )
         session.add(booking)
         await session.commit()
+        
+        # Invalidate availability and public rooms caches
+        try:
+            from app.api.v1.availability import clear_availability_cache
+            clear_availability_cache(hotel_id)
+        except Exception as e:
+            logger.error(f"Failed clearing availability cache on public booking: {e}")
+
         await session.refresh(booking)
         
         return PublicBookingResponse(
