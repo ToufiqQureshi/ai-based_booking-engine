@@ -442,7 +442,7 @@ export default function BookingSelection() {
                                 )}
                             >
                                 <HotelIcon className="w-3.5 h-3.5" />
-                                Room Categories
+                                Rooms
                             </button>
                             <button
                                 onClick={() => setSearchType('package')}
@@ -452,7 +452,7 @@ export default function BookingSelection() {
                                 )}
                             >
                                 <Sparkles className="w-3.5 h-3.5" />
-                                Special Packages
+                                Packages
                             </button>
                         </div>
                     </div>
