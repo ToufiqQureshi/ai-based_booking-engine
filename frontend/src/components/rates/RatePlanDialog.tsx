@@ -35,6 +35,7 @@ import { apiClient } from '@/api/client';
 import { RatePlan } from '@/types/api';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { ImageUpload } from '@/components/common/ImageUpload';
 
 const ratePlanSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -50,6 +51,7 @@ const ratePlanSchema = z.object({
     is_package: z.boolean().default(false),
     package_items: z.string().optional(),
     market_price: z.coerce.number().min(0).optional().nullable(),
+    image_url: z.string().optional(),
 });
 
 interface RatePlanDialogProps {
@@ -80,6 +82,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
             is_package: false,
             package_items: '',
             market_price: undefined,
+            image_url: '',
         },
     });
 
@@ -102,6 +105,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                 is_package: initialData.is_package || false,
                 package_items: (initialData.package_items || []).join(', '),
                 market_price: initialData.market_price,
+                image_url: initialData.image_url || '',
             });
         } else {
             form.reset({
@@ -118,6 +122,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                 is_package: defaultIsPackage,
                 package_items: '',
                 market_price: undefined,
+                image_url: '',
             });
         }
     }, [initialData, form, open, defaultIsPackage]);
@@ -214,6 +219,26 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                                 <FormControl>
                                                     <Input placeholder="What makes this plan special?" className="h-10 border-slate-200 focus-visible:ring-blue-600" {...field} />
                                                 </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="image_url"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-slate-600">Plan / Package Image</FormLabel>
+                                                <FormControl>
+                                                    <ImageUpload
+                                                        existingImage={field.value}
+                                                        onUploadComplete={(url) => field.onChange(url)}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription className="text-[10px]">
+                                                    Upload an image to display with this rate plan/package on the booking engine.
+                                                </FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}

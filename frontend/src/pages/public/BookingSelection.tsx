@@ -839,7 +839,16 @@ export default function BookingSelection() {
                                         <div key={plan.id} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col md:flex-row mb-8 hover:shadow-xl transition-all duration-300 group border-l-4 border-l-amber-500">
                                             {/* Left: Premium Image Section */}
                                             <div className="md:w-[400px] h-72 md:h-auto bg-slate-100 relative overflow-hidden">
-                                                <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
+                                                {plan.image_url ? (
+                                                    <img 
+                                                        src={getImageUrl(plan.image_url)} 
+                                                        alt={plan.name} 
+                                                        className="w-full h-full min-h-[250px] object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+                                                        onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}
+                                                    />
+                                                ) : (
+                                                    <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
+                                                )}
                                                 <div className="absolute top-4 left-4 z-10">
                                                     <div className="bg-amber-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2">
                                                         <Sparkles className="w-3 h-3" /> Exclusive Offer
@@ -1001,24 +1010,35 @@ export default function BookingSelection() {
                                                                         key={plan.id} 
                                                                         className="flex items-center justify-between group/rate py-2"
                                                                     >
-                                                                        <div className="flex-1">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="text-sm font-semibold text-slate-700">{plan.name}</span>
-                                                                                {plan.savings_text && (
-                                                                                    <span className="text-[10px] font-bold text-green-600">
-                                                                                        {plan.savings_text}
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="flex gap-3 mt-0.5">
-                                                                                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{plan.meal_plan_code}</span>
-                                                                                {plan.is_refundable ? (
-                                                                                    <span className="text-[10px] text-emerald-600 font-medium">
-                                                                                        {plan.cancellation_policy || 'Free Cancellation'}
-                                                                                    </span>
-                                                                                ) : (
-                                                                                    <span className="text-[10px] text-rose-600 font-medium">Non-Refundable</span>
-                                                                                )}
+                                                                        <div className="flex-1 flex items-center gap-3">
+                                                                            {plan.image_url && (
+                                                                                <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-slate-50 relative">
+                                                                                    <img 
+                                                                                        src={getImageUrl(plan.image_url)} 
+                                                                                        alt={plan.name} 
+                                                                                        className="w-full h-full object-cover"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                            <div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="text-sm font-semibold text-slate-700">{plan.name}</span>
+                                                                                    {plan.savings_text && (
+                                                                                        <span className="text-[10px] font-bold text-green-600">
+                                                                                            {plan.savings_text}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="flex gap-3 mt-0.5">
+                                                                                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{plan.meal_plan_code}</span>
+                                                                                    {plan.is_refundable ? (
+                                                                                        <span className="text-[10px] text-emerald-600 font-medium">
+                                                                                            {plan.cancellation_policy || 'Free Cancellation'}
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="text-[10px] text-rose-600 font-medium">Non-Refundable</span>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
                                                                         </div>
 

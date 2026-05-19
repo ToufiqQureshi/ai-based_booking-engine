@@ -176,6 +176,7 @@ export interface RatePlan {
   is_package?: boolean;
   package_items?: string[];
   market_price?: number;
+  image_url?: string;
   created_at: string;
 }
 
@@ -378,6 +379,7 @@ export interface RateOption {
   savings_text?: string;
   is_package?: boolean;
   market_price?: number;
+  image_url?: string;
 }
 
 export interface PublicRoomSearchResult extends RoomType {
