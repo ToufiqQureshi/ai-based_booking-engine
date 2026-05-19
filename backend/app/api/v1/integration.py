@@ -268,19 +268,21 @@ async def get_widget_code(
 <div id="hotelier-booking-widget" 
      data-hotel-slug="{hotel_slug}"
      data-theme="{settings.widget_theme}"
-     data-color="{settings.widget_primary_color}">
+     data-color="{settings.widget_primary_color}"
+     data-widget-layout="{getattr(settings, "widget_layout", "modern")}">
 </div>'''
     
     javascript_code = f'''<script>
   (function() {{
     var script = document.createElement('script');
-    script.src = '{frontend_url}/widget.js';
+    script.src = '{frontend_url}/widget-v3.js';
     script.async = true;
     script.onload = function() {{
       HotelierWidget.init({{
         hotelSlug: '{hotel_slug}',
         primaryColor: '{settings.widget_primary_color}',
         theme: '{settings.widget_theme}',
+        widgetLayout: '{getattr(settings, "widget_layout", "modern")}',
         apiUrl: '{api_url}',
         frontendUrl: '{frontend_url}'
       }});

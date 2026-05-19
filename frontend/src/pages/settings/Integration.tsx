@@ -31,6 +31,9 @@ interface IntegrationSettings {
     ai_model?: string;
     ai_base_url?: string;
     google_sheet_url?: string;
+    widget_layout?: string;
+    widget_custom_css?: string;
+    widget_custom_js?: string;
 }
 
 interface WidgetCode {
@@ -434,6 +437,7 @@ const IntegrationPage = () => {
                                 <Label>Preview</Label>
                                 <div className="p-8 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center transition-all duration-300">
                                     <iframe
+                                        key={`${settings?.widget_layout}-${settings?.widget_primary_color}-${settings?.widget_background_color}`}
                                         src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget`}
                                         className="w-full max-w-4xl border-0 rounded-none overflow-visible shadow-none transition-all duration-300"
                                         style={{ height: `${previewHeight}px` }}
@@ -476,6 +480,35 @@ const IntegrationPage = () => {
     </iframe>
 </div>`}
                                 </pre>
+                            </div>
+
+                            {/* Documentation of Integration Parameters */}
+                            <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200/60 mt-4 space-y-3">
+                                <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                                    <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                                    Widget Custom Code & Parameter Documentation
+                                </h4>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    If your client requires complete styling control or a customized integration, you can pass these parameters dynamically via the widget script configurations or use custom CSS in our Dashboard Settings:
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 text-xs">
+                                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 shadow-sm">
+                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">hotelSlug</code>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">The unique hotel identifier in URLs. Currently: <strong className="text-foreground font-semibold">{activeHotelSlug || 'demo'}</strong></p>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 shadow-sm">
+                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">widgetLayout</code>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">Widget layout configuration. Supported options: <code className="bg-slate-50 p-0.5 rounded">"modern"</code>, <code className="bg-slate-50 p-0.5 rounded">"classic"</code>, <code className="bg-slate-50 p-0.5 rounded">"minimal"</code>.</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 shadow-sm">
+                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">primaryColor</code>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">Main primary color theme for buttons & selections. E.g. <code className="bg-slate-50 p-0.5 rounded">"#7C3AED"</code>.</p>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 shadow-sm">
+                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">widgetCustomCss</code>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">Custom CSS rules loaded dynamically to target specific elements like buttons, dates, overlays, or font styles.</p>
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -588,34 +621,132 @@ const IntegrationPage = () => {
                                         </div>
                                     </div>
 
+                                    {/* Layout Style Cards */}
+                                    <div className="space-y-2 mt-4">
+                                        <Label className="text-sm font-semibold">Widget Layout Style</Label>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {/* Modern Layout */}
+                                            <div 
+                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'modern' ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-200 bg-card'}`}
+                                                onClick={() => updateSettings({ widget_layout: 'modern' })}
+                                            >
+                                                <div>
+                                                    <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 block">Modern Row</span>
+                                                    <span className="text-xs text-muted-foreground mt-1 block">Sleek horizontal float bar with combined inputs and popovers. Ideal for homepages.</span>
+                                                </div>
+                                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                                    <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Recommended</span>
+                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'modern' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
+                                                        {settings.widget_layout === 'modern' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                    </div>
+                                                </div>
+                                            </div>
 
+                                            {/* Classic Layout */}
+                                            <div 
+                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'classic' ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-200 bg-card'}`}
+                                                onClick={() => updateSettings({ widget_layout: 'classic' })}
+                                            >
+                                                <div>
+                                                    <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 block">Classic Stacked</span>
+                                                    <span className="text-xs text-muted-foreground mt-1 block">Boxed design with distinct input boxes and clean spacing. Best for sidebars/boxes.</span>
+                                                </div>
+                                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'classic' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
+                                                        {settings.widget_layout === 'classic' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <div>
-                                        <Label>Allowed Domains</Label>
-                                        <Input
-                                            placeholder="example.com, myhotel.com (comma-separated)"
-                                            value={settings.allowed_domains}
-                                            onChange={(e) =>
-                                                updateSettings({ allowed_domains: e.target.value })
-                                            }
-                                        />
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Leave empty to allow all domains (not recommended for production)
-                                        </p>
+                                            {/* Minimal Layout */}
+                                            <div 
+                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-200 bg-card'}`}
+                                                onClick={() => updateSettings({ widget_layout: 'minimal' })}
+                                            >
+                                                <div>
+                                                    <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 block">Minimal Bar</span>
+                                                    <span className="text-xs text-muted-foreground mt-1 block">Compact layout with transparent backgrounds and subtle bottom borders. Ultra-clean.</span>
+                                                </div>
+                                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
+                                                        {settings.widget_layout === 'minimal' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <Label>Webhook URL (Optional)</Label>
-                                        <Input
-                                            placeholder="https://your-site.com/webhook"
-                                            value={settings.webhook_url || ''}
-                                            onChange={(e) =>
-                                                updateSettings({ webhook_url: e.target.value })
-                                            }
-                                        />
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Receive real-time notifications for bookings
+                                    {/* Advanced Custom Styling/Code Option */}
+                                    <div className="border-t pt-5 mt-5">
+                                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                            <Code className="w-4 h-4 text-primary" />
+                                            Custom Styles & Code Overrides
+                                        </h4>
+                                        <p className="text-xs text-muted-foreground mb-4">
+                                            Inject custom CSS styles or JavaScript overrides directly into the embedded booking widget frame to achieve your custom client website styling.
                                         </p>
+                                        
+                                        <div className="space-y-4">
+                                            <div>
+                                                <Label className="flex justify-between items-center text-xs">
+                                                    <span>Custom CSS styling code</span>
+                                                    <span className="text-[9px] font-mono text-muted-foreground">Injected directly inside widget head</span>
+                                                </Label>
+                                                <textarea
+                                                    className="w-full mt-1 min-h-[120px] font-mono text-xs p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:text-slate-100"
+                                                    placeholder="/* Example:\n.custom-theme-btn {\n  border-radius: 9999px !important;\n}\n#hotelier-booking-widget {\n  font-family: 'Poppins', sans-serif;\n} */"
+                                                    value={settings.widget_custom_css || ''}
+                                                    onChange={(e) =>
+                                                        updateSettings({ widget_custom_css: e.target.value })
+                                                    }
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label className="flex justify-between items-center text-xs">
+                                                    <span>Custom JavaScript (JS) code</span>
+                                                    <span className="text-[9px] font-mono text-muted-foreground">Executes inside widget iframe context</span>
+                                                </Label>
+                                                <textarea
+                                                    className="w-full mt-1 min-h-[80px] font-mono text-xs p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:text-slate-100"
+                                                    placeholder="// Example:\n// console.log('Widget loaded successfully for slug: ' + config.hotelSlug);"
+                                                    value={settings.widget_custom_js || ''}
+                                                    onChange={(e) =>
+                                                        updateSettings({ widget_custom_js: e.target.value })
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t pt-4 space-y-4">
+                                        <div>
+                                            <Label>Allowed Domains</Label>
+                                            <Input
+                                                placeholder="example.com, myhotel.com (comma-separated)"
+                                                value={settings.allowed_domains}
+                                                onChange={(e) =>
+                                                    updateSettings({ allowed_domains: e.target.value })
+                                                }
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Leave empty to allow all domains (not recommended for production)
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <Label>Webhook URL (Optional)</Label>
+                                            <Input
+                                                placeholder="https://your-site.com/webhook"
+                                                value={settings.webhook_url || ''}
+                                                onChange={(e) =>
+                                                    updateSettings({ webhook_url: e.target.value })
+                                                }
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Receive real-time notifications for bookings
+                                            </p>
+                                        </div>
                                     </div>
 
                                     <div className="border-t pt-4 mt-4">
