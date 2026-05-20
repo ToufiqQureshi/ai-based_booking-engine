@@ -16,11 +16,11 @@ export function PublicBookingLayout() {
     }, [hotelSlug]);
 
     return (
-        <div className="min-h-screen bg-slate-50">
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="light min-h-screen bg-slate-50">
+            <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
                 <div className="container flex h-14 items-center justify-center">
-                    <div className="font-bold text-xl tracking-tight text-primary">
-                        Staybooker <span className="text-muted-foreground text-sm font-normal">Secure Booking</span>
+                    <div className="font-bold text-xl tracking-tight text-indigo-600">
+                        Staybooker <span className="text-slate-500 text-sm font-normal">Secure Booking</span>
                     </div>
                 </div>
             </header>
@@ -29,7 +29,7 @@ export function PublicBookingLayout() {
             </main>
             <footer className="border-t py-6 md:py-0">
                 <div className="container flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
-                    <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+                    <p className="text-center text-sm leading-loose text-slate-500 md:text-left">
                         Powered by Staybooker. Secure payments by Stripe.
                     </p>
                 </div>

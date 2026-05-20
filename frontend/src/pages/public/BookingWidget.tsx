@@ -301,7 +301,7 @@ export default function BookingWidget() {
     const layout = config?.widget_layout || 'modern';
 
     return (
-        <div className="w-full flex justify-center font-sans p-2 lg:p-4">
+        <div className="light w-full flex justify-center font-sans p-2 lg:p-4">
             <style>{`
                 .custom-theme-btn {
                     background-color: ${primaryHex} !important;
