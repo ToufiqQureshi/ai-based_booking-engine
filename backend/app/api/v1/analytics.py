@@ -170,10 +170,6 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         total_visitors = len(sessions)
         total_conversions = len([b for b in bookings if b.status != 'cancelled'])
         conversion_rate = round((total_conversions / total_visitors * 100), 2) if total_visitors > 0 else 0
-        # 3. Basic Aggregations
-        total_visitors = len(sessions)
-        total_conversions = len([b for b in bookings if b.status != 'cancelled'])
-        conversion_rate = round((total_conversions / total_visitors * 100), 2) if total_visitors > 0 else 0
         avg_time = int(sum(s.time_spent_seconds or 0 for s in sessions) / total_visitors) if total_visitors > 0 else 0
         
         # 4. Device Stats
@@ -282,6 +278,17 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         popular_questions = [{"text": k.capitalize(), "value": v} for k, v in sorted(keywords.items(), key=lambda x: x[1], reverse=True)[:10]]
 
         # 10. Geo Stats
+        COUNTRY_CODES = {
+            "India": "IN", "United States": "US", "United Kingdom": "GB",
+            "Germany": "DE", "France": "FR", "Australia": "AU", "Canada": "CA",
+            "Singapore": "SG", "UAE": "AE", "United Arab Emirates": "AE",
+            "Japan": "JP", "China": "CN", "Russia": "RU", "Brazil": "BR",
+            "Italy": "IT", "Spain": "ES", "Netherlands": "NL", "Thailand": "TH",
+            "Malaysia": "MY", "Indonesia": "ID", "Philippines": "PH",
+            "Bangladesh": "BD", "Pakistan": "PK", "Nepal": "NP", "Sri Lanka": "LK",
+            "South Africa": "ZA", "Kenya": "KE", "Nigeria": "NG",
+            "Mexico": "MX", "Argentina": "AR", "Colombia": "CO",
+        }
         geo_counts = {}
         for s in sessions:
             country = s.country or "Unknown"
@@ -292,7 +299,7 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             pct = round((count / total_visitors * 100), 1) if total_visitors > 0 else 0
             geo_stats.append({
                 "country": country,
-                "code": "IN" if country == "India" else "US" if country == "United States" else "XX",
+                "code": COUNTRY_CODES.get(country, country[:2].upper()),
                 "visitors": count,
                 "percentage": pct
             })
@@ -359,6 +366,12 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         pickup_today = len([b for b in bookings if b.created_at.date() == today])
         pickup_yesterday = len([b for b in bookings if b.created_at.date() == yesterday])
 
+        # Compute ai_revenue (estimated revenue from AI-assisted bookings)
+        ai_revenue = round(sum(
+            float(b.total_amount or 0) for b in bookings
+            if b.status != 'cancelled' and b.source == 'ai_agent'
+        ), 2)
+
         return {
             "total_visitors": total_visitors,
             "avg_time_spent_seconds": avg_time,
@@ -372,6 +385,7 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             "occupancy_rate": occupancy_rate,
             "traffic_heatmap": heatmap_list,
             "ai_resolution_rate": res_rate,
+            "ai_revenue": ai_revenue,
             "popular_questions": popular_questions,
             "total_leads": total_leads_count,
             "ai_engaged": ai_engagement_count,
