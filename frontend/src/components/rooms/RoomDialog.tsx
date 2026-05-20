@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Info, Image as ImageIcon, DollarSign, ListChecks, Check } from 'lucide-react';
+import { Loader2, Info, Image as ImageIcon, DollarSign, ListChecks, Check, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -79,6 +80,7 @@ interface RoomDialogProps {
 }
 
 export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomDialogProps) {
+    const navigate = useNavigate();
     const { toast } = useToast();
     const isEditing = !!initialData;
     const [activeTab, setActiveTab] = useState('basic');
@@ -200,10 +202,10 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl rounded-2xl bg-white">
+            <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl rounded-2xl bg-background">
                 {/* Header */}
-                <div className="px-8 py-6 border-b bg-slate-50/50">
-                    <DialogTitle className="text-2xl font-bold text-slate-900">
+                <div className="px-8 py-6 border-b border-border bg-muted/40">
+                    <DialogTitle className="text-2xl font-bold text-foreground">
                         {isEditing ? 'Edit Room Type' : 'Add New Room Type'}
                     </DialogTitle>
                     <DialogDescription className="text-sm text-slate-500 mt-1">
@@ -215,17 +217,17 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
                             <div className="px-8 pt-4">
-                                <TabsList className="grid grid-cols-4 w-full h-11 bg-slate-100/80 p-1 rounded-xl">
-                                    <TabsTrigger value="basic" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                                <TabsList className="grid grid-cols-4 w-full h-11 bg-muted/60 p-1 rounded-xl">
+                                    <TabsTrigger value="basic" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
                                         <Info className="w-3.5 h-3.5 mr-2" /> Basic Info
                                     </TabsTrigger>
-                                    <TabsTrigger value="photos" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                                    <TabsTrigger value="photos" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
                                         <ImageIcon className="w-3.5 h-3.5 mr-2" /> Photos
                                     </TabsTrigger>
-                                    <TabsTrigger value="pricing" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                                    <TabsTrigger value="pricing" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
                                         <DollarSign className="w-3.5 h-3.5 mr-2" /> Pricing
                                     </TabsTrigger>
-                                    <TabsTrigger value="amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+                                    <TabsTrigger value="amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
                                         <ListChecks className="w-3.5 h-3.5 mr-2" /> Amenities
                                     </TabsTrigger>
                                 </TabsList>
@@ -472,7 +474,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         </div>
                                     </div>
 
-                                    <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
+                                    <div className="p-6 rounded-2xl bg-muted/40 border border-border">
                                         <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-5">Occupancy Settings</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <FormField
@@ -604,7 +606,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                         </Tabs>
 
                         {/* Footer */}
-                        <div className="flex items-center justify-between px-8 py-5 border-t bg-slate-50/80 gap-4 shrink-0">
+                        <div className="flex items-center justify-between px-8 py-5 border-t border-border bg-muted/40 gap-4 shrink-0">
                             <FormField
                                 control={form.control}
                                 name="is_active"
@@ -618,7 +620,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                             />
                                         </FormControl>
                                         <div className="flex flex-col">
-                                            <FormLabel className="font-bold text-xs text-slate-900">Online Status</FormLabel>
+                                            <FormLabel className="font-bold text-xs text-foreground">Online Status</FormLabel>
                                             <span className="text-[10px] text-slate-400 font-medium">Visible to guests</span>
                                         </div>
                                     </FormItem>

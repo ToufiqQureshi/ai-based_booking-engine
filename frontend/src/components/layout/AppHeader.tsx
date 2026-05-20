@@ -105,7 +105,7 @@ export function AppHeader() {
             <ChevronDown className="h-3 w-3 text-slate-400 group-hover:text-blue-600 transition-colors" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-xl border-slate-200 shadow-xl bg-white">
+        <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-xl border-border shadow-xl bg-popover">
           <div className="px-3 py-2 mb-1">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Your Properties</p>
           </div>
@@ -187,7 +187,7 @@ export function AppHeader() {
               <ChevronDown className="h-3 w-3 text-slate-300" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl border-slate-200 shadow-xl bg-white">
+          <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl border-border shadow-xl bg-popover">
             <DropdownMenuLabel className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Account</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-slate-100" />
             <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 text-slate-700 font-semibold text-sm gap-2.5" onSelect={() => navigate('/profile')}>
@@ -212,7 +212,7 @@ export function AppHeader() {
 
       {/* Dialogs */}
       <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
-        <DialogContent className="rounded-2xl p-0 overflow-hidden bg-white border-none shadow-2xl max-w-md">
+        <DialogContent className="rounded-2xl p-0 overflow-hidden bg-background border-none shadow-2xl max-w-md">
             <div className="bg-blue-600 p-8 text-white">
                 <DialogTitle className="text-xl font-bold mb-1">Add New Property</DialogTitle>
                 <DialogDescription className="text-blue-100 text-sm">Fill in the details below to add another hotel to your account.</DialogDescription>
@@ -230,7 +230,7 @@ export function AppHeader() {
                     <Input className="h-11 rounded-lg border-slate-200 bg-slate-50/50 font-medium text-slate-400" value={newPropSlug} onChange={(e) => setNewPropSlug(e.target.value)} placeholder="e.g. grand-plaza" />
                 </div>
             </div>
-            <DialogFooter className="p-6 bg-slate-50 flex gap-3">
+            <DialogFooter className="p-6 bg-muted/50 flex gap-3">
                 <Button variant="ghost" className="rounded-lg font-bold text-slate-500" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
                 <Button className="rounded-lg bg-blue-600 hover:bg-blue-700 h-11 px-8 font-bold text-sm shadow-sm" onClick={handleAddProperty} disabled={isCreating}>
                     {isCreating ? 'Saving...' : 'Add Property'}
@@ -240,7 +240,7 @@ export function AppHeader() {
       </Dialog>
 
       <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
-        <DialogContent className="rounded-2xl p-0 overflow-hidden bg-white border-none shadow-2xl max-w-md">
+        <DialogContent className="rounded-2xl p-0 overflow-hidden bg-background border-none shadow-2xl max-w-md">
             <div className="bg-slate-900 p-8 text-white">
                 <DialogTitle className="text-xl font-bold mb-1">Help & Support</DialogTitle>
                 <DialogDescription className="text-slate-400 text-sm">Need help? Our team is available 24/7 to assist you.</DialogDescription>

@@ -76,7 +76,7 @@ export function InvoiceDialog({ open, onOpenChange, payment }: InvoiceDialogProp
                 </DialogHeader>
 
                 {/* Invoice Preview */}
-                <div className="border rounded-lg p-8 bg-white max-h-[60vh] overflow-y-auto" ref={invoiceRef}>
+                <div className="border rounded-lg p-8 bg-background max-h-[60vh] overflow-y-auto" ref={invoiceRef}>
                     <div className="flex justify-between items-start border-b pb-6 mb-6">
                         <div>
                             <h1 className="text-2xl font-bold">STAYBOOKER</h1>

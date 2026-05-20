@@ -165,9 +165,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-white border-none shadow-2xl rounded-2xl">
+            <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-background border-none shadow-2xl rounded-2xl">
                 {/* Header */}
-                <div className="bg-slate-50 p-6 sm:p-8 border-b border-slate-100">
+                <div className="bg-muted/50 p-6 sm:p-8 border-b border-border">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 text-blue-600 mb-2">
                             <TrendingUp className="w-4 h-4" />
@@ -255,7 +255,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                     <h3 className="text-base font-bold">Pricing Rules</h3>
                                 </div>
 
-                                <div className="grid sm:grid-cols-2 gap-6 p-6 rounded-xl bg-slate-50/50 border border-slate-100">
+                                <div className="grid sm:grid-cols-2 gap-6 p-6 rounded-xl bg-muted/30 border border-border">
                                     <FormField
                                         control={form.control}
                                         name="price_adjustment"
@@ -376,9 +376,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                 </div>
 
                                 <div className="grid gap-3 sm:grid-cols-2">
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/40 border border-border">
                                         <div className="space-y-0.5">
-                                            <p className="text-sm font-bold text-slate-900">Active Status</p>
+                                            <p className="text-sm font-bold text-foreground">Active Status</p>
                                             <p className="text-[10px] text-slate-500">Show this plan to guests</p>
                                         </div>
                                         <FormField
@@ -392,9 +392,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         />
                                     </div>
 
-                                    <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/40 border border-border">
                                         <div className="space-y-0.5">
-                                            <p className="text-sm font-bold text-slate-900">Refundable</p>
+                                            <p className="text-sm font-bold text-foreground">Refundable</p>
                                             <p className="text-[10px] text-slate-500">Allow refunds on cancellation</p>
                                         </div>
                                         <FormField
@@ -442,7 +442,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                     "p-6 rounded-xl border transition-all",
                                     form.watch('is_package') 
                                         ? "bg-blue-50/30 border-blue-100" 
-                                        : "bg-slate-50 border-slate-100"
+                                        : "bg-muted/30 border-border"
                                 )}>
                                     <FormField
                                         control={form.control}
@@ -499,7 +499,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                     </Form>
                 </div>
 
-                <DialogFooter className="p-6 bg-slate-50 flex items-center justify-between border-t border-slate-100">
+                <DialogFooter className="p-6 bg-muted/50 flex items-center justify-between border-t border-border">
                     <div className="flex items-center gap-2 text-slate-400">
                         <HelpCircle className="h-4 w-4" />
                         <span className="text-[10px] font-bold uppercase tracking-wider">Updates will sync instantly</span>

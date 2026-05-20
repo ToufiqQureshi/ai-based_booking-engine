@@ -174,7 +174,7 @@ export function ManageOccupancyDialog({ open, onOpenChange, roomType, date, onSu
                                     <Input
                                         type="number"
                                         placeholder="Set new price..."
-                                        className="pl-7 bg-white"
+                                        className="pl-7 bg-background"
                                         value={newPrice}
                                         onChange={(e) => setNewPrice(e.target.value === '' ? '' : parseFloat(e.target.value))}
                                     />
