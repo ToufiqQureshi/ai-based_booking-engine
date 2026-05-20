@@ -1,4 +1,4 @@
-import { MoreHorizontal, Users, Bed, Edit, Trash2, BedDouble, Ruler, ChevronRight } from 'lucide-react';
+﻿import { MoreHorizontal, Users, Bed, Edit, Trash2, BedDouble, Ruler, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, getImageUrl } from '@/lib/utils';
@@ -45,7 +45,7 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
                             Active
                         </Badge>
                     ) : (
-                        <Badge variant="secondary" className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5">
+                        <Badge variant="secondary" className="bg-slate-200 text-muted-foreground text-[10px] font-bold px-2 py-0.5">
                             Paused
                         </Badge>
                     )}
@@ -55,13 +55,13 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-lg bg-white/90 backdrop-blur-sm border border-slate-200 shadow-sm">
-                                <MoreHorizontal className="h-4 w-4 text-slate-600" />
+                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-lg bg-background/90 backdrop-blur-sm border border-border shadow-sm">
+                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-lg p-1 min-w-[140px]">
                             <DropdownMenuItem onClick={() => onEdit(room)} className="rounded-md cursor-pointer text-sm font-medium">
-                                <Edit className="mr-2 h-4 w-4 text-slate-400" />
+                                <Edit className="mr-2 h-4 w-4 text-muted-foreground" />
                                 Edit Room
                             </DropdownMenuItem>
                             <DropdownMenuItem

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -173,10 +173,10 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                             <TrendingUp className="w-4 h-4" />
                             <span className="text-[10px] font-bold uppercase tracking-wider">Rate Management</span>
                         </div>
-                        <DialogTitle className="text-2xl font-bold text-slate-900">
+                        <DialogTitle className="text-2xl font-bold text-foreground">
                             {isEditing ? 'Edit Rate Plan' : 'Add Rate Plan'}
                         </DialogTitle>
-                        <DialogDescription className="text-slate-500 text-sm">
+                        <DialogDescription className="text-muted-foreground text-sm">
                             {isEditing 
                                 ? 'Update your pricing rules and cancellation policies.' 
                                 : 'Create a new pricing plan for your rooms.'}
@@ -190,7 +190,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                             
                             {/* Section 1: Basic Info */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-slate-900">
+                                <div className="flex items-center gap-2 text-foreground">
                                     <Info className="h-4 w-4" />
                                     <h3 className="text-base font-bold">Basic Information</h3>
                                 </div>
@@ -201,9 +201,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Plan Name</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Plan Name</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="e.g. Early Bird Offer, Winter Special" className="h-10 border-slate-200 focus-visible:ring-blue-600" {...field} />
+                                                    <Input placeholder="e.g. Early Bird Offer, Winter Special" className="h-10 border-border focus-visible:ring-blue-600" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -215,9 +215,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="description"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Short Description</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Short Description</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="What makes this plan special?" className="h-10 border-slate-200 focus-visible:ring-blue-600" {...field} />
+                                                    <Input placeholder="What makes this plan special?" className="h-10 border-border focus-visible:ring-blue-600" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -229,7 +229,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="image_url"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Plan / Package Image</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Plan / Package Image</FormLabel>
                                                 <FormControl>
                                                     <ImageUpload
                                                         existingImage={field.value}
@@ -246,11 +246,11 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                 </div>
                             </div>
 
-                            <Separator className="bg-slate-100" />
+                            <Separator className="bg-muted" />
 
                             {/* Section 2: Pricing */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-slate-900">
+                                <div className="flex items-center gap-2 text-foreground">
                                     <DollarSign className="h-4 w-4" />
                                     <h3 className="text-base font-bold">Pricing Rules</h3>
                                 </div>
@@ -261,11 +261,11 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="price_adjustment"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Markup / Add-on Price</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Markup / Add-on Price</FormLabel>
                                                 <FormControl>
                                                     <div className="relative">
-                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</div>
-                                                        <Input type="number" className="h-10 border-slate-200 pl-7" {...field} />
+                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</div>
+                                                        <Input type="number" className="h-10 border-border pl-7" {...field} />
                                                     </div>
                                                 </FormControl>
                                                 <FormDescription className="text-[10px]">Added to room base price</FormDescription>
@@ -279,11 +279,11 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="market_price"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Display Price (M.R.P.)</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Display Price (M.R.P.)</FormLabel>
                                                 <FormControl>
                                                     <div className="relative">
-                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</div>
-                                                        <Input type="number" placeholder="Original price..." className="h-10 border-slate-200 pl-7" {...field} value={field.value ?? ''} />
+                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</div>
+                                                        <Input type="number" placeholder="Original price..." className="h-10 border-border pl-7" {...field} value={field.value ?? ''} />
                                                     </div>
                                                 </FormControl>
                                                 <FormDescription className="text-[10px]">For strike-through display</FormDescription>
@@ -297,10 +297,10 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="meal_plan"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Meal Plan</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Meal Plan</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl>
-                                                        <SelectTrigger className="h-10 border-slate-200">
+                                                        <SelectTrigger className="h-10 border-border">
                                                             <SelectValue placeholder="Select meal plan" />
                                                         </SelectTrigger>
                                                     </FormControl>
@@ -321,9 +321,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="min_los"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Min. Nights Stay</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Min. Nights Stay</FormLabel>
                                                 <FormControl>
-                                                    <Input type="number" className="h-10 border-slate-200" {...field} />
+                                                    <Input type="number" className="h-10 border-border" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -334,7 +334,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
 
                             {/* Section 3: Policies */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-slate-900">
+                                <div className="flex items-center gap-2 text-foreground">
                                     <Clock className="h-4 w-4" />
                                     <h3 className="text-base font-bold">Cancellation & Booking Policies</h3>
                                 </div>
@@ -345,11 +345,11 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="cancellation_hours"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Free Cancellation Before</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Free Cancellation Before</FormLabel>
                                                 <FormControl>
                                                     <div className="relative">
-                                                        <Input type="number" className="h-10 border-slate-200 pr-14" {...field} />
-                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">Hours</span>
+                                                        <Input type="number" className="h-10 border-border pr-14" {...field} />
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground uppercase">Hours</span>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -362,11 +362,11 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         name="advance_purchase_days"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-semibold text-slate-600">Advance Booking Req.</FormLabel>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Advance Booking Req.</FormLabel>
                                                 <FormControl>
                                                     <div className="relative">
-                                                        <Input type="number" className="h-10 border-slate-200 pr-14" {...field} />
-                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">Days</span>
+                                                        <Input type="number" className="h-10 border-border pr-14" {...field} />
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground uppercase">Days</span>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -379,7 +379,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                     <div className="flex items-center justify-between p-4 rounded-lg bg-muted/40 border border-border">
                                         <div className="space-y-0.5">
                                             <p className="text-sm font-bold text-foreground">Active Status</p>
-                                            <p className="text-[10px] text-slate-500">Show this plan to guests</p>
+                                            <p className="text-[10px] text-muted-foreground">Show this plan to guests</p>
                                         </div>
                                         <FormField
                                             control={form.control}
@@ -395,7 +395,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                     <div className="flex items-center justify-between p-4 rounded-lg bg-muted/40 border border-border">
                                         <div className="space-y-0.5">
                                             <p className="text-sm font-bold text-foreground">Refundable</p>
-                                            <p className="text-[10px] text-slate-500">Allow refunds on cancellation</p>
+                                            <p className="text-[10px] text-muted-foreground">Allow refunds on cancellation</p>
                                         </div>
                                         <FormField
                                             control={form.control}
@@ -416,10 +416,10 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                             <Eye className="w-4 h-4 text-indigo-600" />
                                             Guest View Live Preview on Booking Engine
                                         </span>
-                                        <span className="px-2 py-0.5 rounded-full bg-white text-[10px] text-indigo-700 font-bold border border-indigo-200">Live Preview</span>
+                                        <span className="px-2 py-0.5 rounded-full bg-background text-[10px] text-indigo-700 font-bold border border-indigo-200">Live Preview</span>
                                     </div>
                                     <div className="flex items-center gap-2 pt-0.5">
-                                        <span className="text-xs text-slate-500 font-medium">Cancellation Policy Display:</span>
+                                        <span className="text-xs text-muted-foreground font-medium">Cancellation Policy Display:</span>
                                         <span className={`text-xs font-bold px-3 py-1 rounded-md shadow-xs border ${
                                             isRefundable 
                                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
@@ -433,7 +433,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
 
                             {/* Section 4: Package Inclusions */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-slate-900">
+                                <div className="flex items-center gap-2 text-foreground">
                                     <Package className="h-4 w-4" />
                                     <h3 className="text-base font-bold">Bundle Package Details</h3>
                                 </div>
@@ -450,7 +450,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         render={({ field }) => (
                                             <FormItem className="flex items-center justify-between mb-4">
                                                 <div className="space-y-0.5">
-                                                    <FormLabel className="text-sm font-bold text-slate-900">Enable as Package</FormLabel>
+                                                    <FormLabel className="text-sm font-bold text-foreground">Enable as Package</FormLabel>
                                                     <FormDescription className="text-[10px]">Bundle extra services with room stay</FormDescription>
                                                 </div>
                                                 <FormControl>
@@ -467,9 +467,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                                 name="package_items"
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel className="text-xs font-semibold text-slate-600">Package Inclusions (Comma separated)</FormLabel>
+                                                        <FormLabel className="text-xs font-semibold text-muted-foreground">Package Inclusions (Comma separated)</FormLabel>
                                                         <FormControl>
-                                                            <Input placeholder="e.g. Free Sightseeing, Spa Session, Welcome Drink" className="h-10 border-slate-200" {...field} />
+                                                            <Input placeholder="e.g. Free Sightseeing, Spa Session, Welcome Drink" className="h-10 border-border" {...field} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -484,9 +484,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                             name="inclusions"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-xs font-semibold text-slate-600">Standard Amenities (Comma separated)</FormLabel>
+                                                    <FormLabel className="text-xs font-semibold text-muted-foreground">Standard Amenities (Comma separated)</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder="e.g. Free WiFi, AC, Geyser" className="h-10 border-slate-200" {...field} />
+                                                        <Input placeholder="e.g. Free WiFi, AC, Geyser" className="h-10 border-border" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -500,7 +500,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                 </div>
 
                 <DialogFooter className="p-6 bg-muted/50 flex items-center justify-between border-t border-border">
-                    <div className="flex items-center gap-2 text-slate-400">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                         <HelpCircle className="h-4 w-4" />
                         <span className="text-[10px] font-bold uppercase tracking-wider">Updates will sync instantly</span>
                     </div>

@@ -1,4 +1,4 @@
-// Settings Page - Real API Integration
+﻿// Settings Page - Real API Integration
 import { useState } from 'react';
 import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -279,13 +279,13 @@ export function SettingsPage() {
 
                 <div className="space-y-2 pt-2 border-t mt-4">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="hotelSlug" className="font-semibold text-slate-800 dark:text-slate-200">Custom Booking Link (URL Slug)</Label>
+                    <Label htmlFor="hotelSlug" className="font-semibold text-foreground dark:text-slate-200">Custom Booking Link (URL Slug)</Label>
                     <span className="text-[10px] text-violet-700 bg-violet-100 dark:bg-violet-950 dark:text-violet-300 px-2.5 py-0.5 rounded-full font-bold tracking-wide uppercase border border-violet-200 dark:border-violet-800">
                       White-label Link
                     </span>
                   </div>
                   <div className="flex rounded-xl shadow-sm border border-input focus-within:ring-2 focus-within:ring-violet-600 focus-within:border-violet-600 overflow-hidden transition-all bg-background">
-                    <span className="px-4 bg-slate-100 dark:bg-slate-900 text-slate-500 flex items-center text-xs font-mono border-r select-none">
+                    <span className="px-4 bg-muted dark:bg-slate-900 text-muted-foreground flex items-center text-xs font-mono border-r select-none">
                       {window.location.host}/book/
                     </span>
                     <Input
@@ -295,7 +295,7 @@ export function SettingsPage() {
                       value={formData.slug}
                       onChange={(e) => handleUpdate('root', 'slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                     />
-                    <span className="px-4 bg-slate-100 dark:bg-slate-900 text-slate-500 flex items-center text-xs font-mono border-l select-none">
+                    <span className="px-4 bg-muted dark:bg-slate-900 text-muted-foreground flex items-center text-xs font-mono border-l select-none">
                       /rooms
                     </span>
                   </div>
@@ -578,7 +578,7 @@ export function SettingsPage() {
                         </p>
                       </div>
 
-                      <div className="h-20 w-20 border rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden relative">
+                      <div className="h-20 w-20 border rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden relative">
                         {formData.settings.logo_url ? (
                           <img
                             src={formData.settings.logo_url}
@@ -613,9 +613,9 @@ export function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border">
                   <div className="space-y-0.5">
-                    <Label className="text-base font-bold text-slate-900">Multi-Room Cart Bar</Label>
+                    <Label className="text-base font-bold text-foreground">Multi-Room Cart Bar</Label>
                     <p className="text-xs text-muted-foreground">
                       Allow guests to select and combine multiple room types (e.g. Deluxe + Executive) in a persistent floating cart.
                     </p>
@@ -627,12 +627,12 @@ export function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="featuredRoom" className="text-slate-900 font-bold">Featured Category for Starting Price Display</Label>
+                  <Label htmlFor="featuredRoom" className="text-foreground font-bold">Featured Category for Starting Price Display</Label>
                   <Select
                     value={formData.settings.featured_room_type_id || ''}
                     onValueChange={(val) => handleUpdate('settings', 'featured_room_type_id', val)}
                   >
-                    <SelectTrigger className="w-full bg-white">
+                    <SelectTrigger className="w-full bg-background">
                       <SelectValue placeholder="Select room category to highlight..." />
                     </SelectTrigger>
                     <SelectContent>

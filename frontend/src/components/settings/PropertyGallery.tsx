@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Camera, Trash2, GripVertical, Upload, Loader2, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -121,12 +121,12 @@ export function PropertyGallery({ photos, onChange, onSave }: PropertyGalleryPro
       </CardHeader>
       <CardContent className="px-0">
         {photos.length === 0 ? (
-          <div className="border-2 border-dashed rounded-2xl p-20 flex flex-col items-center justify-center text-center bg-slate-50/50">
-            <div className="p-4 bg-white rounded-full shadow-sm mb-4">
+          <div className="border-2 border-dashed rounded-2xl p-20 flex flex-col items-center justify-center text-center bg-muted/30/50">
+            <div className="p-4 bg-background rounded-full shadow-sm mb-4">
               <Camera className="h-10 w-10 text-slate-300" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900">No photos yet</h3>
-            <p className="text-slate-500 max-w-xs mx-auto mt-2">
+            <h3 className="text-lg font-semibold text-foreground">No photos yet</h3>
+            <p className="text-muted-foreground max-w-xs mx-auto mt-2">
               Upload high-quality images of your property to show guests what makes it special.
             </p>
             <Button variant="outline" className="mt-6 relative">
@@ -145,9 +145,9 @@ export function PropertyGallery({ photos, onChange, onSave }: PropertyGalleryPro
             {photos.sort((a, b) => a.order - b.order).map((photo) => (
               <div 
                 key={photo.id} 
-                className={`group relative rounded-2xl overflow-hidden bg-white border shadow-sm transition-all hover:shadow-md ${photo.is_primary ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                className={`group relative rounded-2xl overflow-hidden bg-background border shadow-sm transition-all hover:shadow-md ${photo.is_primary ? 'ring-2 ring-primary ring-offset-2' : ''}`}
               >
-                <div className="aspect-[4/3] overflow-hidden bg-slate-100">
+                <div className="aspect-[4/3] overflow-hidden bg-muted">
                   <img 
                     src={photo.url} 
                     alt={photo.caption || 'Property'} 
@@ -180,12 +180,12 @@ export function PropertyGallery({ photos, onChange, onSave }: PropertyGalleryPro
                     </Button>
                   </div>
                 </div>
-                <div className="p-3 bg-white">
+                <div className="p-3 bg-background">
                   <Input 
                     placeholder="Add a caption..." 
                     value={photo.caption || ''} 
                     onChange={(e) => updateCaption(photo.id!, e.target.value)}
-                    className="h-8 text-xs border-none bg-slate-50 focus-visible:ring-1 focus-visible:ring-slate-200"
+                    className="h-8 text-xs border-none bg-muted/30 focus-visible:ring-1 focus-visible:ring-slate-200"
                   />
                 </div>
               </div>

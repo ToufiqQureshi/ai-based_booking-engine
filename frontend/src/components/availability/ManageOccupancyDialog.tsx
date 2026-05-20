@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Loader2, Lock, Unlock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -170,7 +170,7 @@ export function ManageOccupancyDialog({ open, onOpenChange, roomType, date, onSu
                             </div>
                             <div className="flex gap-2">
                                 <div className="relative flex-1">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                                     <Input
                                         type="number"
                                         placeholder="Set new price..."

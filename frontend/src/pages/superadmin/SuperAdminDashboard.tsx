@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ShieldCheck,
@@ -292,7 +292,7 @@ export default function SuperAdminDashboard() {
             <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB]">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-slate-500 font-semibold animate-pulse tracking-tight">Staybooker Enterprise</p>
+                    <p className="text-muted-foreground font-semibold animate-pulse tracking-tight">Staybooker Enterprise</p>
                 </div>
             </div>
         );
@@ -302,18 +302,18 @@ export default function SuperAdminDashboard() {
     if (!user || user.role !== 'SUPER_ADMIN') {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB] p-4 font-inter">
-                <Card className="max-w-md w-full border-slate-200 shadow-xl">
+                <Card className="max-w-md w-full border-border shadow-xl">
                     <CardHeader className="text-center pb-2">
                         <div className="mx-auto w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4 border border-red-100">
                             <XCircle className="w-10 h-10" />
                         </div>
-                        <CardTitle className="text-2xl font-bold text-slate-900">Security Access Denied</CardTitle>
-                        <CardDescription className="text-slate-500 font-medium mt-2">
+                        <CardTitle className="text-2xl font-bold text-foreground">Security Access Denied</CardTitle>
+                        <CardDescription className="text-muted-foreground font-medium mt-2">
                             Admin-only restricted portal.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="p-4 bg-slate-50 rounded-xl text-[10px] font-mono text-slate-400 border border-slate-100">
+                        <div className="p-4 bg-muted/30 rounded-xl text-[10px] font-mono text-muted-foreground border border-border">
                             ERR_AUTH_PRIV_LOW: superadmin.staybooker.ai
                         </div>
                         <Button
@@ -353,23 +353,23 @@ export default function SuperAdminDashboard() {
     return (
         <div className="min-h-screen bg-[#F9FAFB] font-inter selection:bg-indigo-100">
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 h-16 px-8 flex items-center justify-between">
+            <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16 px-8 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-100">
                         <ShieldCheck className="text-white w-5 h-5" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-bold text-slate-900 leading-none">Staybooker <span className="text-indigo-600">Admin</span></h1>
-                        <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mt-1">Platform Control Center</p>
+                        <h1 className="text-lg font-bold text-foreground leading-none">Staybooker <span className="text-indigo-600">Admin</span></h1>
+                        <p className="text-[10px] text-muted-foreground font-bold tracking-wider uppercase mt-1">Platform Control Center</p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-6">
                     <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-indigo-600 transition-colors" />
                         <input
                             placeholder="Global Search..."
-                            className="bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm w-64 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 transition-all outline-none"
+                            className="bg-muted/30 border border-border rounded-xl pl-10 pr-4 py-2 text-sm w-64 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 transition-all outline-none"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -377,7 +377,7 @@ export default function SuperAdminDashboard() {
                     <div className="h-8 w-px bg-slate-200" />
                     <div className="flex items-center gap-3">
                         <div className="text-right">
-                            <p className="text-sm font-bold text-slate-900">{user.email.split('@')[0]}</p>
+                            <p className="text-sm font-bold text-foreground">{user.email.split('@')[0]}</p>
                             <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-tighter">Super Admin</p>
                         </div>
                         <Button
@@ -401,17 +401,17 @@ export default function SuperAdminDashboard() {
                         { label: 'AI Features Active', value: hotels.filter(h => h.feature_ai_agent).length, trend: 'Trending', icon: BrainCircuit, color: 'text-purple-600', bg: 'bg-purple-50' },
                         { label: 'System Health', value: '99.9%', trend: 'Operational', icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
                     ].map((stat, i) => (
-                        <Card key={i} className="border-slate-200 shadow-sm hover:shadow-md transition-all">
+                        <Card key={i} className="border-border shadow-sm hover:shadow-md transition-all">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
                                         <stat.icon className="w-6 h-6" />
                                     </div>
-                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{stat.label}</span>
+                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</span>
                                 </div>
                                 <div className="flex items-end justify-between">
-                                    <h3 className="text-3xl font-black text-slate-900 tabular-nums tracking-tight">{stat.value}</h3>
-                                    <span className="text-[10px] font-black px-2 py-1 bg-slate-100 rounded-lg text-slate-600">{stat.trend}</span>
+                                    <h3 className="text-3xl font-black text-foreground tabular-nums tracking-tight">{stat.value}</h3>
+                                    <span className="text-[10px] font-black px-2 py-1 bg-muted rounded-lg text-muted-foreground">{stat.trend}</span>
                                 </div>
                             </CardContent>
                         </Card>
@@ -421,17 +421,17 @@ export default function SuperAdminDashboard() {
                 {/* Tabs & Content */}
                 <Tabs defaultValue="hotels" className="w-full">
                     <div className="flex items-center justify-between mb-6">
-                        <TabsList className="bg-slate-100 p-1 rounded-xl border border-slate-200">
-                            <TabsTrigger value="hotels" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
+                        <TabsList className="bg-muted p-1 rounded-xl border border-border">
+                            <TabsTrigger value="hotels" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
                                 <Hotel className="w-4 h-4 mr-2" /> Properties
                             </TabsTrigger>
-                            <TabsTrigger value="users" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
+                            <TabsTrigger value="users" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
                                 <Users className="w-4 h-4 mr-2" /> User Accounts
                             </TabsTrigger>
-                            <TabsTrigger value="audit" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
+                            <TabsTrigger value="audit" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
                                 <Activity className="w-4 h-4 mr-2" /> Audit & Activity
                             </TabsTrigger>
-                            <TabsTrigger value="broadcasts" className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
+                            <TabsTrigger value="broadcasts" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
                                 <Radio className="w-4 h-4 mr-2" /> System Broadcasts
                             </TabsTrigger>
                         </TabsList>
@@ -439,7 +439,7 @@ export default function SuperAdminDashboard() {
                         <div className="flex items-center gap-3">
                             <Button
                                 variant="outline"
-                                className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 hover:bg-slate-50 transition-colors"
+                                className="rounded-xl border-border bg-background font-bold h-11 px-6 hover:bg-muted/30 transition-colors"
                                 onClick={() => refetch()}
                             >
                                 <RefreshCw className="w-4 h-4 mr-2" /> Refresh Data
@@ -451,16 +451,16 @@ export default function SuperAdminDashboard() {
                     </div>
 
                     <TabsContent value="hotels" className="mt-0">
-                        <Card className="border-slate-200 shadow-sm overflow-hidden rounded-2xl bg-white">
+                        <Card className="border-border shadow-sm overflow-hidden rounded-2xl bg-background">
                             <div className="overflow-x-auto">
                                 <Table>
-                                    <TableHeader className="bg-slate-50/50 border-b border-slate-100">
+                                    <TableHeader className="bg-muted/30/50 border-b border-border">
                                         <TableRow className="hover:bg-transparent">
-                                            <TableHead className="w-[300px] text-[10px] font-black uppercase tracking-widest text-slate-400 py-4 pl-8">Hotel Property</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ownership</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">AI Features</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right pr-8">Actions</TableHead>
+                                            <TableHead className="w-[300px] text-[10px] font-black uppercase tracking-widest text-muted-foreground py-4 pl-8">Hotel Property</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ownership</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">AI Features</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right pr-8">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -469,26 +469,26 @@ export default function SuperAdminDashboard() {
                                                 <TableCell colSpan={5} className="h-64 text-center">
                                                     <div className="flex flex-col items-center gap-3">
                                                         <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                                                        <span className="text-sm font-bold text-slate-400 animate-pulse">Loading Portfolio...</span>
+                                                        <span className="text-sm font-bold text-muted-foreground animate-pulse">Loading Portfolio...</span>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
                                         ) : filteredHotels.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-64 text-center text-slate-400 font-bold italic">
+                                                <TableCell colSpan={5} className="h-64 text-center text-muted-foreground font-bold italic">
                                                     No properties matched your search.
                                                 </TableCell>
                                             </TableRow>
                                         ) : filteredHotels.map((hotel) => (
-                                            <TableRow key={hotel.id} className="hover:bg-slate-50/50 transition-colors border-slate-100">
+                                            <TableRow key={hotel.id} className="hover:bg-muted/30/50 transition-colors border-border">
                                                 <TableCell className="py-5 pl-8">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 overflow-hidden group">
-                                                            <Building2 className="w-6 h-6 text-slate-400 group-hover:scale-110 transition-transform" />
+                                                        <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center border border-border overflow-hidden group">
+                                                            <Building2 className="w-6 h-6 text-muted-foreground group-hover:scale-110 transition-transform" />
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-slate-900">{hotel.name}</div>
-                                                            <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1 mt-0.5">
+                                                            <div className="font-bold text-foreground">{hotel.name}</div>
+                                                            <div className="text-[11px] text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
                                                                 <MapPin className="w-3 h-3" /> Location Managed
                                                             </div>
                                                         </div>
@@ -496,15 +496,15 @@ export default function SuperAdminDashboard() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col">
-                                                        <span className="font-bold text-slate-700 text-sm tabular-nums">{hotel.owner_email.split('@')[0]}</span>
-                                                        <span className="text-[11px] text-slate-400">{hotel.owner_email}</span>
+                                                        <span className="font-bold text-foreground text-sm tabular-nums">{hotel.owner_email.split('@')[0]}</span>
+                                                        <span className="text-[11px] text-muted-foreground">{hotel.owner_email}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge className={`rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-widest border ${
                                                         hotel.is_active 
                                                         ? 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm' 
-                                                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                                                        : 'bg-muted text-muted-foreground border-border'
                                                     }`}>
                                                         {hotel.is_active ? 'Active' : 'Locked'}
                                                     </Badge>
@@ -517,7 +517,7 @@ export default function SuperAdminDashboard() {
                                                             { label: 'Rates', key: 'rate_shopper_enabled', icon: TrendingUp, val: hotel.feature_rate_shopper },
                                                         ].map((feat) => (
                                                             <div key={feat.key} className="flex flex-col items-center gap-2">
-                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{feat.label}</span>
+                                                                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">{feat.label}</span>
                                                                 <Switch
                                                                     checked={feat.val}
                                                                     onCheckedChange={() => toggleFeature(hotel.id, feat.key, feat.val)}
@@ -529,21 +529,21 @@ export default function SuperAdminDashboard() {
                                                 </TableCell>
                                                 <TableCell className="text-right pr-8">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white hover:shadow-sm hover:border-slate-200 border border-transparent transition-all">
-                                                            <ExternalLink className="w-4 h-4 text-slate-400 hover:text-indigo-600" />
+                                                        <Button variant="ghost" size="icon" className="rounded-xl hover:bg-background hover:shadow-sm hover:border-border border border-transparent transition-all">
+                                                            <ExternalLink className="w-4 h-4 text-muted-foreground hover:text-indigo-600" />
                                                         </Button>
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white hover:shadow-sm">
-                                                                    <MoreVertical className="w-4 h-4 text-slate-400" />
+                                                                <Button variant="ghost" size="icon" className="rounded-xl hover:bg-background hover:shadow-sm">
+                                                                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
                                                                 </Button>
                                                             </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-2xl border-slate-200 bg-white">
-                                                                <DropdownMenuLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2">Property Control</DropdownMenuLabel>
-                                                                <DropdownMenuSeparator className="bg-slate-50" />
+                                                            <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-2xl border-border bg-background">
+                                                                <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-3 py-2">Property Control</DropdownMenuLabel>
+                                                                <DropdownMenuSeparator className="bg-muted/30" />
                                                                 <DropdownMenuItem className="rounded-xl py-3 cursor-pointer group" onClick={() => impersonateMutation.mutate(hotel.id)}>
                                                                     <UserCheck className="w-4 h-4 mr-3 text-emerald-600" />
-                                                                    <span className="font-bold text-slate-700">Impersonate Hotel</span>
+                                                                    <span className="font-bold text-foreground">Impersonate Hotel</span>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem className="rounded-xl py-3 cursor-pointer group" onClick={() => {
                                                                     setSelectedQuotaHotel(hotel);
@@ -552,17 +552,17 @@ export default function SuperAdminDashboard() {
                                                                     setAiUsageLimit(hotel.subscription?.ai_usage_limit?.toString() || '50000');
                                                                 }}>
                                                                     <Sliders className="w-4 h-4 mr-3 text-purple-600" />
-                                                                    <span className="font-bold text-slate-700">Quotas & Limits</span>
+                                                                    <span className="font-bold text-foreground">Quotas & Limits</span>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem className="rounded-xl py-3 cursor-pointer group" onClick={() => toggleActive(hotel.id, hotel.is_active)}>
                                                                     {hotel.is_active ? <XCircle className="w-4 h-4 mr-3 text-red-500" /> : <ShieldCheck className="w-4 h-4 mr-3 text-emerald-500" />}
-                                                                    <span className="font-bold text-slate-700">{hotel.is_active ? 'Restrict Account' : 'Grant Full Access'}</span>
+                                                                    <span className="font-bold text-foreground">{hotel.is_active ? 'Restrict Account' : 'Grant Full Access'}</span>
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem className="rounded-xl py-3 cursor-pointer group" onClick={() => toast({ title: 'Subscription Manager', description: 'Redirecting to payment gateway...' })}>
                                                                     <CreditCard className="w-4 h-4 mr-3 text-indigo-500" />
-                                                                    <span className="font-bold text-slate-700">Manage Billing</span>
+                                                                    <span className="font-bold text-foreground">Manage Billing</span>
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuSeparator className="bg-slate-50" />
+                                                                <DropdownMenuSeparator className="bg-muted/30" />
                                                                 <DropdownMenuItem className="rounded-xl py-3 cursor-pointer group hover:bg-red-50" onClick={() => {
                                                                     if (confirm(`Are you absolutely sure you want to delete ${hotel.name}? This action is irreversible.`)) {
                                                                         deleteHotelMutation.mutate(hotel.id);
@@ -584,17 +584,17 @@ export default function SuperAdminDashboard() {
                     </TabsContent>
 
                     <TabsContent value="users" className="mt-0">
-                        <Card className="border-slate-200 shadow-sm rounded-2xl p-8 bg-white min-h-[400px]">
+                        <Card className="border-border shadow-sm rounded-2xl p-8 bg-background min-h-[400px]">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
-                                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">System User Governance</h3>
-                                    <p className="text-sm text-slate-400 font-medium mt-1">Review and manage platform administration levels.</p>
+                                    <h3 className="text-2xl font-black text-foreground tracking-tight">System User Governance</h3>
+                                    <p className="text-sm text-muted-foreground font-medium mt-1">Review and manage platform administration levels.</p>
                                 </div>
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <input
                                         placeholder="Filter by email address..."
-                                        className="bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm w-80 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
+                                        className="bg-muted/30 border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm w-80 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
                                         value={userSearchQuery}
                                         onChange={(e) => setUserSearchQuery(e.target.value)}
                                     />
@@ -607,22 +607,22 @@ export default function SuperAdminDashboard() {
                                         <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
                                     </div>
                                 ) : users.map((u: any) => (
-                                    <div key={u.id} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/30 hover:border-indigo-100 hover:bg-white hover:shadow-xl hover:shadow-slate-100/50 transition-all group relative overflow-hidden">
+                                    <div key={u.id} className="p-6 rounded-2xl border border-border bg-muted/30/30 hover:border-indigo-100 hover:bg-background hover:shadow-xl hover:shadow-slate-100/50 transition-all group relative overflow-hidden">
                                         <div className="flex items-start justify-between mb-4">
-                                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                                            <div className="w-12 h-12 bg-background rounded-xl flex items-center justify-center shadow-sm border border-border text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
                                                 <UserIcon className="w-6 h-6" />
                                             </div>
                                             <Badge className={`rounded-lg px-3 py-1 font-black text-[9px] uppercase tracking-widest ${
-                                                u.role === 'SUPER_ADMIN' ? 'bg-indigo-600 text-white border-none' : 'bg-slate-200 text-slate-600'
+                                                u.role === 'SUPER_ADMIN' ? 'bg-indigo-600 text-white border-none' : 'bg-slate-200 text-muted-foreground'
                                             }`}>
                                                 {u.role}
                                             </Badge>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="font-bold text-slate-900 truncate">{u.email}</p>
-                                            <p className="text-[11px] text-slate-400 font-bold tracking-tight uppercase">Joined: {format(new Date(u.created_at), 'dd MMM yyyy')}</p>
+                                            <p className="font-bold text-foreground truncate">{u.email}</p>
+                                            <p className="text-[11px] text-muted-foreground font-bold tracking-tight uppercase">Joined: {format(new Date(u.created_at), 'dd MMM yyyy')}</p>
                                         </div>
-                                        <div className="mt-6 pt-6 border-t border-slate-100 flex items-center gap-2">
+                                        <div className="mt-6 pt-6 border-t border-border flex items-center gap-2">
                                             <Button
                                                 variant="outline"
                                                 className={`flex-1 rounded-xl h-10 font-black text-[10px] uppercase tracking-wider ${u.role === 'SUPER_ADMIN' ? 'text-red-600 hover:bg-red-50 border-red-100' : 'text-indigo-600 hover:bg-indigo-50 border-indigo-100'}`}
@@ -642,30 +642,30 @@ export default function SuperAdminDashboard() {
 
                     {/* Audit Logs Tab Content */}
                     <TabsContent value="audit" className="mt-0">
-                        <Card className="border-slate-200 shadow-sm rounded-2xl p-8 bg-white min-h-[400px]">
+                        <Card className="border-border shadow-sm rounded-2xl p-8 bg-background min-h-[400px]">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
-                                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Security Audit & Activity Trail</h3>
-                                    <p className="text-sm text-slate-400 font-medium mt-1">Immutable record of enterprise administration events and system modifications.</p>
+                                    <h3 className="text-2xl font-black text-foreground tracking-tight">Security Audit & Activity Trail</h3>
+                                    <p className="text-sm text-muted-foreground font-medium mt-1">Immutable record of enterprise administration events and system modifications.</p>
                                 </div>
                                 <Button
                                     variant="outline"
-                                    className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 hover:bg-slate-50 transition-colors"
+                                    className="rounded-xl border-border bg-background font-bold h-11 px-6 hover:bg-muted/30 transition-colors"
                                     onClick={() => refetchAudit()}
                                 >
                                     <RefreshCw className="w-4 h-4 mr-2" /> Refresh Trail
                                 </Button>
                             </div>
 
-                            <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                            <div className="overflow-x-auto border border-border rounded-2xl">
                                 <Table>
-                                    <TableHeader className="bg-slate-50/80 border-b border-slate-100">
+                                    <TableHeader className="bg-muted/30/80 border-b border-border">
                                         <TableRow className="hover:bg-transparent">
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-4 pl-6">Timestamp</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Operator Email</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Action Type</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Description / Details</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right pr-6">IP Address</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground py-4 pl-6">Timestamp</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Operator Email</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Action Type</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description / Details</TableHead>
+                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right pr-6">IP Address</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -674,25 +674,25 @@ export default function SuperAdminDashboard() {
                                                 <TableCell colSpan={5} className="h-64 text-center">
                                                     <div className="flex flex-col items-center gap-3">
                                                         <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                                                        <span className="text-sm font-bold text-slate-400 animate-pulse">Loading Audit Logs...</span>
+                                                        <span className="text-sm font-bold text-muted-foreground animate-pulse">Loading Audit Logs...</span>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
                                         ) : auditLogs.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-64 text-center text-slate-400 font-bold italic">
+                                                <TableCell colSpan={5} className="h-64 text-center text-muted-foreground font-bold italic">
                                                     No audit log trail recorded yet.
                                                 </TableCell>
                                             </TableRow>
                                         ) : auditLogs.map((log) => (
-                                            <TableRow key={log.id} className="hover:bg-slate-50/50 transition-colors border-slate-100">
-                                                <TableCell className="py-4 pl-6 text-xs font-mono font-medium text-slate-500 whitespace-nowrap">
+                                            <TableRow key={log.id} className="hover:bg-muted/30/50 transition-colors border-border">
+                                                <TableCell className="py-4 pl-6 text-xs font-mono font-medium text-muted-foreground whitespace-nowrap">
                                                     <div className="flex items-center gap-2">
                                                         <Clock className="w-3.5 h-3.5 text-indigo-500" />
                                                         {format(new Date(log.created_at), 'dd MMM yyyy, HH:mm:ss')}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="font-bold text-slate-800 text-xs">
+                                                <TableCell className="font-bold text-foreground text-xs">
                                                     {log.user_email}
                                                 </TableCell>
                                                 <TableCell>
@@ -700,10 +700,10 @@ export default function SuperAdminDashboard() {
                                                         {log.action}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-xs text-slate-600 font-medium max-w-md">
+                                                <TableCell className="text-xs text-muted-foreground font-medium max-w-md">
                                                     {log.description}
                                                 </TableCell>
-                                                <TableCell className="text-right pr-6 font-mono text-[11px] text-slate-400">
+                                                <TableCell className="text-right pr-6 font-mono text-[11px] text-muted-foreground">
                                                     {log.ip_address}
                                                 </TableCell>
                                             </TableRow>
@@ -717,41 +717,41 @@ export default function SuperAdminDashboard() {
                     {/* Broadcasts Tab Content */}
                     <TabsContent value="broadcasts" className="mt-0">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <Card className="border-slate-200 shadow-sm rounded-2xl p-8 bg-white lg:col-span-1 h-fit">
+                            <Card className="border-border shadow-sm rounded-2xl p-8 bg-background lg:col-span-1 h-fit">
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 border border-indigo-100">
                                         <Radio className="w-5 h-5 animate-pulse" />
                                     </div>
                                     <div>
-                                        <h4 className="text-lg font-black text-slate-900 tracking-tight">New Broadcast Banner</h4>
-                                        <p className="text-xs text-slate-400 font-medium">Instantly alert all tenant dashboards.</p>
+                                        <h4 className="text-lg font-black text-foreground tracking-tight">New Broadcast Banner</h4>
+                                        <p className="text-xs text-muted-foreground font-medium">Instantly alert all tenant dashboards.</p>
                                     </div>
                                 </div>
 
                                 <div className="space-y-5">
                                     <div>
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Banner Title</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Banner Title</label>
                                         <Input
                                             placeholder="e.g. Scheduled System Upkeep"
-                                            className="h-12 bg-slate-50 border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-100"
+                                            className="h-12 bg-muted/30 border-border rounded-xl font-medium focus:ring-2 focus:ring-indigo-100"
                                             value={broadcastTitle}
                                             onChange={(e) => setBroadcastTitle(e.target.value)}
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Announcement Message</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Announcement Message</label>
                                         <textarea
                                             placeholder="Provide complete maintenance windows or platform updates..."
                                             rows={4}
-                                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 transition-all outline-none resize-none"
+                                            className="w-full p-4 bg-muted/30 border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 transition-all outline-none resize-none"
                                             value={broadcastMessage}
                                             onChange={(e) => setBroadcastMessage(e.target.value)}
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">Severity Classification</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Severity Classification</label>
                                         <div className="grid grid-cols-3 gap-3">
                                             {[
                                                 { label: 'Info', value: 'info', bg: 'bg-blue-50 text-blue-600 border-blue-200' },
@@ -763,7 +763,7 @@ export default function SuperAdminDashboard() {
                                                     type="button"
                                                     onClick={() => setBroadcastType(t.value)}
                                                     className={`py-3 px-4 rounded-xl border text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                                                        broadcastType === t.value ? `${t.bg} shadow-md scale-105 ring-2 ring-indigo-600/20` : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+                                                        broadcastType === t.value ? `${t.bg} shadow-md scale-105 ring-2 ring-indigo-600/20` : 'bg-muted/30 text-muted-foreground border-border hover:bg-muted'
                                                     }`}
                                                 >
                                                     {t.value === 'warning' ? <AlertTriangle className="w-3.5 h-3.5" /> : null}
@@ -787,15 +787,15 @@ export default function SuperAdminDashboard() {
                                 </div>
                             </Card>
 
-                            <Card className="border-slate-200 shadow-sm rounded-2xl p-8 bg-white lg:col-span-2 min-h-[400px]">
+                            <Card className="border-border shadow-sm rounded-2xl p-8 bg-background lg:col-span-2 min-h-[400px]">
                                 <div className="flex items-center justify-between mb-8">
                                     <div>
-                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Active Platform Broadcasts</h3>
-                                        <p className="text-sm text-slate-400 font-medium mt-1">Manage global announcement banners appearing on all client interfaces.</p>
+                                        <h3 className="text-2xl font-black text-foreground tracking-tight">Active Platform Broadcasts</h3>
+                                        <p className="text-sm text-muted-foreground font-medium mt-1">Manage global announcement banners appearing on all client interfaces.</p>
                                     </div>
                                     <Button
                                         variant="outline"
-                                        className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 hover:bg-slate-50 transition-colors"
+                                        className="rounded-xl border-border bg-background font-bold h-11 px-6 hover:bg-muted/30 transition-colors"
                                         onClick={() => refetchBroadcasts()}
                                     >
                                         <RefreshCw className="w-4 h-4 mr-2" /> Sync Banners
@@ -806,13 +806,13 @@ export default function SuperAdminDashboard() {
                                     {isLoadingBroadcasts ? (
                                         <div className="h-64 flex flex-col items-center justify-center gap-3">
                                             <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                                            <span className="text-sm font-bold text-slate-400 animate-pulse">Syncing Broadcast Channels...</span>
+                                            <span className="text-sm font-bold text-muted-foreground animate-pulse">Syncing Broadcast Channels...</span>
                                         </div>
                                     ) : broadcasts.length === 0 ? (
-                                        <div className="h-64 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center p-8 bg-slate-50/50">
+                                        <div className="h-64 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center text-center p-8 bg-muted/30/50">
                                             <Radio className="w-12 h-12 text-slate-300 mb-3 animate-pulse" />
-                                            <h5 className="text-base font-bold text-slate-700">No Active Announcements</h5>
-                                            <p className="text-xs text-slate-400 font-medium max-w-sm mt-1">Create a broadcast banner using the control module to broadcast live alerts across the enterprise.</p>
+                                            <h5 className="text-base font-bold text-foreground">No Active Announcements</h5>
+                                            <p className="text-xs text-muted-foreground font-medium max-w-sm mt-1">Create a broadcast banner using the control module to broadcast live alerts across the enterprise.</p>
                                         </div>
                                     ) : broadcasts.map((b) => (
                                         <div
@@ -829,16 +829,16 @@ export default function SuperAdminDashboard() {
                                                 </div>
                                                 <div className="space-y-1.5">
                                                     <div className="flex items-center gap-3">
-                                                        <h4 className="text-base font-black text-slate-900 tracking-tight">{b.title}</h4>
+                                                        <h4 className="text-base font-black text-foreground tracking-tight">{b.title}</h4>
                                                         <Badge className={`rounded-lg px-2.5 py-0.5 font-black text-[9px] uppercase tracking-wider ${
                                                             b.type === 'warning' ? 'bg-amber-600 text-white' : b.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
                                                         }`}>
                                                             {b.type}
                                                         </Badge>
                                                     </div>
-                                                    <p className="text-xs font-medium text-slate-700 leading-relaxed">{b.message}</p>
-                                                    <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono pt-1">
-                                                        <Clock className="w-3 h-3 text-slate-400" /> Broadcasted: {format(new Date(b.created_at), 'dd MMM yyyy, HH:mm')}
+                                                    <p className="text-xs font-medium text-foreground leading-relaxed">{b.message}</p>
+                                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono pt-1">
+                                                        <Clock className="w-3 h-3 text-muted-foreground" /> Broadcasted: {format(new Date(b.created_at), 'dd MMM yyyy, HH:mm')}
                                                     </div>
                                                 </div>
                                             </div>
@@ -846,7 +846,7 @@ export default function SuperAdminDashboard() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="rounded-xl hover:bg-white hover:text-red-600 hover:shadow-sm transition-all text-slate-400 self-center"
+                                                className="rounded-xl hover:bg-background hover:text-red-600 hover:shadow-sm transition-all text-muted-foreground self-center"
                                                 onClick={() => {
                                                     if (confirm("Deactivate and remove this platform broadcast?")) {
                                                         deleteBroadcastMutation.mutate(b.id);
@@ -865,49 +865,49 @@ export default function SuperAdminDashboard() {
 
                 {/* Quotas & Credit Limits Modal */}
                 <Dialog open={!!selectedQuotaHotel} onOpenChange={(open) => !open && setSelectedQuotaHotel(null)}>
-                    <DialogContent className="max-w-md bg-white p-8 rounded-3xl border border-slate-200 shadow-2xl">
+                    <DialogContent className="max-w-md bg-background p-8 rounded-3xl border border-border shadow-2xl">
                         <DialogHeader className="space-y-2">
                             <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center border border-purple-100 mb-2">
                                 <Sliders className="w-6 h-6" />
                             </div>
-                            <DialogTitle className="text-xl font-bold text-slate-900">Enterprise Quotas & Usage Limits</DialogTitle>
-                            <DialogDescription className="text-xs text-slate-500 font-medium">
-                                Configure dedicated messaging credits and AI agent interaction caps for <span className="font-bold text-slate-800">{selectedQuotaHotel?.name}</span>.
+                            <DialogTitle className="text-xl font-bold text-foreground">Enterprise Quotas & Usage Limits</DialogTitle>
+                            <DialogDescription className="text-xs text-muted-foreground font-medium">
+                                Configure dedicated messaging credits and AI agent interaction caps for <span className="font-bold text-foreground">{selectedQuotaHotel?.name}</span>.
                             </DialogDescription>
                         </DialogHeader>
 
                         <div className="space-y-5 my-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                     <MessageSquare className="w-3.5 h-3.5 text-emerald-500" /> WhatsApp Notification Credits
                                 </label>
                                 <Input
                                     type="number"
-                                    className="h-12 bg-slate-50 border-slate-200 rounded-xl font-bold text-slate-900"
+                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground"
                                     value={whatsappCredits}
                                     onChange={(e) => setWhatsappCredits(e.target.value)}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                     <Zap className="w-3.5 h-3.5 text-amber-500" /> SMS Dispatch Credits
                                 </label>
                                 <Input
                                     type="number"
-                                    className="h-12 bg-slate-50 border-slate-200 rounded-xl font-bold text-slate-900"
+                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground"
                                     value={smsCredits}
                                     onChange={(e) => setSmsCredits(e.target.value)}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                     <BrainCircuit className="w-3.5 h-3.5 text-indigo-500" /> AI Agent Interaction Limit
                                 </label>
                                 <Input
                                     type="number"
-                                    className="h-12 bg-slate-50 border-slate-200 rounded-xl font-bold text-slate-900"
+                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground"
                                     value={aiUsageLimit}
                                     onChange={(e) => setAiUsageLimit(e.target.value)}
                                 />
@@ -917,7 +917,7 @@ export default function SuperAdminDashboard() {
                         <DialogFooter className="flex gap-3">
                             <Button
                                 variant="outline"
-                                className="flex-1 rounded-xl h-12 font-bold hover:bg-slate-50"
+                                className="flex-1 rounded-xl h-12 font-bold hover:bg-muted/30"
                                 onClick={() => setSelectedQuotaHotel(null)}
                             >
                                 Cancel

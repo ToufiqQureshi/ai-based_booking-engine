@@ -1,4 +1,4 @@
-// Main Application Sidebar — Professional Light Design with Dark Mode
+﻿// Main Application Sidebar — Professional Light Design with Dark Mode
 import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Bed, IndianRupee, Calendar, BookOpen,
@@ -55,10 +55,10 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+      className="border-r border-border dark:border-slate-800 bg-background dark:bg-slate-900"
     >
       {/* Hotel Logo & Name */}
-      <SidebarHeader className="px-4 py-4 border-b border-slate-100 dark:border-slate-800">
+      <SidebarHeader className="px-4 py-4 border-b border-border dark:border-slate-800">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm overflow-hidden">
             {hotel?.logo_url ? (
@@ -69,10 +69,10 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="truncate text-sm font-semibold text-slate-900 dark:text-white leading-none mb-0.5">
+              <span className="truncate text-sm font-semibold text-foreground dark:text-white leading-none mb-0.5">
                 {hotel?.name || 'Staybooker'}
               </span>
-              <span className="truncate text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              <span className="truncate text-[10px] font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
                 {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : user?.role || 'Admin'}
               </span>
             </div>
@@ -84,7 +84,7 @@ export function AppSidebar() {
       <SidebarContent className="px-2 py-3 scrollbar-thin overflow-y-auto">
         <SidebarGroup>
           {!collapsed && (
-            <SidebarGroupLabel className="px-2 mb-1 text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">
+            <SidebarGroupLabel className="px-2 mb-1 text-[10px] font-bold text-muted-foreground dark:text-muted-foreground uppercase tracking-widest">
               Main Menu
             </SidebarGroupLabel>
           )}
@@ -102,7 +102,7 @@ export function AppSidebar() {
                         'h-9 rounded-lg transition-all px-2.5 group',
                         active
                           ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                          : 'text-muted-foreground dark:text-muted-foreground hover:bg-muted/30 dark:hover:bg-slate-800 hover:text-foreground dark:hover:text-slate-200'
                       )}
                     >
                       <NavLink to={item.url} className="flex items-center gap-2.5 w-full">
@@ -111,7 +111,7 @@ export function AppSidebar() {
                             'h-4 w-4 shrink-0 transition-colors',
                             active
                               ? 'text-indigo-600 dark:text-indigo-400'
-                              : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'
+                              : 'text-muted-foreground dark:text-muted-foreground group-hover:text-muted-foreground dark:group-hover:text-slate-300'
                           )}
                         />
                         {!collapsed && (
@@ -131,7 +131,7 @@ export function AppSidebar() {
 
         <SidebarGroup className="mt-2">
           {!collapsed && (
-            <SidebarGroupLabel className="px-2 mb-1 text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">
+            <SidebarGroupLabel className="px-2 mb-1 text-[10px] font-bold text-muted-foreground dark:text-muted-foreground uppercase tracking-widest">
               System
             </SidebarGroupLabel>
           )}
@@ -148,15 +148,15 @@ export function AppSidebar() {
                       className={cn(
                         'h-9 rounded-lg transition-all px-2.5 group',
                         active
-                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                          ? 'bg-muted dark:bg-slate-800 text-foreground dark:text-white'
+                          : 'text-muted-foreground dark:text-muted-foreground hover:bg-muted/30 dark:hover:bg-slate-800 hover:text-foreground dark:hover:text-slate-200'
                       )}
                     >
                       <NavLink to={item.url} className="flex items-center gap-2.5 w-full">
                         <item.icon
                           className={cn(
                             'h-4 w-4 shrink-0',
-                            active ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'
+                            active ? 'text-foreground dark:text-slate-200' : 'text-muted-foreground dark:text-muted-foreground'
                           )}
                         />
                         {!collapsed && (
@@ -173,9 +173,9 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User Footer */}
-      <SidebarFooter className="p-3 border-t border-slate-100 dark:border-slate-800">
+      <SidebarFooter className="p-3 border-t border-border dark:border-slate-800">
         <div className={cn(
-          'flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors',
+          'flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/30 dark:hover:bg-slate-800 transition-colors',
           collapsed ? 'justify-center' : ''
         )}>
           <Avatar className="h-7 w-7 shrink-0 rounded-lg">
@@ -187,17 +187,17 @@ export function AppSidebar() {
           {!collapsed && (
             <>
               <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-                <span className="truncate text-xs font-semibold text-slate-900 dark:text-white">
+                <span className="truncate text-xs font-semibold text-foreground dark:text-white">
                   {user?.name || 'User'}
                 </span>
-                <span className="truncate text-[10px] text-slate-400 dark:text-slate-500">
+                <span className="truncate text-[10px] text-muted-foreground dark:text-muted-foreground">
                   {user?.email || ''}
                 </span>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg"
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg"
                 onClick={logout}
               >
                 <LogOut className="h-3.5 w-3.5" />

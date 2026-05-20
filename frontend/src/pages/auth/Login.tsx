@@ -1,4 +1,4 @@
-// Login Page
+﻿// Login Page
 // ==========================================
 // 🔗 CONNECTION REPORT (Impact Analysis)
 // ==========================================
@@ -192,7 +192,7 @@ export function LoginPage() {
               )}
 
               {isSuperAdmin && (
-                <p className="text-center text-[10px] text-slate-400 font-medium uppercase tracking-widest pt-4">
+                <p className="text-center text-[10px] text-muted-foreground font-medium uppercase tracking-widest pt-4">
                   Proprietary System - Authorized Access Only
                 </p>
               )}

@@ -1,4 +1,4 @@
-import { MoreHorizontal, Users, Bed, Edit, Trash2, ArrowRight, Ruler, LayoutGrid } from 'lucide-react';
+﻿import { MoreHorizontal, Users, Bed, Edit, Trash2, ArrowRight, Ruler, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -43,7 +43,7 @@ export function RoomListItem({ room, onEdit, onDelete, formatCurrency }: RoomLis
                     </h3>
                     <Badge variant={room.is_active ? "default" : "secondary"} className={cn(
                         "text-[9px] font-bold px-2 py-0 border-none",
-                        room.is_active ? "bg-green-500 hover:bg-green-500" : "bg-slate-200 text-slate-600"
+                        room.is_active ? "bg-green-500 hover:bg-green-500" : "bg-slate-200 text-muted-foreground"
                     )}>
                         {room.is_active ? 'Active' : 'Paused'}
                     </Badge>
@@ -99,7 +99,7 @@ export function RoomListItem({ room, onEdit, onDelete, formatCurrency }: RoomLis
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-lg p-1 min-w-[140px]">
                         <DropdownMenuItem onClick={() => onEdit(room)} className="rounded-md cursor-pointer text-sm font-medium">
-                            <Edit className="mr-2 h-4 w-4 text-slate-400" />
+                            <Edit className="mr-2 h-4 w-4 text-muted-foreground" />
                             Edit Room
                         </DropdownMenuItem>
                         <DropdownMenuItem

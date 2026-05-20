@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -340,7 +340,7 @@ const IntegrationPage = () => {
                                         <div className="space-y-2">
                                             <p className="font-semibold">⚠️ Save this key now! It won't be shown again.</p>
                                             <div className="flex items-center gap-2">
-                                                <code className="flex-1 p-2 bg-white rounded border">
+                                                <code className="flex-1 p-2 bg-background rounded border">
                                                     {createdKey.secret_key}
                                                 </code>
                                                 <Button
@@ -435,7 +435,7 @@ const IntegrationPage = () => {
                             {/* Preview */}
                             <div className="space-y-2">
                                 <Label>Preview</Label>
-                                <div className="p-8 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center transition-all duration-300">
+                                <div className="p-8 bg-muted rounded-xl border border-border flex items-center justify-center transition-all duration-300">
                                     <iframe
                                         key={`${settings?.widget_layout}-${settings?.widget_primary_color}-${settings?.widget_background_color}`}
                                         src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget`}
@@ -483,8 +483,8 @@ const IntegrationPage = () => {
                             </div>
 
                             {/* Documentation of Integration Parameters */}
-                            <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200/60 mt-4 space-y-3">
-                                <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                            <div className="bg-muted/30 dark:bg-slate-900/40 p-5 rounded-2xl border border-border/60 mt-4 space-y-3">
+                                <h4 className="text-xs font-black uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
                                     <Sparkles className="w-3.5 h-3.5 text-purple-500" />
                                     Widget Custom Code & Parameter Documentation
                                 </h4>
@@ -492,19 +492,19 @@ const IntegrationPage = () => {
                                     If your client requires complete styling control or a customized integration, you can pass these parameters dynamically via the widget script configurations or use custom CSS in our Dashboard Settings:
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 text-xs">
-                                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 shadow-sm">
+                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
                                         <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">hotelSlug</code>
                                         <p className="text-[11px] text-muted-foreground mt-0.5">The unique hotel identifier in URLs. Currently: <strong className="text-foreground font-semibold">{activeHotelSlug || 'demo'}</strong></p>
                                     </div>
-                                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 shadow-sm">
+                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
                                         <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">widgetLayout</code>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">Widget layout configuration. Supported options: <code className="bg-slate-50 p-0.5 rounded">"modern"</code>, <code className="bg-slate-50 p-0.5 rounded">"classic"</code>, <code className="bg-slate-50 p-0.5 rounded">"minimal"</code>.</p>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">Widget layout configuration. Supported options: <code className="bg-muted/30 p-0.5 rounded">"modern"</code>, <code className="bg-muted/30 p-0.5 rounded">"classic"</code>, <code className="bg-muted/30 p-0.5 rounded">"minimal"</code>.</p>
                                     </div>
-                                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 shadow-sm">
+                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
                                         <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">primaryColor</code>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">Main primary color theme for buttons & selections. E.g. <code className="bg-slate-50 p-0.5 rounded">"#7C3AED"</code>.</p>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">Main primary color theme for buttons & selections. E.g. <code className="bg-muted/30 p-0.5 rounded">"#7C3AED"</code>.</p>
                                     </div>
-                                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 shadow-sm">
+                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
                                         <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">widgetCustomCss</code>
                                         <p className="text-[11px] text-muted-foreground mt-0.5">Custom CSS rules loaded dynamically to target specific elements like buttons, dates, overlays, or font styles.</p>
                                     </div>
@@ -526,8 +526,8 @@ const IntegrationPage = () => {
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
                                 <Label>Preview</Label>
-                                <div className="p-8 bg-slate-50 rounded-xl border border-slate-100 h-64 flex items-center justify-center relative overflow-hidden">
-                                    <div className="absolute bottom-4 right-4 bg-white p-2 rounded-full shadow-lg border border-purple-100 flex items-center gap-2">
+                                <div className="p-8 bg-muted/30 rounded-xl border border-border h-64 flex items-center justify-center relative overflow-hidden">
+                                    <div className="absolute bottom-4 right-4 bg-background p-2 rounded-full shadow-lg border border-purple-100 flex items-center gap-2">
                                         <MessageCircle className="w-6 h-6 text-purple-500" />
                                         <span className="font-bold text-sm text-purple-600">{hotel?.name || 'AI Concierge'}</span>
                                     </div>
@@ -627,49 +627,49 @@ const IntegrationPage = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             {/* Modern Layout */}
                                             <div 
-                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'modern' ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-200 bg-card'}`}
+                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'modern' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
                                                 onClick={() => updateSettings({ widget_layout: 'modern' })}
                                             >
                                                 <div>
-                                                    <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 block">Modern Row</span>
+                                                    <span className="font-extrabold text-sm text-foreground dark:text-slate-200 block">Modern Row</span>
                                                     <span className="text-xs text-muted-foreground mt-1 block">Sleek horizontal float bar with combined inputs and popovers. Ideal for homepages.</span>
                                                 </div>
-                                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                                <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
                                                     <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Recommended</span>
                                                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'modern' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
-                                                        {settings.widget_layout === 'modern' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                        {settings.widget_layout === 'modern' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Classic Layout */}
                                             <div 
-                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'classic' ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-200 bg-card'}`}
+                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'classic' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
                                                 onClick={() => updateSettings({ widget_layout: 'classic' })}
                                             >
                                                 <div>
-                                                    <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 block">Classic Stacked</span>
+                                                    <span className="font-extrabold text-sm text-foreground dark:text-slate-200 block">Classic Stacked</span>
                                                     <span className="text-xs text-muted-foreground mt-1 block">Boxed design with distinct input boxes and clean spacing. Best for sidebars/boxes.</span>
                                                 </div>
-                                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                                                <div className="mt-4 pt-3 border-t border-border flex items-center justify-end">
                                                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'classic' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
-                                                        {settings.widget_layout === 'classic' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                        {settings.widget_layout === 'classic' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Minimal Layout */}
                                             <div 
-                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-200 bg-card'}`}
+                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
                                                 onClick={() => updateSettings({ widget_layout: 'minimal' })}
                                             >
                                                 <div>
-                                                    <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 block">Minimal Bar</span>
+                                                    <span className="font-extrabold text-sm text-foreground dark:text-slate-200 block">Minimal Bar</span>
                                                     <span className="text-xs text-muted-foreground mt-1 block">Compact layout with transparent backgrounds and subtle bottom borders. Ultra-clean.</span>
                                                 </div>
-                                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                                                <div className="mt-4 pt-3 border-t border-border flex items-center justify-end">
                                                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
-                                                        {settings.widget_layout === 'minimal' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                        {settings.widget_layout === 'minimal' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
                                                     </div>
                                                 </div>
                                             </div>
@@ -767,7 +767,7 @@ const IntegrationPage = () => {
                                                     <Button 
                                                         variant="outline" 
                                                         size="sm" 
-                                                        className="h-7 text-[10px] bg-white border-blue-200 hover:bg-blue-50"
+                                                        className="h-7 text-[10px] bg-background border-blue-200 hover:bg-blue-50"
                                                         onClick={() => updateSettings({ 
                                                             ai_provider: 'groq', 
                                                             ai_model: 'llama-3.3-70b-versatile',
@@ -779,7 +779,7 @@ const IntegrationPage = () => {
                                                     <Button 
                                                         variant="outline" 
                                                         size="sm" 
-                                                        className="h-7 text-[10px] bg-white border-slate-200"
+                                                        className="h-7 text-[10px] bg-background border-border"
                                                         onClick={() => updateSettings({ 
                                                             ai_provider: 'openai', 
                                                             ai_model: 'gpt-4o-mini',

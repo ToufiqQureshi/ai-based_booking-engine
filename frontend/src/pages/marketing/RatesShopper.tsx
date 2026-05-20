@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -310,11 +310,11 @@ export default function RatesShopper() {
     if (hotel && !hotel.feature_rate_shopper) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center p-4 text-center">
-                <div className="p-6 bg-slate-100 rounded-full mb-6">
-                    <ShieldAlert className="h-16 w-16 text-slate-400" />
+                <div className="p-6 bg-muted rounded-full mb-6">
+                    <ShieldAlert className="h-16 w-16 text-muted-foreground" />
                 </div>
-                <h2 className="text-2xl font-black text-slate-900 mb-2">Feature Locked</h2>
-                <p className="text-slate-500 mb-8 max-w-md font-medium">
+                <h2 className="text-2xl font-black text-foreground mb-2">Feature Locked</h2>
+                <p className="text-muted-foreground mb-8 max-w-md font-medium">
                     Rate Shopper (v2.0 AI) is not included in your current plan. 
                     Please contact support or your account manager to enable real-time competitor tracking.
                 </p>
@@ -374,12 +374,12 @@ export default function RatesShopper() {
                                         </Badge>
                                         {todayAnalysis.market_position === 'Premium' && <TrendingUp className="h-4 w-4 text-red-500" />}
                                         {todayAnalysis.market_position === 'Budget' && <TrendingDown className="h-4 w-4 text-green-500" />}
-                                        {todayAnalysis.market_position === 'Average' && <Minus className="h-4 w-4 text-gray-500" />}
+                                        {todayAnalysis.market_position === 'Average' && <Minus className="h-4 w-4 text-muted-foreground" />}
                                     </div>
                                 </div>
                                 <div className="md:col-span-1">
                                     <p className="text-sm text-blue-600 font-medium">Recommendation</p>
-                                    <p className="text-sm text-slate-700 italic mt-1">
+                                    <p className="text-sm text-foreground italic mt-1">
                                         "{todayAnalysis.suggestion}"
                                     </p>
                                 </div>

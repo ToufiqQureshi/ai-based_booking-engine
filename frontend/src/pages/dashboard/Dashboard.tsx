@@ -1,4 +1,4 @@
-// Dashboard Home Page - Clean & Professional Design
+﻿// Dashboard Home Page - Clean & Professional Design
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -90,7 +90,7 @@ export function DashboardPage() {
       <div className="flex items-center justify-center h-[60vh]">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-7 w-7 text-indigo-600 animate-spin" />
-          <span className="text-slate-400 dark:text-slate-500 font-medium text-sm">Loading dashboard…</span>
+          <span className="text-muted-foreground dark:text-muted-foreground font-medium text-sm">Loading dashboard…</span>
         </div>
       </div>
     );
@@ -112,7 +112,7 @@ export function DashboardPage() {
           <AlertTitle className="text-amber-800 dark:text-amber-400 font-semibold">AI Assistant Inactive</AlertTitle>
           <AlertDescription className="text-amber-700 dark:text-amber-500 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1 text-sm">
             <span>Configure your AI settings to activate the Guest Concierge on your website.</span>
-            <Button variant="outline" size="sm" className="bg-white hover:bg-amber-100 text-amber-700 border-amber-200 h-8" asChild>
+            <Button variant="outline" size="sm" className="bg-background hover:bg-amber-100 text-amber-700 border-amber-200 h-8" asChild>
               <Link to="/settings/integration">Configure Now</Link>
             </Button>
           </AlertDescription>
@@ -122,13 +122,13 @@ export function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Arrivals */}
-        <Card className="shadow-none border-slate-200">
+        <Card className="shadow-none border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Arrivals</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Arrivals</CardTitle>
             <CalendarCheck className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-900">
+            <div className="text-3xl font-bold text-foreground">
               <AnimatedCounter value={stats?.today_arrivals || 0} />
             </div>
             <div className="flex items-center text-xs mt-1">
@@ -140,45 +140,45 @@ export function DashboardPage() {
                   {stats.trends.arrivals >= 0 ? '+' : ''}{stats.trends.arrivals}%
                 </span>
               )}
-              <span className="text-slate-400">vs yesterday</span>
+              <span className="text-muted-foreground">vs yesterday</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Departures */}
-        <Card className="shadow-none border-slate-200">
+        <Card className="shadow-none border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Departures</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Departures</CardTitle>
             <CalendarX className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-900">
+            <div className="text-3xl font-bold text-foreground">
               <AnimatedCounter value={stats?.today_departures || 0} />
             </div>
-            <div className="flex items-center text-xs mt-1 text-slate-400">
+            <div className="flex items-center text-xs mt-1 text-muted-foreground">
               <span>{stats?.today_departures || 0} scheduled today</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Occupancy */}
-        <Card className="shadow-none border-slate-200">
+        <Card className="shadow-none border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Occupancy</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Occupancy</CardTitle>
             <Bed className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-900">
+            <div className="text-3xl font-bold text-foreground">
               <AnimatedCounter value={stats?.current_occupancy || 0} />
             </div>
-            <div className="flex items-center text-xs mt-1 text-slate-400">
+            <div className="flex items-center text-xs mt-1 text-muted-foreground">
               <span>{stats?.current_occupancy || 0} rooms occupied</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Revenue */}
-        <Card className="shadow-none border-slate-200 bg-blue-50/30">
+        <Card className="shadow-none border-border bg-blue-50/30">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Revenue</CardTitle>
             <CreditCard className="h-4 w-4 text-blue-600" />
@@ -201,7 +201,7 @@ export function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Recent Bookings */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="shadow-none border-slate-200">
+          <Card className="shadow-none border-border">
             <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-4">
               <div>
                 <CardTitle className="text-base font-bold">Recent Bookings</CardTitle>
@@ -213,25 +213,25 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent className="p-0">
               {recentBookings.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 italic text-sm">
+                <div className="text-center py-10 text-muted-foreground italic text-sm">
                   No bookings found
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-border">
                   {recentBookings.map((booking) => (
                     <div
                       key={booking.id}
-                      className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                      className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 font-semibold text-xs">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground font-semibold text-xs">
                           {booking.guest?.first_name?.[0]}{booking.guest?.last_name?.[0]}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">
+                          <p className="text-sm font-semibold text-foreground">
                             {booking.guest?.first_name} {booking.guest?.last_name}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             #{booking.booking_number} • {booking.rooms?.[0]?.room_type_name || 'Room'}
                           </p>
                         </div>
@@ -241,11 +241,11 @@ export function DashboardPage() {
                           "text-[10px] uppercase px-2 py-0 h-5",
                           booking.status === 'confirmed' ? 'text-green-600 bg-green-50 border-green-100' : 
                           booking.status === 'checked_in' ? 'text-blue-600 bg-blue-50 border-blue-100' : 
-                          'text-slate-500 bg-slate-50 border-slate-100'
+                          'text-muted-foreground bg-muted/30 border-border'
                         )}>
                           {booking.status}
                         </Badge>
-                        <p className="text-[10px] text-slate-400 mt-1">
+                        <p className="text-[10px] text-muted-foreground mt-1">
                           {booking.check_in}
                         </p>
                       </div>
@@ -271,15 +271,15 @@ export function DashboardPage() {
               {rateAnalysis ? (
                 <div className="space-y-4">
                   <div className="flex justify-between items-baseline">
-                    <span className="text-xs text-slate-500 uppercase">Your Price</span>
-                    <span className="text-xl font-bold text-slate-900">₹{rateAnalysis.my_price}</span>
+                    <span className="text-xs text-muted-foreground uppercase">Your Price</span>
+                    <span className="text-xl font-bold text-foreground">₹{rateAnalysis.my_price}</span>
                   </div>
                   <div className="flex justify-between items-baseline">
-                    <span className="text-xs text-slate-500 uppercase">Market Avg</span>
-                    <span className="text-sm font-medium text-slate-600">₹{rateAnalysis.average_market_price}</span>
+                    <span className="text-xs text-muted-foreground uppercase">Market Avg</span>
+                    <span className="text-sm font-medium text-muted-foreground">₹{rateAnalysis.average_market_price}</span>
                   </div>
-                  <div className="pt-2 border-t border-slate-200">
-                    <p className="text-xs text-slate-600 leading-relaxed italic">
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground leading-relaxed italic">
                       "{rateAnalysis.suggestion}"
                     </p>
                   </div>
@@ -289,25 +289,25 @@ export function DashboardPage() {
                 </div>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-xs text-slate-500">No market data yet</p>
+                  <p className="text-xs text-muted-foreground">No market data yet</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Action Required */}
-          <Card className="shadow-none border-slate-200 border-l-4 border-l-blue-600">
+          <Card className="shadow-none border-border border-l-4 border-l-blue-600">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Action Needed</CardTitle>
+              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Action Needed</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-4">
-                <div className="text-3xl font-bold text-slate-900">
+                <div className="text-3xl font-bold text-foreground">
                   <AnimatedCounter value={stats?.pending_bookings || 0} />
                 </div>
                 <Badge className="bg-blue-600">Pending</Badge>
               </div>
-              <p className="text-xs text-slate-500 mb-4">Confirm bookings to secure your revenue.</p>
+              <p className="text-xs text-muted-foreground mb-4">Confirm bookings to secure your revenue.</p>
               <Button className="w-full bg-blue-600 hover:bg-blue-700 h-9 text-xs font-bold" asChild>
                 <Link to="/bookings?status=pending">Review All</Link>
               </Button>

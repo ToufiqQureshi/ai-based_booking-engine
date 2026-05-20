@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/api/client';
 import { Loader2, Users, Building, Activity, ShieldAlert, CheckCircle, XCircle, Plus, Calendar, Sparkles, TrendingUp, Zap, ArrowUpRight, ShieldCheck, Globe } from 'lucide-react';
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
                 
                 <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
                     <div className="space-y-4">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-background/5 backdrop-blur-xl border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">
                             <ShieldCheck className="w-4 h-4 text-emerald-400" />
                             System Authority: Elevated
                         </div>
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center gap-6">
-                        <div className="flex flex-col items-end px-6 py-4 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
+                        <div className="flex flex-col items-end px-6 py-4 rounded-3xl bg-background/5 border border-white/10 backdrop-blur-md">
                             <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Infrastructure Health</span>
                             <div className="flex items-center gap-3">
                                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
 
             <Tabs defaultValue="overview" className="space-y-8">
                 <div className="sticky top-6 z-40 flex justify-center">
-                    <TabsList className="h-16 p-2 bg-white/60 backdrop-blur-2xl border border-indigo-100/50 rounded-[24px] shadow-xl">
+                    <TabsList className="h-16 p-2 bg-background/60 backdrop-blur-2xl border border-indigo-100/50 rounded-[24px] shadow-xl">
                         <TabsTrigger value="overview" className="rounded-2xl px-8 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">Overview</TabsTrigger>
                         <TabsTrigger value="hotels" className="rounded-2xl px-8 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">Hotels</TabsTrigger>
                         <TabsTrigger value="subscriptions" className="rounded-2xl px-8 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">Subscriptions</TabsTrigger>
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
                 <TabsContent value="overview" className="space-y-8 animate-enter">
                     {/* High-Impact Stats Grid */}
                     <div className="grid gap-6 md:grid-cols-3">
-                        <Card className="rounded-[32px] border-none bg-white/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] overflow-hidden relative group">
+                        <Card className="rounded-[32px] border-none bg-background/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] overflow-hidden relative group">
                             <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <Users className="h-20 w-20 text-indigo-600" />
                             </div>
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
                             </CardContent>
                         </Card>
 
-                        <Card className="rounded-[32px] border-none bg-white/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] overflow-hidden relative group">
+                        <Card className="rounded-[32px] border-none bg-background/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] overflow-hidden relative group">
                             <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <Building className="h-20 w-20 text-violet-600" />
                             </div>
@@ -197,7 +197,7 @@ export default function AdminDashboard() {
                             </CardContent>
                         </Card>
 
-                        <Card className="rounded-[32px] border-none bg-white/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] overflow-hidden relative group">
+                        <Card className="rounded-[32px] border-none bg-background/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] overflow-hidden relative group">
                             <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <Zap className="h-20 w-20 text-amber-600" />
                             </div>
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
 
                     <div className="grid gap-8 md:grid-cols-2">
                         {/* Intelligence Charts */}
-                        <Card className="rounded-[40px] border-none bg-white/80 backdrop-blur-xl shadow-xl p-6">
+                        <Card className="rounded-[40px] border-none bg-background/80 backdrop-blur-xl shadow-xl p-6">
                             <CardHeader className="px-0 pt-0 pb-6">
                                 <CardTitle className="text-lg font-black text-indigo-950 tracking-tight flex items-center gap-3">
                                     <Globe className="w-5 h-5 text-indigo-500" />
@@ -248,7 +248,7 @@ export default function AdminDashboard() {
                             </CardContent>
                         </Card>
 
-                        <Card className="rounded-[40px] border-none bg-white/80 backdrop-blur-xl shadow-xl p-6 overflow-hidden">
+                        <Card className="rounded-[40px] border-none bg-background/80 backdrop-blur-xl shadow-xl p-6 overflow-hidden">
                              <div className="absolute top-0 right-0 p-8">
                                 <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
                                     <TrendingUp className="h-6 w-6 text-emerald-600" />
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
                 </TabsContent>
 
                 <TabsContent value="hotels" className="animate-enter">
-                    <Card className="rounded-[40px] border-none bg-white/80 backdrop-blur-xl shadow-xl overflow-hidden">
+                    <Card className="rounded-[40px] border-none bg-background/80 backdrop-blur-xl shadow-xl overflow-hidden">
                         <CardHeader className="p-8 border-b border-indigo-50">
                             <CardTitle className="text-2xl font-black text-indigo-950 tracking-tight">Master Hotel Registry</CardTitle>
                         </CardHeader>
@@ -352,7 +352,7 @@ export default function AdminDashboard() {
                 </TabsContent>
 
                 <TabsContent value="subscriptions" className="animate-enter">
-                    <Card className="rounded-[40px] border-none bg-white/80 backdrop-blur-xl shadow-xl overflow-hidden">
+                    <Card className="rounded-[40px] border-none bg-background/80 backdrop-blur-xl shadow-xl overflow-hidden">
                         <CardHeader className="p-8 border-b border-indigo-50 flex flex-row items-center justify-between">
                             <CardTitle className="text-2xl font-black text-indigo-950 tracking-tight">Financial Protocol History</CardTitle>
                             <Button size="sm" className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 h-10 px-6 font-bold shadow-lg shadow-indigo-500/20" onClick={() => setIsSubDialogOpen(true)}>
@@ -379,7 +379,7 @@ export default function AdminDashboard() {
                                             <TableCell>
                                                 <Badge className={cn(
                                                     "rounded-lg px-3 py-1 font-black text-[10px] uppercase tracking-widest shadow-sm",
-                                                    s.plan_name === 'Enterprise' ? "bg-indigo-600 text-white" : "bg-white text-indigo-600 border border-indigo-100"
+                                                    s.plan_name === 'Enterprise' ? "bg-indigo-600 text-white" : "bg-background text-indigo-600 border border-indigo-100"
                                                 )}>
                                                     {s.plan_name}
                                                 </Badge>
@@ -404,7 +404,7 @@ export default function AdminDashboard() {
                 </TabsContent>
 
                 <TabsContent value="users" className="animate-enter">
-                    <Card className="rounded-[40px] border-none bg-white/80 backdrop-blur-xl shadow-xl overflow-hidden">
+                    <Card className="rounded-[40px] border-none bg-background/80 backdrop-blur-xl shadow-xl overflow-hidden">
                         <CardHeader className="p-8 border-b border-indigo-50">
                             <CardTitle className="text-2xl font-black text-indigo-950 tracking-tight">Access Control & Security</CardTitle>
                         </CardHeader>
@@ -452,7 +452,7 @@ export default function AdminDashboard() {
             </Tabs>
 
             <Dialog open={isSubDialogOpen} onOpenChange={setIsSubDialogOpen}>
-                <DialogContent className="rounded-[40px] border-none bg-white/95 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden max-w-md">
+                <DialogContent className="rounded-[40px] border-none bg-background/95 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden max-w-md">
                     <div className="bg-indigo-600 p-8 text-white">
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-black tracking-tight">License Management</DialogTitle>

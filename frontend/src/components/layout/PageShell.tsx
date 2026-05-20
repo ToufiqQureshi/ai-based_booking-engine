@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PageShell — Standard page wrapper for all dashboard pages.
  *
  * Provides:
@@ -33,11 +33,11 @@ export function PageShell({
       {/* Page Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
+          <h1 className="text-xl font-bold text-foreground dark:text-white tracking-tight truncate">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-0.5 truncate">
               {subtitle}
             </p>
           )}

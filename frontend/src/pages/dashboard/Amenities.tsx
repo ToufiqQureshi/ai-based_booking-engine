@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { 
     Loader2, 
     Plus, 
@@ -72,7 +72,7 @@ const ICONS: Record<string, any> = {
 };
 
 const CATEGORIES = [
-    { value: 'general', label: 'General', color: 'bg-slate-100 text-slate-700' },
+    { value: 'general', label: 'General', color: 'bg-muted text-foreground' },
     { value: 'tech', label: 'Technology', color: 'bg-blue-100 text-blue-700' },
     { value: 'wellness', label: 'Wellness', color: 'bg-emerald-100 text-emerald-700' },
     { value: 'dining', label: 'Dining', color: 'bg-orange-100 text-orange-700' },
@@ -255,7 +255,7 @@ export default function Amenities() {
                                     <TableCell className="px-6 py-6">
                                         <Badge className={cn(
                                             "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none",
-                                            CATEGORIES.find(c => c.value === amenity.category)?.color || 'bg-slate-100'
+                                            CATEGORIES.find(c => c.value === amenity.category)?.color || 'bg-muted'
                                         )}>
                                             {amenity.category}
                                         </Badge>

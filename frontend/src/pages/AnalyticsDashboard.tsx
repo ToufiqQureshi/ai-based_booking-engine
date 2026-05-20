@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend, LineChart, Line
@@ -131,7 +131,7 @@ const SectionCard: React.FC<{ title: string; subtitle?: string; icon?: React.Rea
 );
 
 const EmptyState: React.FC<{ message: string }> = ({ message }) => (
-  <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
+  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
     <AlertCircle className="w-8 h-8 opacity-30" />
     <p className="text-sm font-medium">{message}</p>
   </div>
@@ -141,7 +141,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-slate-900 text-white text-xs font-semibold rounded-xl px-4 py-3 shadow-xl">
-        <p className="text-slate-400 mb-2">{label}</p>
+        <p className="text-muted-foreground mb-2">{label}</p>
         {payload.map((p: any) => (
           <p key={p.dataKey} style={{ color: p.color }}>
             {p.name}: {typeof p.value === 'number' && p.name?.includes('₹') ? `₹${p.value.toLocaleString()}` : p.value}
@@ -253,7 +253,7 @@ export const AnalyticsDashboard: React.FC = () => {
   if (loading) return (
     <div className="h-screen w-full flex flex-col justify-center items-center gap-4">
       <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm font-medium text-slate-500">Loading analytics…</p>
+      <p className="text-sm font-medium text-muted-foreground">Loading analytics…</p>
     </div>
   );
 
@@ -290,7 +290,7 @@ export const AnalyticsDashboard: React.FC = () => {
         >
           <div>
             <h1 className="text-2xl font-black text-foreground tracking-tight">Analytics & Reports</h1>
-            <p className="text-sm text-slate-500 font-medium mt-0.5">
+            <p className="text-sm text-muted-foreground font-medium mt-0.5">
               Performance data for the last <span className="text-indigo-600 font-bold">{days} days</span>
             </p>
           </div>
@@ -430,11 +430,11 @@ export const AnalyticsDashboard: React.FC = () => {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex items-center gap-6 mt-3 pt-3 border-t border-slate-100">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                <div className="flex items-center gap-6 mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                     <span className="w-3 h-0.5 rounded-full bg-indigo-500 inline-block" /> Visitors
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                     <span className="w-3 h-0.5 rounded-full bg-emerald-500 inline-block" /> Revenue
                   </div>
                 </div>
@@ -450,7 +450,7 @@ export const AnalyticsDashboard: React.FC = () => {
                       return (
                         <div key={stage.stage}>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold text-slate-600">{getStageLabel(stage.stage)}</span>
+                            <span className="text-xs font-bold text-muted-foreground">{getStageLabel(stage.stage)}</span>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-black text-foreground">{stage.count.toLocaleString()}</span>
                               <span className="text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">{pct}%</span>
@@ -471,11 +471,11 @@ export const AnalyticsDashboard: React.FC = () => {
 
                     {data.funnel_dropoffs && data.funnel_dropoffs.length > 0 && (
                       <div className="pt-4 border-t border-border">
-                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Drop-off Points</p>
+                        <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-3">Drop-off Points</p>
                         <div className="space-y-2">
                           {data.funnel_dropoffs.map(d => (
                             <div key={d.stage} className="flex justify-between items-center text-xs">
-                              <span className="text-slate-500 font-medium">After {getStageLabel(d.stage)}</span>
+                              <span className="text-muted-foreground font-medium">After {getStageLabel(d.stage)}</span>
                               <span className={`font-bold px-2 py-0.5 rounded-lg ${d.drop_percentage > 50 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
                                 -{d.drop_percentage}%
                               </span>
@@ -508,11 +508,11 @@ export const AnalyticsDashboard: React.FC = () => {
                             ev.type === 'booking' ? 'bg-emerald-500' :
                             ev.type === 'search' ? 'bg-blue-500' : 'bg-slate-400'
                           }`} />
-                          <span className="font-semibold text-slate-700">{ev.message}</span>
+                          <span className="font-semibold text-foreground">{ev.message}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 ml-2">
                           {ev.amount && <span className="font-black text-emerald-600">₹{ev.amount.toLocaleString()}</span>}
-                          <span className="text-slate-400 font-medium">{ev.timestamp}</span>
+                          <span className="text-muted-foreground font-medium">{ev.timestamp}</span>
                         </div>
                       </motion.div>
                     ))}
@@ -545,13 +545,13 @@ export const AnalyticsDashboard: React.FC = () => {
                         const DevIcon = d.type === 'mobile' ? Smartphone : d.type === 'tablet' ? Tablet : Monitor;
                         return (
                           <div key={d.type} className="flex items-center gap-3">
-                            <DevIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <DevIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                             <div className="flex-1">
                               <div className="flex justify-between mb-1">
-                                <span className="text-xs font-bold text-slate-600">{d.name}</span>
-                                <span className="text-xs font-black text-slate-900">{pct}%</span>
+                                <span className="text-xs font-bold text-muted-foreground">{d.name}</span>
+                                <span className="text-xs font-black text-foreground">{pct}%</span>
                               </div>
-                              <div className="w-full bg-slate-100 rounded-full h-1.5">
+                              <div className="w-full bg-muted rounded-full h-1.5">
                                 <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
                               </div>
                             </div>
@@ -633,7 +633,7 @@ export const AnalyticsDashboard: React.FC = () => {
                       <div key={r.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-black text-slate-300 w-4">#{idx + 1}</span>
-                          <span className="text-sm font-semibold text-slate-700">{r.name || 'Room'}</span>
+                          <span className="text-sm font-semibold text-foreground">{r.name || 'Room'}</span>
                         </div>
                         <span className="text-sm font-black text-indigo-600">{r.count} bookings</span>
                       </div>
@@ -693,7 +693,7 @@ export const AnalyticsDashboard: React.FC = () => {
                             <div className="bg-indigo-500 h-full rounded-full transition-all" style={{ width: `${item.percentage}%` }} />
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 w-8 text-right shrink-0">{item.percentage}%</span>
+                        <span className="text-[10px] font-bold text-muted-foreground w-8 text-right shrink-0">{item.percentage}%</span>
                       </div>
                     ))}
                   </div>
@@ -708,11 +708,11 @@ export const AnalyticsDashboard: React.FC = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: '48px repeat(24, minmax(0, 1fr))', gap: '3px' }}>
                     <div />
                     {Array.from({ length: 24 }).map((_, h) => (
-                      <div key={h} className="text-[9px] text-center font-bold text-slate-400 pb-1">{h}</div>
+                      <div key={h} className="text-[9px] text-center font-bold text-muted-foreground pb-1">{h}</div>
                     ))}
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, dIdx) => (
                       <React.Fragment key={day}>
-                        <div className="text-[10px] font-bold text-slate-500 flex items-center">{day}</div>
+                        <div className="text-[10px] font-bold text-muted-foreground flex items-center">{day}</div>
                         {Array.from({ length: 24 }).map((_, hIdx) => {
                           const cell = data.traffic_heatmap?.find(i => i.weekday === dIdx && i.hour === hIdx);
                           const count = cell?.visitors || 0;
@@ -734,11 +734,11 @@ export const AnalyticsDashboard: React.FC = () => {
                     ))}
                   </div>
                   <div className="flex items-center gap-2 mt-4 justify-end">
-                    <span className="text-[10px] text-slate-400 font-medium">Low</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">Low</span>
                     {[0.15, 0.35, 0.55, 0.75, 1].map(v => (
                       <div key={v} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(99, 102, 241, ${v})` }} />
                     ))}
-                    <span className="text-[10px] text-slate-400 font-medium">High</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">High</span>
                   </div>
                 </div>
               </div>
@@ -758,11 +758,11 @@ export const AnalyticsDashboard: React.FC = () => {
                   </div>
                   <div className="text-center py-4">
                     <span className="text-5xl font-black text-white">{data.ai_resolution_rate ?? 0}%</span>
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mt-2">Chat → Booking Rate</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-2">Chat → Booking Rate</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-4">
-                    <div className="bg-white/5 rounded-xl p-3 border border-white/10">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Total Leads</p>
+                    <div className="bg-background/5 rounded-xl p-3 border border-white/10">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Leads</p>
                       <p className="text-xl font-black text-white mt-1">{data.total_leads || 0}</p>
                     </div>
                     <div className="bg-indigo-600/30 rounded-xl p-3 border border-indigo-500/30">
@@ -791,7 +791,7 @@ export const AnalyticsDashboard: React.FC = () => {
                         key={idx}
                         className="flex items-center gap-2 px-3 py-2 bg-muted border border-border rounded-xl hover:bg-indigo-50 hover:border-indigo-200 dark:hover:bg-indigo-900/20 transition-colors cursor-default"
                       >
-                        <span className="text-xs font-bold text-slate-700">{q.text}</span>
+                        <span className="text-xs font-bold text-foreground">{q.text}</span>
                         <span className="text-[10px] font-black bg-card border border-border text-muted-foreground px-1.5 py-0.5 rounded-lg shadow-sm">{q.value}</span>
                       </div>
                     ))}

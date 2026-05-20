@@ -1,4 +1,4 @@
-// Rooms Page - Management with Clean & Professional UI
+﻿// Rooms Page - Management with Clean & Professional UI
 import { Plus, Search, Grid, List, Bed, Loader2, Package, SlidersHorizontal } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -116,7 +116,7 @@ export function RoomsPage() {
     >
 
       {/* Controls Bar */}
-      <Card className="shadow-none border-slate-200">
+      <Card className="shadow-none border-border">
         <CardContent className="p-4 flex flex-col gap-4 md:flex-row md:items-center justify-between">
           {/* Tabs */}
           <div className="flex bg-muted p-1 rounded-lg">
@@ -143,10 +143,10 @@ export function RoomsPage() {
           {/* Search & View Mode */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={`Search ${activeTab === 'room' ? 'rooms' : 'packages'}...`}
-                className="pl-9 h-9 text-sm border-slate-200 shadow-none focus-visible:ring-blue-600"
+                className="pl-9 h-9 text-sm border-border shadow-none focus-visible:ring-blue-600"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -177,13 +177,13 @@ export function RoomsPage() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-          <p className="text-slate-400 text-sm font-medium">Loading content...</p>
+          <p className="text-muted-foreground text-sm font-medium">Loading content...</p>
         </div>
       ) : displayItems.length === 0 ? (
         <div className="text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border">
           <Bed className="h-12 w-12 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-bold text-foreground">No {activeTab === 'room' ? 'rooms' : 'packages'} found</h3>
-          <p className="text-sm text-slate-500 mb-6">Start by adding your first {activeTab === 'room' ? 'room category' : 'package'}.</p>
+          <p className="text-sm text-muted-foreground mb-6">Start by adding your first {activeTab === 'room' ? 'room category' : 'package'}.</p>
           <Button onClick={handleCreateOpen} variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
             Create {activeTab === 'room' ? 'Room' : 'Package'}
           </Button>
@@ -236,7 +236,7 @@ export function RoomsPage() {
                   />
                 ))
               ) : (
-                <div className="p-10 text-center text-slate-400 italic text-sm">
+                <div className="p-10 text-center text-muted-foreground italic text-sm">
                   List view for packages coming soon. Please use grid view.
                 </div>
               )}

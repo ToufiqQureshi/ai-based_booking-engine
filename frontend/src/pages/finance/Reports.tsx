@@ -1,4 +1,4 @@
-// Reports Page - Real API Integration
+﻿// Reports Page - Real API Integration
 import { useState, useEffect } from 'react';
 import { Download, Calendar, TrendingUp, Users, Bed, IndianRupee, Loader2 } from 'lucide-react';
 import {
@@ -263,7 +263,7 @@ export function ReportsPage() {
                 <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-500" /> Revenue Flow
                 </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Your total revenue for this period is {formatCurrency(stats.summary.totalRevenue)}. 
                   Average daily performance is steady.
                 </p>
@@ -272,7 +272,7 @@ export function ReportsPage() {
                 <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
                   <Users className="w-4 h-4 text-blue-500" /> Booking Volume
                 </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   With {stats.summary.totalBookings} confirmed bookings, your occupancy is at {stats.summary.occupancyRate}%.
                 </p>
               </div>
@@ -280,7 +280,7 @@ export function ReportsPage() {
                 <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
                   <Bed className="w-4 h-4 text-purple-500" /> Profitability
                 </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Estimated net profit stands at {formatCurrency(stats.summary.netProfit)}. 
                   Your gross margins are healthy.
                 </p>
@@ -288,8 +288,8 @@ export function ReportsPage() {
             </div>
           ) : (
             <div className="py-12 text-center bg-muted/30 rounded-xl border border-dashed border-border">
-              <p className="text-sm text-slate-500">Not enough data to generate performance insights yet.</p>
-              <p className="text-xs text-slate-400 mt-1">AI recommendations will appear after your first few bookings.</p>
+              <p className="text-sm text-muted-foreground">Not enough data to generate performance insights yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">AI recommendations will appear after your first few bookings.</p>
             </div>
           )}
           <div className="mt-6 flex justify-end">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -156,8 +156,8 @@ export default function ChannelSettings() {
         <div className="p-6 space-y-6 max-w-6xl mx-auto">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Channel Manager</h1>
-                    <p className="text-slate-500 mt-2">Connect and sync your inventory with OTAs (Booking.com, Airbnb, etc.)</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Channel Manager</h1>
+                    <p className="text-muted-foreground mt-2">Connect and sync your inventory with OTAs (Booking.com, Airbnb, etc.)</p>
                 </div>
                 {isConnected && (
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-3 py-1">
@@ -181,7 +181,7 @@ export default function ChannelSettings() {
                 <CardContent className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`} />
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-foreground">
                             {isConnected ? 'Connected to Channex.io Gateway' : 'Gateway Disconnected'}
                         </span>
                     </div>
@@ -218,17 +218,17 @@ export default function ChannelSettings() {
                                 <CardDescription>Required from Hotelier</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4 text-sm">
-                                <ol className="list-decimal list-inside space-y-2 text-slate-700">
+                                <ol className="list-decimal list-inside space-y-2 text-foreground">
                                     <li>Log in to your <strong>Booking.com Extranet</strong>.</li>
                                     <li>Go to <strong>Account</strong> {'>'} <strong>Connectivity Provider</strong>.</li>
                                     <li>Search for <strong>"Channex"</strong> (our gateway).</li>
                                     <li>Copy your <strong>Hotel ID</strong> (LE number).</li>
                                 </ol>
-                                <div className="p-3 bg-slate-50 rounded border mt-4">
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Enter Hotel ID</label>
+                                <div className="p-3 bg-muted/30 rounded border mt-4">
+                                    <label className="text-xs font-bold text-muted-foreground uppercase">Enter Hotel ID</label>
                                     <div className="flex flex-col gap-3 mt-1">
                                         <div>
-                                            <label className="text-xs font-bold text-slate-500 uppercase">Hotel ID (Channex/OTA)</label>
+                                            <label className="text-xs font-bold text-muted-foreground uppercase">Hotel ID (Channex/OTA)</label>
                                             <Input
                                                 placeholder="e.g. 1234567"
                                                 value={hotelIdInput}
@@ -236,7 +236,7 @@ export default function ChannelSettings() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-xs font-bold text-slate-500 uppercase">Channex API Key</label>
+                                            <label className="text-xs font-bold text-muted-foreground uppercase">Channex API Key</label>
                                             <Input
                                                 type="password"
                                                 placeholder="Paste key from Channex Profile"
@@ -262,13 +262,13 @@ export default function ChannelSettings() {
                                 <CardDescription>Required from Hotelier</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4 text-sm">
-                                <ol className="list-decimal list-inside space-y-2 text-slate-700">
+                                <ol className="list-decimal list-inside space-y-2 text-foreground">
                                     <li>Log in to your <strong>Staybooker</strong> (this page).</li>
                                     <li>Click the button below to authorize.</li>
                                     <li>You will be redirected to Airbnb to approve access.</li>
                                     <li>Map your listings after approval.</li>
                                 </ol>
-                                <div className="p-3 bg-slate-50 rounded border mt-4">
+                                <div className="p-3 bg-muted/30 rounded border mt-4">
                                     <Button className="w-full bg-[#FF5A5F] hover:bg-[#FF5A5F]/90">
                                         Login with Airbnb
                                     </Button>
@@ -294,7 +294,7 @@ export default function ChannelSettings() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[300px]">Your Room (Staybooker)</TableHead>
-                                    <TableHead className="w-[50px]"><ArrowRightLeft className="w-4 h-4 text-slate-400" /></TableHead>
+                                    <TableHead className="w-[50px]"><ArrowRightLeft className="w-4 h-4 text-muted-foreground" /></TableHead>
                                     <TableHead>Channel Room ID (OTA)</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
@@ -356,8 +356,8 @@ export default function ChannelSettings() {
                                                 {log.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-medium text-slate-900">{log.message}</p>
-                                                <p className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()}</p>
+                                                <p className="text-sm font-medium text-foreground">{log.message}</p>
+                                                <p className="text-xs text-muted-foreground">{new Date(log.timestamp).toLocaleString()}</p>
                                             </div>
                                         </div>
                                         <Badge variant="outline">{log.type.toUpperCase()}</Badge>
@@ -383,7 +383,7 @@ export default function ChannelSettings() {
                             {/* OVERVIEW */}
                             <div>
                                 <h3 className="text-lg font-semibold mb-2">Overview</h3>
-                                <p className="text-slate-600 text-sm">
+                                <p className="text-muted-foreground text-sm">
                                     Staybooker integrates with <strong>Channex.io</strong> (Connectivity Provider) to sync your rooms, rates, and availability with major OTAs like Booking.com, Airbnb, Expedia, and Agoda.
                                 </p>
                             </div>
@@ -394,8 +394,8 @@ export default function ChannelSettings() {
                             <div className="grid gap-4 md:grid-cols-[200px_1fr]">
                                 <div className="font-semibold text-primary">Step 1: Connect</div>
                                 <div className="space-y-2">
-                                    <h4 className="font-medium text-slate-900">Connect to the Gateway</h4>
-                                    <ul className="list-disc list-outside ml-4 text-sm text-slate-600 space-y-1">
+                                    <h4 className="font-medium text-foreground">Connect to the Gateway</h4>
+                                    <ul className="list-disc list-outside ml-4 text-sm text-muted-foreground space-y-1">
                                         <li>Navigate to the <strong>Channel Config</strong> tab.</li>
                                         <li>Enter your <strong>Channex Hotel ID</strong>. (Contact support if you need one).</li>
                                         <li>Click <strong>Verify & Connect</strong>. The system will ping the gateway to confirm access.</li>
@@ -409,9 +409,9 @@ export default function ChannelSettings() {
                             <div className="grid gap-4 md:grid-cols-[200px_1fr]">
                                 <div className="font-semibold text-primary">Step 2: Map Rooms</div>
                                 <div className="space-y-2">
-                                    <h4 className="font-medium text-slate-900">Link Local Rooms to OTA Rooms</h4>
-                                    <p className="text-sm text-slate-600">Once connected, you must tell the system which local room corresponds to which room on Booking.com.</p>
-                                    <ul className="list-disc list-outside ml-4 text-sm text-slate-600 space-y-1">
+                                    <h4 className="font-medium text-foreground">Link Local Rooms to OTA Rooms</h4>
+                                    <p className="text-sm text-muted-foreground">Once connected, you must tell the system which local room corresponds to which room on Booking.com.</p>
+                                    <ul className="list-disc list-outside ml-4 text-sm text-muted-foreground space-y-1">
                                         <li>Go to the <strong>Room Mapping</strong> tab.</li>
                                         <li>Find your local room (e.g., "Deluxe King").</li>
                                         <li>Enter the <strong>OTA Room ID</strong> found in your Booking.com Extranet (e.g., <code>4216789</code>).</li>

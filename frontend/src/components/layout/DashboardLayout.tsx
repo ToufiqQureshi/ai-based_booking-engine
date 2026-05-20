@@ -1,4 +1,4 @@
-import { Outlet, Navigate } from 'react-router-dom';
+﻿import { Outlet, Navigate } from 'react-router-dom';
 import { ShieldX, Loader2, LogOut, MessageSquare, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -16,18 +16,18 @@ function ContentSkeleton() {
       {/* Page title skeleton */}
       <div className="space-y-2">
         <div className="h-7 w-48 rounded-lg bg-slate-200 dark:bg-slate-700" />
-        <div className="h-4 w-72 rounded-lg bg-slate-100 dark:bg-slate-800" />
+        <div className="h-4 w-72 rounded-lg bg-muted dark:bg-slate-800" />
       </div>
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+          <div key={i} className="h-28 rounded-xl bg-background dark:bg-slate-800 border border-border dark:border-slate-700" />
         ))}
       </div>
       {/* Main content block */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 h-72 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
-        <div className="h-72 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
+        <div className="lg:col-span-2 h-72 rounded-xl bg-background dark:bg-slate-800 border border-border dark:border-slate-700" />
+        <div className="h-72 rounded-xl bg-background dark:bg-slate-800 border border-border dark:border-slate-700" />
       </div>
     </div>
   );
@@ -39,9 +39,9 @@ export function DashboardLayout() {
   // ── Auth loading: full skeleton (first load only) ────────────────────────
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      <div className="flex h-screen w-full bg-muted/30 dark:bg-slate-950 overflow-hidden">
         {/* Sidebar skeleton */}
-        <div className="hidden w-60 shrink-0 flex-col gap-4 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:flex">
+        <div className="hidden w-60 shrink-0 flex-col gap-4 border-r border-border dark:border-slate-800 bg-background dark:bg-slate-900 p-5 md:flex">
           <Skeleton className="h-8 w-28 rounded-lg" />
           <div className="space-y-2 mt-6">
             {[...Array(10)].map((_, i) => (
@@ -51,15 +51,15 @@ export function DashboardLayout() {
         </div>
         {/* Content skeleton */}
         <div className="flex flex-1 flex-col">
-          <div className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center px-6">
+          <div className="h-14 border-b border-border dark:border-slate-800 bg-background dark:bg-slate-900 flex items-center px-6">
             <Skeleton className="h-5 w-40 rounded-lg" />
           </div>
           <ContentSkeleton />
         </div>
         {/* Loading indicator */}
-        <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-full shadow border border-slate-200 dark:border-slate-700">
+        <div className="absolute bottom-6 right-6 flex items-center gap-2 bg-background dark:bg-slate-800 px-3 py-1.5 rounded-full shadow border border-border dark:border-slate-700">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Loading…</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Loading…</span>
         </div>
       </div>
     );
@@ -72,23 +72,23 @@ export function DashboardLayout() {
   // ── Deactivated state ────────────────────────────────────────────────────
   if ((hotel && hotel.is_active === false) || (user && user.is_active === false)) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-6 text-center">
-        <div className="max-w-md w-full bg-white dark:bg-slate-900 p-10 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-muted/30 dark:bg-slate-950 p-6 text-center">
+        <div className="max-w-md w-full bg-background dark:bg-slate-900 p-10 rounded-2xl shadow-lg border border-border dark:border-slate-800">
           <div className="w-14 h-14 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center mb-6 mx-auto">
             <ShieldX className="w-7 h-7 text-amber-500" />
           </div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-5">
             <AlertCircle className="w-3 h-3" /> Account Inactive
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Access Restricted</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+          <h1 className="text-2xl font-bold text-foreground dark:text-white mb-3">Access Restricted</h1>
+          <p className="text-muted-foreground dark:text-muted-foreground text-sm leading-relaxed mb-8">
             Your StayBooker account is currently inactive. This may be due to pending documentation or subscription renewal.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button className="h-10 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm gap-2 shadow-sm">
               <MessageSquare className="h-4 w-4" /> Contact Support
             </Button>
-            <Button variant="ghost" className="h-10 px-6 rounded-xl text-slate-500 font-semibold text-sm gap-2" onClick={logout}>
+            <Button variant="ghost" className="h-10 px-6 rounded-xl text-muted-foreground font-semibold text-sm gap-2" onClick={logout}>
               <LogOut className="h-4 w-4" /> Logout
             </Button>
           </div>
@@ -99,7 +99,7 @@ export function DashboardLayout() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      <div className="flex min-h-screen w-full bg-muted/30 dark:bg-slate-950 overflow-hidden">
         <AppSidebar />
         <SidebarInset className="flex flex-1 flex-col min-w-0 overflow-hidden">
           <AppHeader />

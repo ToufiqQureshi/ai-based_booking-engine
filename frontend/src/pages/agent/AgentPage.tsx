@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,11 +106,11 @@ const AgentPage = () => {
     if (hotel && !hotel.feature_ai_agent) {
         return (
             <div className="flex h-screen w-full flex-col items-center justify-center p-4 text-center">
-                <div className="p-6 bg-slate-100 rounded-full mb-6">
-                    <ShieldAlert className="h-16 w-16 text-slate-400" />
+                <div className="p-6 bg-muted rounded-full mb-6">
+                    <ShieldAlert className="h-16 w-16 text-muted-foreground" />
                 </div>
-                <h2 className="text-2xl font-black text-slate-900 mb-2">Feature Locked</h2>
-                <p className="text-slate-500 mb-8 max-w-md font-medium">
+                <h2 className="text-2xl font-black text-foreground mb-2">Feature Locked</h2>
+                <p className="text-muted-foreground mb-8 max-w-md font-medium">
                     AI Assistant is not included in your current plan. 
                     Please contact support or your account manager to enable this feature.
                 </p>
@@ -173,25 +173,25 @@ const AgentPage = () => {
                                 <div className="flex flex-wrap gap-2 mt-2 ml-11 max-w-[80%]">
                                     <button
                                         onClick={() => triggerQuickAsk("Show me last week's total revenue")}
-                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                        className="text-xs bg-muted/30 hover:bg-muted border border-border text-foreground px-3 py-1.5 rounded-full transition"
                                     >
                                         📊 Total Revenue
                                     </button>
                                     <button
                                         onClick={() => triggerQuickAsk("Tell me which rooms are most booked")}
-                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                        className="text-xs bg-muted/30 hover:bg-muted border border-border text-foreground px-3 py-1.5 rounded-full transition"
                                     >
                                         🛏️ Most Booked Rooms
                                     </button>
                                     <button
                                         onClick={() => triggerQuickAsk("Check our occupancy rate for this month")}
-                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                        className="text-xs bg-muted/30 hover:bg-muted border border-border text-foreground px-3 py-1.5 rounded-full transition"
                                     >
                                         📈 Occupancy Rate
                                     </button>
                                     <button
                                         onClick={() => triggerQuickAsk("What are the cancellation metrics?")}
-                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                        className="text-xs bg-muted/30 hover:bg-muted border border-border text-foreground px-3 py-1.5 rounded-full transition"
                                     >
                                         ❌ Cancellation Stats
                                     </button>
