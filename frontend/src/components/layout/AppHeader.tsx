@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -27,9 +27,11 @@ import { useNavigate } from 'react-router-dom';
 import { NotificationPopover } from '@/components/notifications/NotificationPopover';
 import { ChatWidget } from '@/components/support/ChatWidget';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export function AppHeader() {
   const { user, hotel, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [properties, setProperties] = React.useState<any[]>([]);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = React.useState(false);
   const [isHelpOpen, setIsHelpOpen] = React.useState(false);
@@ -82,7 +84,7 @@ export function AppHeader() {
     .slice(0, 2) || 'U';
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 bg-white px-8 border-b border-slate-200">
+    <header className="sticky top-0 z-40 flex h-14 items-center gap-3 bg-white dark:bg-slate-900 px-6 border-b border-slate-200 dark:border-slate-800">
       
       {/* Sidebar Trigger */}
       <SidebarTrigger className="-ml-2 h-9 w-9 rounded-lg hover:bg-slate-50 transition-colors">
@@ -151,7 +153,21 @@ export function AppHeader() {
 
       {/* Control Cluster */}
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition-all" onClick={() => setIsHelpOpen(true)}>
+        {/* Dark Mode Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark'
+            ? <Sun className="h-4 w-4" />
+            : <Moon className="h-4 w-4" />
+          }
+        </Button>
+
+        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all" onClick={() => setIsHelpOpen(true)}>
             <HelpCircle className="h-5 w-5" />
         </Button>
         <NotificationPopover />

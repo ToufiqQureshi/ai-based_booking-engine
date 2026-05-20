@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Suspense, lazy } from "react";
-import { Loader2 } from "lucide-react";
 
 // Auth Pages
 const LoginPage = lazy(() => import("@/pages/auth/Login"));
@@ -44,14 +44,8 @@ const BookingConfirmation = lazy(() => import("@/pages/public/BookingConfirmatio
 const BookingWidget = lazy(() => import("@/pages/public/BookingWidget"));
 const ChatEmbed = lazy(() => import("@/pages/public/ChatEmbed"));
 
-const PageLoader = () => (
-  <div className="h-screen w-full flex items-center justify-center bg-background">
-    <div className="flex flex-col items-center gap-4">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading Staybooker...</p>
-    </div>
-  </div>
-);
+// Slim top progress bar — does NOT block the whole screen
+const PageLoader = () => <div className="page-progress" />;
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -74,6 +68,7 @@ const App = () => {
 
   return (
     <ErrorBoundary>
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
@@ -145,6 +140,7 @@ const App = () => {
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
+    </ThemeProvider>
     </ErrorBoundary>
   );
 };
