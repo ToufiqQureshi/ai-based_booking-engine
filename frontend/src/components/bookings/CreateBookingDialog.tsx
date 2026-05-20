@@ -28,18 +28,37 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 
+const BOOKING_SOURCES = [
+    { value: 'walk_in',     label: '🚶 Walk-in',              color: 'bg-orange-100 text-orange-700' },
+    { value: 'phone',       label: '📞 Phone Call',            color: 'bg-blue-100 text-blue-700' },
+    { value: 'online',      label: '🌐 Hotel Website (Online)', color: 'bg-green-100 text-green-700' },
+    { value: 'booking_com', label: '🏨 Booking.com',           color: 'bg-indigo-100 text-indigo-700' },
+    { value: 'agoda',       label: '🔵 Agoda',                 color: 'bg-purple-100 text-purple-700' },
+    { value: 'airbnb',      label: '🏠 Airbnb',                color: 'bg-pink-100 text-pink-700' },
+    { value: 'goibibo',     label: '✈️ Goibibo',               color: 'bg-red-100 text-red-700' },
+    { value: 'makemytrip',  label: '🎒 MakeMyTrip',            color: 'bg-yellow-100 text-yellow-700' },
+    { value: 'travel_agent',label: '🤝 Travel Agent',          color: 'bg-teal-100 text-teal-700' },
+    { value: 'corporate',   label: '💼 Corporate / B2B',       color: 'bg-slate-100 text-slate-700' },
+    { value: 'whatsapp',    label: '💬 WhatsApp / Social',     color: 'bg-emerald-100 text-emerald-700' },
+    { value: 'manual',      label: '✏️ Manual / Other',        color: 'bg-gray-100 text-gray-700' },
+];
+
 const formSchema = z.object({
     firstName: z.string().min(2, 'First name is required'),
-    lastName: z.string().min(2, 'Last name is required'),
+    lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Invalid email address'),
+    phone: z.string().min(7, 'Phone number required'),
     roomTypeId: z.string().min(1, 'Room type is required'),
     checkIn: z.date(),
     checkOut: z.date(),
     pricePerNight: z.coerce.number().min(0, 'Price must be positive'),
+    source: z.string().min(1, 'Booking source is required'),
+    specialRequests: z.string().optional(),
 });
 
 interface RoomType {
@@ -63,9 +82,12 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
             firstName: '',
             lastName: '',
             email: '',
+            phone: '',
             checkIn: new Date(),
             checkOut: addDays(new Date(), 1),
             pricePerNight: 0,
+            source: 'walk_in',
+            specialRequests: '',
         },
     });
 
@@ -75,7 +97,6 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
         }
     }, [open]);
 
-    // Update price when room type changes
     const handleRoomTypeChange = (id: string) => {
         const room = roomTypes.find(r => r.id === id);
         if (room) {
@@ -83,6 +104,8 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
         }
         form.setValue('roomTypeId', id);
     };
+
+    const selectedSource = BOOKING_SOURCES.find(s => s.value === form.watch('source'));
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
@@ -101,24 +124,26 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                     first_name: values.firstName,
                     last_name: values.lastName,
                     email: values.email,
+                    phone: values.phone,
                 },
                 rooms: [
                     {
                         room_type_id: values.roomTypeId,
                         room_type_name: selectedRoom?.name || 'Unknown',
-                        guests: 2, // Default
+                        guests: 2,
                         price_per_night: values.pricePerNight,
                         total_price: values.pricePerNight * nights,
                     }
                 ],
-                source: 'manual'
+                source: values.source,
+                special_requests: values.specialRequests || '',
             };
 
             await apiClient.post('/bookings', payload);
 
             toast({
-                title: 'Booking Created',
-                description: `Booking for ${values.firstName} has been created.`,
+                title: '✅ Booking Created',
+                description: `Booking for ${values.firstName} created via ${selectedSource?.label || values.source}.`,
             });
             setOpen(false);
             form.reset();
@@ -128,7 +153,7 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
             toast({
                 variant: 'destructive',
                 title: 'Failed to create booking',
-                description: 'Please try again.',
+                description: 'Please check all fields and try again.',
             });
         }
     };
@@ -141,15 +166,17 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                     New Booking
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Create New Booking</DialogTitle>
                     <DialogDescription>
-                        Enter guest details and room selection to create a manual booking.
+                        Enter guest details, room selection, and booking source.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+
+                        {/* Guest Name */}
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
@@ -179,20 +206,70 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                             />
                         </div>
 
+                        {/* Email & Phone */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="john@example.com" type="email" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="phone"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Phone Number</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="+91 98765 43210" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Booking Source */}
                         <FormField
                             control={form.control}
-                            name="email"
+                            name="source"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Email</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="john@example.com" type="email" {...field} />
-                                    </FormControl>
+                                    <FormLabel>Booking Source</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="How did the guest book?" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {BOOKING_SOURCES.map(src => (
+                                                <SelectItem key={src.value} value={src.value}>
+                                                    {src.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedSource && (
+                                        <div className="mt-1">
+                                            <Badge className={cn('text-xs font-medium border-0', selectedSource.color)}>
+                                                Source: {selectedSource.label}
+                                            </Badge>
+                                        </div>
+                                    )}
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
+                        {/* Room Type */}
                         <FormField
                             control={form.control}
                             name="roomTypeId"
@@ -208,7 +285,7 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                                         <SelectContent>
                                             {roomTypes.map((room) => (
                                                 <SelectItem key={room.id} value={room.id}>
-                                                    {room.name}
+                                                    {room.name} — ₹{room.base_price.toLocaleString('en-IN')}/night
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -218,6 +295,7 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                             )}
                         />
 
+                        {/* Dates */}
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
@@ -235,11 +313,7 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
-                                                        {field.value ? (
-                                                            format(field.value, "PPP")
-                                                        ) : (
-                                                            <span>Pick a date</span>
-                                                        )}
+                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                     </Button>
                                                 </FormControl>
@@ -249,7 +323,6 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                                                     mode="single"
                                                     selected={field.value}
                                                     onSelect={field.onChange}
-                                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                                                     initialFocus
                                                 />
                                             </PopoverContent>
@@ -274,11 +347,7 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                                                             !field.value && "text-muted-foreground"
                                                         )}
                                                     >
-                                                        {field.value ? (
-                                                            format(field.value, "PPP")
-                                                        ) : (
-                                                            <span>Pick a date</span>
-                                                        )}
+                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                     </Button>
                                                 </FormControl>
@@ -299,12 +368,13 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                             />
                         </div>
 
+                        {/* Price */}
                         <FormField
                             control={form.control}
                             name="pricePerNight"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Price Per Night</FormLabel>
+                                    <FormLabel>Price Per Night (₹)</FormLabel>
                                     <FormControl>
                                         <Input type="number" {...field} />
                                     </FormControl>
@@ -314,7 +384,25 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                             )}
                         />
 
+                        {/* Special Requests */}
+                        <FormField
+                            control={form.control}
+                            name="specialRequests"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Special Requests <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g. Early check-in, extra bed..." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
                         <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                                Cancel
+                            </Button>
                             <Button type="submit" disabled={form.formState.isSubmitting}>
                                 {form.formState.isSubmitting ? (
                                     <>
