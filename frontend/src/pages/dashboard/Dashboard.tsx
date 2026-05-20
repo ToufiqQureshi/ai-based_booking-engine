@@ -26,6 +26,7 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { PageShell } from '@/components/layout/PageShell';
 import { cn } from '@/lib/utils';
 
 interface RecentBooking {
@@ -88,40 +89,35 @@ export function DashboardPage() {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-          <span className="text-slate-500 font-medium text-sm">Loading dashboard...</span>
+          <Loader2 className="h-7 w-7 text-indigo-600 animate-spin" />
+          <span className="text-slate-400 dark:text-slate-500 font-medium text-sm">Loading dashboard…</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500">
-          Welcome back, {user?.name?.split(' ')[0] || 'User'}. Here's what's happening today at {hotel?.name || 'your property'}.
-        </p>
-
-        <div className="mt-4">
-          <WelcomeCard message="Have a productive day managing your hotel! 👋" />
-        </div>
-
-        {/* AI Configuration Alert */}
-        {aiNotConfigured && (
-          <Alert className="mt-4 border-amber-200 bg-amber-50">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-800 font-semibold">AI Assistant Inactive</AlertTitle>
-            <AlertDescription className="text-amber-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1 text-sm">
-              <span>Configure your AI settings to activate the Guest Concierge on your website.</span>
-              <Button variant="outline" size="sm" className="bg-white hover:bg-amber-100 text-amber-700 border-amber-200 h-8" asChild>
-                <Link to="/settings/integration">Configure Now</Link>
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+    <PageShell
+      title="Dashboard"
+      subtitle={`Welcome back, ${user?.name?.split(' ')[0] || 'User'}. Here's what's happening today at ${hotel?.name || 'your property'}.`}
+    >
+      <div className="mt-1">
+        <WelcomeCard message="Have a productive day managing your hotel! 👋" />
       </div>
+
+      {/* AI Configuration Alert */}
+      {aiNotConfigured && (
+        <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800 dark:text-amber-400 font-semibold">AI Assistant Inactive</AlertTitle>
+          <AlertDescription className="text-amber-700 dark:text-amber-500 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1 text-sm">
+            <span>Configure your AI settings to activate the Guest Concierge on your website.</span>
+            <Button variant="outline" size="sm" className="bg-white hover:bg-amber-100 text-amber-700 border-amber-200 h-8" asChild>
+              <Link to="/settings/integration">Configure Now</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -319,7 +315,7 @@ export function DashboardPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

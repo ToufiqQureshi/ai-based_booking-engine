@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { RoomType, RatePlan } from '@/types/api';
 import { RoomCard } from '@/components/rooms/RoomCard';
 import { RoomListItem } from '@/components/rooms/RoomListItem';
+import { PageShell } from '@/components/layout/PageShell';
 
 // Lazy load dialog components
 const RoomDialog = lazy(() => import('@/components/rooms/RoomDialog').then(m => ({ default: m.RoomDialog })));
@@ -103,24 +104,16 @@ export function RoomsPage() {
   const displayItems = activeTab === 'room' ? filteredRooms : filteredPackages;
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* Simple Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {activeTab === 'room' ? 'Room Types' : 'Packages'}
-          </h1>
-          <p className="text-sm text-slate-500">
-            {activeTab === 'room' 
-              ? 'Manage your hotel room categories and inventory.' 
-              : 'Create and manage special stay packages.'}
-          </p>
-        </div>
-        <Button onClick={handleCreateOpen} className="bg-blue-600 hover:bg-blue-700 h-10 px-6">
-          <Plus className="w-4 h-4 mr-2" />
+    <PageShell
+      title={activeTab === 'room' ? 'Room Types' : 'Packages'}
+      subtitle={activeTab === 'room' ? 'Manage your hotel room categories and inventory.' : 'Create and manage special stay packages.'}
+      actions={
+        <Button onClick={handleCreateOpen} className="bg-indigo-600 hover:bg-indigo-700 h-9 px-5 text-sm font-semibold">
+          <Plus className="w-4 h-4 mr-1.5" />
           {activeTab === 'room' ? 'Add Room Type' : 'Add Package'}
         </Button>
-      </div>
+      }
+    >
 
       {/* Controls Bar */}
       <Card className="shadow-none border-slate-200">
@@ -277,7 +270,7 @@ export function RoomsPage() {
           />
         )}
       </Suspense>
-    </div>
+    </PageShell>
   );
 }
 

@@ -30,6 +30,7 @@ import { apiClient } from '@/api/client';
 import { Payment } from '@/types/api';
 import { InvoiceDialog } from '@/components/payments/InvoiceDialog';
 import { useToast } from '@/hooks/use-toast';
+import { PageShell } from '@/components/layout/PageShell';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   completed: { label: 'Completed', variant: 'default' },
@@ -123,17 +124,10 @@ export function PaymentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
-          <p className="text-muted-foreground">
-            Track all transactions and invoices
-          </p>
-        </div>
-      </div>
-
+    <PageShell
+      title="Payments"
+      subtitle="Track all transactions and invoices"
+    >
       <InvoiceDialog
         open={isInvoiceOpen}
         onOpenChange={setIsInvoiceOpen}
@@ -268,7 +262,7 @@ export function PaymentsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }
 

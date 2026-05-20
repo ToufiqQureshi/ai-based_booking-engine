@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
+import { PageShell } from '@/components/layout/PageShell';
 
 interface BookingData {
   id: string;
@@ -175,17 +176,11 @@ export function BookingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Bookings</h1>
-          <p className="text-muted-foreground">
-            View and manage all reservations
-          </p>
-        </div>
-        <CreateBookingDialog onSuccess={fetchBookings} />
-      </div>
+    <PageShell
+      title="Bookings"
+      subtitle="View and manage all reservations"
+      actions={<CreateBookingDialog onSuccess={fetchBookings} />}
+    >
 
       <BookingDetailsDialog
         open={isDetailsOpen}
@@ -393,7 +388,7 @@ export function BookingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }
 

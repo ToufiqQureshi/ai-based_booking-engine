@@ -11,6 +11,7 @@ export interface User {
   role: UserRole;
   hotel_id: string;
   is_active?: boolean;
+  avatar_url?: string;
   created_at: string;
   updated_at: string;
 }

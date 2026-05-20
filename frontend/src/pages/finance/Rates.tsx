@@ -23,6 +23,7 @@ import { RatePlanDialog } from '@/components/rates/RatePlanDialog';
 import { apiClient } from '@/api/client';
 import { RatePlan } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
+import { PageShell } from '@/components/layout/PageShell';
 
 const mealPlanLabels: Record<string, string> = {
   EP: 'European Plan (Room Only)',
@@ -97,22 +98,15 @@ export function RatesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Rate Plans</h1>
-          <p className="text-muted-foreground">
-            Configure your pricing strategies and rate plans
-          </p>
-        </div>
-
-        <Button className="gap-2" onClick={handleCreate}>
-          <Plus className="h-4 w-4" />
-          Add Rate Plan
+    <PageShell
+      title="Rate Plans"
+      subtitle="Configure your pricing strategies and rate plans"
+      actions={
+        <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 h-9 px-5 text-sm font-semibold" onClick={handleCreate}>
+          <Plus className="h-4 w-4" /> Add Rate Plan
         </Button>
-      </div>
-
+      }
+    >
       <RatePlanDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
@@ -206,7 +200,7 @@ export function RatesPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }
 
