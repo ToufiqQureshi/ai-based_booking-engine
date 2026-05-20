@@ -15,6 +15,22 @@ export function PublicBookingLayout() {
         };
     }, [hotelSlug]);
 
+    // Force light mode on public booking pages
+    // Sheet/Dialog/Popover portals render to document.body (outside wrapper div),
+    // so we must remove 'dark' from <html> directly — not just use a wrapper class.
+    useEffect(() => {
+        const htmlEl = document.documentElement;
+        const hadDark = htmlEl.classList.contains('dark');
+        htmlEl.classList.remove('dark');
+
+        return () => {
+            // Restore dark mode when guest leaves public pages
+            if (hadDark) {
+                htmlEl.classList.add('dark');
+            }
+        };
+    }, []);
+
     return (
         <div className="light min-h-screen bg-slate-50">
             <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
