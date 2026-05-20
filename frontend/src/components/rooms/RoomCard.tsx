@@ -22,9 +22,9 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
     const primaryPhoto = room.photos?.find(p => p.is_primary) || room.photos?.[0] || null;
 
     return (
-        <Card className="overflow-hidden group hover:shadow-md transition-all duration-200 border border-slate-200 bg-white rounded-xl relative">
+        <Card className="overflow-hidden group hover:shadow-md transition-all duration-200 border border-border bg-card rounded-xl relative flex flex-col">
             {/* Image Section */}
-            <div className="aspect-[16/10] relative overflow-hidden bg-slate-100">
+            <div className="aspect-[16/10] relative overflow-hidden bg-muted">
                 {primaryPhoto ? (
                     <img
                         src={getImageUrl(primaryPhoto.url)}
@@ -32,7 +32,7 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-300">
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                         <Bed className="h-10 w-10 mb-2 opacity-20" />
                         <span className="text-[10px] font-semibold uppercase tracking-wider">No Image</span>
                     </div>
@@ -77,32 +77,32 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
             </div>
 
             {/* Content Section */}
-            <CardHeader className="p-4 pb-2">
+            <CardHeader className="p-4 pb-2 flex-none">
                 <div className="space-y-1">
-                    <CardTitle className="text-lg font-bold text-slate-900 leading-tight">
+                    <CardTitle className="text-base font-bold text-foreground leading-tight">
                         {room.name}
                     </CardTitle>
-                    <CardDescription className="line-clamp-2 text-slate-500 text-xs font-medium leading-relaxed min-h-[32px]">
+                    <CardDescription className="line-clamp-2 text-muted-foreground text-xs font-medium leading-relaxed min-h-[32px]">
                         {room.description || 'No description provided for this room category.'}
                     </CardDescription>
                 </div>
             </CardHeader>
 
-            <CardContent className="p-4 pt-2 space-y-4">
+            <CardContent className="p-4 pt-2 space-y-3 flex flex-col flex-1">
                 {/* Stats Row */}
-                <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
                     <div className="flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-slate-400" />
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>{room.base_occupancy}-{room.max_occupancy} Pax</span>
                     </div>
-                    <div className="w-1 h-1 rounded-full bg-slate-200" />
+                    <div className="w-1 h-1 rounded-full bg-border" />
                     <div className="flex items-center gap-1.5">
-                        <BedDouble className="h-3.5 w-3.5 text-slate-400" />
+                        <BedDouble className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>{room.bed_type || 'Double'}</span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
                     {room.room_size && (
                         <div className="flex items-center gap-1.5">
                             <Ruler className="h-3 w-3" />
@@ -110,15 +110,15 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
                         </div>
                     )}
                     <div className="flex items-center gap-1.5">
-                        <div className="w-1 h-1 rounded-full bg-slate-300" />
+                        <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
                         <span>Inventory: {room.total_inventory}</span>
                     </div>
                 </div>
 
-                {/* Price Footer */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                {/* Price Footer - mt-auto pushes it to bottom */}
+                <div className="mt-auto pt-3 border-t border-border flex items-center justify-between">
                     <div className="flex flex-col">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Price / Night</span>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Price / Night</span>
                         <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-bold text-blue-600">
                                 {formatCurrency(room.base_price)}

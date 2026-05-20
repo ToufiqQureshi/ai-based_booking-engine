@@ -92,16 +92,16 @@ const KPICard: React.FC<{
   trend?: { value: number; label: string };
   accent?: string;
 }> = ({ label, value, sub, icon, trend, accent = 'text-indigo-600' }) => (
-  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+  <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md transition-all duration-200">
     <div className="flex items-start justify-between">
-      <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl text-slate-500">
+      <div className="p-2 bg-muted border border-border rounded-xl text-muted-foreground">
         {icon}
       </div>
       {trend !== undefined && (
         <span className={`text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 ${
           trend.value >= 0
-            ? 'bg-emerald-50 text-emerald-700'
-            : 'bg-red-50 text-red-600'
+            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+            : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
         }`}>
           {trend.value >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
           {Math.abs(trend.value)}%
@@ -109,22 +109,22 @@ const KPICard: React.FC<{
       )}
     </div>
     <div>
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{label}</p>
       <h3 className={`text-2xl font-black ${accent}`}>{value}</h3>
-      {sub && <p className="text-xs text-slate-400 font-medium mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-muted-foreground font-medium mt-0.5">{sub}</p>}
     </div>
   </div>
 );
 
 const SectionCard: React.FC<{ title: string; subtitle?: string; icon?: React.ReactNode; children: React.ReactNode; className?: string }> = 
   ({ title, subtitle, icon, children, className = '' }) => (
-  <div className={`bg-white border border-slate-200/80 rounded-2xl p-6 hover:shadow-md transition-shadow duration-200 ${className}`}>
+  <div className={`bg-card border border-border rounded-2xl p-6 hover:shadow-md transition-shadow duration-200 ${className}`}>
     <div className="flex items-start justify-between mb-5">
       <div>
-        <h2 className="text-base font-bold text-slate-800">{title}</h2>
-        {subtitle && <p className="text-xs text-slate-400 font-medium mt-0.5">{subtitle}</p>}
+        <h2 className="text-base font-bold text-foreground">{title}</h2>
+        {subtitle && <p className="text-xs text-muted-foreground font-medium mt-0.5">{subtitle}</p>}
       </div>
-      {icon && <div className="text-slate-300">{icon}</div>}
+      {icon && <div className="text-muted-foreground">{icon}</div>}
     </div>
     {children}
   </div>
@@ -279,7 +279,7 @@ export const AnalyticsDashboard: React.FC = () => {
   }));
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-6">
 
         {/* ── Header ────────────────────────────────────────────────────── */}
@@ -289,7 +289,7 @@ export const AnalyticsDashboard: React.FC = () => {
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
         >
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Analytics & Reports</h1>
+            <h1 className="text-2xl font-black text-foreground tracking-tight">Analytics & Reports</h1>
             <p className="text-sm text-slate-500 font-medium mt-0.5">
               Performance data for the last <span className="text-indigo-600 font-bold">{days} days</span>
             </p>
@@ -297,7 +297,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
           <div className="flex items-center gap-3 flex-wrap">
             {/* Live badge */}
-            <div className="flex items-center gap-2 bg-white border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm">
+            <div className="flex items-center gap-2 bg-background border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
@@ -306,7 +306,7 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
 
             {/* Day filter */}
-            <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
+            <div className="flex items-center gap-0.5 bg-muted border border-border rounded-xl p-0.5">
               {[7, 30, 90].map(d => (
                 <button
                   key={d}
@@ -314,7 +314,7 @@ export const AnalyticsDashboard: React.FC = () => {
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                     days === d
                       ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      : 'text-muted-foreground hover:bg-accent'
                   }`}
                 >
                   {d}d
@@ -325,7 +325,7 @@ export const AnalyticsDashboard: React.FC = () => {
             {/* Export */}
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-background border border-border text-foreground rounded-xl text-xs font-bold hover:bg-muted shadow-sm transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
               Export CSV
@@ -337,7 +337,7 @@ export const AnalyticsDashboard: React.FC = () => {
         {switching ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 h-28 animate-pulse" />
+              <div key={i} className="bg-muted border border-border rounded-2xl p-5 h-28 animate-pulse" />
             ))}
           </div>
         ) : (
@@ -359,7 +359,7 @@ export const AnalyticsDashboard: React.FC = () => {
               value={`${data.total_conversions || 0}`}
               sub={`From ${data.total_visitors || 0} visitors`}
               icon={<Calendar className="w-4 h-4" />}
-              accent="text-slate-900"
+              accent="text-foreground"
             />
             <KPICard
               label="Conversion Rate"
@@ -373,14 +373,14 @@ export const AnalyticsDashboard: React.FC = () => {
               value={`${data.occupancy_rate || 0}%`}
               sub={`RevPAR: ₹${(data.rev_par || 0).toLocaleString('en-IN')}`}
               icon={<Bed className="w-4 h-4" />}
-              accent="text-slate-900"
+              accent="text-foreground"
             />
           </motion.div>
         )}
 
         {/* ── Tabs ──────────────────────────────────────────────────────── */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-white border border-slate-200 p-0.5 rounded-xl shadow-sm inline-flex gap-0.5">
+          <TabsList className="bg-muted border border-border p-0.5 rounded-xl inline-flex gap-0.5">
             {[
               { value: 'overview', label: 'Overview' },
               { value: 'revenue', label: 'Revenue & Rooms' },
@@ -390,7 +390,7 @@ export const AnalyticsDashboard: React.FC = () => {
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="px-5 py-2 text-xs font-bold rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-600 transition-all"
+                className="px-5 py-2 text-xs font-bold rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-muted-foreground transition-all"
               >
                 {tab.label}
               </TabsTrigger>
@@ -452,11 +452,11 @@ export const AnalyticsDashboard: React.FC = () => {
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-bold text-slate-600">{getStageLabel(stage.stage)}</span>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-black text-slate-900">{stage.count.toLocaleString()}</span>
-                              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{pct}%</span>
+                              <span className="text-sm font-black text-foreground">{stage.count.toLocaleString()}</span>
+                              <span className="text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">{pct}%</span>
                             </div>
                           </div>
-                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${pct}%` }}
@@ -470,7 +470,7 @@ export const AnalyticsDashboard: React.FC = () => {
                     })}
 
                     {data.funnel_dropoffs && data.funnel_dropoffs.length > 0 && (
-                      <div className="pt-4 border-t border-slate-100">
+                      <div className="pt-4 border-t border-border">
                         <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Drop-off Points</p>
                         <div className="space-y-2">
                           {data.funnel_dropoffs.map(d => (
@@ -501,7 +501,7 @@ export const AnalyticsDashboard: React.FC = () => {
                         key={ev.id}
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center justify-between py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-100 text-xs"
+                        className="flex items-center justify-between py-2.5 px-3 bg-muted rounded-xl border border-border text-xs"
                       >
                         <div className="flex items-center gap-2.5">
                           <span className={`w-2 h-2 rounded-full shrink-0 ${
@@ -646,7 +646,7 @@ export const AnalyticsDashboard: React.FC = () => {
                     <div className="space-y-3">
                       {data.promo_stats.map(p => (
                         <div key={p.code} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                          <span className="text-sm font-bold text-slate-700 font-mono bg-slate-100 px-2 py-0.5 rounded-md">{p.code}</span>
+                          <span className="text-sm font-bold text-foreground font-mono bg-muted px-2 py-0.5 rounded-md">{p.code}</span>
                           <span className="text-sm font-black text-indigo-600">{p.bookings} used</span>
                         </div>
                       ))}
@@ -666,10 +666,10 @@ export const AnalyticsDashboard: React.FC = () => {
                   {data.booking_window_data && data.booking_window_data.some(b => b.count > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.booking_window_data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="window" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dy={8} />
-                        <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dx={-4} />
-                        <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="window" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dy={8} />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dx={-4} />
+                        <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
                         <Bar dataKey="count" name="Bookings" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={56} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -686,10 +686,10 @@ export const AnalyticsDashboard: React.FC = () => {
                         <span className="text-xl leading-none w-8 text-center shrink-0">{countryFlag(item.code)}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between mb-1.5">
-                            <span className="text-xs font-bold text-slate-700 truncate">{item.country}</span>
-                            <span className="text-xs font-black text-slate-900 ml-2 shrink-0">{item.visitors}</span>
+                            <span className="text-xs font-bold text-foreground truncate">{item.country}</span>
+                            <span className="text-xs font-black text-foreground ml-2 shrink-0">{item.visitors}</span>
                           </div>
-                          <div className="w-full bg-slate-100 rounded-full h-1.5">
+                          <div className="w-full bg-muted rounded-full h-1.5">
                             <div className="bg-indigo-500 h-full rounded-full transition-all" style={{ width: `${item.percentage}%` }} />
                           </div>
                         </div>
@@ -789,10 +789,10 @@ export const AnalyticsDashboard: React.FC = () => {
                     {data.popular_questions.map((q, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-default"
+                        className="flex items-center gap-2 px-3 py-2 bg-muted border border-border rounded-xl hover:bg-indigo-50 hover:border-indigo-200 dark:hover:bg-indigo-900/20 transition-colors cursor-default"
                       >
                         <span className="text-xs font-bold text-slate-700">{q.text}</span>
-                        <span className="text-[10px] font-black bg-white border border-slate-200 text-slate-500 px-1.5 py-0.5 rounded-lg shadow-sm">{q.value}</span>
+                        <span className="text-[10px] font-black bg-card border border-border text-muted-foreground px-1.5 py-0.5 rounded-lg shadow-sm">{q.value}</span>
                       </div>
                     ))}
                   </div>
