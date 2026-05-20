@@ -1358,6 +1358,126 @@ export default function BookingSelection() {
                 </SheetContent>
             </Sheet>
 
+            {/* ── Hotel Policies Section (Simplotel / Staah Style) ── */}
+            {hotel?.settings && (
+                hotel.settings.cancellation_policy ||
+                hotel.settings.payment_policy ||
+                hotel.settings.child_policy ||
+                hotel.settings.privacy_policy ||
+                hotel.settings.important_info
+            ) && (
+                <div className="mt-12 mb-6 px-4 md:px-0">
+                    <div className="max-w-5xl mx-auto">
+                        {/* Section Header */}
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                                <Info className="w-4 h-4 text-slate-600" />
+                            </div>
+                            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Hotel Policies &amp; Important Information
+                            </h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Cancellation Policy */}
+                            {hotel.settings.cancellation_policy && (
+                                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-center gap-2.5 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                                            <X className="w-4 h-4 text-red-500" />
+                                        </div>
+                                        <h3 className="font-bold text-sm text-slate-800">Cancellation Policy</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                        {hotel.settings.cancellation_policy}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Payment Policy */}
+                            {hotel.settings.payment_policy && (
+                                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-center gap-2.5 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                                            <Check className="w-4 h-4 text-green-600" />
+                                        </div>
+                                        <h3 className="font-bold text-sm text-slate-800">Payment Policy</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                        {hotel.settings.payment_policy}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Child & Extra Bed Policy */}
+                            {hotel.settings.child_policy && (
+                                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-center gap-2.5 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                                            <User className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                        <h3 className="font-bold text-sm text-slate-800">Child &amp; Extra Bed Policy</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                        {hotel.settings.child_policy}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Privacy Policy */}
+                            {hotel.settings.privacy_policy && (
+                                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-center gap-2.5 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+                                            <ShoppingBag className="w-4 h-4 text-purple-600" />
+                                        </div>
+                                        <h3 className="font-bold text-sm text-slate-800">Privacy Policy</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                        {hotel.settings.privacy_policy}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Important Information — full width */}
+                            {hotel.settings.important_info && (
+                                <div className="md:col-span-2 bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+                                    <div className="flex items-center gap-2.5 mb-3">
+                                        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                                            <Info className="w-4 h-4 text-amber-600" />
+                                        </div>
+                                        <h3 className="font-bold text-sm text-amber-800">Important Information</h3>
+                                    </div>
+                                    <p className="text-sm text-amber-700 leading-relaxed whitespace-pre-wrap">
+                                        {hotel.settings.important_info}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Hotel Check-in / Check-out Times */}
+                        {(hotel.settings.check_in_time || hotel.settings.check_out_time) && (
+                            <div className="mt-4 flex flex-wrap gap-3">
+                                {hotel.settings.check_in_time && (
+                                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm shadow-sm">
+                                        <CalendarIcon className="w-4 h-4 text-indigo-500" />
+                                        <span className="text-slate-500 font-medium">Check-in from</span>
+                                        <span className="font-bold text-slate-800">{hotel.settings.check_in_time}</span>
+                                    </div>
+                                )}
+                                {hotel.settings.check_out_time && (
+                                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm shadow-sm">
+                                        <CalendarIcon className="w-4 h-4 text-rose-500" />
+                                        <span className="text-slate-500 font-medium">Check-out by</span>
+                                        <span className="font-bold text-slate-800">{hotel.settings.check_out_time}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* AI Chat Widget */}
             <ChatWidget 
                 hotelSlug={hotelSlug || ''} 

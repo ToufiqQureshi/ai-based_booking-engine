@@ -1,4 +1,4 @@
-﻿import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut, Moon, Sun } from 'lucide-react';
+import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -190,7 +190,7 @@ export function AppHeader() {
           <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl border-border shadow-xl bg-popover">
             <DropdownMenuLabel className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Account</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-muted" />
-            <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-muted/30 text-foreground font-semibold text-sm gap-2.5" onSelect={() => navigate('/profile')}>
+            <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-muted/30 text-foreground font-semibold text-sm gap-2.5" onSelect={() => navigate('/settings/profile')}>
               <User className="h-4 w-4 text-muted-foreground" /> My Profile
             </DropdownMenuItem>
             <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-muted/30 text-foreground font-semibold text-sm gap-2.5" onSelect={() => navigate('/settings?tab=notifications')}>
