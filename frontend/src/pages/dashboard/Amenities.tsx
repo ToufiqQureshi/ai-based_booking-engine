@@ -55,7 +55,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { apiClient } from '@/api/client';
 import { useToast } from "@/hooks/use-toast";
 import { Amenity } from '@/types/api';
-import { cn } from '@/lib/utils';
+import { PageShell } from '@/components/layout/PageShell';
 
 const ICONS: Record<string, any> = {
     wifi: Wifi,
@@ -159,46 +159,34 @@ export default function Amenities() {
     });
 
     return (
-        <div className="min-h-screen bg-[#FDFDFF] p-8 lg:p-12 space-y-10">
-            {/* High-Fidelity Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-1 object-cover bg-indigo-600 rounded-full" />
-                        <span className="text-xs font-black uppercase tracking-[0.3em] text-indigo-600/60">Asset Management</span>
-                    </div>
-                    <h1 className="text-5xl lg:text-6xl font-black tracking-tight text-indigo-950">
-                        Luxury <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Library</span>
-                    </h1>
-                    <p className="text-lg text-indigo-900/50 font-medium max-w-xl leading-relaxed">
-                        Curate the definitive collection of services and features that define your guest experience.
-                    </p>
-                </div>
-                
-                <Button 
+        <PageShell
+            title="Amenity Library"
+            subtitle="Curate services and features that define your guest experience."
+            actions={
+                <Button
                     onClick={() => setIsDialogOpen(true)}
-                    className="h-16 px-10 rounded-[24px] bg-indigo-950 hover:bg-indigo-900 text-white font-extrabold text-lg shadow-[0_20px_40px_rgba(30,27,75,0.2)] transition-all hover:scale-[1.02] active:scale-[0.98] flex gap-3 group"
+                    className="h-9 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md flex gap-2 group"
                 >
-                    <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
-                    Define Amenity
+                    <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                    Add Amenity
                 </Button>
-            </div>
-
-            {/* Smart Filters & Search */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            }
+        >
+            {/* Smart Filters */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 <div className="lg:col-span-2 relative group">
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400 transition-colors group-focus-within:text-indigo-600" />
                     <Input 
                         placeholder="Search luxury library..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="h-16 pl-14 pr-6 rounded-[24px] border-indigo-100/50 bg-white shadow-sm focus:ring-4 focus:ring-indigo-500/5 text-lg font-medium transition-all"
+                        className="h-16 pl-14 pr-6 rounded-[24px] border-indigo-100/50 bg-background shadow-sm focus:ring-4 focus:ring-indigo-500/5 text-lg font-medium transition-all"
                     />
                 </div>
                 <div className="flex gap-4 lg:col-span-2">
                     <div className="flex-1">
                         <Select value={filterScope} onValueChange={(val: any) => setFilterScope(val)}>
-                            <SelectTrigger className="h-16 rounded-[24px] border-indigo-100/50 bg-white px-6 font-bold text-indigo-950">
+                            <SelectTrigger className="h-16 rounded-[24px] border-indigo-100/50 bg-background px-6 font-bold">
                                 <div className="flex items-center gap-2">
                                     <Filter className="w-4 h-4 text-indigo-400" />
                                     <SelectValue placeholder="Scope" />
@@ -215,7 +203,7 @@ export default function Amenities() {
             </div>
 
             {/* Library Grid */}
-            <Card className="rounded-[32px] border-indigo-100/30 bg-white/60 backdrop-blur-xl shadow-2xl shadow-indigo-100/50 overflow-hidden">
+            <Card className="rounded-[32px] border-border bg-card backdrop-blur-xl shadow-sm overflow-hidden">
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader className="bg-indigo-50/30">
@@ -301,7 +289,7 @@ export default function Amenities() {
 
             {/* Modern Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur-2xl border-white/40 shadow-[0_30px_70px_rgba(0,0,0,0.15)] rounded-[32px] p-0 overflow-hidden border">
+                <DialogContent className="sm:max-w-[500px] bg-background border-border shadow-2xl rounded-[32px] p-0 overflow-hidden">
                     <DialogHeader className="p-10 pb-6 bg-gradient-to-br from-indigo-50/80 to-white/20 border-b border-indigo-100/20">
                         <DialogTitle className="text-3xl font-extrabold tracking-tight text-indigo-950">New Amenity Definition</DialogTitle>
                         <DialogDescription className="text-indigo-600/60 font-semibold text-sm mt-2">
@@ -316,7 +304,7 @@ export default function Amenities() {
                                 placeholder="e.g. Presidential Lounge"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="h-14 rounded-2xl border-indigo-100/50 bg-white px-5 font-bold text-lg focus:ring-4 focus:ring-indigo-500/5"
+                                className="h-14 rounded-2xl border-border bg-background px-5 font-bold text-lg focus:ring-4 focus:ring-indigo-500/5"
                             />
                         </div>
 
@@ -327,7 +315,7 @@ export default function Amenities() {
                                     value={formData.category}
                                     onValueChange={(val) => setFormData({ ...formData, category: val })}
                                 >
-                                    <SelectTrigger className="h-14 rounded-2xl border-indigo-100/50 bg-white px-5 font-bold">
+                                    <SelectTrigger className="h-14 rounded-2xl border-border bg-background px-5 font-bold">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-2xl border-indigo-50 shadow-2xl">
@@ -343,7 +331,7 @@ export default function Amenities() {
                                     value={formData.scope}
                                     onValueChange={(val) => setFormData({ ...formData, scope: val as 'hotel' | 'room' })}
                                 >
-                                    <SelectTrigger className="h-14 rounded-2xl border-indigo-100/50 bg-white px-5 font-bold">
+                                    <SelectTrigger className="h-14 rounded-2xl border-border bg-background px-5 font-bold">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-2xl border-indigo-50 shadow-2xl">
@@ -366,7 +354,7 @@ export default function Amenities() {
                                             "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
                                             formData.icon_slug === slug 
                                                 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110" 
-                                                : "bg-white text-indigo-400 hover:text-indigo-600"
+                                                : "bg-background text-indigo-400 hover:text-indigo-600"
                                         )}
                                     >
                                         {getIcon(slug)}
@@ -406,6 +394,6 @@ export default function Amenities() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </PageShell>
     );
 }

@@ -260,7 +260,7 @@ export function DashboardPage() {
         {/* Side Panel */}
         <div className="space-y-6">
           {/* Rate Analysis */}
-          <Card className="shadow-none border-slate-200 bg-slate-50/50">
+          <Card className="shadow-none border-border bg-muted/30">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-blue-600" />
