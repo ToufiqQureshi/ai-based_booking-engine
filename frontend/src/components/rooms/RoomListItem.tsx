@@ -21,9 +21,9 @@ export function RoomListItem({ room, onEdit, onDelete, formatCurrency }: RoomLis
     const primaryPhoto = room.photos?.find(p => p.is_primary) ?? room.photos?.[0];
 
     return (
-        <div className="flex items-center gap-6 p-4 group hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-none">
+        <div className="flex items-center gap-6 p-4 group hover:bg-muted/50 transition-colors border-b border-border last:border-none">
             {/* Thumbnail */}
-            <div className="h-14 w-20 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+            <div className="h-14 w-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0 border border-border">
                 {primaryPhoto ? (
                     <img
                         src={getImageUrl(primaryPhoto.url)}
@@ -31,14 +31,14 @@ export function RoomListItem({ room, onEdit, onDelete, formatCurrency }: RoomLis
                         className="h-full w-full object-cover transition-transform group-hover:scale-105"
                     />
                 ) : (
-                    <Bed className="h-5 w-5 text-slate-300" />
+                    <Bed className="h-5 w-5 text-muted-foreground" />
                 )}
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-center gap-3">
-                    <h3 className="text-base font-bold text-slate-900 truncate">
+                    <h3 className="text-base font-bold text-foreground truncate">
                         {room.name}
                     </h3>
                     <Badge variant={room.is_active ? "default" : "secondary"} className={cn(
@@ -48,10 +48,10 @@ export function RoomListItem({ room, onEdit, onDelete, formatCurrency }: RoomLis
                         {room.is_active ? 'Active' : 'Paused'}
                     </Badge>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
                     <span className="truncate max-w-md">{room.description || 'No description available'}</span>
                     {room.room_size && (
-                        <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
+                        <div className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
                             <Ruler className="h-3 w-3" />
                             <span>{room.room_size} SF</span>
                         </div>
@@ -62,19 +62,19 @@ export function RoomListItem({ room, onEdit, onDelete, formatCurrency }: RoomLis
             {/* Metrics */}
             <div className="flex items-center gap-8 text-xs tabular-nums shrink-0 mr-4">
                 <div className="flex flex-col items-center gap-0.5" title="Occupancy">
-                    <Users className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-600 uppercase">
+                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-[10px] font-bold text-foreground uppercase">
                         {room.base_occupancy}-{room.max_occupancy} Pax
                     </span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5" title="Inventory">
-                    <LayoutGrid className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-600 uppercase">
+                    <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-[10px] font-bold text-foreground uppercase">
                         {room.total_inventory} Units
                     </span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5 w-24">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Base Rate</span>
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Base Rate</span>
                     <span className="text-lg font-bold text-blue-600">
                         {formatCurrency(room.base_price)}
                     </span>
@@ -86,14 +86,14 @@ export function RoomListItem({ room, onEdit, onDelete, formatCurrency }: RoomLis
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     onClick={() => onEdit(room)}
                 >
                     <Edit className="h-4 w-4" />
                 </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>

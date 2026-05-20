@@ -119,12 +119,12 @@ export function RoomsPage() {
       <Card className="shadow-none border-slate-200">
         <CardContent className="p-4 flex flex-col gap-4 md:flex-row md:items-center justify-between">
           {/* Tabs */}
-          <div className="flex bg-slate-100 p-1 rounded-lg">
+          <div className="flex bg-muted p-1 rounded-lg">
             <button
               onClick={() => setActiveTab('room')}
               className={cn(
                 "px-4 py-1.5 text-xs font-semibold rounded-md transition-all",
-                activeTab === 'room' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                activeTab === 'room' ? "bg-background text-indigo-600 shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Rooms
@@ -133,7 +133,7 @@ export function RoomsPage() {
               onClick={() => setActiveTab('package')}
               className={cn(
                 "px-4 py-1.5 text-xs font-semibold rounded-md transition-all",
-                activeTab === 'package' ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                activeTab === 'package' ? "bg-background text-indigo-600 shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Packages
@@ -151,11 +151,11 @@ export function RoomsPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex border border-slate-200 rounded-lg p-1 bg-white">
+            <div className="flex border border-border rounded-lg p-1 bg-background">
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn("h-7 w-7 rounded-md", viewMode === 'grid' && "bg-slate-100 text-blue-600")}
+                className={cn("h-7 w-7 rounded-md", viewMode === 'grid' && "bg-muted text-indigo-600")}
                 onClick={() => setViewMode('grid')}
               >
                 <Grid className="h-4 w-4" />
@@ -163,7 +163,7 @@ export function RoomsPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn("h-7 w-7 rounded-md", viewMode === 'list' && "bg-slate-100 text-blue-600")}
+                className={cn("h-7 w-7 rounded-md", viewMode === 'list' && "bg-muted text-indigo-600")}
                 onClick={() => setViewMode('list')}
               >
                 <List className="h-4 w-4" />
@@ -180,9 +180,9 @@ export function RoomsPage() {
           <p className="text-slate-400 text-sm font-medium">Loading content...</p>
         </div>
       ) : displayItems.length === 0 ? (
-        <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <div className="text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border">
           <Bed className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-bold text-slate-900">No {activeTab === 'room' ? 'rooms' : 'packages'} found</h3>
+          <h3 className="text-lg font-bold text-foreground">No {activeTab === 'room' ? 'rooms' : 'packages'} found</h3>
           <p className="text-sm text-slate-500 mb-6">Start by adding your first {activeTab === 'room' ? 'room category' : 'package'}.</p>
           <Button onClick={handleCreateOpen} variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
             Create {activeTab === 'room' ? 'Room' : 'Package'}
@@ -224,7 +224,7 @@ export function RoomsPage() {
 
           {/* List View */}
           {viewMode === 'list' && (
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+            <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
               {activeTab === 'room' ? (
                 (displayItems as RoomType[]).map((room) => (
                   <RoomListItem
