@@ -390,14 +390,14 @@ export default function BookingSelection() {
                                     {hotel.name}
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-3 mt-4 text-white/90">
-                                    <Badge className="bg-violet-600/90 backdrop-blur-md border-violet-400/30 text-white font-bold px-4 py-1.5 shadow-lg">
+                                    <Badge className="backdrop-blur-md text-white font-bold px-4 py-1.5 shadow-lg" style={{ backgroundColor: `${themeColor}e6`, borderColor: `${themeColor}4d` }}>
                                         {hotel.star_rating} Star Property
                                     </Badge>
                                     {(hotel.amenities || []).slice(0, 3).map((amenity, idx) => {
                                         const Icon = ICONS[amenity.toLowerCase()] || Check;
                                         return (
                                             <span key={idx} className="text-sm font-semibold hidden md:flex items-center gap-2 backdrop-blur-sm bg-black/40 px-4 py-2 rounded-full border border-white/20 shadow-inner">
-                                                <Icon className="w-4 h-4 text-violet-300" />{amenity}
+                                                <Icon className="w-4 h-4 text-white/70" />{amenity}
                                             </span>
                                         );
                                     })}
@@ -428,7 +428,8 @@ export default function BookingSelection() {
                                     <button
                                         key={idx}
                                         onClick={() => setCurrentImageIndex(idx)}
-                                        className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentImageIndex ? 'w-8 bg-violet-500' : 'w-2 bg-white/40'}`}
+                                        className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentImageIndex ? 'w-8' : 'w-2 bg-white/40'}`}
+                                        style={idx === currentImageIndex ? { backgroundColor: themeColor } : {}}
                                     />
                                 ))}
                             </div>
@@ -448,8 +449,9 @@ export default function BookingSelection() {
                                 onClick={() => setSearchType('room')}
                                 className={cn(
                                     "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
-                                    searchType === 'room' ? "bg-white text-violet-700 shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
+                                    searchType === 'room' ? "bg-white shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
                                 )}
+                                style={searchType === 'room' ? { color: themeColor } : {}}
                             >
                                 <HotelIcon className="w-3.5 h-3.5" />
                                 Rooms
@@ -458,8 +460,9 @@ export default function BookingSelection() {
                                 onClick={() => setSearchType('package')}
                                 className={cn(
                                     "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
-                                    searchType === 'package' ? "bg-white text-violet-700 shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
+                                    searchType === 'package' ? "bg-white shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
                                 )}
+                                style={searchType === 'package' ? { color: themeColor } : {}}
                             >
                                 <Sparkles className="w-3.5 h-3.5" />
                                 Packages
@@ -543,15 +546,20 @@ export default function BookingSelection() {
                                     disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                                     className="p-0"
                                     classNames={{
-                                        cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
-                                        day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
-                                        day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
+                                        cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                        day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                                        day_selected: "text-white font-bold shadow-md",
+                                        day_today: "font-bold border border-slate-200 bg-slate-50",
                                         head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-9 sm:w-11 pb-2 text-center",
-                                        caption: "flex justify-center py-2.5 px-3 relative items-center bg-violet-600 text-white rounded-xl mb-3 shadow-sm",
+                                        caption: "flex justify-center py-2.5 px-3 relative items-center text-white rounded-xl mb-3 shadow-sm",
                                         caption_label: "text-xs font-extrabold tracking-wide uppercase",
                                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
                                         months: "flex flex-col md:flex-row space-y-3 md:space-x-4 md:space-y-0"
+                                    }}
+                                    styles={{
+                                        caption: { backgroundColor: themeColor },
+                                        day_selected: { backgroundColor: themeColor },
+                                        day_today: { color: themeColor }
                                     }}
                                     modifiersStyles={{
                                         selected: { backgroundColor: themeColor, color: '#fff' }
@@ -710,12 +718,12 @@ export default function BookingSelection() {
                     <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.15em]">Available Rooms</h2>
                     <button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 shadow-sm hover:border-violet-400 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 shadow-sm hover:border-current transition-colors"
                     >
                         <SlidersHorizontal className="w-4 h-4" />
                         Filters
                         {(selectedMealPlans.length > 0 || priceRange[1] < 20000) && (
-                            <span className="w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-black flex items-center justify-center">
+                            <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center" style={{ backgroundColor: themeColor }}>
                                 {selectedMealPlans.length + (priceRange[1] < 20000 ? 1 : 0)}
                             </span>
                         )}
@@ -1191,7 +1199,7 @@ export default function BookingSelection() {
                                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Room & Extra Add-ons</p>
                                 <p className="text-sm font-extrabold text-slate-800 truncate" title={pendingRoom?.name}>{pendingRoom?.name}</p>
                                 {selectedAddons.length > 0 ? (
-                                    <p className="text-[11px] font-bold text-violet-600 mt-0.5 truncate">
+                                    <p className="text-[11px] font-bold mt-0.5 truncate" style={{ color: themeColor }}>
                                         +{selectedAddons.length} {selectedAddons.length === 1 ? 'Add-on' : 'Add-ons'} (₹{selectedAddons.reduce((s, a) => s + a.price, 0).toLocaleString('en-IN')})
                                     </p>
                                 ) : (
@@ -1391,10 +1399,10 @@ export default function BookingSelection() {
                                 <Button 
                                     variant="outline" 
                                     size="lg" 
-                                    className="w-full font-bold text-slate-700 hover:text-violet-700 hover:bg-violet-50/50 border-slate-200 rounded-2xl h-12 transition-colors flex items-center justify-center gap-2" 
+                                    className="w-full font-bold text-slate-700 border-slate-200 rounded-2xl h-12 transition-colors flex items-center justify-center gap-2" 
                                     onClick={() => setIsCartSheetOpen(false)}
                                 >
-                                    <Plus className="w-4 h-4 shrink-0 text-violet-600" />
+                                    <Plus className="w-4 h-4 shrink-0" style={{ color: themeColor }} />
                                     <span className="truncate">Add Another Room to Stay</span>
                                 </Button>
                             </div>
@@ -1473,8 +1481,8 @@ export default function BookingSelection() {
                             {hotel.settings.privacy_policy && (
                                 <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
                                     <div className="flex items-center gap-2.5 mb-3">
-                                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-                                            <ShoppingBag className="w-4 h-4 text-purple-600" />
+                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${themeColor}15` }}>
+                                            <ShoppingBag className="w-4 h-4" style={{ color: themeColor }} />
                                         </div>
                                         <h3 className="font-bold text-sm text-slate-800">Privacy Policy</h3>
                                     </div>

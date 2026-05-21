@@ -762,7 +762,7 @@ export default function BookingWidget() {
                                     <button className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200 hover:border-primary transition-all text-left bg-white text-slate-800 cursor-pointer"
                                             style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
                                         <div className="flex items-center gap-2">
-                                            <CalendarIcon className="w-4 h-4 text-purple-600 custom-theme-text" />
+                                            <CalendarIcon className="w-4 h-4 custom-theme-text" />
                                             <span className="text-xs font-extrabold">
                                                 {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Check In"}
                                             </span>
@@ -772,7 +772,7 @@ export default function BookingWidget() {
                                             <span className="text-xs font-extrabold">
                                                 {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Check Out"}
                                             </span>
-                                            <CalendarIcon className="w-4 h-4 text-purple-600 custom-theme-text" />
+                                            <CalendarIcon className="w-4 h-4 custom-theme-text" />
                                         </div>
                                     </button>
                                 </PopoverTrigger>
@@ -787,7 +787,7 @@ export default function BookingWidget() {
                                     <button className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200 hover:border-primary transition-all text-left bg-white text-slate-800 cursor-pointer"
                                             style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
                                         <div className="flex items-center gap-2">
-                                            <Users className="w-4 h-4 text-purple-600 custom-theme-text" />
+                                            <Users className="w-4 h-4 custom-theme-text" />
                                             <span className="text-xs font-extrabold">
                                                 {adults + children} Guest{adults + children > 1 ? 's' : ''} / {roomsCount} Room{roomsCount > 1 ? 's' : ''}
                                             </span>
@@ -839,7 +839,7 @@ export default function BookingWidget() {
                                             {checkInDate ? format(checkInDate, "dd MMM") : "In"} - {checkOutDate ? format(checkOutDate, "dd MMM") : "Out"}
                                         </span>
                                     </div>
-                                    <CalendarIcon className="w-4 h-4 text-purple-600 custom-theme-text" />
+                                    <CalendarIcon className="w-4 h-4 custom-theme-text" />
                                 </button>
                             </PopoverTrigger>
                             {calendarPopoverContent}
@@ -860,7 +860,7 @@ export default function BookingWidget() {
                                             {adults + children} Guest{adults + children > 1 ? 's' : ''}, {roomsCount} R
                                         </span>
                                     </div>
-                                    <Users className="w-4 h-4 text-purple-600 custom-theme-text" />
+                                    <Users className="w-4 h-4 custom-theme-text" />
                                 </button>
                             </PopoverTrigger>
                             {guestPopoverContent}
