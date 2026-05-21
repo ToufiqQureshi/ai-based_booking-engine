@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- TODO: Set the document title to the name of your application -->
+    <title>Staybooker</title>
+    <meta name="description" content="revengine staybooker  " />
+    <meta name="author" content="revengine" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+
+    <link rel="preconnect" href="https://ai-basedbooking-engine-production.up.railway.app" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- TODO: Update og:title to match your application name -->
+    <meta property="og:title" content="Staybooker" />
+    <meta property="og:description" content="revengine staybooker" />
+    <meta property="og:type" content="website" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@Lovable" />
+    <script>
+      // Performance Observer for Long Tasks & Animation Frames
+      try {
+        const observer = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.duration > 50) {
+              console.warn(`⚠️ SLOW TASK DETECTED [${entry.entryType}]:`, entry.name, `${Math.round(entry.duration)}ms`);
+            }
+          }
+        });
+        observer.observe({type: 'longtask', buffered: true});
+        
+        if (PerformanceObserver.supportedEntryTypes && PerformanceObserver.supportedEntryTypes.includes('long-animation-frame')) {
+          observer.observe({type: 'long-animation-frame', buffered: true});
+        }
+      } catch (e) {
+        // Fallback for older browsers
+      }
+    </script>
+    <script type="module" crossorigin src="/assets/index-CNmcmuCy.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-B_nFMqZm.css">
+  </head>
+
+  <body>
+    
+    <div id="root"></div>
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"42238e5ea0784d2eb5b6f2b254521936","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

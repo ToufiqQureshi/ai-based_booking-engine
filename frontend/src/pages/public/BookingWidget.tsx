@@ -147,8 +147,8 @@ export default function BookingWidget() {
         }
     };
 
-    const getNormalizedColor = (_col?: string | null) => {
-        return '#7c3aed'; // Always purple — Staybooker brand
+    const getNormalizedColor = (col?: string | null) => {
+        return col || '#7c3aed';
     };
     const primaryHex = getNormalizedColor(config?.primary_color);
     const bgColor = config?.widget_background_color || '#ffffff';

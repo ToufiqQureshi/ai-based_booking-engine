@@ -105,7 +105,7 @@ export default function BookingConfirmation() {
     };
 
     const getNormalizedColor = (col?: string | null) => {
-        return '#7c3aed';
+        return col || '#7c3aed';
     };
     const themeColor = getNormalizedColor(hotel?.primary_color);
 

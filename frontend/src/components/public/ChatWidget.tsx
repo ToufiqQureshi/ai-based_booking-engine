@@ -95,8 +95,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const getNormalizedColor = (col?: string | null) => {
-        if (!col || !col.startsWith('#')) return '#7c3aed';
-        return col;
+        return col || '#7c3aed';
     };
     const primaryColor = getNormalizedColor(hotelInfo?.primary_color || initialPrimaryColor);
 
