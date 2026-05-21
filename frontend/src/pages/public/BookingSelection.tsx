@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize, ChevronDown, Trash2, X } from 'lucide-react';
+import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize, ChevronDown, Trash2, X, SlidersHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -87,6 +87,15 @@ export default function BookingSelection() {
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [flexibleDates, setFlexibleDates] = useState(false);
     const [roomsCount, setRoomsCount] = useState(1);
+    const [isMobile, setIsMobile] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
     
     // Filters
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 20000]);
@@ -380,14 +389,14 @@ export default function BookingSelection() {
                                     {hotel.name}
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-3 mt-4 text-white/90">
-                                    <Badge className="bg-indigo-600/90 backdrop-blur-md border-indigo-400/30 text-white font-bold px-4 py-1.5 shadow-lg">
+                                    <Badge className="bg-violet-600/90 backdrop-blur-md border-violet-400/30 text-white font-bold px-4 py-1.5 shadow-lg">
                                         {hotel.star_rating} Star Property
                                     </Badge>
                                     {(hotel.amenities || []).slice(0, 3).map((amenity, idx) => {
                                         const Icon = ICONS[amenity.toLowerCase()] || Check;
                                         return (
                                             <span key={idx} className="text-sm font-semibold hidden md:flex items-center gap-2 backdrop-blur-sm bg-black/40 px-4 py-2 rounded-full border border-white/20 shadow-inner">
-                                                <Icon className="w-4 h-4 text-indigo-400" /> {amenity}
+                                                <Icon className="w-4 h-4 text-violet-300" />{amenity}
                                             </span>
                                         );
                                     })}
@@ -418,7 +427,7 @@ export default function BookingSelection() {
                                     <button
                                         key={idx}
                                         onClick={() => setCurrentImageIndex(idx)}
-                                        className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentImageIndex ? 'w-8 bg-indigo-500' : 'w-2 bg-white/40'}`}
+                                        className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentImageIndex ? 'w-8 bg-violet-500' : 'w-2 bg-white/40'}`}
                                     />
                                 ))}
                             </div>
@@ -427,12 +436,12 @@ export default function BookingSelection() {
                 </div>
             )}
 
-            <div className="max-w-7xl mx-auto px-4 mt-8">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 mt-4 sm:mt-8">
                 {/* Inline Search Modifier (Always Visible) */}
                 {/* Premium Hotelier Calendar Widget (Purple Theme) */}
-                <div id="hotelier-search-widget" className="bg-white/95 backdrop-blur-md border border-slate-100 p-4 md:p-6 rounded-[2rem] shadow-[0_20px_70px_rgba(109,40,217,0.08)] mb-10 max-w-6xl mx-auto relative transition-all duration-300">
+                <div id="hotelier-search-widget" className="bg-white border border-slate-200 p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2rem] shadow-lg shadow-violet-900/5 mb-6 sm:mb-10 max-w-6xl mx-auto">
                     {/* Premium Room/Package Switch */}
-                    <div className="flex justify-center mb-6">
+                    <div className="flex justify-center mb-4">
                         <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/50 backdrop-blur-sm">
                             <button
                                 onClick={() => setSearchType('room')}
@@ -457,7 +466,7 @@ export default function BookingSelection() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 lg:gap-6 bg-slate-50/50 p-3 lg:p-4 rounded-3xl border border-slate-100">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-slate-50/80 p-2.5 sm:p-3 rounded-2xl border border-slate-100">
                         {/* Date Selector Popover (Check-In & Check-Out) */}
                         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                             <PopoverTrigger asChild>
@@ -501,16 +510,25 @@ export default function BookingSelection() {
                                 </button>
                             </PopoverTrigger>
 
-                            <PopoverContent className="w-auto p-5 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden max-w-[95vw]" align="start">
-                                <div className="mb-3 text-center">
-                                    <Badge className="bg-violet-100 text-violet-700 px-3.5 py-1 font-black text-[10px] tracking-widest uppercase">
-                                        Dynamic Pricing Engine
-                                    </Badge>
-                                    <p className="text-[11px] font-semibold text-slate-500 mt-1">Select Check-in and Check-out dates. Best available daily rates shown below.</p>
+                            <PopoverContent
+                                className="p-0 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
+                                style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px' }}
+                                align="start"
+                                sideOffset={8}
+                            >
+                                <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
+                                        <p className="text-[11px] text-slate-400 mt-0.5">Tap check-in, then check-out</p>
+                                    </div>
+                                    <button onClick={() => setIsCalendarOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                                        <X className="w-4 h-4 text-slate-500" />
+                                    </button>
                                 </div>
+                                <div className="p-3 overflow-x-auto">
                                 <Calendar 
                                     mode="range"
-                                    numberOfMonths={2}
+                                    numberOfMonths={isMobile ? 1 : 2}
                                     selected={{
                                         from: checkInDate,
                                         to: checkOutDate
@@ -525,15 +543,15 @@ export default function BookingSelection() {
                                     disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                                     className="p-0"
                                     classNames={{
-                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
+                                        cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                                        day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
                                         day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
                                         day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
-                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2.5 text-center",
-                                        caption: "flex justify-center py-2.5 px-3 relative items-center bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl mb-3 shadow-md",
+                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-9 sm:w-11 pb-2 text-center",
+                                        caption: "flex justify-center py-2.5 px-3 relative items-center bg-violet-600 text-white rounded-xl mb-3 shadow-sm",
                                         caption_label: "text-xs font-extrabold tracking-wide uppercase",
-                                        nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
-                                        months: "flex flex-col md:flex-row space-y-4 md:space-x-6 md:space-y-0"
+                                        nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
+                                        months: "flex flex-col md:flex-row space-y-3 md:space-x-4 md:space-y-0"
                                     }}
                                     components={{
                                         DayContent: ({ date }: any) => {
@@ -561,8 +579,9 @@ export default function BookingSelection() {
                                         }
                                     }}
                                 />
-                                <div className="border-t border-slate-100 pt-3 mt-4 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
+                                <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
                                     <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
+                                </div>
                                 </div>
                             </PopoverContent>
                         </Popover>
@@ -638,8 +657,8 @@ export default function BookingSelection() {
                             </PopoverContent>
                         </Popover>
 
-                        {/* Promo Input */}
-                        <div className="flex-1 sm:flex-none sm:w-48 flex flex-col justify-center bg-white p-4 rounded-2xl border border-slate-200/80">
+                        {/* Promo Input - hidden on mobile to keep layout clean */}
+                        <div className="hidden sm:flex flex-1 sm:w-40 flex-col justify-center bg-white p-3 rounded-xl border border-slate-200/80">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
                             <Input 
                                 value={promoCode}
@@ -650,10 +669,10 @@ export default function BookingSelection() {
                         </div>
 
                         {/* Search Button */}
-                        <div className="flex items-center">
+                        <div className="flex items-center w-full sm:w-auto">
                             <Button 
                                 onClick={handleSearch}
-                                className="w-full lg:w-auto h-full min-h-[72px] px-10 text-white font-extrabold uppercase text-sm tracking-widest rounded-2xl shadow-xl shrink-0 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5"
+                                className="w-full sm:w-auto h-14 sm:min-h-[64px] px-6 sm:px-10 text-white font-extrabold uppercase text-sm tracking-widest rounded-xl sm:rounded-2xl shadow-md shrink-0 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5"
                                 style={{ backgroundColor: themeColor }}
                             >
                                 <Search className="w-5 h-5 stroke-[2.5]" />
@@ -677,9 +696,26 @@ export default function BookingSelection() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Mobile Filter Toggle */}
+                <div className="flex items-center justify-between mb-4 lg:hidden">
+                    <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.15em]">Available Rooms</h2>
+                    <button
+                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 shadow-sm hover:border-violet-400 transition-colors"
+                    >
+                        <SlidersHorizontal className="w-4 h-4" />
+                        Filters
+                        {(selectedMealPlans.length > 0 || priceRange[1] < 20000) && (
+                            <span className="w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-black flex items-center justify-center">
+                                {selectedMealPlans.length + (priceRange[1] < 20000 ? 1 : 0)}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Sidebar: Social Proof & Filters */}
-                    <div className="lg:col-span-3 space-y-6">
+                    <div className={`lg:col-span-3 space-y-4 ${isFilterOpen ? 'block' : 'hidden'} lg:block`}>
                         <SocialProofWidget hotel={hotel} />
                         
                         {/* Filters Card */}
