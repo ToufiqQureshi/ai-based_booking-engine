@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -624,7 +624,7 @@ const IntegrationPage = () => {
                                     {/* Layout Style Cards */}
                                     <div className="space-y-2 mt-4">
                                         <Label className="text-sm font-semibold">Widget Layout Style</Label>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                             {/* Modern Layout */}
                                             <div 
                                                 className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'modern' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
@@ -670,6 +670,22 @@ const IntegrationPage = () => {
                                                 <div className="mt-4 pt-3 border-t border-border flex items-center justify-end">
                                                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
                                                         {settings.widget_layout === 'minimal' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Premium Capsule Layout */}
+                                            <div 
+                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'premium' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
+                                                onClick={() => updateSettings({ widget_layout: 'premium' })}
+                                            >
+                                                <div>
+                                                    <span className="font-extrabold text-sm text-foreground dark:text-slate-200 block">Premium Capsule</span>
+                                                    <span className="text-xs text-muted-foreground mt-1 block">Highly rounded, luxurious floating capsule with deep shadows. Perfect for premium hotels.</span>
+                                                </div>
+                                                <div className="mt-4 pt-3 border-t border-border flex items-center justify-end">
+                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'premium' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
+                                                        {settings.widget_layout === 'premium' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
                                                     </div>
                                                 </div>
                                             </div>
