@@ -159,7 +159,7 @@ export default function BookingWidget() {
     const calendarPopoverContent = (
         <PopoverContent
             className="p-0 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
-            style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px' }}
+            style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px', transform: 'translateZ(0)', willChange: 'transform, opacity' }}
             align="center"
             side="bottom"
             avoidCollisions={false}
@@ -235,7 +235,7 @@ export default function BookingWidget() {
 
 
     const guestPopoverContent = (
-        <PopoverContent className="w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" align="center" side="bottom" avoidCollisions={false}>
+        <PopoverContent className="w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="bottom" avoidCollisions={false}>
             <div className="space-y-6">
                 {/* Rooms Counter */}
                 <div className="flex items-center justify-between">
@@ -329,6 +329,10 @@ export default function BookingWidget() {
     );
 
     const layout = urlParams.get('preview_layout') || config?.widget_layout || 'modern';
+
+    if (config === null) {
+        return null; // Prevents flashing of default layout before config is fetched
+    }
 
     return (
         <div ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4">
