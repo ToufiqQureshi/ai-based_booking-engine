@@ -558,11 +558,10 @@ export default function BookingSelection() {
                                     }}
                                     styles={{
                                         caption: { backgroundColor: themeColor },
-                                        day_selected: { backgroundColor: themeColor },
-                                        day_today: { color: themeColor }
                                     }}
                                     modifiersStyles={{
-                                        selected: { backgroundColor: themeColor, color: '#fff' }
+                                        selected: { backgroundColor: themeColor, color: '#fff' },
+                                        today: { color: themeColor, fontWeight: 700 }
                                     }}
                                     components={{
                                         DayContent: ({ date }: any) => {
