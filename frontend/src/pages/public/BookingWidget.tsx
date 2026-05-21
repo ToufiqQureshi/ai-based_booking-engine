@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
 import { Calendar as CalendarIcon, Users, ArrowRight, Minus, Plus, Search, X } from 'lucide-react';
@@ -74,6 +74,14 @@ export default function BookingWidget() {
     // Calendar UI State
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [isGuestOpen, setIsGuestOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 640);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
 
     // Dynamic Resizing Logic
     useEffect(() => {
@@ -136,13 +144,26 @@ export default function BookingWidget() {
 
     // Helper components to avoid duplicate popovers
     const calendarPopoverContent = (
-        <PopoverContent className="w-auto p-4 bg-white border-slate-100 shadow-2xl rounded-3xl overflow-hidden max-w-[95vw]" align="center">
-            <div className="mb-3 text-center">
-                <Badge className="custom-theme-bg-light px-3 py-1 font-extrabold text-[9px] tracking-wider uppercase border-0">
-                    Dynamic Pricing Engine
-                </Badge>
-                <p className="text-[11px] font-semibold text-slate-500 mt-1">Best available daily room rates shown below</p>
+        <PopoverContent
+            className="p-0 bg-white border-slate-100 shadow-2xl rounded-2xl overflow-hidden"
+            style={{ width: isMobile ? 'calc(100vw - 24px)' : 'auto', maxWidth: '700px' }}
+            align="center"
+            sideOffset={8}
+        >
+            {/* Header with close button */}
+            <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Tap check-in, then check-out</p>
+                </div>
+                <button
+                    onClick={() => setIsCalendarOpen(false)}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                    <X className="w-4 h-4 text-slate-500" />
+                </button>
             </div>
+            <div className="p-3 overflow-x-auto">
             <Calendar
                 mode="range"
                 selected={{
@@ -158,19 +179,19 @@ export default function BookingWidget() {
                         setCheckOutDate(undefined);
                     }
                 }}
-                numberOfMonths={2}
+                numberOfMonths={isMobile ? 1 : 2}
                 disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                 className="p-0"
                 classNames={{
-                    cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-slate-50/50 [&:has([aria-selected])]:bg-slate-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                    day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                    cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-slate-50/50 [&:has([aria-selected])]:bg-slate-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                    day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
                     day_selected: "custom-theme-btn font-bold shadow-md",
                     day_today: "custom-theme-bg-light font-bold border",
-                    head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2.5 text-center",
+                    head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-9 sm:w-11 pb-2 text-center",
                     caption: "flex justify-center py-2.5 px-3 relative items-center custom-theme-btn text-white rounded-xl mb-3 shadow-sm",
                     caption_label: "text-xs font-extrabold tracking-wide uppercase",
-                    nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0 opacity-90",
-                    months: "flex flex-col md:flex-row space-y-4 md:space-x-6 md:space-y-0"
+                    nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
+                    months: "flex flex-col md:flex-row space-y-3 md:space-x-4 md:space-y-0"
                 }}
                 components={{
                     DayContent: ({ date }: any) => {
@@ -185,12 +206,12 @@ export default function BookingWidget() {
                         return (
                             <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
                                 <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                {!isPast && (
+                                {!isPast && !isMobile && (
                                     <span className={cn(
                                         "text-[9px] font-extrabold leading-none mt-1",
-                                        isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
+                                        isSoldOut ? "text-red-500" : "text-emerald-600 group-aria-selected:text-white"
                                     )}>
-                                        {isSoldOut ? "Sold Out" : `₹${price}`}
+                                        {isSoldOut ? "Sold" : `₹${price}`}
                                     </span>
                                 )}
                             </div>
@@ -198,8 +219,9 @@ export default function BookingWidget() {
                     }
                 }}
             />
-            <div className="border-t border-slate-100 pt-3 mt-3 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
+            <div className="border-t border-slate-100 pt-2.5 mt-2 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
+                <X className="w-3 h-3 text-red-500 stroke-[3]" /> SOLD OUT
+            </div>
             </div>
         </PopoverContent>
     );
@@ -344,40 +366,40 @@ export default function BookingWidget() {
                     <div className="w-full lg:flex-[2] relative group">
                         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                             <PopoverTrigger asChild>
-                                <button className="w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
+                                <button className="w-full flex flex-row items-center gap-3 p-3 sm:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
                                         style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
                                     {/* Check-In Section */}
-                                    <div className="flex-1 flex items-start gap-3">
-                                        <div className="w-10 h-10 rounded-xl custom-theme-bg-light group-hover:custom-theme-btn flex items-center justify-center shrink-0 mt-0.5 transition-colors">
-                                            <CalendarIcon className="w-5 h-5" />
+                                    <div className="flex-1 flex items-center gap-2.5 min-w-0">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl custom-theme-bg-light flex items-center justify-center shrink-0">
+                                            <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                                         </div>
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Check In</span>
-                                            <span className="text-sm font-extrabold text-slate-800 block">
-                                                {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select Date"}
+                                        <div className="min-w-0">
+                                            <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
+                                            <span className="text-xs sm:text-sm font-extrabold text-slate-800 block truncate">
+                                                {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select"}
                                             </span>
-                                            <span className="text-xs font-medium text-slate-500 block mt-0.5">
+                                            <span className="text-[10px] sm:text-xs font-medium text-slate-500 block hidden sm:block">
                                                 {checkInDate ? format(checkInDate, "EEEE") : "Day"}
                                             </span>
                                         </div>
                                     </div>
 
-                                    {/* Separator Arrow */}
-                                    <div className="hidden sm:flex items-center justify-center px-2 text-slate-300 group-hover:text-slate-500 transition-colors animate-pulse">
-                                        <ArrowRight className="w-5 h-5" />
+                                    {/* Separator */}
+                                    <div className="flex items-center justify-center px-1 text-slate-300">
+                                        <ArrowRight className="w-4 h-4" />
                                     </div>
 
                                     {/* Check-Out Section */}
-                                    <div className="flex-1 flex items-start gap-3 sm:pl-3 border-t sm:border-t-0 sm:border-l border-slate-100 pt-3 sm:pt-0">
-                                        <div className="w-10 h-10 rounded-xl custom-theme-bg-light group-hover:custom-theme-btn flex items-center justify-center shrink-0 mt-0.5 transition-colors">
-                                            <CalendarIcon className="w-5 h-5" />
+                                    <div className="flex-1 flex items-center gap-2.5 pl-1 border-l border-slate-100 min-w-0">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl custom-theme-bg-light flex items-center justify-center shrink-0">
+                                            <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                                         </div>
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Check Out</span>
-                                            <span className="text-sm font-extrabold text-slate-800 block">
-                                                {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select Date"}
+                                        <div className="min-w-0">
+                                            <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
+                                            <span className="text-xs sm:text-sm font-extrabold text-slate-800 block truncate">
+                                                {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select"}
                                             </span>
-                                            <span className="text-xs font-medium text-slate-500 block mt-0.5">
+                                            <span className="text-[10px] sm:text-xs font-medium text-slate-500 block hidden sm:block">
                                                 {checkOutDate ? format(checkOutDate, "EEEE") : "Day"}
                                             </span>
                                         </div>
