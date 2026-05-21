@@ -349,9 +349,16 @@ export default function BookingWidget() {
                 .rdp-day_selected {
                     background-color: ${primaryHex} !important;
                     color: white !important;
+                    box-shadow: 0 4px 14px 0 ${primaryHex}40;
                 }
                 .rdp-caption {
                     background-color: ${primaryHex} !important;
+                }
+                .rdp-day_disabled {
+                    opacity: 1 !important;
+                }
+                .rdp-day_disabled span {
+                    color: #94a3b8 !important;
                 }
             `}</style>
             
@@ -363,13 +370,13 @@ export default function BookingWidget() {
             {/* 1. MODERN FLOATING CARD LAYOUT (DEFAULT) */}
             {layout === 'modern' && isMobile && (
                 /* ── MOBILE: vertical stack with INLINE calendar ── */
-                <div className="bg-white rounded-2xl shadow-xl p-3 w-full flex flex-col gap-3 border border-slate-200"
-                     style={{ backgroundColor: bgColor }}>
+                <div className="bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-4 w-full flex flex-col gap-3 border border-white/60"
+                     style={{ backgroundColor: bgColor === '#ffffff' || bgColor === '#fff' ? 'rgba(255,255,255,0.95)' : bgColor }}>
 
                     {/* Date trigger */}
                     <button
-                        className="w-full flex flex-row items-center gap-3 p-3 rounded-xl border-2 transition-all text-left cursor-pointer"
-                        style={{ borderColor: isCalendarOpen ? primaryHex : '#e2e8f0', backgroundColor: '#fff' }}
+                        className="w-full flex flex-row items-center gap-3 p-3.5 rounded-2xl border-2 transition-all text-left cursor-pointer hover:bg-slate-50/50"
+                        style={{ borderColor: isCalendarOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
                         onClick={() => { setIsCalendarOpen(!isCalendarOpen); setIsGuestOpen(false); }}
                     >
                         <div className="flex-1 flex items-center gap-2.5 min-w-0">
@@ -401,7 +408,7 @@ export default function BookingWidget() {
 
                     {/* Inline calendar — same theme as public booking page */}
                     {isCalendarOpen && (
-                        <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-lg">
+                        <div className="rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
                             <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
                                 <div>
                                     <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
@@ -445,8 +452,8 @@ export default function BookingWidget() {
                                             price = price + (isWeekend ? 500 : 0);
                                             const isSoldOut = date.getDate() === 13;
                                             return (
-                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                                    <span className={cn("text-xs font-bold leading-none", isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white")}>{date.getDate()}</span>
+                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5 rounded-xl hover:bg-slate-50 transition-colors">
+                                                    <span className={cn("text-[13px] font-black leading-none", isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white")}>{date.getDate()}</span>
                                                     {!isPast && (
                                                         <span className={cn(
                                                             "text-[8px] font-extrabold leading-none mt-0.5",
@@ -470,8 +477,8 @@ export default function BookingWidget() {
                     {/* Guests inline */}
                     <div className="w-full">
                         <button
-                            className="w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left cursor-pointer"
-                            style={{ borderColor: isGuestOpen ? primaryHex : '#e2e8f0', backgroundColor: '#fff' }}
+                            className="w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all text-left cursor-pointer hover:bg-slate-50/50"
+                            style={{ borderColor: isGuestOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
                             onClick={() => { setIsGuestOpen(!isGuestOpen); setIsCalendarOpen(false); }}
                         >
                             <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
@@ -520,8 +527,8 @@ export default function BookingWidget() {
 
                     {/* Search button */}
                     <button
-                        className="w-full h-14 rounded-xl text-white font-extrabold text-sm tracking-wide flex items-center justify-center gap-2 shadow-lg hover:opacity-90 active:scale-[0.98] transition-all"
-                        style={{ backgroundColor: primaryHex }}
+                        className="w-full h-[60px] mt-1 rounded-2xl text-white font-black text-[15px] tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
+                        style={{ backgroundImage: `linear-gradient(135deg, ${primaryHex}, ${primaryHex}dd)` }}
                         onClick={handleSearch}
                     >
                         <Search className="w-5 h-5" />
@@ -532,15 +539,15 @@ export default function BookingWidget() {
 
             {layout === 'modern' && !isMobile && (
                 /* ── DESKTOP: inline accordion — no Popover needed ── */
-                <div className="bg-white rounded-3xl shadow-2xl p-4 w-full max-w-6xl flex flex-col gap-3 border border-slate-100"
-                     style={{ backgroundColor: bgColor }}>
+                <div className="bg-white/90 backdrop-blur-2xl rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] p-4 w-full max-w-6xl flex flex-col gap-3 border border-white/60"
+                     style={{ backgroundColor: bgColor === '#ffffff' || bgColor === '#fff' ? 'rgba(255,255,255,0.92)' : bgColor }}>
 
                     {/* Top row: date + guests + promo + search */}
                     <div className="flex flex-row items-center gap-3">
                         {/* Date trigger */}
                         <button
-                            className="flex-[2] flex flex-row items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left cursor-pointer"
-                            style={{ borderColor: isCalendarOpen ? primaryHex : '#e2e8f0', backgroundColor: '#fff' }}
+                            className="flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                            style={{ borderColor: isCalendarOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
                             onClick={() => { setIsCalendarOpen(!isCalendarOpen); setIsGuestOpen(false); }}
                         >
                             <div className="flex-1 flex items-center gap-3 min-w-0">
@@ -574,8 +581,8 @@ export default function BookingWidget() {
 
                         {/* Guests trigger */}
                         <button
-                            className="flex-1 flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left cursor-pointer"
-                            style={{ borderColor: isGuestOpen ? primaryHex : '#e2e8f0', backgroundColor: '#fff' }}
+                            className="flex-1 flex items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                            style={{ borderColor: isGuestOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
                             onClick={() => { setIsGuestOpen(!isGuestOpen); setIsCalendarOpen(false); }}
                         >
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -594,20 +601,20 @@ export default function BookingWidget() {
                         </button>
 
                         {/* Promo */}
-                        <div className="w-40 flex flex-col justify-center p-4 rounded-2xl border border-slate-200 bg-white">
+                        <div className="w-40 flex flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
                             <input
-                                className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none placeholder:text-slate-400 text-slate-800 w-full"
+                                className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none placeholder:text-slate-300 text-slate-800 w-full"
                                 placeholder="Optional"
                                 value={promoCode}
                                 onChange={(e) => setPromoCode(e.target.value)}
                             />
                         </div>
 
-                        {/* Search */}
+                        {/* Search button */}
                         <button
-                            className="h-[72px] px-8 rounded-2xl text-white font-extrabold text-base flex items-center justify-center gap-2 shadow-xl hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
-                            style={{ backgroundColor: primaryHex }}
+                            className="h-[76px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all shrink-0"
+                            style={{ backgroundImage: `linear-gradient(135deg, ${primaryHex}, ${primaryHex}dd)` }}
                             onClick={handleSearch}
                         >
                             <Search className="w-5 h-5" />
