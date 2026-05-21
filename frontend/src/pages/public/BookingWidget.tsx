@@ -159,6 +159,8 @@ export default function BookingWidget() {
             className="p-0 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
             style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px' }}
             align="center"
+            side="bottom"
+            avoidCollisions={false}
             sideOffset={8}
         >
             {/* Header */}
@@ -228,7 +230,7 @@ export default function BookingWidget() {
 
 
     const guestPopoverContent = (
-        <PopoverContent className="w-80 p-6 bg-white border-slate-100 shadow-2xl rounded-3xl" align="center">
+        <PopoverContent className="w-80 p-6 bg-white border-slate-100 shadow-2xl rounded-3xl" align="center" side="bottom" avoidCollisions={false}>
             <div className="space-y-6">
                 {/* Rooms Counter */}
                 <div className="flex items-center justify-between">
