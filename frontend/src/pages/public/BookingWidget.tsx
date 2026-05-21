@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
 import { Calendar as CalendarIcon, Users, ArrowRight, Minus, Plus, Search, X } from 'lucide-react';
@@ -83,22 +83,37 @@ export default function BookingWidget() {
         return () => window.removeEventListener('resize', check);
     }, []);
 
-    // Dynamic Resizing Logic
+    // Dynamic Resizing Logic — use ResizeObserver to send ACTUAL height
+    const widgetRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
-        const layout = config?.widget_layout || 'modern';
-        let baseHeight = 140;
-        if (layout === 'classic') baseHeight = 360;
-        else if (layout === 'minimal') baseHeight = 85;
+        const el = widgetRef.current;
+        if (!el) return;
 
-        const expandedHeight = 800; // Expanded height for calendar/guests popover
+        const sendHeight = () => {
+            const height = el.scrollHeight + 16; // +16px breathing room
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, '*');
+                window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, '*');
+            }
+        };
+
+        // Send height immediately
+        sendHeight();
+
+        // Also send when popover opens (content expands)
+        const expandedHeight = 860;
         const isOpen = isCalendarOpen || isGuestOpen;
-        const height = isOpen ? expandedHeight : baseHeight;
-
-        if (window.parent !== window) {
-            window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, '*');
-            window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, '*');
+        if (isOpen && window.parent !== window) {
+            window.parent.postMessage({ type: 'RESIZE_OVERLAY', height: expandedHeight }, '*');
+            window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height: expandedHeight }, '*');
         }
-    }, [isCalendarOpen, isGuestOpen, config?.widget_layout]);
+
+        // Watch for any layout changes
+        const observer = new ResizeObserver(sendHeight);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [isCalendarOpen, isGuestOpen, config?.widget_layout, isMobile]);
 
     // Custom JS Code execution inside widget frame
     useEffect(() => {
@@ -323,7 +338,7 @@ export default function BookingWidget() {
     const layout = config?.widget_layout || 'modern';
 
     return (
-        <div className="light w-full flex justify-center font-sans p-2 lg:p-4">
+        <div ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4">
             <style>{`
                 .custom-theme-btn {
                     background-color: ${primaryHex} !important;
@@ -434,8 +449,8 @@ export default function BookingWidget() {
                         </Popover>
                     </div>
 
-                    {/* PROMO CODE - Modern Input */}
-                    <div className="w-full lg:w-48 flex flex-col justify-center p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all"
+                    {/* PROMO CODE - Hidden on mobile to keep widget compact */}
+                    <div className="hidden lg:flex w-full lg:w-48 flex-col justify-center p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all"
                          style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 text-left">Promo Code</span>
                         <input
