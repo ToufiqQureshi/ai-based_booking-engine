@@ -426,149 +426,8 @@ const IntegrationPage = () => {
                 <TabsContent value="search-widget" className="space-y-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Embed Search Bar</CardTitle>
-                            <CardDescription>
-                                Add a booking bar to your website. We recommend the JavaScript method for best experience.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* Preview */}
-                            <div className="space-y-2">
-                                <Label>Preview</Label>
-                                <div className="p-8 bg-muted rounded-xl border border-border flex items-center justify-center transition-all duration-300">
-                                    <iframe
-                                        key={`${settings?.widget_layout}-${settings?.widget_primary_color}-${settings?.widget_background_color}`}
-                                        src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget`}
-                                        className="w-full max-w-4xl border-0 rounded-none overflow-visible shadow-none transition-all duration-300"
-                                        style={{ height: `${previewHeight}px` }}
-                                        title="Booking Widget Preview"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="border-t my-4" />
-
-                            {/* Smart Embed Code */}
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <Label>Embed Code (Copy & Paste)</Label>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(`<div style="height: 120px; position: relative; z-index: 9999;">
-    <iframe 
-        id="hotelier-search-widget"
-        src="${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget" 
-        style="width: 100%; height: 750px; border: none; position: absolute; top: 0; left: 0; overflow: visible;" 
-        scrolling="no" 
-        title="Book Now">
-    </iframe>
-</div>`)}
-                                    >
-                                        <Copy className="w-4 h-4 mr-2" />
-                                        Copy Code
-                                    </Button>
-                                </div>
-                                <pre className="p-4 bg-slate-900 text-slate-50 rounded-lg overflow-x-auto text-xs font-mono leading-relaxed text-wrap break-all">
-                                    {`<div style="height: 120px; position: relative; z-index: 9999;">
-    <iframe 
-        id="hotelier-search-widget"
-        src="${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget" 
-        style="width: 100%; height: 750px; border: none; position: absolute; top: 0; left: 0; overflow: visible;" 
-        scrolling="no" 
-        title="Book Now">
-    </iframe>
-</div>`}
-                                </pre>
-                            </div>
-
-                            {/* Documentation of Integration Parameters */}
-                            <div className="bg-muted/30 dark:bg-slate-900/40 p-5 rounded-2xl border border-border/60 mt-4 space-y-3">
-                                <h4 className="text-xs font-black uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                    <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-                                    Widget Custom Code & Parameter Documentation
-                                </h4>
-                                <p className="text-xs text-muted-foreground leading-relaxed">
-                                    If your client requires complete styling control or a customized integration, you can pass these parameters dynamically via the widget script configurations or use custom CSS in our Dashboard Settings:
-                                </p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 text-xs">
-                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
-                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">hotelSlug</code>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">The unique hotel identifier in URLs. Currently: <strong className="text-foreground font-semibold">{activeHotelSlug || 'demo'}</strong></p>
-                                    </div>
-                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
-                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">widgetLayout</code>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">Widget layout configuration. Supported options: <code className="bg-muted/30 p-0.5 rounded">"modern"</code>, <code className="bg-muted/30 p-0.5 rounded">"classic"</code>, <code className="bg-muted/30 p-0.5 rounded">"minimal"</code>.</p>
-                                    </div>
-                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
-                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">primaryColor</code>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">Main primary color theme for buttons & selections. E.g. <code className="bg-muted/30 p-0.5 rounded">"#7C3AED"</code>.</p>
-                                    </div>
-                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
-                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">widgetCustomCss</code>
-                                        <p className="text-[11px] text-muted-foreground mt-0.5">Custom CSS rules loaded dynamically to target specific elements like buttons, dates, overlays, or font styles.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                {/* Chat Widget Tab */}
-                <TabsContent value="chat-widget" className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Embed Chat Widget</CardTitle>
-                            <CardDescription>
-                                Add the AI Concierge to your website.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-2">
-                                <Label>Preview</Label>
-                                <div className="p-8 bg-muted/30 rounded-xl border border-border h-64 flex items-center justify-center relative overflow-hidden">
-                                    <div className="absolute bottom-4 right-4 bg-background p-2 rounded-full shadow-lg border border-purple-100 flex items-center gap-2">
-                                        <MessageCircle className="w-6 h-6 text-purple-500" />
-                                        <span className="font-bold text-sm text-purple-600">{hotel?.name || 'AI Concierge'}</span>
-                                    </div>
-                                    <p className="text-muted-foreground text-sm">Widget appears at bottom-right</p>
-                                </div>
-                            </div>
-
-                            <div className="border-t my-4" />
-
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <Label>Script Code (Add before &lt;/body&gt;)</Label>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(`<script src="${window.location.origin}/widget-v3.js"></script><script>HotelierWidget.init({hotelSlug: '${activeHotelSlug || 'demo'}', frontendUrl: '${window.location.origin}'});</script>`)}
-                                    >
-                                        <Copy className="w-4 h-4 mr-2" />
-                                        Copy Code
-                                    </Button>
-                                </div>
-                                <pre className="p-4 bg-slate-900 text-slate-50 rounded-lg overflow-x-auto text-xs font-mono leading-relaxed text-wrap break-all">
-                                    {`<script src="${window.location.origin}/widget-v3.js"></script>
-<script>
-  HotelierWidget.init({
-    hotelSlug: '${activeHotelSlug || 'demo'}',
-    frontendUrl: '${window.location.origin}'
-  });
-</script>`}
-                                </pre>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-
-                {/* Settings Tab */}
-                <TabsContent value="settings" className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Widget Settings</CardTitle>
-                            <CardDescription>Customize your booking widget appearance</CardDescription>
+                            <CardTitle>Widget Appearance</CardTitle>
+                            <CardDescription>Customize your booking widget settings and colors</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {settings && (
@@ -734,7 +593,160 @@ const IntegrationPage = () => {
                                             </div>
                                         </div>
                                     </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
 
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Embed Search Bar</CardTitle>
+                            <CardDescription>
+                                Add a booking bar to your website. We recommend the JavaScript method for best experience.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* Preview */}
+                            <div className="space-y-2">
+                                <Label>Preview</Label>
+                                <div className="p-8 bg-muted rounded-xl border border-border flex items-center justify-center transition-all duration-300">
+                                    <iframe
+                                        key={`${settings?.widget_layout}-${settings?.widget_primary_color}-${settings?.widget_background_color}`}
+                                        src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget`}
+                                        className="w-full max-w-4xl border-0 rounded-none overflow-visible shadow-none transition-all duration-300"
+                                        style={{ height: `${previewHeight}px` }}
+                                        title="Booking Widget Preview"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="border-t my-4" />
+
+                            {/* Smart Embed Code */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <Label>Embed Code (Copy & Paste)</Label>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(`<div style="height: 120px; position: relative; z-index: 9999;">
+    <iframe 
+        id="hotelier-search-widget"
+        src="${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget" 
+        style="width: 100%; height: 750px; border: none; position: absolute; top: 0; left: 0; overflow: visible;" 
+        scrolling="no" 
+        title="Book Now">
+    </iframe>
+</div>`)}
+                                    >
+                                        <Copy className="w-4 h-4 mr-2" />
+                                        Copy Code
+                                    </Button>
+                                </div>
+                                <pre className="p-4 bg-slate-900 text-slate-50 rounded-lg overflow-x-auto text-xs font-mono leading-relaxed text-wrap break-all">
+                                    {`<div style="height: 120px; position: relative; z-index: 9999;">
+    <iframe 
+        id="hotelier-search-widget"
+        src="${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget" 
+        style="width: 100%; height: 750px; border: none; position: absolute; top: 0; left: 0; overflow: visible;" 
+        scrolling="no" 
+        title="Book Now">
+    </iframe>
+</div>`}
+                                </pre>
+                            </div>
+
+                            {/* Documentation of Integration Parameters */}
+                            <div className="bg-muted/30 dark:bg-slate-900/40 p-5 rounded-2xl border border-border/60 mt-4 space-y-3">
+                                <h4 className="text-xs font-black uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                                    Widget Custom Code & Parameter Documentation
+                                </h4>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    If your client requires complete styling control or a customized integration, you can pass these parameters dynamically via the widget script configurations or use custom CSS in our Dashboard Settings:
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 text-xs">
+                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
+                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">hotelSlug</code>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">The unique hotel identifier in URLs. Currently: <strong className="text-foreground font-semibold">{activeHotelSlug || 'demo'}</strong></p>
+                                    </div>
+                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
+                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">widgetLayout</code>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">Widget layout configuration. Supported options: <code className="bg-muted/30 p-0.5 rounded">"modern"</code>, <code className="bg-muted/30 p-0.5 rounded">"classic"</code>, <code className="bg-muted/30 p-0.5 rounded">"minimal"</code>.</p>
+                                    </div>
+                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
+                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">primaryColor</code>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">Main primary color theme for buttons & selections. E.g. <code className="bg-muted/30 p-0.5 rounded">"#7C3AED"</code>.</p>
+                                    </div>
+                                    <div className="bg-background dark:bg-slate-900 p-3 rounded-xl border border-border shadow-sm">
+                                        <code className="text-purple-600 dark:text-purple-400 font-bold font-mono">widgetCustomCss</code>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">Custom CSS rules loaded dynamically to target specific elements like buttons, dates, overlays, or font styles.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Chat Widget Tab */}
+                <TabsContent value="chat-widget" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Embed Chat Widget</CardTitle>
+                            <CardDescription>
+                                Add the AI Concierge to your website.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-2">
+                                <Label>Preview</Label>
+                                <div className="p-8 bg-muted/30 rounded-xl border border-border h-64 flex items-center justify-center relative overflow-hidden">
+                                    <div className="absolute bottom-4 right-4 bg-background p-2 rounded-full shadow-lg border border-purple-100 flex items-center gap-2">
+                                        <MessageCircle className="w-6 h-6 text-purple-500" />
+                                        <span className="font-bold text-sm text-purple-600">{hotel?.name || 'AI Concierge'}</span>
+                                    </div>
+                                    <p className="text-muted-foreground text-sm">Widget appears at bottom-right</p>
+                                </div>
+                            </div>
+
+                            <div className="border-t my-4" />
+
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <Label>Script Code (Add before &lt;/body&gt;)</Label>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(`<script src="${window.location.origin}/widget-v3.js"></script><script>HotelierWidget.init({hotelSlug: '${activeHotelSlug || 'demo'}', frontendUrl: '${window.location.origin}'});</script>`)}
+                                    >
+                                        <Copy className="w-4 h-4 mr-2" />
+                                        Copy Code
+                                    </Button>
+                                </div>
+                                <pre className="p-4 bg-slate-900 text-slate-50 rounded-lg overflow-x-auto text-xs font-mono leading-relaxed text-wrap break-all">
+                                    {`<script src="${window.location.origin}/widget-v3.js"></script>
+<script>
+  HotelierWidget.init({
+    hotelSlug: '${activeHotelSlug || 'demo'}',
+    frontendUrl: '${window.location.origin}'
+  });
+</script>`}
+                                </pre>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Settings Tab */}
+                <TabsContent value="settings" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>System Settings</CardTitle>
+                            <CardDescription>Manage domain restrictions, webhooks, and AI configuration</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {settings && (
+                                <>
                                     <div className="border-t pt-4 space-y-4">
                                         <div>
                                             <Label>Allowed Domains</Label>
