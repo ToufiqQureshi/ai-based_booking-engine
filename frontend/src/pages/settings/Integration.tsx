@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Key, Code, Webhook, Globe, Plus, Trash2, Eye, EyeOff, Search, MessageCircle, Sparkles, Loader2 } from 'lucide-react';
+import { Copy, Key, Code, Webhook, Globe, Plus, Trash2, Eye, EyeOff, Search, MessageCircle, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/api/client';
 
@@ -481,71 +481,76 @@ const IntegrationPage = () => {
                                     </div>
 
                                     {/* Layout Style Cards */}
-                                    <div className="space-y-2 mt-4">
-                                        <Label className="text-sm font-semibold">Widget Layout Style</Label>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="space-y-3 mt-6">
+                                        <Label className="text-sm font-semibold">Select Widget Design</Label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                             {/* Modern Layout */}
                                             <div 
-                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'modern' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
+                                                className={`relative overflow-hidden border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'modern' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
                                                 onClick={() => updateSettings({ widget_layout: 'modern' })}
                                             >
-                                                <div>
-                                                    <span className="font-extrabold text-sm text-foreground dark:text-slate-200 block">Modern Row</span>
-                                                    <span className="text-xs text-muted-foreground mt-1 block">Sleek horizontal float bar with combined inputs and popovers. Ideal for homepages.</span>
+                                                {settings.widget_layout === 'modern' && <div className="absolute top-2 right-2"><CheckCircle2 className="w-4 h-4 text-primary" /></div>}
+                                                <div className="w-full h-12 bg-muted/50 rounded-xl flex items-center p-1.5 gap-1 mb-4">
+                                                    <div className="flex-1 h-full bg-background rounded-lg border border-border/50"></div>
+                                                    <div className="flex-1 h-full bg-background rounded-lg border border-border/50"></div>
+                                                    <div className="w-10 h-full rounded-lg" style={{ backgroundColor: settings.widget_primary_color || '#7c3aed' }}></div>
                                                 </div>
-                                                <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                                                    <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Recommended</span>
-                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'modern' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
-                                                        {settings.widget_layout === 'modern' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
-                                                    </div>
+                                                <div className="text-center">
+                                                    <span className="font-semibold text-sm text-foreground block">Modern Row</span>
+                                                    <span className="text-[10px] text-muted-foreground mt-0.5 block">Side-by-side inputs</span>
                                                 </div>
                                             </div>
 
                                             {/* Classic Layout */}
                                             <div 
-                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'classic' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
+                                                className={`relative overflow-hidden border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'classic' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
                                                 onClick={() => updateSettings({ widget_layout: 'classic' })}
                                             >
-                                                <div>
-                                                    <span className="font-extrabold text-sm text-foreground dark:text-slate-200 block">Classic Stacked</span>
-                                                    <span className="text-xs text-muted-foreground mt-1 block">Boxed design with distinct input boxes and clean spacing. Best for sidebars/boxes.</span>
+                                                {settings.widget_layout === 'classic' && <div className="absolute top-2 right-2"><CheckCircle2 className="w-4 h-4 text-primary" /></div>}
+                                                <div className="w-full bg-muted/50 rounded-xl p-2 space-y-1.5 mb-4 border border-border/20">
+                                                    <div className="w-full h-3 bg-background rounded-sm border border-border/50"></div>
+                                                    <div className="w-full h-3 bg-background rounded-sm border border-border/50"></div>
+                                                    <div className="w-full h-4 rounded-md mt-1" style={{ backgroundColor: settings.widget_primary_color || '#7c3aed' }}></div>
                                                 </div>
-                                                <div className="mt-4 pt-3 border-t border-border flex items-center justify-end">
-                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'classic' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
-                                                        {settings.widget_layout === 'classic' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
-                                                    </div>
+                                                <div className="text-center">
+                                                    <span className="font-semibold text-sm text-foreground block">Classic Stacked</span>
+                                                    <span className="text-[10px] text-muted-foreground mt-0.5 block">Vertical form layout</span>
                                                 </div>
                                             </div>
 
                                             {/* Minimal Layout */}
                                             <div 
-                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
+                                                className={`relative overflow-hidden border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
                                                 onClick={() => updateSettings({ widget_layout: 'minimal' })}
                                             >
-                                                <div>
-                                                    <span className="font-extrabold text-sm text-foreground dark:text-slate-200 block">Minimal Bar</span>
-                                                    <span className="text-xs text-muted-foreground mt-1 block">Compact layout with transparent backgrounds and subtle bottom borders. Ultra-clean.</span>
+                                                {settings.widget_layout === 'minimal' && <div className="absolute top-2 right-2"><CheckCircle2 className="w-4 h-4 text-primary" /></div>}
+                                                <div className="w-full h-12 bg-background border-b border-border/50 flex items-end pb-2 px-2 gap-2 mb-4">
+                                                    <div className="flex-1 h-3 border-b-2 border-muted"></div>
+                                                    <div className="flex-1 h-3 border-b-2 border-muted"></div>
+                                                    <div className="w-10 h-5 rounded" style={{ backgroundColor: settings.widget_primary_color || '#7c3aed' }}></div>
                                                 </div>
-                                                <div className="mt-4 pt-3 border-t border-border flex items-center justify-end">
-                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'minimal' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
-                                                        {settings.widget_layout === 'minimal' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
-                                                    </div>
+                                                <div className="text-center">
+                                                    <span className="font-semibold text-sm text-foreground block">Minimal Bar</span>
+                                                    <span className="text-[10px] text-muted-foreground mt-0.5 block">Clean underline style</span>
                                                 </div>
                                             </div>
 
                                             {/* Premium Capsule Layout */}
                                             <div 
-                                                className={`border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'premium' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
+                                                className={`relative overflow-hidden border-2 rounded-xl p-4 cursor-pointer hover:border-primary/80 transition-all flex flex-col justify-between ${settings.widget_layout === 'premium' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card'}`}
                                                 onClick={() => updateSettings({ widget_layout: 'premium' })}
                                             >
-                                                <div>
-                                                    <span className="font-extrabold text-sm text-foreground dark:text-slate-200 block">Premium Capsule</span>
-                                                    <span className="text-xs text-muted-foreground mt-1 block">Highly rounded, luxurious floating capsule with deep shadows. Perfect for premium hotels.</span>
-                                                </div>
-                                                <div className="mt-4 pt-3 border-t border-border flex items-center justify-end">
-                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings.widget_layout === 'premium' ? 'border-primary bg-primary' : 'border-slate-300'}`}>
-                                                        {settings.widget_layout === 'premium' && <div className="w-1.5 h-1.5 rounded-full bg-background" />}
+                                                {settings.widget_layout === 'premium' && <div className="absolute top-2 right-2"><CheckCircle2 className="w-4 h-4 text-primary" /></div>}
+                                                <div className="w-full py-1.5 flex justify-center mb-4">
+                                                    <div className="w-[95%] h-9 bg-background rounded-full shadow-md border border-border/40 flex items-center p-1 gap-1">
+                                                        <div className="flex-1 h-full bg-muted/30 rounded-full"></div>
+                                                        <div className="flex-1 h-full bg-muted/30 rounded-full"></div>
+                                                        <div className="w-10 h-full rounded-full" style={{ backgroundColor: settings.widget_primary_color || '#7c3aed' }}></div>
                                                     </div>
+                                                </div>
+                                                <div className="text-center">
+                                                    <span className="font-semibold text-sm text-foreground block">Premium Capsule</span>
+                                                    <span className="text-[10px] text-muted-foreground mt-0.5 block">Rounded floating design</span>
                                                 </div>
                                             </div>
                                         </div>
