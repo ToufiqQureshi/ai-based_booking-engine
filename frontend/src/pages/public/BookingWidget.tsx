@@ -156,7 +156,7 @@ export default function BookingWidget() {
     // Calendar popover — same design as public booking page
     const calendarPopoverContent = (
         <PopoverContent
-            className="p-0 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
+            className="p-0 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
             style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px' }}
             align="center"
             side="bottom"
@@ -207,7 +207,7 @@ export default function BookingWidget() {
                             const isSoldOut = date.getDate() === 13;
                             return (
                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                    <span className={cn("text-xs font-bold leading-none", isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white")}>{date.getDate()}</span>
                                     {!isPast && (
                                         <span className={cn(
                                             "text-[9px] font-extrabold leading-none mt-1",
@@ -230,7 +230,7 @@ export default function BookingWidget() {
 
 
     const guestPopoverContent = (
-        <PopoverContent className="w-80 p-6 bg-white border-slate-100 shadow-2xl rounded-3xl" align="center" side="bottom" avoidCollisions={false}>
+        <PopoverContent className="w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" align="center" side="bottom" avoidCollisions={false}>
             <div className="space-y-6">
                 {/* Rooms Counter */}
                 <div className="flex items-center justify-between">
@@ -446,7 +446,7 @@ export default function BookingWidget() {
                                             const isSoldOut = date.getDate() === 13;
                                             return (
                                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                                    <span className={cn("text-xs font-bold leading-none", isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white")}>{date.getDate()}</span>
                                                     {!isPast && (
                                                         <span className={cn(
                                                             "text-[8px] font-extrabold leading-none mt-0.5",
@@ -662,7 +662,7 @@ export default function BookingWidget() {
                                             const isSoldOut = date.getDate() === 13;
                                             return (
                                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                                    <span className={cn("text-xs font-bold leading-none", isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white")}>{date.getDate()}</span>
                                                     {!isPast && (
                                                         <span className={cn(
                                                             "text-[9px] font-extrabold leading-none mt-1",
