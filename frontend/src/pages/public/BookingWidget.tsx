@@ -545,60 +545,68 @@ export default function BookingWidget() {
                     {/* Top row: date + guests + promo + search */}
                     <div className="flex flex-row items-center gap-3">
                         {/* Date trigger */}
-                        <button
-                            className="flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
-                            style={{ borderColor: isCalendarOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
-                            onClick={() => { setIsCalendarOpen(!isCalendarOpen); setIsGuestOpen(false); }}
-                        >
-                            <div className="flex-1 flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                     style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                    <CalendarIcon className="w-5 h-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
-                                    <span className="text-sm font-extrabold text-slate-800 block">
-                                        {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select Date"}
-                                    </span>
-                                    <span className="text-xs text-slate-500">{checkInDate ? format(checkInDate, "EEEE") : "Add date"}</span>
-                                </div>
-                            </div>
-                            <ArrowRight className="w-5 h-5 text-slate-300 shrink-0" />
-                            <div className="flex-1 flex items-center gap-3 pl-3 border-l border-slate-100 min-w-0">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                     style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                    <CalendarIcon className="w-5 h-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
-                                    <span className="text-sm font-extrabold text-slate-800 block">
-                                        {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select Date"}
-                                    </span>
-                                    <span className="text-xs text-slate-500">{checkOutDate ? format(checkOutDate, "EEEE") : "Add date"}</span>
-                                </div>
-                            </div>
-                        </button>
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <button
+                                    className="flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                                    style={{ borderColor: isCalendarOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
+                                >
+                                    <div className="flex-1 flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                             style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
+                                            <CalendarIcon className="w-5 h-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
+                                            <span className="text-sm font-extrabold text-slate-800 block">
+                                                {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select Date"}
+                                            </span>
+                                            <span className="text-xs text-slate-500">{checkInDate ? format(checkInDate, "EEEE") : "Add date"}</span>
+                                        </div>
+                                    </div>
+                                    <ArrowRight className="w-5 h-5 text-slate-300 shrink-0" />
+                                    <div className="flex-1 flex items-center gap-3 pl-3 border-l border-slate-100 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                             style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
+                                            <CalendarIcon className="w-5 h-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
+                                            <span className="text-sm font-extrabold text-slate-800 block">
+                                                {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select Date"}
+                                            </span>
+                                            <span className="text-xs text-slate-500">{checkOutDate ? format(checkOutDate, "EEEE") : "Add date"}</span>
+                                        </div>
+                                    </div>
+                                </button>
+                            </PopoverTrigger>
+                            {calendarPopoverContent}
+                        </Popover>
 
                         {/* Guests trigger */}
-                        <button
-                            className="flex-1 flex items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
-                            style={{ borderColor: isGuestOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
-                            onClick={() => { setIsGuestOpen(!isGuestOpen); setIsCalendarOpen(false); }}
-                        >
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                 style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                <Users className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
-                                <span className="text-sm font-extrabold text-slate-800 block">
-                                    {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
-                                </span>
-                                <span className="text-xs text-slate-500">{roomsCount} Room{roomsCount !== 1 ? 's' : ''}, {adults} Adult{adults !== 1 ? 's' : ''}</span>
-                            </div>
-                            <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0"
-                                         style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                        </button>
+                        <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
+                            <PopoverTrigger asChild>
+                                <button
+                                    className="flex-1 flex items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                                    style={{ borderColor: isGuestOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
+                                >
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                         style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
+                                        <Users className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
+                                        <span className="text-sm font-extrabold text-slate-800 block">
+                                            {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
+                                        </span>
+                                        <span className="text-xs text-slate-500">{roomsCount} Room{roomsCount !== 1 ? 's' : ''}, {adults} Adult{adults !== 1 ? 's' : ''}</span>
+                                    </div>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0"
+                                                 style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                                </button>
+                            </PopoverTrigger>
+                            {guestPopoverContent}
+                        </Popover>
 
                         {/* Promo */}
                         <div className="w-40 flex flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
@@ -622,104 +630,7 @@ export default function BookingWidget() {
                         </button>
                     </div>
 
-                    {/* Inline calendar (desktop) */}
-                    {isCalendarOpen && (
-                        <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm">
-                            <div className="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
-                                    <p className="text-[11px] text-slate-400 mt-0.5">Click check-in date, then check-out date</p>
-                                </div>
-                                <button onClick={() => setIsCalendarOpen(false)}
-                                        className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-                                    <X className="w-4 h-4 text-slate-500" />
-                                </button>
-                            </div>
-                            <div className="p-4 flex justify-center">
-                                <Calendar
-                                    mode="range"
-                                    numberOfMonths={2}
-                                    selected={{ from: checkInDate, to: checkOutDate }}
-                                    onSelect={(range: any) => {
-                                        if (range?.from) setCheckInDate(range.from);
-                                        if (range?.to) setCheckOutDate(range.to);
-                                        if (range?.from && range?.to) setIsCalendarOpen(false);
-                                    }}
-                                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                                    className="p-0"
-                                    classNames={{
-                                        cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:bg-violet-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                        day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-100/50 rounded-xl transition-all",
-                                        day_selected: "bg-violet-600 text-white hover:bg-violet-700 hover:text-white focus:bg-violet-600 focus:text-white font-bold shadow-md",
-                                        day_today: "bg-violet-100/40 text-violet-700 font-bold border border-violet-200",
-                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2 text-center",
-                                        caption: "flex justify-center py-2.5 px-3 relative items-center bg-violet-600 text-white rounded-xl mb-3 shadow-sm",
-                                        caption_label: "text-xs font-extrabold tracking-wide uppercase",
-                                        nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
-                                        months: "flex flex-row gap-6"
-                                    }}
-                                    components={{
-                                        DayContent: ({ date }: any) => {
-                                            const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
-                                            const isPast = date < todayObj;
-                                            let price = startingPrice > 0 ? startingPrice : 4200;
-                                            const day = date.getDay();
-                                            const isWeekend = day === 5 || day === 6;
-                                            price = price + (isWeekend ? 500 : 0);
-                                            const isSoldOut = date.getDate() === 13;
-                                            return (
-                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                                    <span className={cn("text-xs font-bold leading-none", isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white")}>{date.getDate()}</span>
-                                                    {!isPast && (
-                                                        <span className={cn(
-                                                            "text-[9px] font-extrabold leading-none mt-1",
-                                                            isSoldOut ? "text-red-500" : "text-emerald-600 group-aria-selected:text-white"
-                                                        )}>
-                                                            {isSoldOut ? "Sold Out" : `₹${price}`}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            );
-                                        }
-                                    }}
-                                />
-                            </div>
-                            <div className="border-t border-slate-100 py-3 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                                <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
-                            </div>
-                        </div>
-                    )}
 
-                    {/* Inline guests (desktop) */}
-                    {isGuestOpen && (
-                        <div className="rounded-2xl border border-slate-100 bg-white p-5">
-                            <div className="flex items-center gap-8 justify-center flex-wrap">
-                                {([['Rooms', roomsCount, setRoomsCount, 1, 5, 'Total rooms'],
-                                   ['Adults', adults, setAdults, 1, 10, 'Ages 13+'],
-                                   ['Children', children, setChildren, 0, 6, 'Ages 0–12']] as const).map(([label, val, setter, min, max, sub]) => (
-                                    <div key={label as string} className="flex items-center gap-4">
-                                        <div className="text-center min-w-[60px]">
-                                            <p className="font-extrabold text-sm text-slate-900">{label as string}</p>
-                                            <p className="text-[10px] text-slate-400">{sub as string}</p>
-                                        </div>
-                                        <div className="flex items-center gap-3 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                                            <button className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white transition-all disabled:opacity-40"
-                                                    onClick={() => (setter as any)(Math.max(min as number, (val as number) - 1))}
-                                                    disabled={(val as number) <= (min as number)}>
-                                                <Minus className="h-3.5 w-3.5 text-slate-700" />
-                                            </button>
-                                            <span className="w-6 text-center text-base font-black text-slate-900">{val as number}</span>
-                                            <button className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white transition-all disabled:opacity-40"
-                                                    onClick={() => (setter as any)(Math.min(max as number, (val as number) + 1))}
-                                                    disabled={(val as number) >= (max as number)}>
-                                                <Plus className="h-3.5 w-3.5 text-slate-700" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
