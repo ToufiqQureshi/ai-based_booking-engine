@@ -2,7 +2,7 @@
 import {
   ChevronLeft, ChevronRight, Edit2, Lock, Loader2,
   TrendingUp, BedDouble, XCircle, BarChart3, RefreshCw,
-  Sliders, IndianRupee, CalendarDays, CheckCircle2, AlertTriangle
+  Sliders, IndianRupee, CalendarDays, CheckCircle2, AlertTriangle, Sparkles
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
@@ -163,21 +163,12 @@ export function AvailabilityPage() {
               Refresh
             </Button>
             <Button
-              variant="outline"
               size="sm"
               className="gap-2"
               onClick={() => setIsBulkDialogOpen(true)}
             >
               <Sliders className="h-3.5 w-3.5" />
               Bulk Block
-            </Button>
-            <Button
-              size="sm"
-              className="gap-2"
-              onClick={() => setIsBulkDialogOpen(true)}
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-              Manage Inventory
             </Button>
           </div>
         </div>
@@ -229,6 +220,14 @@ export function AvailabilityPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* ── Info Banner ── */}
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-3 flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-300 shadow-sm">
+          <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5 animate-pulse" />
+          <div>
+            <span className="font-semibold text-blue-900 dark:text-blue-200">Quick Tip:</span> Click any individual cell in the grid below to override its daily rate or mark rooms as sold out/blocked. Use the <strong className="font-bold">Bulk Block</strong> button at the top to block multiple rooms over a date range.
+          </div>
         </div>
 
         {/* ── Controls Row ── */}
@@ -426,61 +425,6 @@ export function AvailabilityPage() {
             </div>
           </div>
         </div>
-
-        {/* ── Quick Actions Panel (formerly "coming soon") ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            {
-              icon: Sliders,
-              color: 'text-blue-600',
-              bg: 'bg-blue-50 dark:bg-blue-950/30',
-              title: 'Bulk Date Block',
-              desc: 'Block multiple rooms across a date range for maintenance, renovation, or special events.',
-              action: 'Open Bulk Block',
-              onClick: () => setIsBulkDialogOpen(true),
-            },
-            {
-              icon: IndianRupee,
-              color: 'text-emerald-600',
-              bg: 'bg-emerald-50 dark:bg-emerald-950/30',
-              title: 'Rate Override',
-              desc: 'Set a custom daily rate for any room type on any date — click a cell in the grid above.',
-              action: 'Click any cell',
-              onClick: undefined,
-            },
-            {
-              icon: TrendingUp,
-              color: 'text-purple-600',
-              bg: 'bg-purple-50 dark:bg-purple-950/30',
-              title: 'Inventory Override',
-              desc: 'Mark individual rooms as sold out or make blocked rooms available again instantly.',
-              action: 'Click any cell',
-              onClick: undefined,
-            },
-          ].map(({ icon: Icon, color, bg, title, desc, action, onClick }) => (
-            <div key={title} className="bg-card border border-border rounded-xl p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
-              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', bg)}>
-                <Icon className={cn('h-5 w-5', color)} />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-foreground">{title}</h3>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{desc}</p>
-              </div>
-              {onClick ? (
-                <Button size="sm" variant="outline" className="mt-auto gap-2 text-xs" onClick={onClick}>
-                  <Icon className="h-3 w-3" />
-                  {action}
-                </Button>
-              ) : (
-                <div className="mt-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="font-medium">{action} — Live</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
         {/* ── Dialogs ── */}
         <BulkUpdateDialog
           open={isBulkDialogOpen}
