@@ -85,6 +85,7 @@ export default function BookingSelection() {
     const [children, setChildren] = useState(0);
     const [promoCode, setPromoCode] = useState('');
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [isGuestOpen, setIsGuestOpen] = useState(false);
     const [flexibleDates, setFlexibleDates] = useState(false);
     const [roomsCount, setRoomsCount] = useState(1);
     const [isMobile, setIsMobile] = useState(false);
@@ -439,7 +440,7 @@ export default function BookingSelection() {
             <div className="max-w-7xl mx-auto px-3 sm:px-4 mt-4 sm:mt-8">
                 {/* Inline Search Modifier (Always Visible) */}
                 {/* Premium Hotelier Calendar Widget (Purple Theme) */}
-                <div id="hotelier-search-widget" className="bg-white border border-slate-200 p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2rem] shadow-lg shadow-violet-900/5 mb-6 sm:mb-10 max-w-6xl mx-auto">
+                <div id="hotelier-search-widget" className="bg-white/95 backdrop-blur-2xl p-4 sm:p-6 rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] mb-6 sm:mb-10 max-w-6xl mx-auto border border-white/60">
                     {/* Premium Room/Package Switch */}
                     <div className="flex justify-center mb-4">
                         <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/50 backdrop-blur-sm">
@@ -466,43 +467,42 @@ export default function BookingSelection() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-slate-50/80 p-2.5 sm:p-3 rounded-2xl border border-slate-100">
+                    <div className="flex flex-col lg:flex-row items-stretch gap-3">
                         {/* Date Selector Popover (Check-In & Check-Out) */}
                         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                             <PopoverTrigger asChild>
-                                <button className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 hover:border-violet-400 hover:shadow-md transition-all text-left group cursor-pointer">
-                                    {/* Check-In Section */}
-                                    <div className="flex-1 flex items-start gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                <button 
+                                    className="flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                                    style={{ borderColor: isCalendarOpen ? themeColor : '#f1f5f9', backgroundColor: '#fff' }}
+                                    onClick={() => { setIsCalendarOpen(!isCalendarOpen); setIsGuestOpen(false); }}
+                                >
+                                    <div className="flex-1 flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                             style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
                                             <CalendarIcon className="w-5 h-5" />
                                         </div>
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Check In</span>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
                                             <span className="text-sm font-extrabold text-slate-800 block">
                                                 {checkInDate ? format(checkInDate, 'dd MMM yyyy') : 'Select Date'}
                                             </span>
-                                            <span className="text-xs font-medium text-slate-500 block mt-0.5">
+                                            <span className="text-xs text-slate-500 block truncate">
                                                 {checkInDate ? format(checkInDate, 'EEEE') : 'Add date'}
                                             </span>
                                         </div>
                                     </div>
-
-                                    {/* Separator Arrow */}
-                                    <div className="hidden sm:flex items-center justify-center px-2 text-slate-300 group-hover:text-violet-500 transition-colors">
-                                        <ArrowRight className="w-5 h-5" />
-                                    </div>
-
-                                    {/* Check-Out Section */}
-                                    <div className="flex-1 flex items-start gap-3 sm:pl-3 border-t sm:border-t-0 sm:border-l border-slate-100 pt-3 sm:pt-0">
-                                        <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                    <ArrowRight className="w-5 h-5 text-slate-300 shrink-0" />
+                                    <div className="flex-1 flex items-center gap-3 pl-3 border-l border-slate-100 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                             style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
                                             <CalendarIcon className="w-5 h-5" />
                                         </div>
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Check Out</span>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
                                             <span className="text-sm font-extrabold text-slate-800 block">
                                                 {checkOutDate ? format(checkOutDate, 'dd MMM yyyy') : 'Select Date'}
                                             </span>
-                                            <span className="text-xs font-medium text-slate-500 block mt-0.5">
+                                            <span className="text-xs text-slate-500 block truncate">
                                                 {checkOutDate ? format(checkOutDate, 'EEEE') : 'Add date'}
                                             </span>
                                         </div>
@@ -513,7 +513,7 @@ export default function BookingSelection() {
                             <PopoverContent
                                 className="p-0 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
                                 style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px' }}
-                                align="start"
+                                align="center"
                                 sideOffset={8}
                             >
                                 <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
@@ -553,6 +553,9 @@ export default function BookingSelection() {
                                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
                                         months: "flex flex-col md:flex-row space-y-3 md:space-x-4 md:space-y-0"
                                     }}
+                                    modifiersStyles={{
+                                        selected: { backgroundColor: themeColor, color: '#fff' }
+                                    }}
                                     components={{
                                         DayContent: ({ date }: any) => {
                                             const todayObj = new Date(new Date().setHours(0,0,0,0));
@@ -580,28 +583,35 @@ export default function BookingSelection() {
                                     }}
                                 />
                                 <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
+                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
                                 </div>
                                 </div>
                             </PopoverContent>
                         </Popover>
 
                         {/* Guests Configuration Popover */}
-                        <Popover>
+                        <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
                             <PopoverTrigger asChild>
-                                <button className="flex-1 sm:flex-none sm:w-64 flex items-start gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 hover:border-violet-400 hover:shadow-md transition-all text-left group cursor-pointer">
-                                    <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                <button
+                                    className="flex-1 flex items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                                    style={{ borderColor: isGuestOpen ? themeColor : '#f1f5f9', backgroundColor: '#fff' }}
+                                    onClick={() => { setIsGuestOpen(!isGuestOpen); setIsCalendarOpen(false); }}
+                                >
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                         style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
                                         <User className="w-5 h-5" />
                                     </div>
-                                    <div>
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Guests</span>
+                                    <div className="min-w-0">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
                                         <span className="text-sm font-extrabold text-slate-800 block">
                                             {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
                                         </span>
-                                        <span className="text-xs font-medium text-slate-500 block mt-0.5">
-                                            {roomsCount} {roomsCount === 1 ? 'Room' : 'Rooms'}, {adults} Adult{children > 0 ? `, ${children} Child` : ''}
+                                        <span className="text-xs text-slate-500 block truncate">
+                                            {roomsCount} Room{roomsCount !== 1 ? 's' : ''}, {adults} Adult{adults !== 1 ? 's' : ''}
                                         </span>
                                     </div>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0"
+                                                 style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                                 </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-80 p-6 bg-white border-slate-100 shadow-2xl rounded-3xl" align="center">
@@ -657,40 +667,39 @@ export default function BookingSelection() {
                             </PopoverContent>
                         </Popover>
 
-                        {/* Promo Input - hidden on mobile to keep layout clean */}
-                        <div className="hidden sm:flex flex-1 sm:w-40 flex-col justify-center bg-white p-3 rounded-xl border border-slate-200/80">
+                        {/* Promo Input */}
+                        <div className="hidden lg:flex w-40 flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
-                            <Input 
+                            <input 
                                 value={promoCode}
                                 onChange={(e) => setPromoCode(e.target.value)}
-                                placeholder="Optional code"
-                                className="h-9 bg-transparent border-0 font-bold text-sm p-0 focus-visible:ring-0 shadow-none placeholder:text-slate-400 placeholder:font-medium"
+                                placeholder="Optional"
+                                className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none focus:ring-0 shadow-none placeholder:text-slate-300 text-slate-800 w-full"
                             />
                         </div>
 
                         {/* Search Button */}
-                        <div className="flex items-center w-full sm:w-auto">
-                            <Button 
-                                onClick={handleSearch}
-                                className="w-full sm:w-auto h-14 sm:min-h-[64px] px-6 sm:px-10 text-white font-extrabold uppercase text-sm tracking-widest rounded-xl sm:rounded-2xl shadow-md shrink-0 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5"
-                                style={{ backgroundColor: themeColor }}
-                            >
-                                <Search className="w-5 h-5 stroke-[2.5]" />
-                                Search
-                            </Button>
-                        </div>
+                        <button
+                            className="h-[76px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all shrink-0"
+                            style={{ backgroundImage: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)` }}
+                            onClick={handleSearch}
+                        >
+                            <Search className="w-5 h-5 stroke-[2.5]" />
+                            Search
+                        </button>
                     </div>
 
                     {/* Flexible Dates Checkbox */}
-                    <div className="mt-4 px-4 flex items-center gap-2.5">
+                    <div className="mt-4 px-4 flex items-center justify-center gap-2.5">
                         <input 
                             type="checkbox" 
                             id="flex-dates" 
                             checked={flexibleDates}
                             onChange={(e) => setFlexibleDates(e.target.checked)}
-                            className="rounded border-slate-300 text-violet-600 focus:ring-violet-600 w-4 h-4 cursor-pointer accent-violet-600" 
+                            className="rounded border-slate-300 w-4 h-4 cursor-pointer" 
+                            style={{ accentColor: themeColor }}
                         />
-                        <label htmlFor="flex-dates" className="text-xs text-slate-600 font-black tracking-wider uppercase cursor-pointer select-none">
+                        <label htmlFor="flex-dates" className="text-xs text-slate-500 font-black tracking-wider uppercase cursor-pointer select-none hover:text-slate-700 transition-colors">
                             Flexible Dates
                         </label>
                     </div>
