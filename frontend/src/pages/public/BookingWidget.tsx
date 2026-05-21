@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
-import { Calendar as CalendarIcon, Users, ArrowRight, Minus, Plus, Search, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, ArrowRight, Minus, Plus, Search, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
@@ -151,8 +151,8 @@ export default function BookingWidget() {
         }
     };
 
-    const getNormalizedColor = (col?: string | null) => {
-        return col || '#7c3aed';
+    const getNormalizedColor = (_col?: string | null) => {
+        return '#7c3aed'; // Always purple — Staybooker brand
     };
     const primaryHex = getNormalizedColor(config?.primary_color);
     const bgColor = config?.widget_background_color || '#ffffff';
@@ -374,103 +374,169 @@ export default function BookingWidget() {
 
             {/* 1. MODERN FLOATING CARD LAYOUT (DEFAULT) */}
             {layout === 'modern' && (
-                <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-3 lg:p-4 w-full max-w-6xl flex flex-col lg:flex-row items-stretch lg:items-center gap-3.5 lg:gap-5 border border-white/80 ring-1 ring-slate-100"
+                <div className="bg-white rounded-2xl shadow-xl p-3 w-full max-w-6xl flex flex-col gap-3 border border-slate-200"
                      style={{ backgroundColor: bgColor }}>
 
-                    {/* DATE GROUP - Combined Check In & Out */}
-                    <div className="w-full lg:flex-[2] relative group">
-                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                            <PopoverTrigger asChild>
-                                <button className="w-full flex flex-row items-center gap-3 p-3 sm:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
-                                        style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
-                                    {/* Check-In Section */}
-                                    <div className="flex-1 flex items-center gap-2.5 min-w-0">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl custom-theme-bg-light flex items-center justify-center shrink-0">
-                                            <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
-                                            <span className="text-xs sm:text-sm font-extrabold text-slate-800 block truncate">
-                                                {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select"}
-                                            </span>
-                                            <span className="text-[10px] sm:text-xs font-medium text-slate-500 block hidden sm:block">
-                                                {checkInDate ? format(checkInDate, "EEEE") : "Day"}
-                                            </span>
-                                        </div>
-                                    </div>
+                    {/* DATE TRIGGER BUTTON */}
+                    <button
+                        className="w-full flex flex-row items-center gap-3 p-3 rounded-xl border-2 transition-all text-left cursor-pointer"
+                        style={{
+                            borderColor: isCalendarOpen ? primaryHex : '#e2e8f0',
+                            backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)'
+                        }}
+                        onClick={() => {
+                            setIsCalendarOpen(!isCalendarOpen);
+                            setIsGuestOpen(false);
+                        }}
+                    >
+                        {/* Check-In */}
+                        <div className="flex-1 flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                 style={{ backgroundColor: `${primaryHex}18`, color: primaryHex }}>
+                                <CalendarIcon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
+                                <span className="text-xs font-extrabold text-slate-800 block truncate">
+                                    {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select"}
+                                </span>
+                            </div>
+                        </div>
 
-                                    {/* Separator */}
-                                    <div className="flex items-center justify-center px-1 text-slate-300">
-                                        <ArrowRight className="w-4 h-4" />
-                                    </div>
+                        <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
 
-                                    {/* Check-Out Section */}
-                                    <div className="flex-1 flex items-center gap-2.5 pl-1 border-l border-slate-100 min-w-0">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl custom-theme-bg-light flex items-center justify-center shrink-0">
-                                            <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                        {/* Check-Out */}
+                        <div className="flex-1 flex items-center gap-2.5 pl-2 border-l border-slate-100 min-w-0">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                 style={{ backgroundColor: `${primaryHex}18`, color: primaryHex }}>
+                                <CalendarIcon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
+                                <span className="text-xs font-extrabold text-slate-800 block truncate">
+                                    {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select"}
+                                </span>
+                            </div>
+                        </div>
+                    </button>
+
+                    {/* INLINE CALENDAR — expands inside widget, no iframe clipping */}
+                    {isCalendarOpen && (
+                        <div className="w-full rounded-xl border border-slate-200 bg-white overflow-hidden">
+                            <Calendar
+                                mode="range"
+                                selected={{ from: checkInDate, to: checkOutDate }}
+                                onSelect={(range: any) => {
+                                    if (range?.from) setCheckInDate(range.from);
+                                    if (range?.to) {
+                                        setCheckOutDate(range.to);
+                                        setIsCalendarOpen(false);
+                                    } else {
+                                        setCheckOutDate(undefined);
+                                    }
+                                }}
+                                numberOfMonths={1}
+                                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                className="p-0 w-full"
+                                classNames={{
+                                    months: "w-full",
+                                    month: "w-full",
+                                    table: "w-full",
+                                    cell: "h-9 flex-1 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-lg [&:has([aria-selected].day-outside)]:bg-slate-50/50 [&:has([aria-selected])]:bg-violet-50 first:[&:has([aria-selected])]:rounded-l-lg last:[&:has([aria-selected])]:rounded-r-lg focus-within:relative focus-within:z-20",
+                                    day: "h-9 w-full p-0 font-normal group aria-selected:opacity-100 hover:bg-violet-50 rounded-lg transition-all",
+                                    day_selected: "font-bold shadow-sm",
+                                    day_today: "font-bold border",
+                                    head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] flex-1 pb-2 text-center",
+                                    head_row: "flex w-full",
+                                    row: "flex w-full mt-1",
+                                    caption: "flex justify-center py-3 px-3 relative items-center text-white rounded-t-lg mb-0",
+                                    caption_label: "text-xs font-extrabold tracking-wide uppercase",
+                                    nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
+                                    nav: "flex items-center justify-between absolute inset-x-3 top-2",
+                                }}
+                                styles={{
+                                    caption: { backgroundColor: primaryHex },
+                                    day_selected: { backgroundColor: primaryHex, color: 'white' },
+                                    day_today: { borderColor: primaryHex, color: primaryHex, backgroundColor: `${primaryHex}12` },
+                                }}
+                            />
+                            <div className="border-t border-slate-100 py-2 text-center text-[10px] text-slate-400 font-bold">
+                                Tap check-in date, then check-out date
+                            </div>
+                        </div>
+                    )}
+
+                    {/* GUESTS SELECTOR — inline expand */}
+                    <div className="w-full">
+                        <button
+                            className="w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left cursor-pointer"
+                            style={{
+                                borderColor: isGuestOpen ? primaryHex : '#e2e8f0',
+                                backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)'
+                            }}
+                            onClick={() => {
+                                setIsGuestOpen(!isGuestOpen);
+                                setIsCalendarOpen(false);
+                            }}
+                        >
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                 style={{ backgroundColor: `${primaryHex}18`, color: primaryHex }}>
+                                <Users className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
+                                <span className="text-xs font-extrabold text-slate-800 block">
+                                    {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'} · {roomsCount} {roomsCount === 1 ? 'Room' : 'Rooms'}
+                                </span>
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0" style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                        </button>
+
+                        {/* Inline guest controls */}
+                        {isGuestOpen && (
+                            <div className="mt-2 rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+                                {[['Rooms', roomsCount, (v: number) => setRoomsCount(v), 1, 5],
+                                  ['Adults', adults, (v: number) => setAdults(v), 1, 10],
+                                  ['Children', children, (v: number) => setChildren(v), 0, 6]].map(([label, val, setter, min, max]: any) => (
+                                    <div key={label} className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-bold text-sm text-slate-900">{label}</p>
+                                            <p className="text-[10px] font-semibold text-slate-400">
+                                                {label === 'Rooms' ? 'Total rooms' : label === 'Adults' ? 'Ages 13+' : 'Ages 0-12'}
+                                            </p>
                                         </div>
-                                        <div className="min-w-0">
-                                            <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
-                                            <span className="text-xs sm:text-sm font-extrabold text-slate-800 block truncate">
-                                                {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select"}
-                                            </span>
-                                            <span className="text-[10px] sm:text-xs font-medium text-slate-500 block hidden sm:block">
-                                                {checkOutDate ? format(checkOutDate, "EEEE") : "Day"}
-                                            </span>
+                                        <div className="flex items-center gap-3 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                                            <button
+                                                className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white hover:shadow-sm transition-all disabled:opacity-40"
+                                                onClick={() => setter(Math.max(min, val - 1))}
+                                                disabled={val <= min}
+                                            >
+                                                <Minus className="h-3 w-3 text-slate-700" />
+                                            </button>
+                                            <span className="w-5 text-center text-sm font-black text-slate-900">{val}</span>
+                                            <button
+                                                className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white hover:shadow-sm transition-all disabled:opacity-40"
+                                                onClick={() => setter(Math.min(max, val + 1))}
+                                                disabled={val >= max}
+                                            >
+                                                <Plus className="h-3 w-3 text-slate-700" />
+                                            </button>
                                         </div>
                                     </div>
-                                </button>
-                            </PopoverTrigger>
-                            {calendarPopoverContent}
-                        </Popover>
-                    </div>
-
-                    {/* GUESTS SELECTOR - Smart Combined */}
-                    <div className="w-full lg:flex-1 relative group">
-                        <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
-                            <PopoverTrigger asChild>
-                                <button className="w-full flex items-start gap-3 p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all text-left group cursor-pointer"
-                                        style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
-                                    <div className="w-10 h-10 rounded-xl custom-theme-bg-light group-hover:custom-theme-btn flex items-center justify-center shrink-0 mt-0.5 transition-colors">
-                                        <Users className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Guests & Rooms</span>
-                                        <span className="text-sm font-extrabold text-slate-800 block">
-                                            {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
-                                        </span>
-                                        <span className="text-xs font-medium text-slate-500 block mt-0.5">
-                                            {roomsCount} {roomsCount === 1 ? 'Room' : 'Rooms'}, {adults} Adult{children > 0 ? `, ${children} Child` : ''}
-                                        </span>
-                                    </div>
-                                </button>
-                            </PopoverTrigger>
-                            {guestPopoverContent}
-                        </Popover>
-                    </div>
-
-                    {/* PROMO CODE - Hidden on mobile to keep widget compact */}
-                    <div className="hidden lg:flex w-full lg:w-48 flex-col justify-center p-3.5 lg:p-4 rounded-2xl border border-slate-200/80 custom-theme-border hover:shadow-md transition-all"
-                         style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 text-left">Promo Code</span>
-                        <input
-                            className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none placeholder:text-slate-400 placeholder:font-medium text-slate-800 w-full"
-                            placeholder="Optional code"
-                            value={promoCode}
-                            onChange={(e) => setPromoCode(e.target.value)}
-                        />
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* SEARCH BUTTON */}
-                    <div className="w-full lg:w-auto flex items-center">
-                        <Button
-                            className="w-full lg:w-auto px-8 h-16 rounded-2xl custom-theme-btn font-bold text-base shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer border-0"
-                            onClick={handleSearch}
-                        >
-                            <Search className="w-5 h-5" />
-                            Search
-                        </Button>
-                    </div>
+                    <button
+                        className="w-full h-14 rounded-xl text-white font-extrabold text-sm tracking-wide flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] hover:opacity-90"
+                        style={{ backgroundColor: primaryHex }}
+                        onClick={handleSearch}
+                    >
+                        <Search className="w-5 h-5" />
+                        Search Available Rooms
+                    </button>
                 </div>
             )}
 
