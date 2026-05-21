@@ -1,12 +1,12 @@
 // Availability Page - Premium Redesign with Full Feature Set
 import {
   ChevronLeft, ChevronRight, Edit2, Lock, Loader2,
-  TrendingUp, BedDouble, XCircle, BarChart3, RefreshCw,
-  Sliders, IndianRupee, CalendarDays, CheckCircle2, AlertTriangle, Sparkles
+  BedDouble, BarChart3, RefreshCw, Sliders,
+  CheckCircle2, AlertTriangle, Sparkles
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -20,12 +20,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { PageShell } from '@/components/layout/PageShell';
 import { apiClient } from '@/api/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isToday, isBefore, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { BulkUpdateDialog } from '@/components/availability/BulkUpdateDialog';
 import { ManageOccupancyDialog } from '@/components/availability/ManageOccupancyDialog';
+
 
 interface AvailabilityDay {
   date: string;
@@ -134,28 +136,17 @@ export function AvailabilityPage() {
         <p className="text-sm font-medium">Loading availability calendar…</p>
       </div>
     );
-  }
-
-  return (
+  }  return (
     <TooltipProvider>
-      <div className="space-y-6">
-
-        {/* ── Page Header ── */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <CalendarDays className="h-6 w-6 text-primary" />
-              Availability
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Real-time room inventory — click any cell to manage inventory & pricing
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
+      <PageShell
+        title="Availability"
+        subtitle="Real-time room inventory — click any cell to manage inventory & pricing"
+        actions={
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-2 h-9 text-xs"
               onClick={() => fetchAvailability(true)}
               disabled={isRefreshing}
             >
@@ -164,66 +155,63 @@ export function AvailabilityPage() {
             </Button>
             <Button
               size="sm"
-              className="gap-2"
+              className="gap-2 h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
               onClick={() => setIsBulkDialogOpen(true)}
             >
               <Sliders className="h-3.5 w-3.5" />
               Bulk Block
             </Button>
           </div>
-        </div>
+        }
+      >
 
         {/* ── Summary Stats Bar ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
               label: 'Occupancy Rate',
               value: `${stats.occupancyRate}%`,
               icon: BarChart3,
-              color: 'text-primary',
-              bg: 'bg-primary/10',
+              color: 'text-indigo-600 dark:text-indigo-400',
               sub: `${stats.totalBooked} of ${stats.totalRooms} room-nights`,
             },
             {
               label: 'Available',
               value: stats.totalAvailable,
               icon: CheckCircle2,
-              color: 'text-emerald-600',
-              bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+              color: 'text-emerald-600 dark:text-emerald-400',
               sub: 'Room-nights open',
             },
             {
               label: 'Booked',
               value: stats.totalBooked,
               icon: BedDouble,
-              color: 'text-blue-600',
-              bg: 'bg-blue-50 dark:bg-blue-950/30',
+              color: 'text-blue-600 dark:text-blue-400',
               sub: 'Confirmed reservations',
             },
             {
               label: 'Blocked',
               value: stats.totalBlocked,
               icon: AlertTriangle,
-              color: 'text-amber-600',
-              bg: 'bg-amber-50 dark:bg-amber-950/30',
+              color: 'text-amber-600 dark:text-amber-400',
               sub: 'Manually blocked rooms',
             },
-          ].map(({ label, value, icon: Icon, color, bg, sub }) => (
-            <div key={label} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 shadow-sm">
-              <div className={cn('p-2.5 rounded-lg shrink-0', bg)}>
-                <Icon className={cn('h-5 w-5', color)} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground font-medium truncate">{label}</p>
-                <p className={cn('text-2xl font-black leading-tight', color)}>{value}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{sub}</p>
-              </div>
-            </div>
+          ].map(({ label, value, icon: Icon, color, sub }) => (
+            <Card key={label} className="shadow-none border-border/80 rounded-xl">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5 px-4 pt-4">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</CardTitle>
+                <Icon className={cn('h-4 w-4', color)} />
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="text-2xl font-bold tracking-tight text-foreground">{value}</div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {/* ── Info Banner ── */}
-        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-3 flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-300 shadow-sm">
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-300 shadow-sm">
           <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5 animate-pulse" />
           <div>
             <span className="font-semibold text-blue-900 dark:text-blue-200">Quick Tip:</span> Click any individual cell in the grid below to override its daily rate or mark rooms as sold out/blocked. Use the <strong className="font-bold">Bulk Block</strong> button at the top to block multiple rooms over a date range.
@@ -231,46 +219,48 @@ export function AvailabilityPage() {
         </div>
 
         {/* ── Controls Row ── */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Date Navigator */}
-          <div className="flex items-center gap-1 bg-muted/50 rounded-xl p-1 border border-border/60">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => navigateDate('prev')}>
-              <ChevronLeft className="h-4 w-4" />
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-card p-4 rounded-xl border border-border">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Date Navigator */}
+            <div className="flex items-center gap-1 bg-muted/60 dark:bg-muted/20 rounded-lg p-1 border border-border/80">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={() => navigateDate('prev')}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="px-3 text-sm font-semibold min-w-[140px] text-center text-foreground">
+                {format(dates[0], 'MMM d')} – {format(dates[dates.length - 1], 'MMM d, yyyy')}
+              </span>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={() => navigateDate('next')}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <Button variant="outline" size="sm" onClick={goToToday} className="h-9 text-xs bg-background border-border/80 rounded-lg font-medium shadow-none">
+              Today
             </Button>
-            <span className="px-3 text-sm font-semibold min-w-[140px] text-center">
-              {format(dates[0], 'MMM d')} – {format(dates[dates.length - 1], 'MMM d, yyyy')}
-            </span>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => navigateDate('next')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+
+            {/* Room Type Filter */}
+            <Select value={selectedRoomType} onValueChange={setSelectedRoomType}>
+              <SelectTrigger className="h-9 w-[180px] text-sm bg-background border-border/80 rounded-lg font-medium shadow-none">
+                <SelectValue placeholder="All Room Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Room Types</SelectItem>
+                {availabilityData.map(room => (
+                  <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <Button variant="outline" size="sm" onClick={goToToday} className="h-9 text-xs">
-            Today
-          </Button>
-
-          {/* Room Type Filter */}
-          <Select value={selectedRoomType} onValueChange={setSelectedRoomType}>
-            <SelectTrigger className="h-9 w-[180px] text-sm">
-              <SelectValue placeholder="All Room Types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Room Types</SelectItem>
-              {availabilityData.map(room => (
-                <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Legend */}
-          <div className="flex items-center gap-3 ml-auto text-xs text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
             {[
-              { color: 'bg-emerald-400', label: 'Available' },
-              { color: 'bg-amber-400', label: 'Limited (<30%)' },
-              { color: 'bg-red-400', label: 'Sold Out' },
-              { color: 'bg-slate-300', label: 'Blocked' },
+              { color: 'bg-emerald-500', label: 'Available' },
+              { color: 'bg-amber-500', label: 'Limited (<30%)' },
+              { color: 'bg-red-500', label: 'Sold Out' },
+              { color: 'bg-slate-400', label: 'Blocked' },
             ].map(({ color, label }) => (
-              <span key={label} className="flex items-center gap-1.5">
+              <span key={label} className="flex items-center gap-2">
                 <span className={cn('h-2.5 w-2.5 rounded-full', color)} />
                 {label}
               </span>
@@ -279,42 +269,41 @@ export function AvailabilityPage() {
         </div>
 
         {/* ── Availability Grid ── */}
-        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <div style={{ minWidth: `${180 + DAYS_TO_SHOW * 72}px` }}>
+            <div style={{ minWidth: `${220 + DAYS_TO_SHOW * 76}px` }}>
 
               {/* Header Row */}
               <div
-                className="grid border-b bg-muted/40"
-                style={{ gridTemplateColumns: `180px repeat(${DAYS_TO_SHOW}, 1fr)` }}
+                className="grid border-b border-border/80 bg-muted/40"
+                style={{ gridTemplateColumns: `220px repeat(${DAYS_TO_SHOW}, 1fr)` }}
               >
-                <div className="px-4 py-3 text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <div className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <BedDouble className="h-3.5 w-3.5" />
                   Room Type
                 </div>
                 {dates.map(date => {
                   const past = isBefore(startOfDay(date), startOfDay(new Date()));
+                  const today = isToday(date);
                   return (
                     <div
                       key={date.toISOString()}
                       className={cn(
-                        'px-1.5 py-2 text-center border-l text-xs transition-colors',
-                        isToday(date) && 'bg-primary/10',
-                        past && !isToday(date) && 'opacity-50'
+                        'px-1 py-3 text-center border-l border-border/80 text-xs transition-colors flex flex-col items-center justify-center',
+                        today && 'bg-primary/5',
+                        past && !today && 'opacity-50'
                       )}
                     >
-                      <div className={cn('font-black text-[10px] uppercase tracking-wider', isToday(date) ? 'text-primary' : 'text-muted-foreground')}>
+                      <span className={cn('text-[10px] font-semibold uppercase tracking-wider', today ? 'text-primary' : 'text-muted-foreground')}>
                         {format(date, 'EEE')}
-                      </div>
-                      <div className={cn('font-bold mt-0.5', isToday(date) ? 'text-primary' : 'text-foreground')}>
+                      </span>
+                      <span className={cn(
+                        'w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold my-0.5 transition-colors',
+                        today ? 'bg-primary text-primary-foreground' : 'text-foreground'
+                      )}>
                         {format(date, 'd')}
-                      </div>
-                      <div className="text-[9px] text-muted-foreground">{format(date, 'MMM')}</div>
-                      {isToday(date) && (
-                        <div className="mt-1">
-                          <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-full font-bold">TODAY</span>
-                        </div>
-                      )}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground font-medium">{format(date, 'MMM')}</span>
                     </div>
                   );
                 })}
@@ -331,13 +320,13 @@ export function AvailabilityPage() {
                 <div
                   key={room.id}
                   className={cn(
-                    'grid border-b last:border-0',
-                    rowIdx % 2 === 1 && 'bg-muted/20'
+                    'grid border-b border-border/80 last:border-0',
+                    rowIdx % 2 === 1 && 'bg-muted/5'
                   )}
-                  style={{ gridTemplateColumns: `180px repeat(${DAYS_TO_SHOW}, 1fr)` }}
+                  style={{ gridTemplateColumns: `220px repeat(${DAYS_TO_SHOW}, 1fr)` }}
                 >
                   {/* Room Name Cell */}
-                  <div className="px-4 py-3 flex flex-col justify-center border-r border-border/50">
+                  <div className="px-5 py-4 flex flex-col justify-center">
                     <span className="font-semibold text-sm text-foreground leading-tight">{room.name}</span>
                     <span className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
                       <BedDouble className="h-2.5 w-2.5" />
@@ -364,7 +353,7 @@ export function AvailabilityPage() {
                         <TooltipTrigger asChild>
                           <div
                             className={cn(
-                              'border-l border-border/30 flex flex-col items-center justify-center py-2 px-1 cursor-pointer transition-all duration-150 group relative',
+                              'border-l border-b border-border/80 flex flex-col items-center justify-center py-2 px-1 cursor-pointer transition-all duration-150 group relative hover:bg-muted/10',
                               bg,
                               hoveredCell === cellKey && 'ring-2 ring-inset ring-primary/40 z-10',
                               isPast && 'opacity-60',
@@ -377,23 +366,22 @@ export function AvailabilityPage() {
                           >
                             {/* Available / Total */}
                             <div className="flex items-baseline gap-0.5">
-                              <span className={cn('text-lg font-black leading-none', text)}>{available}</span>
-                              <span className="text-[10px] text-muted-foreground font-medium">/{total}</span>
+                              <span className={cn('text-base font-semibold leading-none', text)}>{available}</span>
+                              <span className="text-[10px] text-muted-foreground/85 font-normal">/{total}</span>
                             </div>
 
                             {/* Price */}
                             {price ? (
-                              <div className="flex items-center gap-0.5 mt-1">
-                                <IndianRupee className="h-2.5 w-2.5 text-muted-foreground" />
-                                <span className="text-[10px] font-bold text-muted-foreground">{price.toLocaleString('en-IN')}</span>
+                              <div className="text-[11px] font-semibold text-muted-foreground/90 mt-1">
+                                ₹{price.toLocaleString('en-IN')}
                               </div>
                             ) : (
-                              <div className="text-[9px] text-muted-foreground/50 mt-1">no rate</div>
+                              <div className="text-[10px] text-muted-foreground/40 mt-1 italic">no rate</div>
                             )}
 
                             {/* Block indicator */}
                             {(isBlocked || blocked > 0) && (
-                              <div className="absolute top-1 right-1">
+                              <div className="absolute top-1.5 right-1.5">
                                 <Lock className="h-2.5 w-2.5 text-slate-400" />
                               </div>
                             )}
@@ -425,23 +413,24 @@ export function AvailabilityPage() {
             </div>
           </div>
         </div>
-        {/* ── Dialogs ── */}
-        <BulkUpdateDialog
-          open={isBulkDialogOpen}
-          onOpenChange={setIsBulkDialogOpen}
-          roomTypes={availabilityData.map(r => ({ id: r.id, name: r.name, totalInventory: r.totalInventory }))}
-          onSuccess={() => fetchAvailability(true)}
-        />
+      </PageShell>
 
-        <ManageOccupancyDialog
-          open={isManageDialogOpen}
-          onOpenChange={setIsManageDialogOpen}
-          roomType={selectedCell?.room || null}
-          date={selectedCell?.date || null}
-          currentPrice={selectedCell?.price}
-          onSuccess={() => fetchAvailability(true)}
-        />
-      </div>
+      {/* ── Dialogs ── */}
+      <BulkUpdateDialog
+        open={isBulkDialogOpen}
+        onOpenChange={setIsBulkDialogOpen}
+        roomTypes={availabilityData.map(r => ({ id: r.id, name: r.name, totalInventory: r.totalInventory }))}
+        onSuccess={() => fetchAvailability(true)}
+      />
+
+      <ManageOccupancyDialog
+        open={isManageDialogOpen}
+        onOpenChange={setIsManageDialogOpen}
+        roomType={selectedCell?.room || null}
+        date={selectedCell?.date || null}
+        currentPrice={selectedCell?.price}
+        onSuccess={() => fetchAvailability(true)}
+      />
     </TooltipProvider>
   );
 }
