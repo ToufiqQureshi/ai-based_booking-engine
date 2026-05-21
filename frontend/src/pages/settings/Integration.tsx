@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -139,14 +139,33 @@ const IntegrationPage = () => {
         }
     };
 
-    const updateSettings = async (updates: Partial<IntegrationSettings>) => {
-        try {
-            const data = await apiClient.put<IntegrationSettings>('/integration/settings', updates);
-            setSettings(data);
-            toast.success('Settings updated successfully');
-        } catch (error) {
-            toast.error('Failed to update settings');
+    const pendingUpdates = useRef<Partial<IntegrationSettings>>({});
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const updateSettings = (updates: Partial<IntegrationSettings>) => {
+        // Optimistically update local state so UI doesn't lag
+        if (settings) {
+            setSettings({ ...settings, ...updates });
         }
+
+        // Accumulate updates
+        pendingUpdates.current = { ...pendingUpdates.current, ...updates };
+
+        // Debounce the API call
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+        timeoutRef.current = setTimeout(async () => {
+            const updatesToSend = { ...pendingUpdates.current };
+            pendingUpdates.current = {}; // clear for next time
+
+            try {
+                const data = await apiClient.put<IntegrationSettings>('/integration/settings', updatesToSend);
+                setSettings(data);
+                toast.success('Settings updated successfully');
+            } catch (error) {
+                toast.error('Failed to update settings');
+            }
+        }, 1000);
     };
 
     const testAI = async () => {
