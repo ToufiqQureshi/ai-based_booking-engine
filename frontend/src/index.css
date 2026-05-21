@@ -178,3 +178,13 @@
     @apply bg-slate-900/80 border-white/10;
   }
 }
+
+/* ─── React Day Picker Overrides ─────────────────────────────────────────── */
+@layer utilities {
+  .rdp-day_disabled {
+    opacity: 1 !important;
+  }
+  .rdp-day_disabled span {
+    opacity: 0.4 !important;
+  }
+}
