@@ -19,6 +19,7 @@ from app.models.integration import (
     WidgetCodeResponse
 )
 from app.models.hotel import Hotel
+from app.core.redis_client import redis_client
 
 router = APIRouter(prefix="/integration", tags=["Integration"])
 
@@ -115,6 +116,15 @@ async def update_integration_settings(
 
     await session.commit()
     await session.refresh(settings)
+    
+    # Invalidate public widget-config cache for this hotel
+    try:
+        cache_key = f"public:widget-config:{current_user.hotel_id}"
+        redis_client.delete_key(cache_key)
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to clear widget-config cache: {e}")
+        
     return settings
 
 
