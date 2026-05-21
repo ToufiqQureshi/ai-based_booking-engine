@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Key, Code, Webhook, Globe, Plus, Trash2, Eye, EyeOff, Search, MessageCircle, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
+import { Copy, Key, Code, Webhook, Globe, Plus, Trash2, Eye, EyeOff, Search, MessageCircle, Sparkles, Loader2, CheckCircle2, Save, Play, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/api/client';
 
@@ -61,6 +61,12 @@ const IntegrationPage = () => {
     const [testingAI, setTestingAI] = useState(false);
     const [previewHeight, setPreviewHeight] = useState(160);
 
+    // Custom CSS/JS local state (save only on button click)
+    const [customCss, setCustomCss] = useState(settings?.widget_custom_css || '');
+    const [customJs, setCustomJs] = useState(settings?.widget_custom_js || '');
+    const [isSavingCode, setIsSavingCode] = useState(false);
+    const [codePreviewKey, setCodePreviewKey] = useState(0);
+
     // Mobile Menu State
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -98,6 +104,8 @@ const IntegrationPage = () => {
 
             // Fetch integration settings
             const settingsData = await apiClient.get<IntegrationSettings>('/integration/settings');
+            setCustomCss(settingsData.widget_custom_css || '');
+            setCustomJs(settingsData.widget_custom_js || '');
             setSettings(settingsData);
 
             // Fetch API keys
@@ -571,49 +579,6 @@ const IntegrationPage = () => {
                                                     <span className="font-semibold text-sm text-foreground block">Premium Capsule</span>
                                                     <span className="text-[10px] text-muted-foreground mt-0.5 block">Rounded floating design</span>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Advanced Custom Styling/Code Option */}
-                                    <div className="border-t pt-5 mt-5">
-                                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                                            <Code className="w-4 h-4 text-primary" />
-                                            Custom Styles & Code Overrides
-                                        </h4>
-                                        <p className="text-xs text-muted-foreground mb-4">
-                                            Inject custom CSS styles or JavaScript overrides directly into the embedded booking widget frame to achieve your custom client website styling.
-                                        </p>
-                                        
-                                        <div className="space-y-4">
-                                            <div>
-                                                <Label className="flex justify-between items-center text-xs">
-                                                    <span>Custom CSS styling code</span>
-                                                    <span className="text-[9px] font-mono text-muted-foreground">Injected directly inside widget head</span>
-                                                </Label>
-                                                <textarea
-                                                    className="w-full mt-1 min-h-[120px] font-mono text-xs p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:text-slate-100"
-                                                    placeholder="/* Example:\n.custom-theme-btn {\n  border-radius: 9999px !important;\n}\n#hotelier-booking-widget {\n  font-family: 'Poppins', sans-serif;\n} */"
-                                                    value={settings.widget_custom_css || ''}
-                                                    onChange={(e) =>
-                                                        updateSettings({ widget_custom_css: e.target.value })
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Label className="flex justify-between items-center text-xs">
-                                                    <span>Custom JavaScript (JS) code</span>
-                                                    <span className="text-[9px] font-mono text-muted-foreground">Executes inside widget iframe context</span>
-                                                </Label>
-                                                <textarea
-                                                    className="w-full mt-1 min-h-[80px] font-mono text-xs p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:text-slate-100"
-                                                    placeholder="// Example:\n// console.log('Widget loaded successfully for slug: ' + config.hotelSlug);"
-                                                    value={settings.widget_custom_js || ''}
-                                                    onChange={(e) =>
-                                                        updateSettings({ widget_custom_js: e.target.value })
-                                                    }
-                                                />
                                             </div>
                                         </div>
                                     </div>
