@@ -196,6 +196,9 @@ export default function BookingWidget() {
                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
                         months: "flex flex-col md:flex-row space-y-3 md:space-x-4 md:space-y-0"
                     }}
+                    modifiersStyles={{
+                        selected: { backgroundColor: primaryHex, color: '#fff' }
+                    }}
                     components={{
                         DayContent: ({ date }: any) => {
                             const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
@@ -207,7 +210,7 @@ export default function BookingWidget() {
                             const isSoldOut = date.getDate() === 13;
                             return (
                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                    <span className={cn("text-xs font-bold leading-none", isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white")}>{date.getDate()}</span>
+                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
                                     {!isPast && (
                                         <span className={cn(
                                             "text-[9px] font-extrabold leading-none mt-1",
@@ -222,7 +225,7 @@ export default function BookingWidget() {
                     }}
                 />
                 <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
+                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
                 </div>
             </div>
         </PopoverContent>
@@ -442,6 +445,9 @@ export default function BookingWidget() {
                                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
                                         months: "w-full"
                                     }}
+                                    modifiersStyles={{
+                                        selected: { backgroundColor: primaryHex, color: '#fff' }
+                                    }}
                                     components={{
                                         DayContent: ({ date }: any) => {
                                             const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
@@ -452,14 +458,14 @@ export default function BookingWidget() {
                                             price = price + (isWeekend ? 500 : 0);
                                             const isSoldOut = date.getDate() === 13;
                                             return (
-                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5 rounded-xl hover:bg-slate-50 transition-colors">
-                                                    <span className={cn("text-[13px] font-black leading-none", isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white")}>{date.getDate()}</span>
+                                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
+                                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
                                                     {!isPast && (
                                                         <span className={cn(
-                                                            "text-[8px] font-extrabold leading-none mt-0.5",
-                                                            isSoldOut ? "text-red-500" : "text-emerald-600 group-aria-selected:text-white"
+                                                            "text-[9px] font-extrabold leading-none mt-1",
+                                                            isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
                                                         )}>
-                                                            {isSoldOut ? "Sold" : `₹${price}`}
+                                                            {isSoldOut ? "Sold Out" : `₹${price}`}
                                                         </span>
                                                     )}
                                                 </div>
@@ -468,7 +474,7 @@ export default function BookingWidget() {
                                     }}
                                 />
                                 <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT
+                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
                                 </div>
                             </div>
                         </div>
