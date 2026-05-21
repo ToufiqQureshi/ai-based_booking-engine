@@ -147,11 +147,13 @@ export default function BookingWidget() {
         }
     };
 
+    const urlParams = new URLSearchParams(window.location.search);
+
     const getNormalizedColor = (col?: string | null) => {
         return col || '#7c3aed';
     };
-    const primaryHex = getNormalizedColor(config?.primary_color);
-    const bgColor = config?.widget_background_color || '#ffffff';
+    const primaryHex = getNormalizedColor(urlParams.get('preview_primary_color') || config?.primary_color);
+    const bgColor = urlParams.get('preview_bg_color') || config?.widget_background_color || '#ffffff';
 
     // Calendar popover — same design as public booking page
     const calendarPopoverContent = (
@@ -326,7 +328,7 @@ export default function BookingWidget() {
         </PopoverContent>
     );
 
-    const layout = config?.widget_layout || 'modern';
+    const layout = urlParams.get('preview_layout') || config?.widget_layout || 'modern';
 
     return (
         <div ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4">

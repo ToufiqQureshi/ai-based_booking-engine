@@ -617,7 +617,7 @@ const IntegrationPage = () => {
                                 <div className="p-8 bg-muted rounded-xl border border-border flex items-center justify-center transition-all duration-300">
                                     <iframe
                                         key={`${settings?.widget_layout}-${settings?.widget_primary_color}-${settings?.widget_background_color}`}
-                                        src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget`}
+                                        src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget?preview_layout=${settings?.widget_layout || ''}&preview_primary_color=${encodeURIComponent(settings?.widget_primary_color || '')}&preview_bg_color=${encodeURIComponent(settings?.widget_background_color || '')}`}
                                         className="w-full max-w-4xl border-0 rounded-none overflow-visible shadow-none transition-all duration-300"
                                         style={{ height: `${previewHeight}px` }}
                                         title="Booking Widget Preview"
