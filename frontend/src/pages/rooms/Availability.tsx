@@ -3,7 +3,7 @@ import {
   ChevronLeft, ChevronRight, Edit2, Lock, Loader2,
   BedDouble, BarChart3, RefreshCw, Sliders,
   CheckCircle2, AlertTriangle, Sparkles,
-  Copy, CalendarDays
+  CalendarDays
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,6 @@ import { cn } from '@/lib/utils';
 import { BulkUpdateDialog } from '@/components/availability/BulkUpdateDialog';
 import { ManageOccupancyDialog } from '@/components/availability/ManageOccupancyDialog';
 import { WeekendUpdateDialog } from '@/components/availability/WeekendUpdateDialog';
-import { CopyCalendarDialog } from '@/components/availability/CopyCalendarDialog';
 
 
 interface AvailabilityDay {
@@ -67,7 +66,6 @@ export function AvailabilityPage() {
   const [selectedRoomType, setSelectedRoomType] = useState('all');
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isWeekendDialogOpen, setIsWeekendDialogOpen] = useState(false);
-  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedCell, setSelectedCell] = useState<{ room: { id: string; name: string }; date: Date; price?: number } | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
@@ -157,15 +155,6 @@ export function AvailabilityPage() {
             >
               <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
               Refresh
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 h-9 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50/50"
-              onClick={() => setIsCopyDialogOpen(true)}
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Copy Calendar
             </Button>
             <Button
               variant="outline"
@@ -453,12 +442,7 @@ export function AvailabilityPage() {
         onSuccess={() => fetchAvailability(true)}
       />
 
-      <CopyCalendarDialog
-        open={isCopyDialogOpen}
-        onOpenChange={setIsCopyDialogOpen}
-        roomTypes={availabilityData.map(r => ({ id: r.id, name: r.name, totalInventory: r.totalInventory }))}
-        onSuccess={() => fetchAvailability(true)}
-      />
+
 
       <ManageOccupancyDialog
         open={isManageDialogOpen}
