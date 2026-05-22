@@ -13,6 +13,7 @@ from app.models.room import RoomType, RoomTypeCreate, RoomTypeRead, RoomTypeUpda
 from app.models.amenity import Amenity, RoomAmenityLink
 from app.models.rates import RoomRate
 from sqlmodel import delete
+from app.api.v1.availability import clear_availability_cache
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
@@ -79,6 +80,7 @@ async def create_room(
         await session.commit()
         await session.refresh(room)
 
+    clear_availability_cache(current_user.hotel_id)
     return room
 
 
@@ -161,6 +163,7 @@ async def update_room(
     await session.commit()
     await session.refresh(room)
     
+    clear_availability_cache(current_user.hotel_id)
     return room
 
 
@@ -196,3 +199,4 @@ async def delete_room(room_id: str, current_user: CurrentUser, session: DbSessio
     
     await session.delete(room)
     await session.commit()
+    clear_availability_cache(current_user.hotel_id)

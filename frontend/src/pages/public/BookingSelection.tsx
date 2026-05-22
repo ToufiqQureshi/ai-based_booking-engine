@@ -107,12 +107,12 @@ export default function BookingSelection() {
     // Filtered rooms logic
     const filteredRooms = rooms
         .filter(room => {
-            const relevantRates = room.rate_options.filter(o => {
+            const relevantRates = (room.rate_options || []).filter(o => {
                 if ((searchType as string) === 'package') return !!o.is_package;
                 return !o.is_package;
             });
             
-            const displayRates = relevantRates.length > 0 ? relevantRates : room.rate_options;
+            const displayRates = relevantRates.length > 0 ? relevantRates : (room.rate_options || []);
             if (displayRates.length === 0) return false;
 
             const minPrice = Math.min(...displayRates.map(o => o.total_price || 0));
@@ -123,7 +123,7 @@ export default function BookingSelection() {
         })
         .sort((a, b) => {
             const getMinPrice = (r: any) => {
-                const rates = r.rate_options;
+                const rates = r.rate_options || [];
                 return rates.length > 0 ? Math.min(...rates.map((o: any) => o.total_price || 0)) : 0;
             };
             return sortBy === 'price_asc' ? getMinPrice(a) - getMinPrice(b) : getMinPrice(b) - getMinPrice(a);
@@ -329,7 +329,7 @@ export default function BookingSelection() {
 
     const startingPrice = (() => {
         if (!startingRoom || !startingRoom.rate_options || startingRoom.rate_options.length === 0) return 0;
-        return Math.min(...startingRoom.rate_options.map(o => o.price_per_night));
+        return Math.min(...(startingRoom.rate_options || []).map(o => o.price_per_night));
     })();
 
 
@@ -877,7 +877,7 @@ export default function BookingSelection() {
                                     // Professional Grouped Package View
                                     Object.values(
                                         rooms.reduce((acc, room) => {
-                                            room.rate_options
+                                            (room.rate_options || [])
                                                 .filter(o => o.is_package)
                                                 .forEach(plan => {
                                                     // Only keep the cheapest room option for each unique package name
@@ -999,12 +999,12 @@ export default function BookingSelection() {
                                 ) : (
                                     // Standard Room View
                                     filteredRooms.map((room) => {
-                                        const filteredRates = room.rate_options.filter(o => {
+                                        const filteredRates = (room.rate_options || []).filter(o => {
                                                 if ((searchType as string) === 'package') return !!o.is_package;
                                                 return !o.is_package;
                                             });
                                             
-                                            const displayRates = filteredRates.length > 0 ? filteredRates : room.rate_options;
+                                            const displayRates = filteredRates.length > 0 ? filteredRates : (room.rate_options || []);
 
                                             return (
                                                 <div key={room.id} className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-indigo-100 transition-all duration-300 group">
