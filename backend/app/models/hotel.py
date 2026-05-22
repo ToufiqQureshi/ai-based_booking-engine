@@ -60,6 +60,18 @@ class HotelSettings(SQLModel):
     multi_room_cart: bool = True
     featured_room_type_id: Optional[str] = None
 
+    # SMTP Configuration
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+
+    # WhatsApp Configuration
+    whatsapp_api_key: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
+
 
 
 class HotelBase(SQLModel):
@@ -76,6 +88,10 @@ class HotelBase(SQLModel):
     feature_rate_shopper: bool = Field(default=True)
     feature_ai_agent: bool = Field(default=True)
     feature_guest_bot: bool = Field(default=True)
+    feature_new_booking: bool = Field(default=True)
+    feature_color_palette: bool = Field(default=True)
+    feature_custom_logo: bool = Field(default=True)
+    feature_custom_widget: bool = Field(default=True)
 
 
 class Hotel(HotelBase, table=True):
@@ -160,4 +176,8 @@ class HotelUpdate(SQLModel):
     feature_rate_shopper: Optional[bool] = None
     feature_ai_agent: Optional[bool] = None
     feature_guest_bot: Optional[bool] = None
+    feature_new_booking: Optional[bool] = None
+    feature_color_palette: Optional[bool] = None
+    feature_custom_logo: Optional[bool] = None
+    feature_custom_widget: Optional[bool] = None
     is_active: Optional[bool] = None

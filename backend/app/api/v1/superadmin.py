@@ -54,6 +54,10 @@ async def list_hotels(
             "feature_ai_agent": hotel.feature_ai_agent,
             "feature_guest_bot": hotel.feature_guest_bot,
             "feature_rate_shopper": hotel.feature_rate_shopper,
+            "feature_new_booking": getattr(hotel, "feature_new_booking", True),
+            "feature_color_palette": getattr(hotel, "feature_color_palette", True),
+            "feature_custom_logo": getattr(hotel, "feature_custom_logo", True),
+            "feature_custom_widget": getattr(hotel, "feature_custom_widget", True),
             "subscription": {
                 "plan": sub.plan_name if sub else "None",
                 "status": sub.status if sub else "inactive",

@@ -57,6 +57,10 @@ export interface Hotel {
   feature_rate_shopper?: boolean;
   feature_ai_agent?: boolean;
   feature_guest_bot?: boolean;
+  feature_new_booking?: boolean;
+  feature_color_palette?: boolean;
+  feature_custom_logo?: boolean;
+  feature_custom_widget?: boolean;
   is_active?: boolean;
   rate_plans?: RatePlan[];
   created_at: string;
@@ -128,6 +132,7 @@ export interface RoomType {
   market_price?: number;
   photos: RoomPhoto[];
   amenities: RoomAmenity[];
+  cancellation_policy?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;

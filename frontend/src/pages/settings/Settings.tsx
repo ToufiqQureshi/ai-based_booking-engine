@@ -1,6 +1,6 @@
-﻿// Settings Page - Real API Integration
+// Settings Page - Real API Integration
 import { useState } from 'react';
-import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag } from 'lucide-react';
+import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag, Lock, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -117,6 +117,14 @@ export function SettingsPage() {
       important_info: hotel?.settings?.important_info || '',
       multi_room_cart: hotel?.settings?.multi_room_cart !== false,
       featured_room_type_id: hotel?.settings?.featured_room_type_id || '',
+      smtp_host: hotel?.settings?.smtp_host || '',
+      smtp_port: hotel?.settings?.smtp_port || '',
+      smtp_username: hotel?.settings?.smtp_username || '',
+      smtp_password: hotel?.settings?.smtp_password || '',
+      smtp_from_email: hotel?.settings?.smtp_from_email || '',
+      whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
+      whatsapp_phone_number_id: hotel?.settings?.whatsapp_phone_number_id || '',
+      whatsapp_business_account_id: hotel?.settings?.whatsapp_business_account_id || '',
     },
     photos: hotel?.photos || []
   });
@@ -220,6 +228,20 @@ export function SettingsPage() {
           >
             <Palette className="h-4 w-4" />
             <span className="font-medium">Branding</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="email" 
+            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+          >
+            <Mail className="h-4 w-4" />
+            <span className="font-medium">Email Settings</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="whatsapp" 
+            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span className="font-medium">WhatsApp Settings</span>
           </TabsTrigger>
           <TabsTrigger 
             value="policies" 
@@ -519,75 +541,87 @@ export function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="logoUpload">Hotel Logo</Label>
-                    <div className="flex gap-4 items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="relative"
-                            disabled={isSaving}
-                          >
-                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                            Upload New Logo
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="absolute inset-0 opacity-0 cursor-pointer"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-
-                                try {
-                                  setIsSaving(true);
-                                  const formData = new FormData();
-                                  formData.append('file', file);
-
-                                  const response = await apiClient.post<{ url: string }>('/upload', formData);
-                                  handleUpdate('settings', 'logo_url', response.url);
-
-                                  toast({
-                                    title: "Logo Uploaded",
-                                    description: "Don't forget to click Save Branding to apply changes.",
-                                  });
-                                } catch (error) {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Upload Failed",
-                                    description: "Could not upload logo. Try a smaller file.",
-                                  });
-                                } finally {
-                                  setIsSaving(false);
-                                }
-                              }}
-                            />
-                          </Button>
-                          {formData.settings.logo_url && (
+                    <div className="relative">
+                      {!hotel.feature_custom_logo && (
+                        <div className="absolute inset-0 z-10 backdrop-blur-sm bg-white/40 dark:bg-slate-950/40 rounded-xl flex flex-col items-center justify-center border border-dashed border-indigo-200 p-2 text-center">
+                          <Lock className="w-5 h-5 text-indigo-600 mb-1 animate-bounce" />
+                          <span className="text-xs font-black text-slate-900 dark:text-white">Custom Logo Locked</span>
+                          <span className="text-[9px] text-slate-500 max-w-[200px] mt-0.5 leading-normal">Upgrade your plan to customize the logo displayed to guests.</span>
+                        </div>
+                      )}
+                      <div className="flex gap-4 items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              className="text-destructive h-8"
-                              onClick={() => handleUpdate('settings', 'logo_url', '')}
+                              className="relative"
+                              disabled={isSaving || !hotel.feature_custom_logo}
                             >
-                              Remove
+                              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                              Upload New Logo
+                              {hotel.feature_custom_logo && (
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="absolute inset-0 opacity-0 cursor-pointer"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+
+                                    try {
+                                      setIsSaving(true);
+                                      const formData = new FormData();
+                                      formData.append('file', file);
+
+                                      const response = await apiClient.post<{ url: string }>('/upload', formData);
+                                      handleUpdate('settings', 'logo_url', response.url);
+
+                                      toast({
+                                        title: "Logo Uploaded",
+                                        description: "Don't forget to click Save Branding to apply changes.",
+                                      });
+                                    } catch (error) {
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Upload Failed",
+                                        description: "Could not upload logo. Try a smaller file.",
+                                      });
+                                    } finally {
+                                      setIsSaving(false);
+                                    }
+                                  }}
+                                />
+                              )}
                             </Button>
+                            {formData.settings.logo_url && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive h-8"
+                                disabled={!hotel.feature_custom_logo}
+                                onClick={() => handleUpdate('settings', 'logo_url', '')}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Recommended size: 200x200px. formats: PNG, JPG.
+                          </p>
+                        </div>
+
+                        <div className="h-20 w-20 border rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden relative">
+                          {formData.settings.logo_url ? (
+                            <img
+                              src={formData.settings.logo_url}
+                              alt="Logo Preview"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground text-center px-1">No Logo</span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Recommended size: 200x200px. formats: PNG, JPG.
-                        </p>
-                      </div>
-
-                      <div className="h-20 w-20 border rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden relative">
-                        {formData.settings.logo_url ? (
-                          <img
-                            src={formData.settings.logo_url}
-                            alt="Logo Preview"
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground text-center px-1">No Logo</span>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -657,7 +691,132 @@ export function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* Policies Settings */}
+          {/* Email Settings */}
+          <TabsContent value="email" className="space-y-6 mt-0">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-primary" />
+                  SMTP Email Configuration
+                </CardTitle>
+                <CardDescription>
+                  Configure SMTP server details to send system notification and confirmation emails using your own domain.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtpHost">SMTP Host</Label>
+                    <Input
+                      id="smtpHost"
+                      placeholder="smtp.mailgun.org"
+                      value={formData.settings.smtp_host || ''}
+                      onChange={(e) => handleUpdate('settings', 'smtp_host', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtpPort">SMTP Port</Label>
+                    <Input
+                      id="smtpPort"
+                      placeholder="587"
+                      value={formData.settings.smtp_port || ''}
+                      onChange={(e) => handleUpdate('settings', 'smtp_port', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtpUsername">SMTP Username</Label>
+                    <Input
+                      id="smtpUsername"
+                      placeholder="postmaster@yourdomain.com"
+                      value={formData.settings.smtp_username || ''}
+                      onChange={(e) => handleUpdate('settings', 'smtp_username', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtpPassword">SMTP Password</Label>
+                    <Input
+                      id="smtpPassword"
+                      type="password"
+                      placeholder="••••••••••••••••"
+                      value={formData.settings.smtp_password || ''}
+                      onChange={(e) => handleUpdate('settings', 'smtp_password', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="smtpFromEmail">Sender Email Address (From)</Label>
+                    <Input
+                      id="smtpFromEmail"
+                      type="email"
+                      placeholder="reservations@yourhotel.com"
+                      value={formData.settings.smtp_from_email || ''}
+                      onChange={(e) => handleUpdate('settings', 'smtp_from_email', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save Email Settings
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* WhatsApp Settings */}
+          <TabsContent value="whatsapp" className="space-y-6 mt-0">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  WhatsApp Business API Configuration
+                </CardTitle>
+                <CardDescription>
+                  Provide Meta WhatsApp Cloud API credentials to dispatch instant guest confirmations and reservation followups.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsappApiKey">WhatsApp API Key / Access Token</Label>
+                    <Input
+                      id="whatsappApiKey"
+                      type="password"
+                      placeholder="EAAGz..."
+                      value={formData.settings.whatsapp_api_key || ''}
+                      onChange={(e) => handleUpdate('settings', 'whatsapp_api_key', e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
+                      <Input
+                        id="whatsappPhoneNumberId"
+                        placeholder="1098485747..."
+                        value={formData.settings.whatsapp_phone_number_id || ''}
+                        onChange={(e) => handleUpdate('settings', 'whatsapp_phone_number_id', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>
+                      <Input
+                        id="whatsappBusinessAccountId"
+                        placeholder="948475839..."
+                        value={formData.settings.whatsapp_business_account_id || ''}
+                        onChange={(e) => handleUpdate('settings', 'whatsapp_business_account_id', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save WhatsApp Settings
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsContent value="policies" className="space-y-6 mt-0">
             <Card>
               <CardHeader>

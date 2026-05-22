@@ -100,6 +100,10 @@ interface HotelAdminData {
     feature_ai_agent: boolean;
     feature_guest_bot: boolean;
     feature_rate_shopper: boolean;
+    feature_new_booking: boolean;
+    feature_color_palette: boolean;
+    feature_custom_logo: boolean;
+    feature_custom_widget: boolean;
     subscription: {
         plan: string;
         status: string;
@@ -174,6 +178,7 @@ export default function SuperAdminDashboard() {
 
     // Detail Drawer state
     const [detailHotel, setDetailHotel] = useState<HotelAdminData | null>(null);
+    const activeDetailHotel = detailHotel ? (hotels.find(h => h.id === detailHotel.id) || detailHotel) : null;
 
     // Subscription Editing state
     const [selectedSubHotel, setSelectedSubHotel] = useState<HotelAdminData | null>(null);
@@ -476,7 +481,11 @@ export default function SuperAdminDashboard() {
         const keyMap: Record<string, string> = {
             'ai_enabled': 'feature_ai_agent',
             'guest_bot_enabled': 'feature_guest_bot',
-            'rate_shopper_enabled': 'feature_rate_shopper'
+            'rate_shopper_enabled': 'feature_rate_shopper',
+            'new_booking_enabled': 'feature_new_booking',
+            'color_palette_enabled': 'feature_color_palette',
+            'custom_logo_enabled': 'feature_custom_logo',
+            'custom_widget_enabled': 'feature_custom_widget'
         };
         const apiField = keyMap[feature] || feature;
         updateMutation.mutate({ id, data: { [apiField]: !currentVal } });
@@ -1744,192 +1753,174 @@ export default function SuperAdminDashboard() {
                                 }}
                             >
                                 Save Enterprise Limits
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
 
-                {/* Hotel Detail Sheet (Drawer) */}
-                <Sheet open={!!detailHotel} onOpenChange={(open) => !open && setDetailHotel(null)}>
-                    <SheetContent className="w-full sm:max-w-lg bg-background border-l border-border p-0 shadow-2xl flex flex-col h-full overflow-hidden">
-                        {detailHotel && (
-                            <>
-                                <div className="p-6 border-b border-border bg-muted/20 backdrop-blur-md flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-indigo-505 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-505/20 shadow-sm">
-                                            <Building2 className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <SheetTitle className="text-lg font-black text-foreground tracking-tight">{detailHotel.name}</SheetTitle>
-                                            <SheetDescription className="text-xs font-mono text-indigo-600 font-bold mt-0.5">slug: {detailHotel.slug}</SheetDescription>
-                                        </div>
-                                    </div>
-                                    <Badge className={`rounded-lg px-2.5 py-1 font-black text-[9px] uppercase tracking-widest border ${
-                                        detailHotel.is_active 
-                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 shadow-sm font-bold' 
-                                        : 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 font-bold'
-                                    }`}>
-                                        {detailHotel.is_active ? 'Active' : 'Locked'}
-                                    </Badge>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                                    {/* Owner Profile */}
-                                    <div className="space-y-3">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Property Ownership</h4>
-                                        <div className="p-4 rounded-2xl border border-border bg-muted/15 space-y-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center text-muted-foreground">
-                                                    <UserIcon className="w-4 h-4" />
+                            {/* Hotel Detail Sheet (Drawer) */}
+                            <Sheet open={!!detailHotel} onOpenChange={(open) => !open && setDetailHotel(null)}>
+                                <SheetContent className="w-full sm:max-w-lg bg-background border-l border-border p-0 shadow-2xl flex flex-col h-full overflow-hidden">
+                                    {activeDetailHotel && (
+                                        <>
+                                            <div className="p-6 border-b border-border bg-muted/20 backdrop-blur-md flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-indigo-50/5 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-50/20 shadow-sm">
+                                                        <Building2 className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <SheetTitle className="text-lg font-black text-foreground tracking-tight">{activeDetailHotel.name}</SheetTitle>
+                                                        <SheetDescription className="text-xs font-mono text-indigo-600 font-bold mt-0.5">slug: {activeDetailHotel.slug}</SheetDescription>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs text-muted-foreground font-medium">Owner Name</p>
-                                                    <p className="text-sm font-bold text-foreground">{detailHotel.owner_name !== 'N/A' ? detailHotel.owner_name : 'Not Specified'}</p>
-                                                </div>
-                                            </div>
-                                            <div className="h-px bg-border" />
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center text-muted-foreground">
-                                                    <Globe className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-muted-foreground font-medium">Login Email</p>
-                                                    <p className="text-sm font-bold text-foreground truncate">{detailHotel.owner_email}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Subscription details */}
-                                    <div className="space-y-3">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Subscription Plan</h4>
-                                        <div className="p-5 rounded-2xl border border-border bg-muted/15 space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Crown className="w-4 h-4 text-amber-500" />
-                                                    <span className="text-sm font-bold text-foreground">
-                                                        {detailHotel.subscription?.plan || 'Free Trial'} Plan
-                                                    </span>
-                                                </div>
-                                                <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider font-bold ${
-                                                    (detailHotel.subscription?.status || 'inactive') === 'active' 
-                                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
-                                                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                                                <Badge className={`rounded-lg px-2.5 py-1 font-black text-[9px] uppercase tracking-widest border ${
+                                                    activeDetailHotel.is_active 
+                                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 shadow-sm font-bold' 
+                                                    : 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 font-bold'
                                                 }`}>
-                                                    {detailHotel.subscription?.status || 'inactive'}
+                                                    {activeDetailHotel.is_active ? 'Active' : 'Locked'}
                                                 </Badge>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-4 pt-2">
-                                                <div className="p-3 bg-background border border-border rounded-xl">
-                                                    <p className="text-[9px] font-black uppercase tracking-wide text-muted-foreground mb-1">WhatsApp Limits</p>
-                                                    <p className="text-base font-black text-foreground">{detailHotel.subscription?.whatsapp_credits ?? 1000} <span className="text-[9px] font-normal text-muted-foreground">cr</span></p>
+                                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                                {/* Owner Details */}
+                                                <div className="space-y-3">
+                                                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Ownership & Contact</h4>
+                                                    <div className="p-4 rounded-2xl border border-border bg-muted/10 space-y-2">
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-muted-foreground font-medium">Owner Name:</span>
+                                                            <span className="font-bold text-foreground">{activeDetailHotel.owner_name}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-muted-foreground font-medium">Owner Email:</span>
+                                                            <span className="font-mono text-foreground font-semibold">{activeDetailHotel.owner_email}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="p-3 bg-background border border-border rounded-xl">
-                                                    <p className="text-[9px] font-black uppercase tracking-wide text-muted-foreground mb-1">SMS Limits</p>
-                                                    <p className="text-base font-black text-foreground">{detailHotel.subscription?.sms_credits ?? 1000} <span className="text-[9px] font-normal text-muted-foreground">cr</span></p>
+
+                                                {/* Subscription Details */}
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Subscription & Plan</h4>
+                                                        <Button 
+                                                            variant="link" 
+                                                            className="text-xs text-indigo-600 font-bold p-0 h-auto"
+                                                            onClick={() => {
+                                                                setSelectedSubHotel(activeDetailHotel);
+                                                                setSubPlanName(activeDetailHotel.subscription?.plan || 'Basic');
+                                                                setSubStatus(activeDetailHotel.subscription?.status || 'active');
+                                                                setSubEndDate(activeDetailHotel.subscription?.end_date ? format(new Date(activeDetailHotel.subscription.end_date), 'yyyy-MM-dd') : '');
+                                                            }}
+                                                        >
+                                                            Modify Plan
+                                                        </Button>
+                                                    </div>
+                                                    <div className="p-4 rounded-2xl border border-border bg-muted/10 space-y-3">
+                                                        <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-muted-foreground font-medium">Current Plan:</span>
+                                                            <Badge className="font-bold uppercase tracking-wider">
+                                                                {activeDetailHotel.subscription?.plan || 'None'}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-muted-foreground font-medium">Status:</span>
+                                                            <Badge variant="outline" className="font-bold uppercase tracking-wider text-[10px]">
+                                                                {activeDetailHotel.subscription?.status || 'inactive'}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-muted-foreground font-medium">End Date:</span>
+                                                            <span className="font-semibold text-foreground">
+                                                                {activeDetailHotel.subscription?.end_date 
+                                                                    ? format(new Date(activeDetailHotel.subscription.end_date), 'dd MMMM yyyy') 
+                                                                    : 'Lifetime'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="p-3 bg-background border border-border rounded-xl col-span-2">
-                                                    <p className="text-[9px] font-black uppercase tracking-wide text-muted-foreground mb-1">AI Agent Usage Cap</p>
-                                                    <p className="text-base font-black text-foreground">{detailHotel.subscription?.ai_usage_limit ?? 50000} <span className="text-[9px] font-normal text-muted-foreground">reqs</span></p>
+
+                                                {/* Quotas & Credit Limits */}
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Resource Quotas</h4>
+                                                        <Button 
+                                                            variant="link" 
+                                                            className="text-xs text-indigo-600 font-bold p-0 h-auto"
+                                                            onClick={() => {
+                                                                setSelectedQuotaHotel(activeDetailHotel);
+                                                                setWhatsappCredits(activeDetailHotel.subscription?.whatsapp_credits?.toString() || '1000');
+                                                                setSmsCredits(activeDetailHotel.subscription?.sms_credits?.toString() || '1000');
+                                                                setAiUsageLimit(activeDetailHotel.subscription?.ai_usage_limit?.toString() || '50000');
+                                                            }}
+                                                        >
+                                                            Adjust Limits
+                                                        </Button>
+                                                    </div>
+                                                    <div className="p-4 rounded-2xl border border-border bg-muted/10 space-y-3">
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-muted-foreground font-medium">WhatsApp Credits:</span>
+                                                            <span className="font-bold text-foreground font-mono">{activeDetailHotel.subscription?.whatsapp_credits ?? 0}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-muted-foreground font-medium">SMS Credits:</span>
+                                                            <span className="font-bold text-foreground font-mono">{activeDetailHotel.subscription?.sms_credits ?? 0}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-xs">
+                                                            <span className="text-muted-foreground font-medium">AI Usage Limit:</span>
+                                                            <span className="font-bold text-foreground font-mono">{activeDetailHotel.subscription?.ai_usage_limit ?? 0}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Feature Controls (7 Toggles) */}
+                                                <div className="space-y-4">
+                                                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Feature Lock Controls</h4>
+                                                    <div className="space-y-3">
+                                                        {[
+                                                            { title: 'AI Assistant', desc: 'Core reservation AI agent and booking support chatbot.', key: 'feature_ai_agent', val: activeDetailHotel.feature_ai_agent },
+                                                            { title: 'Guest AI Agent', desc: 'Guest interaction bots for whatsapp, widget and post-stay followups.', key: 'feature_guest_bot', val: activeDetailHotel.feature_guest_bot },
+                                                            { title: 'Rate Shopper', desc: 'Allows properties to track competitors pricing dynamically.', key: 'feature_rate_shopper', val: activeDetailHotel.feature_rate_shopper },
+                                                            { title: 'New Booking Button', desc: 'Ability to manually add reservations directly from the calendar.', key: 'feature_new_booking', val: activeDetailHotel.feature_new_booking },
+                                                            { title: 'Color Palette Customizer', desc: 'Design customization controls for custom theme builder.', key: 'feature_color_palette', val: activeDetailHotel.feature_color_palette },
+                                                            { title: 'Custom Logo Uploader', desc: 'Allows hotels to brand the booking engine with their own logo.', key: 'feature_custom_logo', val: activeDetailHotel.feature_custom_logo },
+                                                            { title: 'Custom Widget integration', desc: 'Script block access and embedding tags for external hotel websites.', key: 'feature_custom_widget', val: activeDetailHotel.feature_custom_widget },
+                                                        ].map((feat) => (
+                                                            <div key={feat.key} className="flex items-center justify-between p-3 rounded-xl border border-border/80 hover:bg-muted/10 transition-colors">
+                                                                <div className="space-y-0.5 max-w-[80%]">
+                                                                    <p className="text-sm font-bold text-foreground">{feat.title}</p>
+                                                                    <p className="text-[10px] text-muted-foreground leading-normal font-medium">{feat.desc}</p>
+                                                                </div>
+                                                                <Switch
+                                                                    checked={feat.val}
+                                                                    onCheckedChange={() => toggleFeature(activeDetailHotel.id, feat.key, feat.val)}
+                                                                    className="data-[state=checked]:bg-indigo-600"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div className="h-px bg-border" />
-                                            <div className="flex items-center justify-between text-xs font-medium">
-                                                <span className="text-muted-foreground">Subscription Term End Date</span>
-                                                <span className="font-bold text-foreground font-mono">
-                                                    {detailHotel.subscription?.end_date 
-                                                        ? format(new Date(detailHotel.subscription.end_date), 'dd MMMM yyyy') 
-                                                        : 'Lifetime Plan'}
-                                                </span>
+                                            <div className="p-6 border-t border-border bg-muted/10 flex gap-3">
+                                                <Button
+                                                    className="flex-1 rounded-xl h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                                                    onClick={() => impersonateMutation.mutate(activeDetailHotel.id)}
+                                                    disabled={impersonateMutation.isPending}
+                                                >
+                                                    <UserCheck className="w-4 h-4 mr-2" /> Impersonate Hotelier
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    className="rounded-xl h-11 border-border font-bold hover:bg-muted/30"
+                                                    onClick={() => setDetailHotel(null)}
+                                                >
+                                                    Close Profile
+                                                </Button>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Features Toggles Summary */}
-                                    <div className="space-y-3">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Provisioned Capabilities</h4>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {[
-                                                { label: 'AI Agent Core', val: detailHotel.feature_ai_agent, icon: BrainCircuit },
-                                                { label: 'Guest Bot', val: detailHotel.feature_guest_bot, icon: MessageSquare },
-                                                { label: 'Rate Shopper', val: detailHotel.feature_rate_shopper, icon: TrendingUp },
-                                            ].map((feat, idx) => (
-                                                <div key={idx} className={`p-3 rounded-xl border flex flex-col items-center gap-2 text-center transition-all ${
-                                                    feat.val ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-650 dark:text-indigo-400' : 'bg-background border-border text-muted-foreground'
-                                                }`}>
-                                                    <feat.icon className="w-5 h-5 mb-0.5" />
-                                                    <span className="text-[10px] font-bold tracking-tight leading-none">{feat.label}</span>
-                                                    <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.2 rounded bg-background border mt-1 font-bold">
-                                                        {feat.val ? 'ON' : 'OFF'}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Quick Command Actions Footer */}
-                                <div className="p-6 border-t border-border bg-muted/20 space-y-3">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Administrative Actions</h4>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Button 
-                                            className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold h-11 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all"
-                                            onClick={() => impersonateMutation.mutate(detailHotel.id)}
-                                        >
-                                            <UserCheck className="w-4 h-4" /> Impersonate Admin
-                                        </Button>
-
-                                        <Button 
-                                            variant="outline"
-                                            className="border-border hover:bg-muted/40 font-bold h-11 rounded-xl flex items-center justify-center gap-2"
-                                            onClick={() => {
-                                                setSelectedQuotaHotel(detailHotel);
-                                                setWhatsappCredits(detailHotel.subscription?.whatsapp_credits?.toString() || '1000');
-                                                setSmsCredits(detailHotel.subscription?.sms_credits?.toString() || '1000');
-                                                setAiUsageLimit(detailHotel.subscription?.ai_usage_limit?.toString() || '50000');
-                                            }}
-                                        >
-                                            <Sliders className="w-4 h-4 text-purple-600" /> Quota Settings
-                                        </Button>
-
-                                        <Button 
-                                            variant="outline"
-                                            className="border-border hover:bg-muted/40 font-bold h-11 rounded-xl flex items-center justify-center gap-2"
-                                            onClick={() => {
-                                                setSelectedSubHotel(detailHotel);
-                                                setSubPlanName(detailHotel.subscription?.plan || 'Basic');
-                                                setSubStatus(detailHotel.subscription?.status || 'active');
-                                                setSubEndDate(detailHotel.subscription?.end_date ? format(new Date(detailHotel.subscription.end_date), 'yyyy-MM-dd') : '');
-                                            }}
-                                        >
-                                            <CreditCard className="w-4 h-4 text-amber-500" /> Subscription Plan
-                                        </Button>
-
-                                        <Button 
-                                            variant={detailHotel.is_active ? "destructive" : "default"}
-                                            className={`font-bold h-11 rounded-xl flex items-center justify-center gap-2 ${
-                                                !detailHotel.is_active && 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'
-                                            }`}
-                                            onClick={() => toggleActive(detailHotel.id, detailHotel.is_active)}
-                                        >
-                                            {detailHotel.is_active ? (
-                                                <>
-                                                    <XCircle className="w-4 h-4" /> Lock Account
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ShieldCheck className="w-4 h-4" /> Unlock Account
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </SheetContent>
-                </Sheet>
+                                        </>
+                                    )}
+                                </SheetContent>
+                            </Sheet>
 
                 {/* Subscription Plan Modal */}
                 <Dialog open={!!selectedSubHotel} onOpenChange={(open) => !open && setSelectedSubHotel(null)}>

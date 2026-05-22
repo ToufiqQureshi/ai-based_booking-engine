@@ -15,6 +15,9 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { Lock } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
     Form,
     FormControl,
@@ -72,6 +75,8 @@ interface CreateBookingDialogProps {
 }
 
 export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
+    const { hotel } = useAuth();
+    const isLocked = hotel?.feature_new_booking === false;
     const [open, setOpen] = useState(false);
     const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
     const { toast } = useToast();
@@ -157,6 +162,35 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
             });
         }
     };
+
+    if (isLocked) {
+        return (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="relative">
+                            <Button className="gap-2 bg-indigo-600/60 hover:bg-indigo-600/60 text-white/80 cursor-not-allowed border border-indigo-400/20 backdrop-blur-sm shadow-none">
+                                <Lock className="h-4 w-4 text-white/80" />
+                                New Booking
+                            </Button>
+                            <div className="absolute -inset-0.5 rounded-lg bg-white/30 dark:bg-slate-950/30 backdrop-blur-[2px] flex items-center justify-center border border-white/20" />
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-slate-900 border border-slate-800 text-white rounded-xl p-3 shadow-xl max-w-xs">
+                        <div className="flex items-start gap-2.5">
+                            <Lock className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="font-bold text-xs text-slate-100">Premium Feature Locked</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5 leading-normal">
+                                    Manual booking creations are locked. Please contact your Super Admin to upgrade your subscription plan.
+                                </p>
+                            </div>
+                        </div>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
+    }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>

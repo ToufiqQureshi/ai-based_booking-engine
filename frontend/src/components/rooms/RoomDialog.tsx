@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -69,6 +69,7 @@ const roomSchema = z.object({
     })).default([]),
     amenity_ids: z.array(z.string()).default([]),
     market_price: z.coerce.number().min(0).optional().nullable(),
+    cancellation_policy: z.string().optional(),
     is_active: z.boolean().default(true),
 });
 
@@ -107,6 +108,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
             is_pet_friendly: false,
             photos: [],
             market_price: undefined,
+            cancellation_policy: '',
             is_active: true,
         },
     });
@@ -149,6 +151,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     is_pet_friendly: initialData.is_pet_friendly || false,
                     photos: initialData.photos || [],
                     market_price: initialData.market_price,
+                    cancellation_policy: initialData.cancellation_policy || '',
                     amenity_ids: (initialData.amenities as RoomAmenity[])?.map(a => a.id) || [],
                     is_active: initialData.is_active ?? true,
                 });
@@ -174,6 +177,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     photos: [],
                     amenity_ids: [],
                     market_price: undefined,
+                    cancellation_policy: '',
                     is_active: true,
                 });
             }
@@ -266,6 +270,29 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                             {...field}
                                                         />
                                                     </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <FormField
+                                            control={form.control}
+                                            name="cancellation_policy"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cancellation Policy</FormLabel>
+                                                    <FormControl>
+                                                        <Textarea
+                                                            placeholder="Specify room-type specific cancellation rules (e.g. Free cancellation up to 24 hours before check-in)..."
+                                                            className="min-h-[80px] rounded-xl border-border focus-visible:ring-blue-600/10 focus-visible:border-blue-600 resize-none p-4"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormDescription className="text-[10px]">
+                                                        Overrides the default hotel-level cancellation policy for this specific room type.
+                                                    </FormDescription>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}

@@ -1,4 +1,4 @@
-﻿// Main Application Sidebar — Professional Light Design with Dark Mode
+// Main Application Sidebar — Professional Light Design with Dark Mode
 import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Bed, IndianRupee, Calendar, BookOpen,
@@ -21,9 +21,9 @@ const mainNavItems = [
   { title: 'Analytics',       url: '/analytics',        icon: LineChart },
   { title: 'AI Assistant',    url: '/agent',            icon: Bot },
   { title: 'Rooms',           url: '/rooms',            icon: Bed },
-  { title: 'Rates',           url: '/rates',            icon: IndianRupee },
+  { title: 'Rate Plans',      url: '/rates',            icon: IndianRupee },
   { title: 'Rate Shopper',    url: '/rate-shopper',     icon: TrendingUp },
-  { title: 'Availability',    url: '/availability',     icon: Calendar },
+  { title: 'Calendar',        url: '/availability',     icon: Calendar },
   { title: 'Bookings',        url: '/bookings',         icon: BookOpen },
   { title: 'Guests',          url: '/guests',           icon: Users },
   { title: 'Payments',        url: '/payments',         icon: CreditCard },

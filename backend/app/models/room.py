@@ -52,6 +52,7 @@ class RoomTypeBase(SQLModel):
     smoking_allowed: bool = Field(default=False)
     is_pet_friendly: bool = Field(default=False)
     market_price: Optional[float] = Field(default=None, description="Original price for strike-through display at room level")
+    cancellation_policy: Optional[str] = None
 
 
 class RoomType(RoomTypeBase, table=True):
@@ -116,6 +117,7 @@ class RoomTypeUpdate(SQLModel):
     floor: Optional[str] = None
     smoking_allowed: Optional[bool] = None
     is_pet_friendly: Optional[bool] = None
+    cancellation_policy: Optional[str] = None
 
 
 class RoomBlockBase(SQLModel):

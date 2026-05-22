@@ -6,6 +6,7 @@ Development mein SQLite, Production mein PostgreSQL use karo.
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
 
 from app.core.config import get_settings
 
@@ -53,6 +54,25 @@ async def init_db():
     """
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+
+        # Run table migrations for new columns
+        # hotels table columns:
+        # feature_new_booking, feature_color_palette, feature_custom_logo, feature_custom_widget
+        for col, col_type in [
+            ("feature_new_booking", "BOOLEAN DEFAULT TRUE"),
+            ("feature_color_palette", "BOOLEAN DEFAULT TRUE"),
+            ("feature_custom_logo", "BOOLEAN DEFAULT TRUE"),
+            ("feature_custom_widget", "BOOLEAN DEFAULT TRUE")
+        ]:
+            try:
+                await conn.execute(text(f"ALTER TABLE hotels ADD COLUMN {col} {col_type}"))
+            except Exception:
+                pass
+        
+        try:
+            await conn.execute(text("ALTER TABLE room_types ADD COLUMN cancellation_policy TEXT"))
+        except Exception:
+            pass
 
 
 async def get_session() -> AsyncSession:

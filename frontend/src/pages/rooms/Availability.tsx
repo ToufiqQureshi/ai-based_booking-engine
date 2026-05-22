@@ -2,7 +2,8 @@
 import {
   ChevronLeft, ChevronRight, Edit2, Lock, Loader2,
   BedDouble, BarChart3, RefreshCw, Sliders,
-  CheckCircle2, AlertTriangle, Sparkles
+  CheckCircle2, AlertTriangle, Sparkles,
+  Copy, CalendarDays
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ import { format, addDays, isToday, isBefore, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { BulkUpdateDialog } from '@/components/availability/BulkUpdateDialog';
 import { ManageOccupancyDialog } from '@/components/availability/ManageOccupancyDialog';
+import { WeekendUpdateDialog } from '@/components/availability/WeekendUpdateDialog';
+import { CopyCalendarDialog } from '@/components/availability/CopyCalendarDialog';
 
 
 interface AvailabilityDay {
@@ -63,6 +66,8 @@ export function AvailabilityPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState('all');
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [isWeekendDialogOpen, setIsWeekendDialogOpen] = useState(false);
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedCell, setSelectedCell] = useState<{ room: { id: string; name: string }; date: Date; price?: number } | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
@@ -139,8 +144,8 @@ export function AvailabilityPage() {
   }  return (
     <TooltipProvider>
       <PageShell
-        title="Availability"
-        subtitle="Real-time room inventory — click any cell to manage inventory & pricing"
+        title="Calendar"
+        subtitle="Real-time room inventory & pricing calendar — click any cell to manage inventory & pricing"
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -152,6 +157,24 @@ export function AvailabilityPage() {
             >
               <RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
               Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 h-9 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50/50"
+              onClick={() => setIsCopyDialogOpen(true)}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy Calendar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 h-9 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50/50"
+              onClick={() => setIsWeekendDialogOpen(true)}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              Update Weekends
             </Button>
             <Button
               size="sm"
@@ -419,6 +442,20 @@ export function AvailabilityPage() {
       <BulkUpdateDialog
         open={isBulkDialogOpen}
         onOpenChange={setIsBulkDialogOpen}
+        roomTypes={availabilityData.map(r => ({ id: r.id, name: r.name, totalInventory: r.totalInventory }))}
+        onSuccess={() => fetchAvailability(true)}
+      />
+
+      <WeekendUpdateDialog
+        open={isWeekendDialogOpen}
+        onOpenChange={setIsWeekendDialogOpen}
+        roomTypes={availabilityData.map(r => ({ id: r.id, name: r.name, totalInventory: r.totalInventory }))}
+        onSuccess={() => fetchAvailability(true)}
+      />
+
+      <CopyCalendarDialog
+        open={isCopyDialogOpen}
+        onOpenChange={setIsCopyDialogOpen}
         roomTypes={availabilityData.map(r => ({ id: r.id, name: r.name, totalInventory: r.totalInventory }))}
         onSuccess={() => fetchAvailability(true)}
       />

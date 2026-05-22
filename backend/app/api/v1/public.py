@@ -249,6 +249,16 @@ async def search_public_rooms(
     Search available rooms for a hotel with multiple rate plans.
     """
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    from datetime import timedelta
+    def addDays(d, num):
+        return d + timedelta(days=num)
+
+    hotel_policy = hotel.settings.get("cancellation_policy") if hotel.settings else None
+
     cache_key = f"public:rooms:{hotel_id}:{check_in.isoformat()}:{check_out.isoformat()}:{guests}:{adults}:{children}:{promo_code or ''}"
     try:
         cached = redis_client.get_value(cache_key)
@@ -347,11 +357,6 @@ async def search_public_rooms(
             # Store price
             daily_price_map[(dr.room_type_id, d_str)] = dr.price
             curr = addDays(curr, 1)
-
-    # Helper for date iteration
-    def addDays(d, num):
-        from datetime import timedelta
-        return d + timedelta(days=num)
 
     # If no rate plans exist, virtual "Standard Rate" will be generated per room below
 
@@ -493,7 +498,7 @@ async def search_public_rooms(
                             total_price=plan_total,
                             inclusions=inclusions,
                             is_refundable=plan.is_refundable,
-                            cancellation_policy=cancel_text,
+                            cancellation_policy=getattr(rt, "cancellation_policy", None) or hotel_policy or cancel_text,
                             savings_text=savings_text,
                             is_package=getattr(plan, 'is_package', False),
                             image_url=getattr(plan, 'image_url', None)
@@ -542,7 +547,7 @@ async def search_public_rooms(
                         total_price=total_standard_price,
                         inclusions=["Free Wi-Fi", "Complimentary Breakfast"],
                         is_refundable=True,
-                        cancellation_policy="Free cancellation up to 24 hours before check-in",
+                        cancellation_policy=getattr(rt, "cancellation_policy", None) or hotel_policy or "Free cancellation up to 24 hours before check-in",
                         savings_text=savings_text,
                         is_package=False
                     ))
