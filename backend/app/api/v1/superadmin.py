@@ -142,7 +142,8 @@ async def list_users(
     query: Optional[str] = None
 ):
     """List all users for admin management"""
-    stmt = select(User)
+    from sqlalchemy.orm import selectinload
+    stmt = select(User).options(selectinload(User.hotel))
     if query:
         stmt = stmt.where(User.email.contains(query) | User.name.contains(query))
     
@@ -156,6 +157,8 @@ async def list_users(
             "email": u.email,
             "role": u.role,
             "hotel_id": u.hotel_id,
+            "hotel_name": u.hotel.name if u.hotel else "Platform / Super Admin",
+            "is_active": u.is_active,
             "created_at": u.created_at.isoformat() if u.created_at else None
         } for u in users
     ]
@@ -181,6 +184,76 @@ async def update_user_role(
     await session.commit()
     return {"message": f"User role updated to {role}"}
 
+@router.patch("/users/{user_id}/status")
+async def update_user_status(
+    user_id: str,
+    data: dict,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    """Deactivate or activate a user account"""
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if "is_active" not in data:
+        raise HTTPException(status_code=400, detail="Missing 'is_active' in request body")
+        
+    user.is_active = bool(data["is_active"])
+    user.updated_at = datetime.utcnow()
+    session.add(user)
+    
+    # Audit log
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="UPDATE_USER_STATUS",
+        description=f"Updated status for user '{user.email}': active={user.is_active}",
+        ip_address="127.0.0.1"
+    )
+    session.add(audit)
+    await session.commit()
+    return {"message": "User status updated successfully", "is_active": user.is_active}
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    """Delete a user and their associated Supabase Auth account"""
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Delete from auth.users (Supabase Auth level) first
+    if user.supabase_id:
+        try:
+            from sqlalchemy import text
+            await session.execute(
+                text("DELETE FROM auth.users WHERE id = :sub_id"),
+                {"sub_id": user.supabase_id}
+            )
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to delete user {user.email} from auth.users: {e}")
+            # Do not block deletion of public record if auth user deletion fails
+            pass
+            
+    # Audit log
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="DELETE_USER",
+        description=f"Deleted user '{user.email}' (Supabase ID: {user.supabase_id})",
+        ip_address="127.0.0.1"
+    )
+    session.add(audit)
+    
+    await session.delete(user)
+    await session.commit()
+    return {"message": "User account deleted successfully"}
+
 @router.delete("/hotels/{hotel_id}")
 async def delete_hotel(
     hotel_id: str,
@@ -192,12 +265,14 @@ async def delete_hotel(
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
     
-    # Delete child relations using raw SQL to bypass SQLAlchemy mapped cascades 
-    # since many models lack the back-populates relationship with cascade
     from sqlalchemy import text
     import logging
     
-    # 1. Deeply nested relations
+    # 1. Fetch all users belonging to this hotel
+    users_res = await session.execute(select(User).where(User.hotel_id == hotel_id))
+    users_to_delete = users_res.scalars().all()
+    
+    # 2. Deeply nested relations
     deep_queries = [
         "DELETE FROM competitor_rates WHERE competitor_id IN (SELECT id FROM competitors WHERE hotel_id = :id)",
         "DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)",
@@ -215,22 +290,10 @@ async def delete_hotel(
             logging.warning(f"Failed executing deep relation cleanup: {e}")
             pass
 
-    # Suspend all users belonging to this hotel using ORM
-    users_res = await session.execute(select(User).where(User.hotel_id == hotel_id))
-    for u in users_res.scalars().all():
-        u.is_active = False
-        u.hotel_id = None
-        session.add(u)
-
-    # 2. Direct relations (ORDER MATTERS: Delete children first)
+    # 3. Direct relations (ORDER MATTERS: Delete children first)
     tables = [
-        # Level 1: Most dependent
         "channel_logs", "channel_room_mappings", "room_rates", "room_blocks", "room_rate_links",
-        # Level 2: Bookings depend on guests, room_types, etc.
-        "bookings", 
-        # Level 3: Guests and other intermediate parents
-        "guests", "rate_plans", "room_types", "competitors", "analytics_sessions",
-        # Level 4: Independent relations
+        "bookings", "guests", "rate_plans", "room_types", "competitors", "analytics_sessions",
         "addons", "amenities", "api_keys", "channel_manager_settings", 
         "integration_settings", "leads", "promo_codes", 
         "user_hotel_links", "subscriptions"
@@ -243,11 +306,51 @@ async def delete_hotel(
         except Exception as e:
             logging.warning(f"Failed to delete from {table}: {e}")
             pass 
-                
+
+    # Clean audit logs containing hotel_id to keep DB completely clean
+    try:
+        async with session.begin_nested():
+            await session.execute(text("DELETE FROM audit_logs WHERE hotel_id = :id"), {"id": hotel_id})
+    except Exception as e:
+        logging.warning(f"Failed to delete audit logs for hotel: {e}")
+        pass
+        
+    # 4. Delete from auth.users (Supabase Auth level) first for all hotel users
+    for u in users_to_delete:
+        if u.supabase_id:
+            try:
+                async with session.begin_nested():
+                    await session.execute(
+                        text("DELETE FROM auth.users WHERE id = :sub_id"),
+                        {"sub_id": u.supabase_id}
+                    )
+            except Exception as e:
+                logging.error(f"Failed to delete user {u.email} from auth.users: {e}")
+                pass
+        
+        # Explicitly delete user from public.users as well
+        try:
+            async with session.begin_nested():
+                await session.delete(u)
+        except Exception as e:
+            logging.error(f"Failed to delete user {u.email} from public.users: {e}")
+            pass
+
     try:
         await session.delete(hotel)
+        
+        # Log this delete action to audit log (without foreign key to hotel since it is deleted)
+        audit = AuditLog(
+            user_id=super_admin.id,
+            user_email=super_admin.email,
+            action="DELETE_HOTEL",
+            description=f"Permanently deleted hotel '{hotel.name}' (Slug: {hotel.slug}) and all its associated users/data",
+            ip_address="127.0.0.1"
+        )
+        session.add(audit)
+        
         await session.commit()
-        return {"message": "Hotel and associated data deleted successfully"}
+        return {"message": "Hotel and all its associated data/users deleted successfully"}
     except Exception as e:
         await session.rollback()
         logging.error(f"Error during final hotel delete: {e}")

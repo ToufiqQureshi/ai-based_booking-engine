@@ -95,6 +95,15 @@ const handleResponse = async <T>(response: Response, retryRequest?: () => Promis
       }
     }
 
+    // Handle user or hotel deactivation instantly
+    if (response.status === 403) {
+      if (errorData.detail === 'User is deactivated') {
+        window.dispatchEvent(new CustomEvent('user-deactivated'));
+      } else if (errorData.detail === 'Hotel is deactivated') {
+        window.dispatchEvent(new CustomEvent('hotel-deactivated'));
+      }
+    }
+
     throw new ApiClientError(
       errorData.detail || 'Request failed',
       response.status,

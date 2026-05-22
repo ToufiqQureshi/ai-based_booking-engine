@@ -100,6 +100,22 @@ async def get_current_user(
 
     # 3. Last Resort: Agar email se bhi nahi mila, toh Auto-Registration (First time login)
     if user is None:
+        # Check if the supabase_id actually exists in auth.users schema.
+        # If it doesn't, it means the user was deleted/purged by superadmin.
+        try:
+            from sqlalchemy import text
+            auth_check = await session.execute(
+                text("SELECT id FROM auth.users WHERE id = :sub_id"),
+                {"sub_id": supabase_id}
+            )
+            if not auth_check.scalar():
+                logger.warning(f"Auto-registration blocked: Supabase Auth user {supabase_id} does not exist in auth.users")
+                raise credentials_exception
+        except Exception as e:
+            if isinstance(e, HTTPException) and e.status_code == status.HTTP_401_UNAUTHORIZED:
+                raise e
+            logger.warning(f"Failed to query auth.users schema during auto-registration check: {e}")
+
         logger.info(f"Starting auto-registration for {email}")
         from app.models.hotel import Hotel
         import uuid
@@ -166,6 +182,11 @@ async def get_current_active_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User is deactivated"
+        )
+    if current_user.hotel and not current_user.hotel.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Hotel is deactivated"
         )
     return current_user
 

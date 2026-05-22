@@ -1,4 +1,4 @@
-﻿import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { ShieldX, Loader2, LogOut, MessageSquare, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -97,11 +97,43 @@ export function DashboardLayout() {
     );
   }
 
+  const isImpersonating = !!localStorage.getItem('superadmin_original_token');
+
+  const handleExitImpersonation = () => {
+    const originalToken = localStorage.getItem('superadmin_original_token');
+    if (originalToken) {
+      localStorage.setItem('token', originalToken);
+      localStorage.removeItem('superadmin_original_token');
+      window.location.href = '/superadmin';
+    }
+  };
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-muted/30 dark:bg-slate-950 overflow-hidden">
         <AppSidebar />
         <SidebarInset className="flex flex-1 flex-col min-w-0 overflow-hidden">
+          {isImpersonating && (
+            <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white text-xs font-bold px-6 py-2 flex items-center justify-between border-b border-yellow-700/20 shadow-md relative z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                <span>
+                  Impersonating: <strong>{hotel?.name || 'Hotel'}</strong> ({user?.email})
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 bg-white text-amber-700 hover:bg-amber-50 hover:text-amber-800 font-black px-3 rounded-lg shadow-sm border-none transition-all flex items-center"
+                onClick={handleExitImpersonation}
+              >
+                Exit Impersonation
+              </Button>
+            </div>
+          )}
           <AppHeader />
           {/*
             ── KEY PERFORMANCE FIX ──────────────────────────────────────────
