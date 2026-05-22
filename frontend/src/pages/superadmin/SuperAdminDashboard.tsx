@@ -519,7 +519,7 @@ export default function SuperAdminDashboard() {
     const uniqueAuditActions = Array.from(new Set(auditLogs.map(log => log.action.toUpperCase())));
 
     return (
-        <div className="min-h-screen bg-[#F9FAFB] font-inter selection:bg-indigo-100">
+        <div className="min-h-screen bg-background font-inter selection:bg-primary/20">
             {/* Header */}
             <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16 px-8 flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -975,10 +975,10 @@ export default function SuperAdminDashboard() {
                                     <p className="text-sm text-muted-foreground font-medium mt-1">Review and manage platform administration levels.</p>
                                 </div>
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground focus-within:text-primary transition-colors" />
                                     <input
                                         placeholder="Filter by email address..."
-                                        className="bg-muted/30 border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm w-80 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
+                                        className="bg-muted/30 border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm w-80 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                                         value={userSearchQuery}
                                         onChange={(e) => setUserSearchQuery(e.target.value)}
                                     />
@@ -991,7 +991,7 @@ export default function SuperAdminDashboard() {
                                         <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
                                     </div>
                                 ) : users.map((u: any) => (
-                                    <div key={u.id} className="p-6 rounded-2xl border border-border bg-muted/30/30 hover:border-indigo-100 hover:bg-background hover:shadow-xl hover:shadow-slate-100/50 transition-all group relative overflow-hidden flex flex-col justify-between">
+                                    <div key={u.id} className="p-6 rounded-2xl border border-border bg-muted/15 hover:border-primary/20 hover:bg-background hover:shadow-lg hover:shadow-primary/5 dark:hover:shadow-none transition-all group relative overflow-hidden flex flex-col justify-between">
                                         <div>
                                             <div className="flex items-start justify-between mb-4">
                                                 <div className="w-12 h-12 bg-background rounded-xl flex items-center justify-center shadow-sm border border-border text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
@@ -1000,19 +1000,19 @@ export default function SuperAdminDashboard() {
                                                 <div className="flex items-center gap-2">
                                                     <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider border shadow-none ${
                                                         u.role === 'SUPER_ADMIN' 
-                                                            ? 'bg-indigo-600 text-white border-none' 
+                                                            ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 font-bold' 
                                                             : u.role === 'OWNER'
-                                                            ? 'bg-amber-50 text-amber-700 border-amber-200 font-bold'
+                                                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 font-bold'
                                                             : u.role === 'MANAGER'
-                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 font-bold'
-                                                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                                                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 font-bold'
+                                                            : 'bg-muted/40 text-muted-foreground border-border'
                                                     }`}>
                                                         {u.role}
                                                     </Badge>
                                                     <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider border shadow-none ${
                                                         u.is_active 
-                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-250 font-bold' 
-                                                            : 'bg-red-50 text-red-700 border-red-250 font-bold'
+                                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 font-bold' 
+                                                            : 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 font-bold'
                                                     }`}>
                                                         {u.is_active ? 'Active' : 'Suspended'}
                                                     </Badge>
@@ -1112,14 +1112,14 @@ export default function SuperAdminDashboard() {
                             </div>
 
                             {/* Audit Filter Panel */}
-                            <div className="p-5 border border-border/80 bg-slate-50/40 rounded-2xl flex flex-wrap gap-4 items-center justify-between mb-6">
+                            <div className="p-5 border border-border/80 bg-muted/15 rounded-2xl flex flex-wrap gap-4 items-center justify-between mb-6">
                                 <div className="flex flex-wrap gap-4 items-center flex-1">
                                     {/* Keyword Search */}
                                     <div className="relative flex-1 min-w-[280px]">
-                                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground focus-within:text-primary transition-colors" />
                                         <input
                                             placeholder="Search by operator email, action or description..."
-                                            className="bg-background border border-border rounded-xl pl-10 pr-4 py-2.5 text-xs w-full focus:ring-2 focus:ring-indigo-100 transition-all outline-none font-medium"
+                                            className="bg-background border border-border rounded-xl pl-10 pr-4 py-2.5 text-xs w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none font-medium"
                                             value={auditSearchQuery}
                                             onChange={(e) => setAuditSearchQuery(e.target.value)}
                                         />
@@ -1160,7 +1160,7 @@ export default function SuperAdminDashboard() {
                                             setAuditSearchQuery('');
                                             setAuditActionFilter('all');
                                         }}
-                                        className="h-10 text-[10px] font-black uppercase tracking-wider text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 rounded-xl px-4 flex items-center gap-1.5 border border-indigo-100"
+                                        className="h-10 text-[10px] font-black uppercase tracking-wider text-primary hover:bg-primary/10 rounded-xl px-4 flex items-center gap-1.5 border border-primary/20"
                                     >
                                         <XCircle className="w-4 h-4" /> Clear Logs Filter
                                     </Button>
@@ -1169,7 +1169,7 @@ export default function SuperAdminDashboard() {
 
                             <div className="overflow-x-auto border border-border rounded-2xl">
                                 <Table>
-                                    <TableHeader className="bg-muted/30/80 border-b border-border">
+                                    <TableHeader className="bg-muted/30 border-b border-border">
                                         <TableRow className="hover:bg-transparent">
                                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground py-4 pl-6">Timestamp</TableHead>
                                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Operator Email</TableHead>
@@ -1195,7 +1195,7 @@ export default function SuperAdminDashboard() {
                                                 </TableCell>
                                             </TableRow>
                                         ) : filteredAuditLogs.map((log) => (
-                                            <TableRow key={log.id} className="hover:bg-muted/30/50 transition-colors border-border">
+                                            <TableRow key={log.id} className="hover:bg-muted/15 transition-colors border-border">
                                                 <TableCell className="py-4 pl-6 text-xs font-mono font-medium text-muted-foreground whitespace-nowrap">
                                                     <div className="flex items-center gap-2">
                                                         <Clock className="w-3.5 h-3.5 text-indigo-500" />
@@ -1206,7 +1206,7 @@ export default function SuperAdminDashboard() {
                                                     {log.user_email}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge className="rounded-lg px-2.5 py-1 font-black text-[9px] uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
+                                                    <Badge className="rounded-lg px-2.5 py-1 font-black text-[9px] uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
                                                         {log.action}
                                                     </Badge>
                                                 </TableCell>
@@ -1224,221 +1224,221 @@ export default function SuperAdminDashboard() {
                         </Card>
                     </TabsContent>
 
-                    {/* Broadcasts Tab Content */}
-                    <TabsContent value="broadcasts" className="mt-0">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <Card className="border-border shadow-sm rounded-2xl p-8 bg-background lg:col-span-1 h-fit space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 border border-indigo-100">
-                                        <Radio className="w-5 h-5 animate-pulse" />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-lg font-black text-foreground tracking-tight">New Broadcast Banner</h4>
-                                        <p className="text-xs text-muted-foreground font-medium">Instantly alert all tenant dashboards.</p>
-                                    </div>
-                                </div>
+                     {/* Broadcasts Tab Content */}
+                     <TabsContent value="broadcasts" className="mt-0">
+                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                             <Card className="border-border shadow-sm rounded-2xl p-8 bg-background lg:col-span-1 h-fit space-y-6">
+                                 <div className="flex items-center gap-3">
+                                     <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary border border-primary/20">
+                                         <Radio className="w-5 h-5 animate-pulse" />
+                                     </div>
+                                     <div>
+                                         <h4 className="text-lg font-black text-foreground tracking-tight">New Broadcast Banner</h4>
+                                         <p className="text-xs text-muted-foreground font-medium">Instantly alert all tenant dashboards.</p>
+                                     </div>
+                                 </div>
 
-                                {/* Predefined Quick Templates */}
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Quick Templates</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            {
-                                                label: '🔧 Maintenance',
-                                                title: 'Scheduled System Maintenance',
-                                                msg: 'Staybooker services will undergo a scheduled maintenance window on Sunday at 02:00 UTC. Dashboard access may experience brief dropouts.',
-                                                type: 'warning'
-                                            },
-                                            {
-                                                label: '✨ New Feature',
-                                                title: 'New AI Voice Agent Released',
-                                                msg: 'We have updated our core reservation framework with real-time AI voice agents. Visit Settings > Integrations to provision yours.',
-                                                type: 'success'
-                                            },
-                                            {
-                                                label: '⚠️ Service Incident',
-                                                title: 'Rate Shopper Interruption',
-                                                msg: 'We are currently experiencing API rate throttling with global OTA search indexes. System operations are running at reduced frequency.',
-                                                type: 'warning'
-                                            },
-                                            {
-                                                label: '📢 Platform Update',
-                                                title: 'Core Engine Performance Boost',
-                                                msg: 'Our core database servers have been migrated to cloud compute clusters. Average API response times have decreased by 40%.',
-                                                type: 'info'
-                                            }
-                                        ].map((tpl, i) => (
-                                            <button
-                                                key={i}
-                                                type="button"
-                                                className="py-2 px-3 border border-border rounded-xl text-left text-[10px] font-bold text-muted-foreground hover:bg-indigo-50/40 hover:text-indigo-600 hover:border-indigo-150 transition-colors"
-                                                onClick={() => {
-                                                    setBroadcastTitle(tpl.title);
-                                                    setBroadcastMessage(tpl.msg);
-                                                    setBroadcastType(tpl.type);
-                                                }}
-                                            >
-                                                {tpl.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                 {/* Predefined Quick Templates */}
+                                 <div className="space-y-2">
+                                     <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Quick Templates</label>
+                                     <div className="grid grid-cols-2 gap-2">
+                                         {[
+                                             {
+                                                 label: '🔧 Maintenance',
+                                                 title: 'Scheduled System Maintenance',
+                                                 msg: 'Staybooker services will undergo a scheduled maintenance window on Sunday at 02:00 UTC. Dashboard access may experience brief dropouts.',
+                                                 type: 'warning'
+                                             },
+                                             {
+                                                 label: '✨ New Feature',
+                                                 title: 'New AI Voice Agent Released',
+                                                 msg: 'We have updated our core reservation framework with real-time AI voice agents. Visit Settings > Integrations to provision yours.',
+                                                 type: 'success'
+                                             },
+                                             {
+                                                 label: '⚠️ Service Incident',
+                                                 title: 'Rate Shopper Interruption',
+                                                 msg: 'We are currently experiencing API rate throttling with global OTA search indexes. System operations are running at reduced frequency.',
+                                                 type: 'warning'
+                                             },
+                                             {
+                                                 label: '📢 Platform Update',
+                                                 title: 'Core Engine Performance Boost',
+                                                 msg: 'Our core database servers have been migrated to cloud compute clusters. Average API response times have decreased by 40%.',
+                                                 type: 'info'
+                                             }
+                                         ].map((tpl, i) => (
+                                             <button
+                                                 key={i}
+                                                 type="button"
+                                                 className="py-2 px-3 border border-border rounded-xl text-left text-[10px] font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+                                                 onClick={() => {
+                                                     setBroadcastTitle(tpl.title);
+                                                     setBroadcastMessage(tpl.msg);
+                                                     setBroadcastType(tpl.type);
+                                                 }}
+                                             >
+                                                 {tpl.label}
+                                             </button>
+                                         ))}
+                                     </div>
+                                 </div>
 
-                                <div className="space-y-5">
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Banner Title</label>
-                                        <Input
-                                            placeholder="e.g. Scheduled System Upkeep"
-                                            className="h-12 bg-muted/30 border-border rounded-xl font-medium focus:ring-2 focus:ring-indigo-100"
-                                            value={broadcastTitle}
-                                            onChange={(e) => setBroadcastTitle(e.target.value)}
-                                        />
-                                    </div>
+                                 <div className="space-y-5">
+                                     <div>
+                                         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Banner Title</label>
+                                         <Input
+                                             placeholder="e.g. Scheduled System Upkeep"
+                                             className="h-12 bg-muted/30 border-border rounded-xl font-medium focus:ring-2 focus:ring-primary/20"
+                                             value={broadcastTitle}
+                                             onChange={(e) => setBroadcastTitle(e.target.value)}
+                                         />
+                                     </div>
 
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Announcement Message</label>
-                                        <textarea
-                                            placeholder="Provide complete maintenance windows or platform updates..."
-                                            rows={4}
-                                            className="w-full p-4 bg-muted/30 border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 transition-all outline-none resize-none"
-                                            value={broadcastMessage}
-                                            onChange={(e) => setBroadcastMessage(e.target.value)}
-                                        />
-                                    </div>
+                                     <div>
+                                         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Announcement Message</label>
+                                         <textarea
+                                             placeholder="Provide complete maintenance windows or platform updates..."
+                                             rows={4}
+                                             className="w-full p-4 bg-muted/30 border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none"
+                                             value={broadcastMessage}
+                                             onChange={(e) => setBroadcastMessage(e.target.value)}
+                                         />
+                                     </div>
 
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Severity Classification</label>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {[
-                                                { label: 'Info', value: 'info', bg: 'bg-blue-50 text-blue-600 border-blue-200' },
-                                                { label: 'Warning', value: 'warning', bg: 'bg-amber-50 text-amber-600 border-amber-200' },
-                                                { label: 'Success', value: 'success', bg: 'bg-emerald-50 text-emerald-600 border-emerald-200' }
-                                            ].map((t) => (
-                                                <button
-                                                    key={t.value}
-                                                    type="button"
-                                                    onClick={() => setBroadcastType(t.value)}
-                                                    className={`py-3 px-4 rounded-xl border text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                                                        broadcastType === t.value ? `${t.bg} shadow-md scale-105 ring-2 ring-indigo-600/20` : 'bg-muted/30 text-muted-foreground border-border hover:bg-muted'
-                                                    }`}
-                                                >
-                                                    {t.value === 'warning' ? <AlertTriangle className="w-3.5 h-3.5" /> : null}
-                                                    {t.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                                     <div>
+                                         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Severity Classification</label>
+                                         <div className="grid grid-cols-3 gap-3">
+                                             {[
+                                                 { label: 'Info', value: 'info', bg: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20' },
+                                                 { label: 'Warning', value: 'warning', bg: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20' },
+                                                 { label: 'Success', value: 'success', bg: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' }
+                                             ].map((t) => (
+                                                 <button
+                                                     key={t.value}
+                                                     type="button"
+                                                     onClick={() => setBroadcastType(t.value)}
+                                                     className={`py-3 px-4 rounded-xl border text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                                                         broadcastType === t.value ? `${t.bg} shadow-md scale-105 ring-2 ring-primary/20` : 'bg-muted/30 text-muted-foreground border-border hover:bg-muted'
+                                                     }`}
+                                                 >
+                                                     {t.value === 'warning' ? <AlertTriangle className="w-3.5 h-3.5" /> : null}
+                                                     {t.label}
+                                                 </button>
+                                             ))}
+                                         </div>
+                                     </div>
 
-                                    {/* Real-time Banner Live Preview */}
-                                    <div className="border border-dashed border-border rounded-xl p-4 bg-slate-50/50 space-y-2">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block flex items-center gap-1.5">
-                                            <Eye className="w-3.5 h-3.5 text-indigo-500" /> Banner Live Preview
-                                        </span>
-                                        {broadcastTitle || broadcastMessage ? (
-                                            <div className={`p-4 rounded-xl border flex items-start gap-3 transition-all ${
-                                                broadcastType === 'warning' ? 'bg-amber-50/70 border-amber-250 text-amber-900' : broadcastType === 'success' ? 'bg-emerald-50/70 border-emerald-250 text-emerald-900' : 'bg-blue-50/70 border-blue-250 text-blue-900'
-                                            }`}>
-                                                <Radio className="w-5 h-5 animate-pulse flex-shrink-0 mt-0.5" />
-                                                <div className="space-y-1">
-                                                    <h5 className="font-bold text-xs leading-none">{broadcastTitle || 'Preview Title'}</h5>
-                                                    <p className="text-[11px] leading-relaxed font-medium opacity-90">{broadcastMessage || 'Preview Message...'}</p>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-6 text-muted-foreground italic text-xs font-medium">
-                                                Start typing or pick a template to see preview
-                                            </div>
-                                        )}
-                                    </div>
+                                     {/* Real-time Banner Live Preview */}
+                                     <div className="border border-dashed border-border rounded-xl p-4 bg-muted/15 space-y-2">
+                                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block flex items-center gap-1.5">
+                                             <Eye className="w-3.5 h-3.5 text-primary" /> Banner Live Preview
+                                         </span>
+                                         {broadcastTitle || broadcastMessage ? (
+                                             <div className={`p-4 rounded-xl border flex items-start gap-3 transition-all ${
+                                                 broadcastType === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400' : broadcastType === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400'
+                                             }`}>
+                                                 <Radio className="w-5 h-5 animate-pulse flex-shrink-0 mt-0.5" />
+                                                 <div className="space-y-1">
+                                                     <h5 className="font-bold text-xs leading-none">{broadcastTitle || 'Preview Title'}</h5>
+                                                     <p className="text-[11px] leading-relaxed font-medium opacity-90">{broadcastMessage || 'Preview Message...'}</p>
+                                                 </div>
+                                             </div>
+                                         ) : (
+                                             <div className="text-center py-6 text-muted-foreground italic text-xs font-medium">
+                                                 Start typing or pick a template to see preview
+                                             </div>
+                                         )}
+                                     </div>
 
-                                    <Button
-                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-indigo-100 transition-all gap-2"
-                                        disabled={!broadcastTitle || !broadcastMessage || createBroadcastMutation.isPending}
-                                        onClick={() => createBroadcastMutation.mutate({
-                                            title: broadcastTitle,
-                                            message: broadcastMessage,
-                                            type: broadcastType
-                                        })}
-                                    >
-                                        <Send className="w-4 h-4" /> Publish Global Broadcast
-                                    </Button>
-                                </div>
-                            </Card>
+                                     <Button
+                                         className="w-full bg-primary hover:bg-primary/95 text-primary-foreground font-bold h-12 rounded-xl shadow-lg shadow-primary/5 dark:shadow-none transition-all gap-2"
+                                         disabled={!broadcastTitle || !broadcastMessage || createBroadcastMutation.isPending}
+                                         onClick={() => createBroadcastMutation.mutate({
+                                             title: broadcastTitle,
+                                             message: broadcastMessage,
+                                             type: broadcastType
+                                         })}
+                                     >
+                                         <Send className="w-4 h-4" /> Publish Global Broadcast
+                                     </Button>
+                                 </div>
+                             </Card>
 
-                            <Card className="border-border shadow-sm rounded-2xl p-8 bg-background lg:col-span-2 min-h-[400px]">
-                                <div className="flex items-center justify-between mb-8">
-                                    <div>
-                                        <h3 className="text-2xl font-black text-foreground tracking-tight">Active Platform Broadcasts</h3>
-                                        <p className="text-sm text-muted-foreground font-medium mt-1">Manage global announcement banners appearing on all client interfaces.</p>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        className="rounded-xl border-border bg-background font-bold h-11 px-6 hover:bg-muted/30 transition-colors"
-                                        onClick={() => refetchBroadcasts()}
-                                    >
-                                        <RefreshCw className="w-4 h-4 mr-2" /> Sync Banners
-                                    </Button>
-                                </div>
+                             <Card className="border-border shadow-sm rounded-2xl p-8 bg-background lg:col-span-2 min-h-[400px]">
+                                 <div className="flex items-center justify-between mb-8">
+                                     <div>
+                                         <h3 className="text-2xl font-black text-foreground tracking-tight">Active Platform Broadcasts</h3>
+                                         <p className="text-sm text-muted-foreground font-medium mt-1">Manage global announcement banners appearing on all client interfaces.</p>
+                                     </div>
+                                     <Button
+                                         variant="outline"
+                                         className="rounded-xl border-border bg-background font-bold h-11 px-6 hover:bg-muted/30 transition-colors"
+                                         onClick={() => refetchBroadcasts()}
+                                     >
+                                         <RefreshCw className="w-4 h-4 mr-2" /> Sync Banners
+                                     </Button>
+                                 </div>
 
-                                <div className="space-y-4">
-                                    {isLoadingBroadcasts ? (
-                                        <div className="h-64 flex flex-col items-center justify-center gap-3">
-                                            <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                                            <span className="text-sm font-bold text-muted-foreground animate-pulse">Syncing Broadcast Channels...</span>
-                                        </div>
-                                    ) : broadcasts.length === 0 ? (
-                                        <div className="h-64 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center text-center p-8 bg-muted/30/50">
-                                            <Radio className="w-12 h-12 text-slate-300 mb-3 animate-pulse" />
-                                            <h5 className="text-base font-bold text-foreground">No Active Announcements</h5>
-                                            <p className="text-xs text-muted-foreground font-medium max-w-sm mt-1">Create a broadcast banner using the control module to broadcast live alerts across the enterprise.</p>
-                                        </div>
-                                    ) : broadcasts.map((b) => (
-                                        <div
-                                            key={b.id}
-                                            className={`p-6 rounded-2xl border flex items-start justify-between gap-6 transition-all shadow-sm hover:shadow-md ${
-                                                b.type === 'warning' ? 'bg-amber-50/60 border-amber-200' : b.type === 'success' ? 'bg-emerald-50/60 border-emerald-200' : 'bg-blue-50/60 border-blue-200'
-                                            }`}
-                                        >
-                                            <div className="flex gap-4 items-start">
-                                                <div className={`p-3 rounded-2xl border ${
-                                                    b.type === 'warning' ? 'bg-amber-100 text-amber-700 border-amber-200' : b.type === 'success' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-blue-100 text-blue-700 border-blue-200'
-                                                }`}>
-                                                    <Radio className="w-6 h-6 animate-pulse" />
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    <div className="flex items-center gap-3">
-                                                        <h4 className="text-base font-black text-foreground tracking-tight">{b.title}</h4>
-                                                        <Badge className={`rounded-lg px-2.5 py-0.5 font-black text-[9px] uppercase tracking-wider ${
-                                                            b.type === 'warning' ? 'bg-amber-600 text-white' : b.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
-                                                        }`}>
-                                                            {b.type}
-                                                        </Badge>
-                                                    </div>
-                                                    <p className="text-xs font-medium text-foreground leading-relaxed">{b.message}</p>
-                                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono pt-1">
-                                                        <Clock className="w-3 h-3 text-muted-foreground" /> Broadcasted: {format(new Date(b.created_at), 'dd MMM yyyy, HH:mm')}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                 <div className="space-y-4">
+                                     {isLoadingBroadcasts ? (
+                                         <div className="h-64 flex flex-col items-center justify-center gap-3">
+                                             <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                                             <span className="text-sm font-bold text-muted-foreground animate-pulse">Syncing Broadcast Channels...</span>
+                                         </div>
+                                     ) : broadcasts.length === 0 ? (
+                                         <div className="h-64 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center text-center p-8 bg-muted/15">
+                                             <Radio className="w-12 h-12 text-muted-foreground/30 mb-3 animate-pulse" />
+                                             <h5 className="text-base font-bold text-foreground">No Active Announcements</h5>
+                                             <p className="text-xs text-muted-foreground font-medium max-w-sm mt-1">Create a broadcast banner using the control module to broadcast live alerts across the enterprise.</p>
+                                         </div>
+                                     ) : broadcasts.map((b) => (
+                                         <div
+                                             key={b.id}
+                                             className={`p-6 rounded-2xl border flex items-start justify-between gap-6 transition-all shadow-sm hover:shadow-md ${
+                                                 b.type === 'warning' ? 'bg-amber-500/5 border-amber-500/20' : b.type === 'success' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-blue-500/5 border-blue-500/20'
+                                             }`}
+                                         >
+                                             <div className="flex gap-4 items-start">
+                                                 <div className={`p-3 rounded-2xl border ${
+                                                     b.type === 'warning' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20' : b.type === 'success' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20'
+                                                 }`}>
+                                                     <Radio className="w-6 h-6 animate-pulse" />
+                                                 </div>
+                                                 <div className="space-y-1.5">
+                                                     <div className="flex items-center gap-3">
+                                                         <h4 className="text-base font-black text-foreground tracking-tight">{b.title}</h4>
+                                                         <Badge className={`rounded-lg px-2.5 py-0.5 font-black text-[9px] uppercase tracking-wider ${
+                                                             b.type === 'warning' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30' : b.type === 'success' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' : 'bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30'
+                                                         }`}>
+                                                             {b.type}
+                                                         </Badge>
+                                                     </div>
+                                                     <p className="text-xs font-medium text-foreground leading-relaxed">{b.message}</p>
+                                                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono pt-1">
+                                                         <Clock className="w-3 h-3 text-muted-foreground" /> Broadcasted: {format(new Date(b.created_at), 'dd MMM yyyy, HH:mm')}
+                                                     </div>
+                                                 </div>
+                                             </div>
 
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="rounded-xl hover:bg-background hover:text-red-600 hover:shadow-sm transition-all text-muted-foreground self-center"
-                                                onClick={() => {
-                                                    if (confirm("Deactivate and remove this platform broadcast?")) {
-                                                        deleteBroadcastMutation.mutate(b.id);
-                                                    }
-                                                }}
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </Card>
-                        </div>
-                    </TabsContent>
+                                             <Button
+                                                 variant="ghost"
+                                                 size="icon"
+                                                 className="rounded-xl hover:bg-background hover:text-destructive hover:shadow-sm transition-all text-muted-foreground self-center"
+                                                 onClick={() => {
+                                                     if (confirm("Deactivate and remove this platform broadcast?")) {
+                                                         deleteBroadcastMutation.mutate(b.id);
+                                                     }
+                                                 }}
+                                             >
+                                                 <Trash2 className="w-5 h-5" />
+                                             </Button>
+                                         </div>
+                                     ))}
+                                 </div>
+                             </Card>
+                         </div>
+                     </TabsContent>
 
                     <TabsContent value="analytics" className="mt-0">
                         <div className="space-y-8">
@@ -1448,10 +1448,10 @@ export default function SuperAdminDashboard() {
                                 <Card className="border-border shadow-sm rounded-2xl p-6 bg-background relative overflow-hidden">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
                                     <div className="flex items-center justify-between mb-4">
-                                        <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center border border-amber-100 shadow-sm">
+                                        <div className="w-12 h-12 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center border border-amber-500/20 shadow-sm">
                                             <Crown className="w-6 h-6" />
                                         </div>
-                                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 rounded-lg px-2.5 py-0.5 font-bold text-[10px] uppercase tracking-wider">MRR Live</Badge>
+                                        <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 rounded-lg px-2.5 py-0.5 font-bold text-[10px] uppercase tracking-wider">MRR Live</Badge>
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Estimated Monthly Revenue</span>
@@ -1486,16 +1486,16 @@ export default function SuperAdminDashboard() {
                                 <Card className="border-border shadow-sm rounded-2xl p-6 bg-background relative overflow-hidden">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
                                     <div className="flex items-center justify-between mb-4">
-                                        <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center border border-purple-100 shadow-sm">
+                                        <div className="w-12 h-12 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center border border-purple-500/20 shadow-sm">
                                             <BrainCircuit className="w-6 h-6" />
                                         </div>
-                                        <Badge className="bg-purple-50 text-purple-700 border-purple-200 rounded-lg px-2.5 py-0.5 font-bold text-[10px] uppercase tracking-wider">AI Suite</Badge>
+                                        <Badge className="bg-purple-500/10 text-purple-750 dark:text-purple-400 border border-purple-500/20 rounded-lg px-2.5 py-0.5 font-bold text-[10px] uppercase tracking-wider">AI Suite</Badge>
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">AI Activation Status</span>
                                         <h2 className="text-3xl font-black text-foreground tracking-tight">
                                             {hotels.filter(h => h.feature_ai_agent).length} <span className="text-sm font-bold text-muted-foreground">Agents</span>
-                                            <span className="mx-2 text-slate-300">/</span>
+                                            <span className="mx-2 text-border">/</span>
                                             {hotels.filter(h => h.feature_guest_bot).length} <span className="text-sm font-bold text-muted-foreground">Bots</span>
                                         </h2>
                                         <p className="text-[11px] text-muted-foreground font-medium pt-1">
@@ -1510,14 +1510,14 @@ export default function SuperAdminDashboard() {
                                 <Card className="border-border shadow-sm rounded-2xl p-6 bg-background">
                                     <div className="flex items-center justify-between mb-3">
                                         <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Tier Distribution Allocation</span>
-                                        <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 rounded-lg px-2.5 py-0.5 font-bold text-[10px] uppercase tracking-wider">Subscriptions</Badge>
+                                        <Badge className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20 rounded-lg px-2.5 py-0.5 font-bold text-[10px] uppercase tracking-wider">Subscriptions</Badge>
                                     </div>
                                     <div className="space-y-2.5 pt-1">
                                         {[
                                             { name: 'Enterprise ($199)', count: hotels.filter(h => h.subscription?.plan?.toLowerCase() === 'enterprise').length, color: 'bg-purple-600' },
                                             { name: 'Premium ($99)', count: hotels.filter(h => h.subscription?.plan?.toLowerCase() === 'premium').length, color: 'bg-blue-600' },
                                             { name: 'Basic ($49)', count: hotels.filter(h => h.subscription?.plan?.toLowerCase() === 'basic').length, color: 'bg-emerald-600' },
-                                            { name: 'Free / Trial', count: hotels.filter(h => !h.subscription?.plan || h.subscription.plan.toLowerCase() === 'free' || h.subscription.plan.toLowerCase() === 'none').length, color: 'bg-slate-400' },
+                                            { name: 'Free / Trial', count: hotels.filter(h => !h.subscription?.plan || h.subscription.plan.toLowerCase() === 'free' || h.subscription.plan.toLowerCase() === 'none').length, color: 'bg-muted-foreground/30' },
                                         ].map((tier, idx) => {
                                             const total = hotels.length || 1;
                                             const pct = Math.round((tier.count / total) * 100);
@@ -1527,7 +1527,7 @@ export default function SuperAdminDashboard() {
                                                         <span>{tier.name}</span>
                                                         <span className="font-mono text-muted-foreground">{tier.count} ({pct}%)</span>
                                                     </div>
-                                                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                                    <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
                                                         <div className={`h-full rounded-full ${tier.color}`} style={{ width: `${pct}%` }} />
                                                     </div>
                                                 </div>
@@ -1587,7 +1587,7 @@ export default function SuperAdminDashboard() {
                                                     const usagePercentage = Math.min((totalUsage / limit) * 100, 100);
                                                     
                                                     return (
-                                                        <TableRow key={hotel.id} className="border-b border-border/40 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                                                        <TableRow key={hotel.id} className="border-b border-border/40 hover:bg-muted/15 transition-colors">
                                                             <TableCell className="font-bold">
                                                                 <div className="flex flex-col">
                                                                     <span className="text-sm text-foreground">{hotel.name}</span>
@@ -1598,13 +1598,13 @@ export default function SuperAdminDashboard() {
                                                                 <div className="flex items-center gap-2">
                                                                     <Badge className={`rounded-lg px-2 py-0.5 text-[9px] uppercase tracking-wider border shadow-none ${
                                                                         isBotUnlocked 
-                                                                        ? 'bg-indigo-50 text-indigo-700 border-indigo-100 font-bold' 
-                                                                        : 'bg-slate-100 text-slate-400 border-slate-200'
+                                                                        ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20 font-bold' 
+                                                                        : 'bg-muted text-muted-foreground border-border'
                                                                     }`}>
                                                                         {isBotUnlocked ? 'Unlocked' : 'Locked'}
                                                                     </Badge>
                                                                     {isBotUnlocked && (
-                                                                        <span className="text-xs font-mono font-bold text-slate-700">{dashboardAiUsage} reqs</span>
+                                                                        <span className="text-xs font-mono font-bold text-foreground">{dashboardAiUsage} reqs</span>
                                                                     )}
                                                                 </div>
                                                             </TableCell>
@@ -1612,23 +1612,23 @@ export default function SuperAdminDashboard() {
                                                                 <div className="flex items-center gap-2">
                                                                     <Badge className={`rounded-lg px-2 py-0.5 text-[9px] uppercase tracking-wider border shadow-none ${
                                                                         isAgentUnlocked 
-                                                                        ? 'bg-purple-50 text-purple-700 border-purple-100 font-bold' 
-                                                                        : 'bg-slate-100 text-slate-400 border-slate-200'
+                                                                        ? 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20 font-bold' 
+                                                                        : 'bg-muted text-muted-foreground border-border'
                                                                     }`}>
                                                                         {isAgentUnlocked ? 'Unlocked' : 'Locked'}
                                                                     </Badge>
                                                                     {isAgentUnlocked && (
-                                                                        <span className="text-xs font-mono font-bold text-slate-700">{guestAiAgentUsage} reqs</span>
+                                                                        <span className="text-xs font-mono font-bold text-foreground">{guestAiAgentUsage} reqs</span>
                                                                     )}
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell className="w-[280px]">
                                                                 <div className="space-y-1.5">
                                                                     <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
-                                                                        <span className="font-bold text-slate-800">{totalUsage} requests used</span>
+                                                                        <span className="font-bold text-foreground">{totalUsage} requests used</span>
                                                                         <span>{limit} limit</span>
                                                                     </div>
-                                                                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                                                                    <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
                                                                         <div 
                                                                             className={`h-full rounded-full transition-all duration-500 ${
                                                                                 usagePercentage > 85 
@@ -1646,7 +1646,7 @@ export default function SuperAdminDashboard() {
                                                                 <Button
                                                                     size="sm"
                                                                     variant="outline"
-                                                                    className="h-8 rounded-lg hover:bg-indigo-50 border-border hover:border-indigo-200 hover:text-indigo-600 font-bold transition-all text-xs"
+                                                                    className="h-8 rounded-lg hover:bg-primary/10 border-border hover:border-primary/20 hover:text-primary font-bold transition-all text-xs"
                                                                     onClick={() => {
                                                                         setSelectedQuotaHotel(hotel);
                                                                         setWhatsappCredits(hotel.subscription?.whatsapp_credits?.toString() || '1000');
@@ -1673,7 +1673,7 @@ export default function SuperAdminDashboard() {
                 <Dialog open={!!selectedQuotaHotel} onOpenChange={(open) => !open && setSelectedQuotaHotel(null)}>
                     <DialogContent className="max-w-md bg-background p-8 rounded-3xl border border-border shadow-2xl">
                         <DialogHeader className="space-y-2">
-                            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center border border-purple-100 mb-2">
+                            <div className="w-12 h-12 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center border border-purple-500/20 mb-2">
                                 <Sliders className="w-6 h-6" />
                             </div>
                             <DialogTitle className="text-xl font-bold text-foreground">Enterprise Quotas & Usage Limits</DialogTitle>
@@ -1689,7 +1689,7 @@ export default function SuperAdminDashboard() {
                                 </label>
                                 <Input
                                     type="number"
-                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground"
+                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary"
                                     value={whatsappCredits}
                                     onChange={(e) => setWhatsappCredits(e.target.value)}
                                 />
@@ -1701,7 +1701,7 @@ export default function SuperAdminDashboard() {
                                 </label>
                                 <Input
                                     type="number"
-                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground"
+                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary"
                                     value={smsCredits}
                                     onChange={(e) => setSmsCredits(e.target.value)}
                                 />
@@ -1713,7 +1713,7 @@ export default function SuperAdminDashboard() {
                                 </label>
                                 <Input
                                     type="number"
-                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground"
+                                    className="h-12 bg-muted/30 border-border rounded-xl font-bold text-foreground focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary"
                                     value={aiUsageLimit}
                                     onChange={(e) => setAiUsageLimit(e.target.value)}
                                 />
@@ -1729,7 +1729,7 @@ export default function SuperAdminDashboard() {
                                 Cancel
                             </Button>
                             <Button
-                                className="flex-1 rounded-xl h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
+                                className="flex-1 rounded-xl h-12 bg-primary hover:bg-primary/95 text-primary-foreground font-bold shadow-lg shadow-primary/5 dark:shadow-none transition-all"
                                 disabled={updateQuotasMutation.isPending}
                                 onClick={() => {
                                     if (!selectedQuotaHotel) return;
@@ -1754,9 +1754,9 @@ export default function SuperAdminDashboard() {
                     <SheetContent className="w-full sm:max-w-lg bg-background border-l border-border p-0 shadow-2xl flex flex-col h-full overflow-hidden">
                         {detailHotel && (
                             <>
-                                <div className="p-6 border-b border-border bg-slate-50/50 backdrop-blur-md flex items-center justify-between">
+                                <div className="p-6 border-b border-border bg-muted/20 backdrop-blur-md flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border border-indigo-100 shadow-sm">
+                                        <div className="w-10 h-10 bg-indigo-505 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-505/20 shadow-sm">
                                             <Building2 className="w-5 h-5" />
                                         </div>
                                         <div>
@@ -1766,8 +1766,8 @@ export default function SuperAdminDashboard() {
                                     </div>
                                     <Badge className={`rounded-lg px-2.5 py-1 font-black text-[9px] uppercase tracking-widest border ${
                                         detailHotel.is_active 
-                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm' 
-                                        : 'bg-red-50 text-red-600 border-red-100'
+                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 shadow-sm font-bold' 
+                                        : 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 font-bold'
                                     }`}>
                                         {detailHotel.is_active ? 'Active' : 'Locked'}
                                     </Badge>
@@ -1777,7 +1777,7 @@ export default function SuperAdminDashboard() {
                                     {/* Owner Profile */}
                                     <div className="space-y-3">
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Property Ownership</h4>
-                                        <div className="p-4 rounded-2xl border border-border bg-muted/20/40 space-y-3">
+                                        <div className="p-4 rounded-2xl border border-border bg-muted/15 space-y-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center text-muted-foreground">
                                                     <UserIcon className="w-4 h-4" />
@@ -1803,7 +1803,7 @@ export default function SuperAdminDashboard() {
                                     {/* Subscription details */}
                                     <div className="space-y-3">
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Subscription Plan</h4>
-                                        <div className="p-5 rounded-2xl border border-border bg-muted/20/40 space-y-4">
+                                        <div className="p-5 rounded-2xl border border-border bg-muted/15 space-y-4">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <Crown className="w-4 h-4 text-amber-500" />
@@ -1813,8 +1813,8 @@ export default function SuperAdminDashboard() {
                                                 </div>
                                                 <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider font-bold ${
                                                     (detailHotel.subscription?.status || 'inactive') === 'active' 
-                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' 
-                                                    : 'bg-amber-50 text-amber-700 border border-amber-250'
+                                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
+                                                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
                                                 }`}>
                                                     {detailHotel.subscription?.status || 'inactive'}
                                                 </Badge>
@@ -1857,7 +1857,7 @@ export default function SuperAdminDashboard() {
                                                 { label: 'Rate Shopper', val: detailHotel.feature_rate_shopper, icon: TrendingUp },
                                             ].map((feat, idx) => (
                                                 <div key={idx} className={`p-3 rounded-xl border flex flex-col items-center gap-2 text-center transition-all ${
-                                                    feat.val ? 'bg-indigo-50/50 border-indigo-150 text-indigo-700' : 'bg-background border-border text-muted-foreground'
+                                                    feat.val ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-650 dark:text-indigo-400' : 'bg-background border-border text-muted-foreground'
                                                 }`}>
                                                     <feat.icon className="w-5 h-5 mb-0.5" />
                                                     <span className="text-[10px] font-bold tracking-tight leading-none">{feat.label}</span>
@@ -1871,11 +1871,11 @@ export default function SuperAdminDashboard() {
                                 </div>
 
                                 {/* Quick Command Actions Footer */}
-                                <div className="p-6 border-t border-border bg-slate-50/50 space-y-3">
+                                <div className="p-6 border-t border-border bg-muted/20 space-y-3">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Administrative Actions</h4>
                                     <div className="grid grid-cols-2 gap-3">
                                         <Button 
-                                            className="bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 rounded-xl flex items-center justify-center gap-2"
+                                            className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold h-11 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all"
                                             onClick={() => impersonateMutation.mutate(detailHotel.id)}
                                         >
                                             <UserCheck className="w-4 h-4" /> Impersonate Admin
@@ -1935,7 +1935,7 @@ export default function SuperAdminDashboard() {
                 <Dialog open={!!selectedSubHotel} onOpenChange={(open) => !open && setSelectedSubHotel(null)}>
                     <DialogContent className="max-w-md bg-background p-8 rounded-3xl border border-border shadow-2xl">
                         <DialogHeader className="space-y-2">
-                            <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-100 mb-2">
+                            <div className="w-12 h-12 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center border border-amber-500/20 mb-2">
                                 <CreditCard className="w-6 h-6" />
                             </div>
                             <DialogTitle className="text-xl font-bold text-foreground">Modify Subscription Plan</DialogTitle>
@@ -2005,7 +2005,7 @@ export default function SuperAdminDashboard() {
                                 Cancel
                             </Button>
                             <Button
-                                className="flex-1 rounded-xl h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
+                                className="flex-1 rounded-xl h-12 bg-primary hover:bg-primary/95 text-primary-foreground font-bold shadow-lg shadow-primary/5 dark:shadow-none transition-all"
                                 disabled={updateSubscriptionMutation.isPending}
                                 onClick={() => {
                                     if (!selectedSubHotel) return;
