@@ -201,6 +201,13 @@ export default function SuperAdminDashboard() {
     const [broadcastMessage, setBroadcastMessage] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
 
+    // Add employee states
+    const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+    const [addUserEmail, setAddUserEmail] = useState('');
+    const [addUserName, setAddUserName] = useState('');
+    const [addUserPassword, setAddUserPassword] = useState('');
+    const [addUserRole, setAddUserRole] = useState('STAFF');
+
     // Advanced search and filters for properties tab
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [planFilter, setPlanFilter] = useState<string>('all');
@@ -292,6 +299,23 @@ export default function SuperAdminDashboard() {
         },
         onError: (err: any) => {
             toast({ title: 'Error', description: err.message || 'Failed to save permissions matrix.', variant: 'destructive' });
+        }
+    });
+
+    const createUserMutation = useMutation({
+        mutationFn: ({ hotelId, data }: { hotelId: string, data: any }) =>
+            apiClient.post(`/superadmin/hotels/${hotelId}/users`, data),
+        onSuccess: () => {
+            toast({ title: 'User Created', description: 'Employee account registered successfully.' });
+            queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
+            setIsAddUserOpen(false);
+            setAddUserEmail('');
+            setAddUserName('');
+            setAddUserPassword('');
+            setAddUserRole('STAFF');
+        },
+        onError: (err: any) => {
+            toast({ title: 'Registration Failed', description: err.message || 'Failed to create employee user account.', variant: 'destructive' });
         }
     });
 
@@ -778,11 +802,8 @@ export default function SuperAdminDashboard() {
                  <Tabs defaultValue="hotels" className="w-full">
                     <div className="flex items-center justify-between mb-6">
                         <TabsList className="bg-muted p-1 rounded-xl border border-border">
-                            <TabsTrigger value="hotels" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
+                             <TabsTrigger value="hotels" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
                                 <Hotel className="w-4 h-4 mr-2" /> Properties
-                            </TabsTrigger>
-                            <TabsTrigger value="users" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
-                                <Users className="w-4 h-4 mr-2" /> User Accounts
                             </TabsTrigger>
                             <TabsTrigger value="audit" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm px-6 h-10 transition-all">
                                 <Activity className="w-4 h-4 mr-2" /> Audit & Activity
@@ -1021,9 +1042,17 @@ export default function SuperAdminDashboard() {
 
                                 {workspaceTab === 'users' && (
                                     <Card className="border border-border rounded-2xl p-8 bg-background min-h-[400px] space-y-6">
-                                        <div>
-                                            <h3 className="text-xl font-bold text-foreground">Hotel User Registry</h3>
-                                            <p className="text-xs text-muted-foreground font-medium mt-1">Review and manage platform users associated with {selectedWorkspaceHotel.name}.</p>
+                                        <div className="flex items-center justify-between pb-4 border-b border-border">
+                                            <div>
+                                                <h3 className="text-xl font-bold text-foreground">Hotel User Registry</h3>
+                                                <p className="text-xs text-muted-foreground font-medium mt-1">Review and manage platform users associated with {selectedWorkspaceHotel.name}.</p>
+                                            </div>
+                                            <Button 
+                                                className="bg-indigo-600 hover:bg-indigo-750 text-white font-bold h-10 px-4 rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                                                onClick={() => setIsAddUserOpen(true)}
+                                            >
+                                                <Plus className="w-4 h-4" /> Add Employee Account
+                                            </Button>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1457,130 +1486,7 @@ export default function SuperAdminDashboard() {
                         )}
                     </TabsContent>
 
-                    <TabsContent value="users" className="mt-0">
-                        <Card className="border-border shadow-sm rounded-2xl p-8 bg-background min-h-[400px]">
-                            <div className="flex items-center justify-between mb-8">
-                                <div>
-                                    <h3 className="text-2xl font-black text-foreground tracking-tight">System User Governance</h3>
-                                    <p className="text-sm text-muted-foreground font-medium mt-1">Review and manage platform administration levels.</p>
-                                </div>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground focus-within:text-primary transition-colors" />
-                                    <input
-                                        placeholder="Filter by email address..."
-                                        className="bg-muted/30 border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm w-80 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
-                                        value={userSearchQuery}
-                                        onChange={(e) => setUserSearchQuery(e.target.value)}
-                                    />
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {isLoadingUsers ? (
-                                    <div className="col-span-full h-48 flex items-center justify-center">
-                                        <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                                    </div>
-                                ) : users.map((u: any) => (
-                                    <div key={u.id} className="p-6 rounded-2xl border border-border bg-muted/15 hover:border-primary/20 hover:bg-background hover:shadow-lg hover:shadow-primary/5 dark:hover:shadow-none transition-all group relative overflow-hidden flex flex-col justify-between">
-                                        <div>
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="w-12 h-12 bg-background rounded-xl flex items-center justify-center shadow-sm border border-border text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
-                                                    <UserIcon className="w-6 h-6" />
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider border shadow-none ${
-                                                        u.role === 'SUPER_ADMIN' 
-                                                            ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 font-bold' 
-                                                            : u.role === 'OWNER'
-                                                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 font-bold'
-                                                            : u.role === 'MANAGER'
-                                                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 font-bold'
-                                                            : 'bg-muted/40 text-muted-foreground border-border'
-                                                    }`}>
-                                                        {u.role}
-                                                    </Badge>
-                                                    <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider border shadow-none ${
-                                                        u.is_active 
-                                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 font-bold' 
-                                                            : 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 font-bold'
-                                                    }`}>
-                                                        {u.is_active ? 'Active' : 'Suspended'}
-                                                    </Badge>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="rounded-xl w-8 h-8 hover:bg-background hover:shadow-sm">
-                                                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-2xl border-border bg-background z-50">
-                                                            <DropdownMenuLabel className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-3 py-2">User Actions</DropdownMenuLabel>
-                                                            <DropdownMenuSeparator className="bg-muted/30" />
-                                                            
-                                                            <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-wider px-3 py-1">Change Role</DropdownMenuLabel>
-                                                            {['SUPER_ADMIN', 'OWNER', 'MANAGER', 'STAFF'].map((roleOpt) => (
-                                                                <DropdownMenuItem 
-                                                                    key={roleOpt} 
-                                                                    className={`rounded-xl py-2 cursor-pointer font-semibold text-xs ${u.role === roleOpt ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-foreground'}`}
-                                                                    onClick={() => updateRoleMutation.mutate({ id: u.id, role: roleOpt })}
-                                                                >
-                                                                    {roleOpt === 'SUPER_ADMIN' ? 'Super Admin' : roleOpt === 'OWNER' ? 'Owner' : roleOpt === 'MANAGER' ? 'Manager' : 'Staff'}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                            
-                                                            <DropdownMenuSeparator className="bg-muted/30" />
-                                                            
-                                                            <DropdownMenuItem 
-                                                                className="rounded-xl py-3 cursor-pointer group" 
-                                                                onClick={() => toggleUserStatusMutation.mutate({ id: u.id, is_active: !u.is_active })}
-                                                            >
-                                                                {u.is_active ? (
-                                                                    <>
-                                                                        <XCircle className="w-4 h-4 mr-3 text-amber-500" />
-                                                                        <span className="font-bold text-foreground">Suspend Account</span>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <UserCheck className="w-4 h-4 mr-3 text-emerald-600" />
-                                                                        <span className="font-bold text-foreground">Activate Account</span>
-                                                                    </>
-                                                                )}
-                                                            </DropdownMenuItem>
-                                                            
-                                                            <DropdownMenuSeparator className="bg-muted/30" />
-                                                            <DropdownMenuItem 
-                                                                className="rounded-xl py-3 cursor-pointer group hover:bg-red-50 text-red-600" 
-                                                                onClick={() => {
-                                                                    if (confirm(`Are you absolutely sure you want to permanently delete user account ${u.email}? This will purge them from Supabase Auth and database levels.`)) {
-                                                                        deleteUserMutation.mutate(u.id);
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <Trash2 className="w-4 h-4 mr-3 text-red-600" />
-                                                                <span className="font-bold">Delete Account</span>
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="font-bold text-foreground truncate text-sm">{u.name || "Unnamed User"}</p>
-                                                <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                                                
-                                                <div className="flex items-center gap-1.5 pt-2">
-                                                    <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                                                    <span className="text-xs font-semibold text-foreground truncate">{u.hotel_name || "Platform / Super Admin"}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-4 pt-4 border-t border-border flex items-center justify-between text-[10px] text-muted-foreground font-mono">
-                                            <span>Joined:</span>
-                                            <span>{u.created_at ? format(new Date(u.created_at), 'dd MMM yyyy') : 'N/A'}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </TabsContent>
 
                     {/* Audit Logs Tab Content */}
                     <TabsContent value="audit" className="mt-0">
@@ -2609,6 +2515,107 @@ export default function SuperAdminDashboard() {
                                 }}
                             >
                                 Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Add User Dialog */}
+                <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                    <DialogContent className="rounded-3xl border border-border bg-background shadow-2xl p-6 max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Add Employee Account</DialogTitle>
+                            <DialogDescription className="text-xs text-muted-foreground font-medium mt-1">
+                                Create a new login credential directly registered under {selectedWorkspaceHotel?.name}.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                                    Full Name
+                                </label>
+                                <Input
+                                    placeholder="John Doe"
+                                    className="h-11 bg-muted/20 border-border rounded-xl font-medium text-foreground"
+                                    value={addUserName}
+                                    onChange={(e) => setAddUserName(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                                    Email Address
+                                </label>
+                                <Input
+                                    type="email"
+                                    placeholder="john@example.com"
+                                    className="h-11 bg-muted/20 border-border rounded-xl font-medium text-foreground"
+                                    value={addUserEmail}
+                                    onChange={(e) => setAddUserEmail(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                                    Password
+                                </label>
+                                <Input
+                                    type="password"
+                                    placeholder="Min 6 characters"
+                                    className="h-11 bg-muted/20 border-border rounded-xl font-medium text-foreground"
+                                    value={addUserPassword}
+                                    onChange={(e) => setAddUserPassword(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                                    Role / Privilege Level
+                                </label>
+                                <Select value={addUserRole} onValueChange={setAddUserRole}>
+                                    <SelectTrigger className="h-11 rounded-xl border-border bg-muted/20 font-bold text-foreground">
+                                        <SelectValue placeholder="Select Role" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl border-border bg-background">
+                                        <SelectItem value="OWNER">Owner / General Manager</SelectItem>
+                                        <SelectItem value="MANAGER">Manager / Department Head</SelectItem>
+                                        <SelectItem value="STAFF">Basic Staff Member</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1 rounded-xl h-11 font-bold hover:bg-muted/30"
+                                onClick={() => setIsAddUserOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="bg-indigo-600 hover:bg-indigo-750 text-white font-bold h-11 px-6 rounded-xl flex-1 transition-all"
+                                disabled={createUserMutation.isPending}
+                                onClick={() => {
+                                    if (!addUserEmail || !addUserName || !addUserPassword) {
+                                        toast({ title: 'Validation Alert', description: 'Please fill in all employee fields.', variant: 'destructive' });
+                                        return;
+                                    }
+                                    if (selectedWorkspaceHotel) {
+                                        createUserMutation.mutate({
+                                            hotelId: selectedWorkspaceHotel.id,
+                                            data: {
+                                                email: addUserEmail,
+                                                name: addUserName,
+                                                password: addUserPassword,
+                                                role: addUserRole
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                Create Account
                             </Button>
                         </DialogFooter>
                     </DialogContent>

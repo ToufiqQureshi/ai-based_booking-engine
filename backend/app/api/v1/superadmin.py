@@ -360,6 +360,110 @@ async def delete_user(
     await session.commit()
     return {"message": "User account deleted successfully"}
 
+from pydantic import BaseModel
+
+class SuperAdminUserCreate(BaseModel):
+    email: str
+    name: str
+    password: str
+    role: str
+
+@router.post("/hotels/{hotel_id}/users")
+async def create_hotel_user(
+    hotel_id: str,
+    data: SuperAdminUserCreate,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    """Create a new employee user account for a specific hotel"""
+    # 1. Verify hotel exists
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+        
+    # 2. Check if email already exists locally
+    existing_stmt = select(User).where(User.email == data.email.lower().strip())
+    res_existing = await session.execute(existing_stmt)
+    if res_existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="A user with this email address already exists")
+        
+    # 3. Create user in Supabase Auth first
+    from app.core.supabase import get_supabase
+    supabase_client = get_supabase()
+    try:
+        sb_user = supabase_client.auth.admin.create_user({
+            "email": data.email.lower().strip(),
+            "password": data.password,
+            "email_confirm": True,
+            "user_metadata": {
+                "name": data.name,
+                "hotel_name": hotel.name
+            }
+        })
+        supabase_id = sb_user.user.id
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Supabase Auth registration failed: {str(e)}"
+        )
+        
+    # 4. Create user in local PostgreSQL
+    from app.models.user import UserRole
+    if data.role not in [r.value for r in UserRole]:
+        # Clean up Supabase auth user
+        try:
+            supabase_client.auth.admin.delete_user(supabase_id)
+        except:
+            pass
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {[r.value for r in UserRole]}")
+        
+    from app.core import security
+    new_user = User(
+        email=data.email.lower().strip(),
+        name=data.name,
+        role=UserRole(data.role),
+        supabase_id=supabase_id,
+        hashed_password=security.get_password_hash(data.password),
+        hotel_id=hotel_id,
+        is_active=True
+    )
+    
+    session.add(new_user)
+    
+    # Audit log
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="CREATE_USER",
+        description=f"Created employee user '{new_user.email}' for hotel '{hotel.name}' with role '{data.role}'",
+        ip_address="127.0.0.1"
+    )
+    session.add(audit)
+    
+    try:
+        await session.commit()
+        await session.refresh(new_user)
+    except Exception as e:
+        await session.rollback()
+        # Clean up Supabase auth user
+        try:
+            supabase_client.auth.admin.delete_user(supabase_id)
+        except:
+            pass
+        raise HTTPException(status_code=500, detail=f"Failed to save user: {str(e)}")
+        
+    return {
+        "id": new_user.id,
+        "name": new_user.name,
+        "email": new_user.email,
+        "role": new_user.role,
+        "hotel_id": new_user.hotel_id,
+        "is_active": new_user.is_active,
+        "created_at": new_user.created_at.isoformat() if new_user.created_at else None
+    }
+
+
 @router.delete("/hotels/{hotel_id}")
 async def delete_hotel(
     hotel_id: str,
