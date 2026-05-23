@@ -94,6 +94,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Separator } from '@/components/ui/separator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -113,6 +114,7 @@ interface HotelAdminData {
     feature_custom_logo: boolean;
     feature_custom_widget: boolean;
     role_permissions?: Record<string, string[]>;
+    settings?: Record<string, any>;
     subscription: {
 
         plan: string;
@@ -1292,6 +1294,52 @@ export default function SuperAdminDashboard() {
                                                     />
                                                 </div>
                                             ))}
+                                        </div>
+
+                                        <Separator className="bg-border/60" />
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                                    <ShieldCheck className="w-4 h-4 text-indigo-650" /> Guest Cancellation Flow Control
+                                                </h4>
+                                                <p className="text-[11px] text-muted-foreground mt-0.5 font-medium leading-relaxed">
+                                                    Choose whether cancellation requests are processed automatically/instantly or require manual hotelier approval first.
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/5">
+                                                <div className="space-y-0.5">
+                                                    <span className="text-xs font-bold text-foreground block">Cancellation Mode</span>
+                                                    <span className="text-[10px] text-muted-foreground font-medium block">
+                                                        {selectedWorkspaceHotel.settings?.cancellation_mode === 'request'
+                                                            ? 'Approval-Based Request (Locked)'
+                                                            : 'Instant Self-Cancellation (Default)'}
+                                                    </span>
+                                                </div>
+                                                <Select
+                                                    value={selectedWorkspaceHotel.settings?.cancellation_mode || 'instant'}
+                                                    onValueChange={(val) => {
+                                                        const currentSettings = selectedWorkspaceHotel.settings || {};
+                                                        updateMutation.mutate({
+                                                            id: selectedWorkspaceHotel.id,
+                                                            data: {
+                                                                settings: {
+                                                                    ...currentSettings,
+                                                                    cancellation_mode: val
+                                                                }
+                                                            }
+                                                        });
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-[220px] h-10 rounded-xl border-border bg-background font-bold text-xs">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="rounded-xl border-border bg-background z-50">
+                                                        <SelectItem value="instant">Instant Self-Cancellation</SelectItem>
+                                                        <SelectItem value="request">Approval-Based Request</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
                                     </Card>
                                 )}

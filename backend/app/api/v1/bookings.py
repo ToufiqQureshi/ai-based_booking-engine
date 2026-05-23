@@ -105,6 +105,12 @@ async def create_booking(
     
     # Create booking
     # --- CONCURRENCY SAFETY: Lock room inventory during transaction ---
+    rooms_list = []
+    from app.models.hotel import Hotel
+    from app.models.rates import RatePlan
+    hotel = await session.get(Hotel, current_user.hotel_id)
+    hotel_policy = hotel.settings.get("cancellation_policy") if hotel and hotel.settings else None
+
     for room_req in booking_data.rooms:
         rt_id = room_req.get("room_type_id")
         # Lock this room type for the duration of this transaction
@@ -115,8 +121,28 @@ async def create_booking(
         if not room_type:
              raise HTTPException(status_code=404, detail=f"Room type {rt_id} not found")
              
-        # TODO: Advanced date-range availability check goes here.
-        # For now, we ensure the room type exists and is locked.
+        # Resolve policy and freeze
+        cancellation_policy = room_type.cancellation_policy
+        is_refundable = True
+        cancellation_hours = 24
+        
+        rp_id = room_req.get("rate_plan_id")
+        if rp_id:
+            rp = await session.get(RatePlan, rp_id)
+            if rp:
+                is_refundable = rp.is_refundable
+                cancellation_hours = rp.cancellation_hours
+                
+        if not cancellation_policy:
+            cancellation_policy = hotel_policy
+            if not cancellation_policy:
+                cancellation_policy = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
+                
+        room_dict = dict(room_req)
+        room_dict["cancellation_policy"] = cancellation_policy
+        room_dict["is_refundable"] = is_refundable
+        room_dict["cancellation_hours"] = cancellation_hours
+        rooms_list.append(room_dict)
 
     booking = Booking(
         hotel_id=current_user.hotel_id,
@@ -124,10 +150,10 @@ async def create_booking(
         booking_number=generate_booking_number(),
         check_in=booking_data.check_in,
         check_out=booking_data.check_out,
-        rooms=booking_data.rooms,
+        rooms=rooms_list,
         special_requests=booking_data.special_requests,
         promo_code=booking_data.promo_code,
-        total_amount=sum(room.get("total_price", 0) for room in booking_data.rooms),
+        total_amount=sum(room.get("total_price", 0) for room in rooms_list),
         status=BookingStatus.PENDING
     )
     session.add(booking)
@@ -245,6 +271,22 @@ async def update_booking(
     
     new_status = booking.status
     
+    if new_status == BookingStatus.CANCELLED and old_status != BookingStatus.CANCELLED:
+        if old_status == BookingStatus.CANCEL_REQUESTED:
+            # Keep pre-calculated values from guest request time
+            pass
+        else:
+            from app.core.cancellation import calculate_cancellation_fee
+            fee, refund, ref_status = calculate_cancellation_fee(booking)
+            booking.cancellation_fee = fee
+            booking.refund_amount = refund
+            booking.refund_status = ref_status
+    elif old_status == BookingStatus.CANCEL_REQUESTED and new_status != BookingStatus.CANCEL_REQUESTED:
+        # Request was rejected, reset cancellation details
+        booking.cancellation_fee = 0.0
+        booking.refund_amount = 0.0
+        booking.refund_status = "none"
+
     # Log to timeline in background if status changed
     if old_status != new_status:
         background_tasks.add_task(

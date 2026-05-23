@@ -41,6 +41,7 @@ const PublicBookingLayout = lazy(() => import("@/layouts/PublicBookingLayout").t
 const BookingSelection = lazy(() => import("@/pages/public/BookingSelection"));
 const BookingCheckout = lazy(() => import("@/pages/public/BookingCheckout"));
 const BookingConfirmation = lazy(() => import("@/pages/public/BookingConfirmation"));
+const BookingCancel = lazy(() => import("@/pages/public/BookingCancel"));
 const BookingWidget = lazy(() => import("@/pages/public/BookingWidget"));
 const ChatEmbed = lazy(() => import("@/pages/public/ChatEmbed"));
 
@@ -121,6 +122,7 @@ const App = () => {
                       <Route path="rooms" element={<BookingSelection />} />
                       <Route path="checkout" element={<BookingCheckout />} />
                       <Route path="confirmation" element={<BookingConfirmation />} />
+                      <Route path="cancel" element={<BookingCancel />} />
                     </Route>
 
                     {/* Standalone Widget Route */}

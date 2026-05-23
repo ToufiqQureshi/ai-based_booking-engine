@@ -70,11 +70,12 @@ interface LeadData {
 const statusConfig: Record<string, {
   label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className?: string;
 }> = {
-  pending:     { label: 'Pending',     variant: 'outline' },
-  confirmed:   { label: 'Confirmed',   variant: 'default', className: 'bg-green-600 hover:bg-green-700 text-white' },
-  checked_in:  { label: 'Checked In',  variant: 'secondary', className: 'bg-blue-100 text-blue-800' },
-  checked_out: { label: 'Checked Out', variant: 'secondary', className: 'bg-gray-100 text-gray-700' },
-  cancelled:   { label: 'Cancelled',   variant: 'destructive' },
+  pending:          { label: 'Pending',          variant: 'outline' },
+  confirmed:        { label: 'Confirmed',        variant: 'default', className: 'bg-green-600 hover:bg-green-700 text-white' },
+  checked_in:       { label: 'Checked In',       variant: 'secondary', className: 'bg-blue-100 text-blue-800' },
+  checked_out:      { label: 'Checked Out',      variant: 'secondary', className: 'bg-gray-100 text-gray-700' },
+  cancelled:        { label: 'Cancelled',        variant: 'destructive' },
+  cancel_requested: { label: 'Cancel Requested', variant: 'outline', className: 'bg-amber-100 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400 font-bold' },
 };
 
 const sourceLabels: Record<string, { label: string; icon: JSX.Element }> = {
@@ -294,6 +295,7 @@ export function BookingsPage() {
                   <SelectItem value="checked_in">Checked In</SelectItem>
                   <SelectItem value="checked_out">Checked Out</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="cancel_requested">Cancel Requested</SelectItem>
                 </SelectContent>
               </Select>
 

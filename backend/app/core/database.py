@@ -74,6 +74,17 @@ async def init_db():
         except Exception:
             pass
 
+        for col, col_type in [
+            ("cancellation_fee", "NUMERIC DEFAULT 0.00"),
+            ("refund_amount", "NUMERIC DEFAULT 0.00"),
+            ("refund_status", "VARCHAR(50) DEFAULT 'none'")
+        ]:
+            try:
+                await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
+            except Exception:
+                pass
+
+
 
 async def get_session() -> AsyncSession:
     """

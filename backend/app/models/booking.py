@@ -22,6 +22,7 @@ class BookingStatus(str, Enum):
     CANCELLED = "cancelled"
     CHECKED_IN = "checked_in"
     CHECKED_OUT = "checked_out"
+    CANCEL_REQUESTED = "cancel_requested"
 
 
 class BookingSource(str, Enum):
@@ -78,6 +79,7 @@ class BookingRoom(SQLModel):
     children: int = 0
     price_per_night: float
     total_price: float
+    cancellation_policy: Optional[str] = None
 
 
 class BookingBase(SQLModel):
@@ -90,6 +92,10 @@ class BookingBase(SQLModel):
     special_requests: Optional[str] = None
     promo_code: Optional[str] = None
     source: BookingSource = Field(default=BookingSource.DIRECT)
+    cancellation_fee: float = Field(default=0.0, ge=0)
+    refund_amount: float = Field(default=0.0, ge=0)
+    refund_status: Optional[str] = Field(default="none")
+
 
 
 class Booking(BookingBase, table=True):

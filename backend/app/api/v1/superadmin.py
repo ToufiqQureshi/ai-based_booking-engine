@@ -114,6 +114,7 @@ async def list_hotels(
             "name": hotel.name,
             "slug": hotel.slug,
             "is_active": hotel.is_active,
+            "settings": settings_dict,
             "owner_email": owner.email if owner else "N/A",
             "owner_name": owner.name if owner else "N/A",
             "feature_ai_agent": hotel.feature_ai_agent,

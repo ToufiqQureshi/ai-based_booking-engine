@@ -106,6 +106,7 @@ export interface HotelSettings {
   popular_badge_text?: string;
   multi_room_cart?: boolean;
   featured_room_type_id?: string;
+  cancellation_mode?: 'instant' | 'request';
 }
 
 // ============== Room Types ==============
@@ -232,7 +233,7 @@ export interface AvailabilityUpdate {
 }
 
 // ============== Booking Types ==============
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'checked_in' | 'checked_out';
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'checked_in' | 'checked_out' | 'cancel_requested';
 
 export interface Booking {
   id: string;
@@ -250,6 +251,9 @@ export interface Booking {
   source: 'direct' | 'booking_engine' | 'manual';
   created_at: string;
   updated_at: string;
+  cancellation_fee?: number;
+  refund_amount?: number;
+  refund_status?: string;
 }
 
 export interface BookingRoom {
@@ -262,6 +266,7 @@ export interface BookingRoom {
   children: number;
   price_per_night: number;
   total_price: number;
+  cancellation_policy?: string;
 }
 
 export interface Guest {

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend, LineChart, Line
@@ -10,7 +10,7 @@ import {
   Globe, TrendingUp, TrendingDown, Layout,
   DollarSign, PieChart as PieIcon, Calendar, Download,
   Activity, ArrowUpRight, ArrowDownRight, Zap, MessageCircle, Bed,
-  Smartphone, Monitor, Tablet, RefreshCw, AlertCircle
+  Smartphone, Monitor, Tablet, RefreshCw, AlertCircle, XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -44,6 +44,10 @@ interface AnalyticsData {
   booking_window_data?: { window: string; count: number }[];
   occupancy_forecast?: { date: string; occupancy: number }[];
   pickup_stats?: { today: number; yesterday: number; trend: 'up' | 'down' };
+  cancellations_count?: number;
+  cancellation_rate?: number;
+  lost_revenue?: number;
+  cancellation_fees_collected?: number;
 }
 
 interface LiveEvent {
@@ -232,6 +236,10 @@ export const AnalyticsDashboard: React.FC = () => {
       ['AI Assisted Revenue', data.ai_revenue ?? 0],
       ['Total AI Leads', data.total_leads ?? 0],
       ['Commission Saved', data.commission_saved ?? 0],
+      ['Total Cancellations', data.cancellations_count ?? 0],
+      ['Cancellation Rate (%)', data.cancellation_rate ?? 0],
+      ['Lost Revenue (INR)', data.lost_revenue ?? 0],
+      ['Cancellation Fees Collected (INR)', data.cancellation_fees_collected ?? 0],
     ];
     const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
     const link = document.createElement('a');
@@ -386,6 +394,7 @@ export const AnalyticsDashboard: React.FC = () => {
               { value: 'revenue', label: 'Revenue & Rooms' },
               { value: 'traffic', label: 'Traffic' },
               { value: 'ai', label: 'AI Performance' },
+              { value: 'cancellations', label: 'Cancellations' },
             ].map(tab => (
               <TabsTrigger
                 key={tab.value}
@@ -799,6 +808,81 @@ export const AnalyticsDashboard: React.FC = () => {
                 ) : (
                   <EmptyState message="AI hasn't collected enough inquiries yet to show patterns." />
                 )}
+              </SectionCard>
+            </div>
+          </TabsContent>
+
+          {/* ── CANCELLATIONS TAB ────────────────────────────────────── */}
+          <TabsContent value="cancellations" className="space-y-4 focus:outline-none">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KPICard 
+                label="Total Cancellations" 
+                value={`${data.cancellations_count || 0}`} 
+                sub="Cancelled reservations count" 
+                icon={<XCircle className="w-4 h-4 text-red-500" />} 
+                accent="text-red-600"
+              />
+              <KPICard 
+                label="Cancellation Rate" 
+                value={`${data.cancellation_rate || 0}%`} 
+                sub="Percent of total bookings" 
+                icon={<AlertCircle className="w-4 h-4 text-amber-500" />} 
+                accent={data.cancellation_rate && data.cancellation_rate > 15 ? 'text-red-500' : 'text-amber-500'} 
+              />
+              <KPICard 
+                label="Lost Revenue" 
+                value={`₹${(data.lost_revenue || 0).toLocaleString('en-IN')}`} 
+                sub="Revenue from cancelled stays" 
+                icon={<TrendingDown className="w-4 h-4 text-red-500" />} 
+                accent="text-red-600"
+              />
+              <KPICard 
+                label="Cancellation Fees" 
+                value={`₹${(data.cancellation_fees_collected || 0).toLocaleString('en-IN')}`} 
+                sub="Retained late cancellation fees" 
+                icon={<DollarSign className="w-4 h-4 text-emerald-500" />} 
+                accent="text-emerald-600"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SectionCard title="Cancellation Strategy Recommendations" subtitle="AI suggested optimization rules to reduce cancellation rates" icon={<Zap className="w-4 h-4 text-indigo-500" />}>
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">1. Promote Non-Refundable Rates</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Your current cancellation rate is **{data.cancellation_rate || 0}%**. Offering a slight discount (e.g. 5-10%) on non-refundable rate plans can secure guaranteed bookings early and lower this rate.
+                    </p>
+                  </div>
+                  <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">2. Expand Cancellation Window</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      If cancellations are occurring close to the check-in date, consider shifting your standard rate plan window from 24 hours to 48 or 72 hours before arrival, allowing more time to resell rooms.
+                    </p>
+                  </div>
+                  <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">3. Automated Deposit Checks</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Implement a small advance token payment requirement for bookings made during high-occupancy weekends to prevent double-booking or speculative holds.
+                    </p>
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Policy Fee Breakdown" subtitle="Details of cancellation charges collected" icon={<DollarSign className="w-4 h-4 text-emerald-500" />}>
+                <div className="space-y-4 flex flex-col justify-center h-full pb-6">
+                  <div className="flex justify-between items-center text-sm py-2 border-b border-dashed border-border">
+                    <span className="text-muted-foreground font-medium">Cancellation Fee Income</span>
+                    <span className="font-bold text-emerald-600">₹{(data.cancellation_fees_collected || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm py-2 border-b border-dashed border-border">
+                    <span className="text-muted-foreground font-medium">Refunded Amount</span>
+                    <span className="font-bold text-slate-800">₹{((data.lost_revenue || 0) - (data.cancellation_fees_collected || 0) > 0 ? (data.lost_revenue || 0) - (data.cancellation_fees_collected || 0) : 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed italic">
+                    Note: Stays cancelled inside the free cancellation window result in a full refund of guest deposits. Late cancellations result in a penalty fee equivalent to 1 night's charge which is retained by the property.
+                  </p>
+                </div>
               </SectionCard>
             </div>
           </TabsContent>

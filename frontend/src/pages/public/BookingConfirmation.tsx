@@ -75,7 +75,9 @@ export default function BookingConfirmation() {
         // Table
         const tableBody = booking.rooms.flatMap((room: any) => [
             [
-                `${room.room_type_name}`,
+                room.cancellation_policy 
+                    ? `${room.room_type_name}\nPolicy: ${room.cancellation_policy}`
+                    : `${room.room_type_name}`,
                 `1 Night x 1 Room`,
                 new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(room.total_price)
             ]
@@ -187,6 +189,11 @@ export default function BookingConfirmation() {
                                         <div>
                                             <p className="font-bold text-slate-900">{room.room_type_name}</p>
                                             <p className="text-sm text-slate-500">{room.rate_plan_name}</p>
+                                            {room.cancellation_policy && (
+                                                <p className="text-xs text-red-500 font-semibold mt-1">
+                                                    Cancellation Policy: {room.cancellation_policy}
+                                                </p>
+                                            )}
                                         </div>
                                         <span className="font-bold text-slate-900">
                                             {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(room.total_price)}

@@ -171,6 +171,12 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         total_conversions = len([b for b in bookings if b.status != 'cancelled'])
         conversion_rate = round((total_conversions / total_visitors * 100), 2) if total_visitors > 0 else 0
         avg_time = int(sum(s.time_spent_seconds or 0 for s in sessions) / total_visitors) if total_visitors > 0 else 0
+
+        # Cancellation Metrics
+        cancellations_count = len([b for b in bookings if b.status == BookingStatus.CANCELLED])
+        cancellation_rate = round((cancellations_count / len(bookings) * 100), 2) if len(bookings) > 0 else 0
+        lost_revenue = sum(float(b.total_amount or 0) for b in bookings if b.status == BookingStatus.CANCELLED)
+        cancellation_fees_collected = sum(float(b.cancellation_fee or 0) for b in bookings if b.status == BookingStatus.CANCELLED)
         
         # 4. Device Stats
         device_counts = {}
@@ -377,6 +383,10 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             "avg_time_spent_seconds": avg_time,
             "total_conversions": total_conversions,
             "conversion_rate": conversion_rate,
+            "cancellations_count": cancellations_count,
+            "cancellation_rate": cancellation_rate,
+            "lost_revenue": lost_revenue,
+            "cancellation_fees_collected": cancellation_fees_collected,
             "chart_data": chart_data,
             "funnel_data": funnel_data,
             "revenue_total": revenue_total,

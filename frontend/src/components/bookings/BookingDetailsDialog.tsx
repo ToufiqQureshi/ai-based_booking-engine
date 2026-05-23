@@ -27,6 +27,7 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
     checked_in: { label: 'Checked In', variant: 'secondary' },
     checked_out: { label: 'Checked Out', variant: 'secondary' },
     cancelled: { label: 'Cancelled', variant: 'destructive' },
+    cancel_requested: { label: 'Cancel Requested', variant: 'outline' },
 };
 
 export function BookingDetailsDialog({ open, onOpenChange, booking, onStatusChange }: BookingDetailsDialogProps) {
@@ -142,14 +143,33 @@ export function BookingDetailsDialog({ open, onOpenChange, booking, onStatusChan
                                 <tbody className="divide-y">
                                     {booking.rooms?.map((room: any, i: number) => (
                                         <tr key={i}>
-                                            <td className="p-2">{room.room_type_name}</td>
-                                            <td className="p-2 text-right">{formatCurrency(room.total_price)}</td>
+                                            <td className="p-2 font-medium">
+                                                <div>{room.room_type_name}</div>
+                                                {room.cancellation_policy && (
+                                                    <div className="text-[11px] text-red-500 font-semibold mt-0.5">
+                                                        Policy: {room.cancellation_policy}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="p-2 text-right align-top">{formatCurrency(room.total_price)}</td>
                                         </tr>
                                     ))}
                                     <tr className="bg-muted/10 font-bold">
                                         <td className="p-2">Total Amount</td>
                                         <td className="p-2 text-right">{formatCurrency(booking.total_amount)}</td>
                                     </tr>
+                                    {(booking.status === 'cancelled' || booking.status === 'cancel_requested') && (
+                                        <>
+                                            <tr className="bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400 font-bold">
+                                                <td className="p-2">{booking.status === 'cancel_requested' ? 'Estimated Cancellation Fee' : 'Cancellation Fee'}</td>
+                                                <td className="p-2 text-right">{formatCurrency(booking.cancellation_fee || 0)}</td>
+                                            </tr>
+                                            <tr className="bg-green-50/50 dark:bg-green-950/20 text-green-600 dark:text-green-400 font-bold">
+                                                <td className="p-2">{booking.status === 'cancel_requested' ? 'Estimated Refund Amount' : `Refund Amount (${booking.refund_status})`}</td>
+                                                <td className="p-2 text-right">{formatCurrency(booking.refund_amount || 0)}</td>
+                                            </tr>
+                                        </>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -216,6 +236,24 @@ export function BookingDetailsDialog({ open, onOpenChange, booking, onStatusChan
                     {booking.status === 'checked_in' && (
                         <div className="flex w-full justify-end">
                             <Button onClick={() => handleStatusUpdate('checked_out')}>Check Out Quote</Button>
+                        </div>
+                    )}
+
+                    {booking.status === 'cancel_requested' && (
+                        <div className="flex w-full justify-between items-center gap-4">
+                            <Button
+                                variant="outline"
+                                className="flex-1 text-slate-700 hover:bg-slate-50 border-slate-200"
+                                onClick={() => handleStatusUpdate('confirmed')}
+                            >
+                                Reject Request (Keep Booking)
+                            </Button>
+                            <Button
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                onClick={() => handleStatusUpdate('cancelled')}
+                            >
+                                Approve Cancellation
+                            </Button>
                         </div>
                     )}
 

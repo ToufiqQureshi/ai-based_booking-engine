@@ -672,8 +672,37 @@ async def create_public_booking(
         addon_total = sum(addon.price for addon in booking_data.addons)
         total_amount = room_total + addon_total
         
-        # Convert rooms/addons to dict format
-        rooms_list = [room.model_dump() for room in booking_data.rooms]
+        # Convert rooms/addons to dict format with cancellation policy freeze
+        rooms_list = []
+        hotel = await session.get(Hotel, hotel_id)
+        hotel_policy = hotel.settings.get("cancellation_policy") if hotel and hotel.settings else None
+        
+        for room in booking_data.rooms:
+            rt = await session.get(RoomType, room.room_type_id)
+            cancellation_policy = rt.cancellation_policy if rt else None
+            
+            # Resolve rate plan cancellation settings
+            is_refundable = True
+            cancellation_hours = 24
+            if room.rate_plan_id:
+                rp = await session.get(RatePlan, room.rate_plan_id)
+                if rp:
+                    is_refundable = rp.is_refundable
+                    cancellation_hours = rp.cancellation_hours
+                    
+            if not cancellation_policy:
+                # If room type doesn't have a specific override policy, check hotel settings
+                cancellation_policy = hotel_policy
+                if not cancellation_policy:
+                    # Fallback to rate plan configuration details
+                    cancellation_policy = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
+            
+            room_dict = room.model_dump()
+            room_dict["cancellation_policy"] = cancellation_policy
+            room_dict["is_refundable"] = is_refundable
+            room_dict["cancellation_hours"] = cancellation_hours
+            rooms_list.append(room_dict)
+
         addons_list = [addon.model_dump() for addon in booking_data.addons]
         
         # Create booking
@@ -897,3 +926,146 @@ async def check_guest_loyalty(
             is_repeat_guest=False,
             message="Welcome! Enjoy your booking experience."
         )
+
+
+class GuestCancelRequest(BaseModel):
+    booking_number: str
+    email: str
+
+class GuestCancelInfoResponse(BaseModel):
+    booking_number: str
+    guest_name: str
+    check_in: date
+    check_out: date
+    rooms: List[dict]
+    total_amount: float
+    paid_amount: float
+    cancellation_policy: str
+    is_refundable: bool
+    cancellation_hours: int
+    potential_fee: float
+    potential_refund: float
+    refund_status: str
+    status: str
+    cancellation_mode: str
+
+@router.post("/bookings/cancel-request", response_model=GuestCancelInfoResponse)
+async def public_cancel_request(data: GuestCancelRequest, session: DbSession):
+    """
+    Look up booking and calculate cancellation fee details.
+    """
+    query = select(Booking).where(Booking.booking_number == data.booking_number)
+    res = await session.execute(query)
+    booking = res.scalar_one_or_none()
+    
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+        
+    if booking.status == BookingStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Booking is already cancelled")
+        
+    if booking.status == BookingStatus.CANCEL_REQUESTED:
+        raise HTTPException(status_code=400, detail="Cancellation request is already pending approval")
+        
+    guest = await session.get(Guest, booking.guest_id)
+    if not guest or guest.email.lower().strip() != data.email.lower().strip():
+        raise HTTPException(status_code=403, detail="Invalid guest email verification")
+        
+    from app.core.cancellation import calculate_cancellation_fee
+    fee, refund, ref_status = calculate_cancellation_fee(booking)
+    
+    room = booking.rooms[0] if booking.rooms else {}
+    cancellation_policy = room.get("cancellation_policy", "Standard policy applies.")
+    is_refundable = room.get("is_refundable", True)
+    cancellation_hours = room.get("cancellation_hours", 24)
+    
+    hotel = await session.get(Hotel, booking.hotel_id)
+    cancellation_mode = hotel.settings.get("cancellation_mode", "instant") if hotel and hotel.settings else "instant"
+    
+    return GuestCancelInfoResponse(
+        booking_number=booking.booking_number,
+        guest_name=f"{guest.first_name} {guest.last_name}",
+        check_in=booking.check_in,
+        check_out=booking.check_out,
+        rooms=booking.rooms,
+        total_amount=booking.total_amount,
+        paid_amount=booking.paid_amount,
+        cancellation_policy=cancellation_policy,
+        is_refundable=is_refundable,
+        cancellation_hours=cancellation_hours,
+        potential_fee=fee,
+        potential_refund=refund,
+        refund_status=ref_status,
+        status=booking.status.value,
+        cancellation_mode=cancellation_mode
+    )
+
+@router.post("/bookings/cancel-confirm")
+async def public_cancel_confirm(data: GuestCancelRequest, session: DbSession):
+    """
+    Confirm booking cancellation or request it, based on hotel settings.
+    """
+    query = select(Booking).where(Booking.booking_number == data.booking_number)
+    res = await session.execute(query)
+    booking = res.scalar_one_or_none()
+    
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+        
+    if booking.status == BookingStatus.CANCELLED:
+        return {"status": "already_cancelled", "message": "Booking is already cancelled"}
+        
+    if booking.status == BookingStatus.CANCEL_REQUESTED:
+        return {"status": "already_requested", "message": "Cancellation request is already pending approval"}
+        
+    guest = await session.get(Guest, booking.guest_id)
+    if not guest or guest.email.lower().strip() != data.email.lower().strip():
+        raise HTTPException(status_code=403, detail="Invalid guest email verification")
+        
+    from app.core.cancellation import calculate_cancellation_fee
+    fee, refund, ref_status = calculate_cancellation_fee(booking)
+    
+    hotel = await session.get(Hotel, booking.hotel_id)
+    cancellation_mode = hotel.settings.get("cancellation_mode", "instant") if hotel and hotel.settings else "instant"
+    
+    if cancellation_mode == "request":
+        booking.status = BookingStatus.CANCEL_REQUESTED
+        booking.cancellation_fee = fee
+        booking.refund_amount = refund
+        booking.refund_status = ref_status
+        booking.updated_at = datetime.utcnow()
+        session.add(booking)
+        await session.commit()
+        return {
+            "status": "cancel_requested",
+            "booking_number": booking.booking_number,
+            "cancellation_fee": fee,
+            "refund_amount": refund,
+            "refund_status": ref_status,
+            "message": "Your cancellation request has been successfully submitted for approval."
+        }
+    
+    booking.status = BookingStatus.CANCELLED
+    booking.cancellation_fee = fee
+    booking.refund_amount = refund
+    booking.refund_status = ref_status
+    booking.updated_at = datetime.utcnow()
+    
+    session.add(booking)
+    await session.commit()
+    
+    try:
+        from app.api.v1.availability import clear_availability_cache
+        clear_availability_cache(booking.hotel_id)
+    except Exception as e:
+        logger.error(f"Failed clearing availability cache on guest cancellation: {e}")
+        
+    return {
+        "status": "cancelled",
+        "booking_number": booking.booking_number,
+        "cancellation_fee": fee,
+        "refund_amount": refund,
+        "refund_status": ref_status,
+        "message": "Your booking has been successfully cancelled."
+    }
+
