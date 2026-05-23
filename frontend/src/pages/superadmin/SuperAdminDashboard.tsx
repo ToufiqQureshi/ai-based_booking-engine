@@ -92,6 +92,7 @@ import {
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface HotelAdminData {
     id: string;
