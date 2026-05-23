@@ -147,33 +147,29 @@ const IntegrationPage = () => {
         }
     };
 
-    const pendingUpdates = useRef<Partial<IntegrationSettings>>({});
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [isSavingSettings, setIsSavingSettings] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
 
     const updateSettings = (updates: Partial<IntegrationSettings>) => {
-        // Optimistically update local state so UI doesn't lag
         if (settings) {
             setSettings({ ...settings, ...updates });
+            setIsDirty(true);
         }
+    };
 
-        // Accumulate updates
-        pendingUpdates.current = { ...pendingUpdates.current, ...updates };
-
-        // Debounce the API call
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
-        timeoutRef.current = setTimeout(async () => {
-            const updatesToSend = { ...pendingUpdates.current };
-            pendingUpdates.current = {}; // clear for next time
-
-            try {
-                const data = await apiClient.put<IntegrationSettings>('/integration/settings', updatesToSend);
-                setSettings(data);
-                toast.success('Settings updated successfully');
-            } catch (error) {
-                toast.error('Failed to update settings');
-            }
-        }, 1000);
+    const handleSaveSettings = async () => {
+        if (!settings) return;
+        setIsSavingSettings(true);
+        try {
+            const data = await apiClient.put<IntegrationSettings>('/integration/settings', settings);
+            setSettings(data);
+            setIsDirty(false);
+            toast.success('Integration settings saved successfully');
+        } catch (error) {
+            toast.error('Failed to save integration settings');
+        } finally {
+            setIsSavingSettings(false);
+        }
     };
 
     const testAI = async () => {
@@ -623,6 +619,27 @@ const IntegrationPage = () => {
                                                     />
                                                 </div>
                                             </div>
+
+                                            {/* Save Changes Button */}
+                                            <div className="flex justify-end gap-2 pt-6 border-t border-border/50">
+                                                {isDirty && (
+                                                    <span className="text-xs text-amber-500 flex items-center mr-2 font-medium">
+                                                        ⚠️ Unsaved changes
+                                                    </span>
+                                                )}
+                                                <Button
+                                                    onClick={handleSaveSettings}
+                                                    disabled={isSavingSettings || !isDirty}
+                                                    className="gap-2"
+                                                >
+                                                    {isSavingSettings ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <Save className="w-4 h-4" />
+                                                    )}
+                                                    {isSavingSettings ? 'Saving...' : 'Save Widget Settings'}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 </>
@@ -892,6 +909,27 @@ Make sure you've set up your AI Provider and API Key in the Settings tab to let 
                                                         <Sparkles className="h-4 w-4" />
                                                     )}
                                                     {testingAI ? 'Testing...' : 'Test AI Connection'}
+                                                </Button>
+                                            </div>
+
+                                            {/* Save Changes Button */}
+                                            <div className="flex justify-end gap-2 pt-6 border-t border-border/50 mt-4">
+                                                {isDirty && (
+                                                    <span className="text-xs text-amber-500 flex items-center mr-2 font-medium">
+                                                        ⚠️ Unsaved changes
+                                                    </span>
+                                                )}
+                                                <Button
+                                                    onClick={handleSaveSettings}
+                                                    disabled={isSavingSettings || !isDirty}
+                                                    className="gap-2 w-full sm:w-auto"
+                                                >
+                                                    {isSavingSettings ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <Save className="w-4 h-4" />
+                                                    )}
+                                                    {isSavingSettings ? 'Saving...' : 'Save System Settings'}
                                                 </Button>
                                             </div>
                                         </div>
