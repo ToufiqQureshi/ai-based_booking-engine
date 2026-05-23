@@ -498,7 +498,8 @@ async def update_weekends(
                     delete(RoomBlock).where(
                         RoomBlock.hotel_id == current_user.hotel_id,
                         RoomBlock.room_type_id == data.room_type_id,
-                        RoomBlock.date == curr
+                        RoomBlock.start_date == curr,
+                        RoomBlock.end_date == curr
                     )
                 )
                 updated_days += 1
