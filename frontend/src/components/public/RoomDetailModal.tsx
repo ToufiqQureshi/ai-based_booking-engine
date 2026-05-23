@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PublicRoomSearchResult, RateOption } from "@/types/api";
-import { Wifi, User, Maximize, Check, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Utensils, Star, LucideIcon } from "lucide-react";
+import { Wifi, User, Maximize, Check, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Utensils, Star, LucideIcon, ShieldCheck, Sparkles, BedDouble, Wine, Bath, ShowerHead, Flame, Baby, Languages, ConciergeBell, WashingMachine, Key, Wind, CigaretteOff, PawPrint, VolumeX, Briefcase, Map } from "lucide-react";
 
 // Icon mapping for amenities
 const AMENITY_ICONS: Record<string, LucideIcon> = {
@@ -30,6 +30,25 @@ const AMENITY_ICONS: Record<string, LucideIcon> = {
     car: Car,
     utensils: Utensils,
     star: Star,
+    shield: ShieldCheck,
+    sparkle: Sparkles,
+    wine: Wine,
+    bath: Bath,
+    shower: ShowerHead,
+    bed: BedDouble,
+    flame: Flame,
+    baby: Baby,
+    globe: Languages,
+    bell: ConciergeBell,
+    laundry: WashingMachine,
+    key: Key,
+    wind: Wind,
+    no_smoking: CigaretteOff,
+    pet: PawPrint,
+    volume_mute: VolumeX,
+    expand: Maximize,
+    briefcase: Briefcase,
+    map: Map,
 };
 
 // Meal plan display names

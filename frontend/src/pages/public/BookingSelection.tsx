@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize, ChevronDown, Trash2, X, SlidersHorizontal } from 'lucide-react';
+import { Loader2, User, Wifi, Calendar as CalendarIcon, Search, ShoppingBag, Plus, Minus, Check, ArrowRight, BedDouble, Utensils, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Star, Bed, ChevronLeft, ChevronRight, Sparkles, Gift, Hotel as HotelIcon, Maximize, ChevronDown, Trash2, X, SlidersHorizontal, ShieldCheck, Wine, Bath, ShowerHead, Flame, Baby, Languages, ConciergeBell, WashingMachine, Key, Wind, CigaretteOff, PawPrint, VolumeX, Briefcase, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -56,7 +56,26 @@ export default function BookingSelection() {
         dumbbell: Dumbbell,
         car: Car,
         utensils: Utensils,
-        star: Star
+        star: Star,
+        shield: ShieldCheck,
+        sparkle: Sparkles,
+        wine: Wine,
+        bath: Bath,
+        shower: ShowerHead,
+        bed: BedDouble,
+        flame: Flame,
+        baby: Baby,
+        globe: Languages,
+        bell: ConciergeBell,
+        laundry: WashingMachine,
+        key: Key,
+        wind: Wind,
+        no_smoking: CigaretteOff,
+        pet: PawPrint,
+        volume_mute: VolumeX,
+        expand: Maximize,
+        briefcase: Briefcase,
+        map: Map,
     };
 
     // Addon Sheet State

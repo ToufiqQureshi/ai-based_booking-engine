@@ -55,13 +55,17 @@ async def seed_defaults(current_user: CurrentUser, session: DbSession):
         
     defaults = [
         {"name": "Free WiFi", "icon_slug": "wifi", "category": "tech", "scope": "room", "is_featured": True},
-        {"name": "Air Conditioning", "icon_slug": "snowflake", "category": "comfort", "scope": "room", "is_featured": True},
+        {"name": "Air Conditioning", "icon_slug": "snowflake", "category": "room", "scope": "room", "is_featured": True},
         {"name": "Smart TV", "icon_slug": "tv", "category": "tech", "scope": "room", "is_featured": True},
         {"name": "Coffee Maker", "icon_slug": "coffee", "category": "dining", "scope": "room", "is_featured": False},
-        {"name": "Mini Bar", "icon_slug": "utensils", "category": "dining", "scope": "room", "is_featured": False},
+        {"name": "Mini Bar", "icon_slug": "wine", "category": "dining", "scope": "room", "is_featured": False},
+        {"name": "Luxury Bathtub", "icon_slug": "bath", "category": "room", "scope": "room", "is_featured": False},
         {"name": "Swimming Pool", "icon_slug": "waves", "category": "wellness", "scope": "hotel", "is_featured": False},
         {"name": "Gym / Fitness", "icon_slug": "dumbbell", "category": "wellness", "scope": "hotel", "is_featured": False},
         {"name": "Parking Area", "icon_slug": "car", "category": "general", "scope": "hotel", "is_featured": False},
+        {"name": "In-room Safe", "icon_slug": "shield", "category": "general", "scope": "room", "is_featured": False},
+        {"name": "Room Service", "icon_slug": "bell", "category": "general", "scope": "hotel", "is_featured": False},
+        {"name": "Pet Friendly", "icon_slug": "pet", "category": "general", "scope": "room", "is_featured": False},
     ]
     
     created = []

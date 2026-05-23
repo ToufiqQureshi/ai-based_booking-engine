@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
     Loader2, 
     Plus, 
@@ -18,7 +18,23 @@ import {
     Hotel, 
     BedDouble,
     Search,
-    Filter
+    Filter,
+    Wine,
+    Bath,
+    ShowerHead,
+    Flame,
+    Baby,
+    Languages,
+    ConciergeBell,
+    WashingMachine,
+    Key,
+    Wind,
+    CigaretteOff,
+    PawPrint,
+    VolumeX,
+    Maximize,
+    Briefcase,
+    Map
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -69,6 +85,23 @@ const ICONS: Record<string, any> = {
     star: Star,
     shield: ShieldCheck,
     sparkle: Sparkles,
+    wine: Wine,
+    bath: Bath,
+    shower: ShowerHead,
+    bed: BedDouble,
+    flame: Flame,
+    baby: Baby,
+    globe: Languages,
+    bell: ConciergeBell,
+    laundry: WashingMachine,
+    key: Key,
+    wind: Wind,
+    no_smoking: CigaretteOff,
+    pet: PawPrint,
+    volume_mute: VolumeX,
+    expand: Maximize,
+    briefcase: Briefcase,
+    map: Map,
 };
 
 const CATEGORIES = [
@@ -344,22 +377,24 @@ export default function Amenities() {
 
                         <div className="space-y-3">
                             <Label className="text-indigo-900/50 font-black uppercase text-[10px] tracking-[0.2em] ml-1">Visual Symbol</Label>
-                            <div className="grid grid-cols-6 gap-3 p-4 bg-indigo-50/30 rounded-[20px] border border-indigo-100/50">
-                                {Object.keys(ICONS).map(slug => (
-                                    <button
-                                        key={slug}
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, icon_slug: slug })}
-                                        className={cn(
-                                            "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
-                                            formData.icon_slug === slug 
-                                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110" 
-                                                : "bg-background text-indigo-400 hover:text-indigo-600"
-                                        )}
-                                    >
-                                        {getIcon(slug)}
-                                    </button>
-                                ))}
+                            <div className="max-h-48 overflow-y-auto p-4 bg-indigo-50/30 rounded-[20px] border border-indigo-100/50 scrollbar-thin">
+                                <div className="grid grid-cols-6 gap-3">
+                                    {Object.keys(ICONS).map(slug => (
+                                        <button
+                                            key={slug}
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, icon_slug: slug })}
+                                            className={cn(
+                                                "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
+                                                formData.icon_slug === slug 
+                                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110" 
+                                                    : "bg-background text-indigo-400 hover:text-indigo-600"
+                                            )}
+                                        >
+                                            {getIcon(slug)}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
