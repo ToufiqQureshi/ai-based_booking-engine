@@ -548,6 +548,19 @@ export default function BookingSelection() {
                                     </button>
                                 </div>
                                 <div className="p-3 overflow-x-auto">
+                                    <style>{`
+                                        .rdp-day_selected,
+                                        .rdp-day_selected:hover {
+                                            background-color: ${themeColor} !important;
+                                            color: white !important;
+                                        }
+                                        .rdp-day_today:not(.rdp-day_selected) {
+                                            color: ${themeColor} !important;
+                                        }
+                                        .rdp-day_selected.rdp-day_today {
+                                            color: white !important;
+                                        }
+                                    `}</style>
                                 <Calendar 
                                     mode="range"
                                     numberOfMonths={isMobile ? 1 : 2}

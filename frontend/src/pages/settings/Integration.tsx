@@ -34,6 +34,7 @@ interface IntegrationSettings {
     widget_layout?: string;
     widget_custom_css?: string;
     widget_custom_js?: string;
+    widget_theme?: string;
 }
 
 interface WidgetCode {
@@ -530,6 +531,25 @@ const IntegrationPage = () => {
                                                 </div>
                                             </div>
 
+                                            <div>
+                                                <Label>Calendar Theme / Style</Label>
+                                                <select
+                                                    className="w-full mt-1 border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
+                                                    value={settings.widget_theme || 'light'}
+                                                    onChange={(e) =>
+                                                        updateSettings({ widget_theme: e.target.value })
+                                                    }
+                                                    disabled={!hotel?.feature_color_palette}
+                                                >
+                                                    <option value="light">Light Calendar (Clean White)</option>
+                                                    <option value="dark">Dark Calendar (Sleek Dark Mode)</option>
+                                                    <option value="theme">Hotel Theme Calendar (Matching Background)</option>
+                                                </select>
+                                                <p className="text-[10px] text-muted-foreground mt-1">
+                                                    Select the visual style of the check-in/check-out date picker calendar.
+                                                </p>
+                                            </div>
+
                                             {/* Layout Style Cards */}
                                             <div className="space-y-3 mt-6">
                                                 <Label className="text-sm font-semibold">Select Widget Design</Label>
@@ -611,8 +631,8 @@ const IntegrationPage = () => {
                                                 <Label className="text-sm font-semibold">Live Preview</Label>
                                                 <div className="p-8 bg-slate-900 rounded-xl border border-border flex items-center justify-center transition-all duration-300 overflow-hidden">
                                                     <iframe
-                                                        key={`${settings.widget_layout}-${settings.widget_primary_color}-${settings.widget_background_color}`}
-                                                        src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget?preview_layout=${settings.widget_layout || ''}&preview_primary_color=${encodeURIComponent(settings.widget_primary_color || '')}&preview_bg_color=${encodeURIComponent(settings.widget_background_color || '')}`}
+                                                        key={`${settings.widget_layout}-${settings.widget_primary_color}-${settings.widget_background_color}-${settings.widget_theme}`}
+                                                        src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget?preview_layout=${settings.widget_layout || ''}&preview_primary_color=${encodeURIComponent(settings.widget_primary_color || '')}&preview_bg_color=${encodeURIComponent(settings.widget_background_color || '')}&preview_theme=${settings.widget_theme || 'light'}`}
                                                         className="w-full max-w-4xl border-0 rounded-none overflow-visible shadow-none transition-all duration-300"
                                                         style={{ height: `${previewHeight}px` }}
                                                         title="Booking Widget Preview"

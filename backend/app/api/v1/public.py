@@ -187,6 +187,7 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         "primary_color": hotel.primary_color,
         "widget_layout": getattr(settings, 'widget_layout', 'modern') if settings else "modern",
         "widget_background_color": settings.widget_background_color if settings else "#FFFFFF",
+        "widget_theme": getattr(settings, 'widget_theme', 'light') if settings else "light",
         "widget_custom_css": getattr(settings, 'widget_custom_css', '') if settings else '',
         "widget_custom_js": getattr(settings, 'widget_custom_js', '') if settings else '',
         "allowed_domains": allowed_domains,

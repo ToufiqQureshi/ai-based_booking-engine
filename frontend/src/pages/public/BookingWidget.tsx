@@ -154,11 +154,13 @@ export default function BookingWidget() {
     };
     const primaryHex = getNormalizedColor(urlParams.get('preview_primary_color') || config?.primary_color);
     const bgColor = urlParams.get('preview_bg_color') || config?.widget_background_color || '#ffffff';
+    const widgetTheme = urlParams.get('preview_theme') || config?.widget_theme || 'light';
+    const isBgLight = bgColor.toLowerCase() === '#ffffff' || bgColor.toLowerCase() === '#fff' || bgColor.toLowerCase() === '#f8fafc';
 
     // Calendar popover — same design as public booking page
     const calendarPopoverContent = (
         <PopoverContent
-            className="p-0 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
+            className="p-0 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 overflow-hidden calendar-container"
             style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px', transform: 'translateZ(0)', willChange: 'transform, opacity' }}
             align="center"
             side="bottom"
@@ -369,6 +371,67 @@ export default function BookingWidget() {
                 .rdp-day_disabled span {
                     color: #94a3b8 !important;
                 }
+
+                /* Calendar Theme Overrides */
+                ${widgetTheme === 'dark' ? `
+                    .calendar-container {
+                        background-color: #0f172a !important;
+                        color: #f8fafc !important;
+                        border-color: #1e293b !important;
+                    }
+                    .rdp-months {
+                        background-color: #0f172a !important;
+                        color: #f8fafc !important;
+                    }
+                    .rdp-caption_label, .rdp-head_cell {
+                        color: #cbd5e1 !important;
+                    }
+                    .rdp-day {
+                        color: #cbd5e1 !important;
+                    }
+                    .rdp-day:hover {
+                        background-color: #1e293b !important;
+                        color: #ffffff !important;
+                    }
+                    .rdp-day_today {
+                        background-color: #1e293b !important;
+                        color: ${primaryHex} !important;
+                    }
+                    .rdp-day_disabled span {
+                        color: #475569 !important;
+                    }
+                    .rdp-day_selected {
+                        background-color: ${primaryHex} !important;
+                        color: white !important;
+                    }
+                ` : widgetTheme === 'theme' ? `
+                    .calendar-container {
+                        background-color: ${bgColor} !important;
+                        color: ${isBgLight ? '#0f172a' : '#f8fafc'} !important;
+                        border-color: ${primaryHex}30 !important;
+                    }
+                    .rdp-day {
+                        color: ${isBgLight ? '#334155' : '#e2e8f0'} !important;
+                    }
+                    .rdp-day:hover {
+                        background-color: ${primaryHex}20 !important;
+                    }
+                    .rdp-day_today {
+                        border-color: ${primaryHex}80 !important;
+                        color: ${primaryHex} !important;
+                    }
+                    .rdp-day_selected {
+                        background-color: ${primaryHex} !important;
+                        color: white !important;
+                    }
+                ` : ''}
+
+                /* Fix checkin/checkout date text color conflict */
+                .rdp-day_selected,
+                .rdp-day_selected.custom-theme-text,
+                .rdp-day_selected.rdp-day_today {
+                    color: white !important;
+                }
             `}</style>
             
             {/* Custom CSS overrides saved in DB settings */}
@@ -417,7 +480,7 @@ export default function BookingWidget() {
 
                     {/* Inline calendar — same theme as public booking page */}
                     {isCalendarOpen && (
-                        <div className="rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+                        <div className="rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] calendar-container">
                             <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
                                 <div>
                                     <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
