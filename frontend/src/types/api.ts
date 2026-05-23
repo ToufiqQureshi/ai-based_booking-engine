@@ -107,6 +107,14 @@ export interface HotelSettings {
   multi_room_cart?: boolean;
   featured_room_type_id?: string;
   cancellation_mode?: 'instant' | 'request';
+  smtp_host?: string;
+  smtp_port?: string | number;
+  smtp_username?: string;
+  smtp_password?: string;
+  smtp_from_email?: string;
+  whatsapp_api_key?: string;
+  whatsapp_phone_number_id?: string;
+  whatsapp_business_account_id?: string;
 }
 
 // ============== Room Types ==============
