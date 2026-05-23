@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { apiClient } from '@/api/client';
 import { useToast } from '@/components/ui/use-toast';
 import { BookingStepper } from '@/components/public/BookingStepper';
+import { cn } from '@/lib/utils';
 
 interface LookupForm {
     bookingNumber: string;
