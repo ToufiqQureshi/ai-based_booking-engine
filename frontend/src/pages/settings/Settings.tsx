@@ -111,6 +111,7 @@ export function SettingsPage() {
       notify_new_booking: hotel?.settings?.notify_new_booking !== false,
       notify_cancellation: hotel?.settings?.notify_cancellation !== false,
       cancellation_policy: hotel?.settings?.cancellation_policy || '',
+      cancellation_mode: hotel?.settings?.cancellation_mode || 'instant',
       payment_policy: hotel?.settings?.payment_policy || '',
       child_policy: hotel?.settings?.child_policy || '',
       privacy_policy: hotel?.settings?.privacy_policy || '',
@@ -836,6 +837,25 @@ export function SettingsPage() {
                       onChange={(e) => handleUpdate('settings', 'cancellation_policy', e.target.value)}
                       className="min-h-[100px]"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cancellation_mode">Cancellation Mode</Label>
+                    <Select
+                      value={formData.settings.cancellation_mode || 'instant'}
+                      onValueChange={(val) => handleUpdate('settings', 'cancellation_mode', val)}
+                    >
+                      <SelectTrigger id="cancellation_mode" className="w-full">
+                        <SelectValue placeholder="Select cancellation mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="instant">Instant Self-Cancellation (Guests cancel immediately)</SelectItem>
+                        <SelectItem value="request">Approval-Based Request (Requires manager approval)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Choose whether guest cancellation requests are processed automatically/instantly or require manual approval in the bookings table first.
+                    </p>
                   </div>
                   
                   <div className="space-y-2">

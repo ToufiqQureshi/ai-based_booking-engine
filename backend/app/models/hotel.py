@@ -43,6 +43,7 @@ class HotelSettings(SQLModel):
     check_in_time: str = "14:00"
     check_out_time: str = "11:00"
     cancellation_policy: Optional[str] = None
+    cancellation_mode: str = "instant"
     payment_policy: Optional[str] = None
     child_policy: Optional[str] = None
     privacy_policy: Optional[str] = None
