@@ -49,7 +49,7 @@ export default function BookingCancel() {
     const [cancelSuccess, setCancelSuccess] = useState(false);
     const [cancelResult, setCancelResult] = useState<any>(null);
 
-    const { register, handleSubmit, formState: { errors } } = useForm<LookupForm>();
+    const { register, handleSubmit, getValues, formState: { errors } } = useForm<LookupForm>();
 
     useEffect(() => {
         if (hotelSlug) {
@@ -92,8 +92,7 @@ export default function BookingCancel() {
         if (!bookingDetails) return;
         setIsCancelling(true);
         try {
-            const lookupForm = document.getElementById("lookup-form-data") as HTMLFormElement;
-            const email = new FormData(lookupForm).get("email") as string;
+            const email = getValues("email");
             
             const res = await apiClient.post('/public/bookings/cancel-confirm', {
                 booking_number: bookingDetails.booking_number,

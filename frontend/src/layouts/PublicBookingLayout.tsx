@@ -1,4 +1,4 @@
-import { Outlet, useParams } from 'react-router-dom';
+import { Outlet, useParams, Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import { startTimeTracking, stopTimeTracking, trackEvent } from '@/lib/tracker';
 import { Shield } from 'lucide-react';
@@ -56,6 +56,10 @@ export function PublicBookingLayout() {
                         Powered by <span className="text-violet-600 font-bold">Staybooker.ai</span>
                     </p>
                     <div className="flex items-center gap-4 text-xs text-slate-400">
+                        <Link to={`/book/${hotelSlug}/cancel`} className="hover:text-violet-600 hover:underline transition-colors font-medium">
+                            Cancel Booking
+                        </Link>
+                        <span>·</span>
                         <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-green-500" /> Secure Payments</span>
                         <span>·</span>
                         <span>Privacy Protected</span>
