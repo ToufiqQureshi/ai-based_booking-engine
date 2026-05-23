@@ -37,6 +37,21 @@ const settingsNavItems = [
   { title: 'Settings',    url: '/settings',    icon: Settings },
 ];
 
+const DEFAULT_ROLE_PERMISSIONS = {
+  OWNER: [
+    "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper", 
+    "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
+    "/channel-settings", "/integration", "/settings"
+  ],
+  MANAGER: [
+    "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",
+    "/availability", "/bookings", "/guests", "/payments", "/settings"
+  ],
+  STAFF: [
+    "/availability", "/bookings", "/guests"
+  ]
+};
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
@@ -51,6 +66,27 @@ export function AppSidebar() {
     .join('')
     .toUpperCase()
     .slice(0, 2) || 'U';
+
+  // Role based permission checks
+  const permissions = (hotel?.settings as any)?.role_permissions?.[user?.role || ''] || 
+    (DEFAULT_ROLE_PERMISSIONS as any)[user?.role || 'STAFF'] || [];
+
+  const isItemAllowed = (item: typeof mainNavItems[0]) => {
+    // Super admins can view all items
+    if (user?.role === 'SUPER_ADMIN') return true;
+
+    // Check custom role permissions
+    if (!permissions.includes(item.url)) return false;
+
+    // Check hotel specific feature locks
+    if (item.url === '/agent' && !hotel?.feature_ai_agent) return false;
+    if (item.url === '/rate-shopper' && !hotel?.feature_rate_shopper) return false;
+
+    return true;
+  };
+
+  const allowedMainNavItems = mainNavItems.filter(isItemAllowed);
+  const allowedSettingsNavItems = settingsNavItems.filter(isItemAllowed);
 
   return (
     <Sidebar
@@ -90,7 +126,7 @@ export function AppSidebar() {
           )}
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {mainNavItems.map((item) => {
+              {allowedMainNavItems.map((item) => {
                 const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -137,7 +173,7 @@ export function AppSidebar() {
           )}
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {settingsNavItems.map((item) => {
+              {allowedSettingsNavItems.map((item) => {
                 const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -171,6 +207,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
 
       {/* User Footer */}
       <SidebarFooter className="p-3 border-t border-border dark:border-slate-800">

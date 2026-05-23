@@ -1,5 +1,5 @@
-import { Outlet, Navigate } from 'react-router-dom';
-import { ShieldX, Loader2, LogOut, MessageSquare, AlertCircle } from 'lucide-react';
+import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { ShieldX, Loader2, LogOut, MessageSquare, AlertCircle, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
@@ -8,6 +8,31 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Suspense } from 'react';
 import { cn } from '@/lib/utils';
+
+const DEFAULT_ROLE_PERMISSIONS = {
+  OWNER: [
+    "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper", 
+    "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
+    "/channel-settings", "/integration", "/settings"
+  ],
+  MANAGER: [
+    "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",
+    "/availability", "/bookings", "/guests", "/payments", "/settings"
+  ],
+  STAFF: [
+    "/availability", "/bookings", "/guests"
+  ]
+};
+
+const getRouteLabel = (path: string) => {
+  if (path === '/dashboard') return 'Dashboard';
+  if (path === '/availability') return 'Calendar Grid';
+  if (path === '/bookings') return 'Bookings';
+  if (path === '/guests') return 'Guests';
+  if (path === '/rooms') return 'Rooms';
+  if (path === '/rates') return 'Rates';
+  return 'Operational View';
+};
 
 // ── Content-area skeleton (sidebar + header stay fully visible) ──────────────
 function ContentSkeleton() {
@@ -33,8 +58,35 @@ function ContentSkeleton() {
   );
 }
 
+function AccessDeniedView({ userRole, onRedirect, fallbackLabel }: { userRole: string, onRedirect: () => void, fallbackLabel: string }) {
+  return (
+    <div className="flex-1 p-8 flex items-center justify-center min-h-[70vh]">
+      <div className="max-w-md w-full bg-background dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-8 text-center shadow-xl shadow-slate-100/50 dark:shadow-none animate-in fade-in zoom-in-95 duration-300">
+        <div className="w-16 h-16 bg-red-50 dark:bg-red-950/30 rounded-2xl flex items-center justify-center mb-6 mx-auto border border-red-100 dark:border-red-900/20 shadow-inner">
+          <Lock className="w-8 h-8 text-red-500 dark:text-red-400" />
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 dark:bg-red-950/40 text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 mb-5 border border-red-100 dark:border-red-900/30">
+          Access Restricted
+        </div>
+        <h2 className="text-xl font-extrabold text-foreground dark:text-white tracking-tight mb-2">Permission Required</h2>
+        <p className="text-muted-foreground text-xs leading-relaxed mb-6 font-medium">
+          Aapke system profile (<strong className="text-indigo-600 dark:text-indigo-400">{userRole}</strong>) ke paas is section ko view karne ke rights nahi hain. Kripya apne hotel administrator se permission allow karne ke liye contact karein.
+        </p>
+        <Button 
+          className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-md shadow-indigo-100 dark:shadow-none"
+          onClick={onRedirect}
+        >
+          Back to {fallbackLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardLayout() {
   const { isAuthenticated, isLoading, hotel, user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // ── Auth loading: full skeleton (first load only) ────────────────────────
   if (isLoading) {
@@ -108,6 +160,38 @@ export function DashboardLayout() {
     }
   };
 
+  // Route path permission checks
+  const permissions = (hotel?.settings as any)?.role_permissions?.[user?.role || ''] || 
+    (DEFAULT_ROLE_PERMISSIONS as any)[user?.role || 'STAFF'] || [];
+
+  const currentPath = location.pathname;
+
+  const isPathAllowed = () => {
+    // Super admins can view all paths
+    if (user?.role === 'SUPER_ADMIN') return true;
+
+    // Allow root page redirects and profile page
+    if (currentPath === '/' || currentPath === '/settings/profile') return true;
+
+    // Check custom role permissions list
+    if (!permissions.includes(currentPath)) return false;
+
+    // Check hotel specific feature locks
+    if (currentPath === '/agent' && !hotel?.feature_ai_agent) return false;
+    if (currentPath === '/rate-shopper' && !hotel?.feature_rate_shopper) return false;
+
+    return true;
+  };
+
+  const allowedPaths = permissions.filter((p: string) => {
+    if (p === '/agent' && !hotel?.feature_ai_agent) return false;
+    if (p === '/rate-shopper' && !hotel?.feature_rate_shopper) return false;
+    return true;
+  });
+  
+  const fallbackPath = allowedPaths[0] || '/availability';
+  const allowed = isPathAllowed();
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-muted/30 dark:bg-slate-950 overflow-hidden">
@@ -135,17 +219,18 @@ export function DashboardLayout() {
             </div>
           )}
           <AppHeader />
-          {/*
-            ── KEY PERFORMANCE FIX ──────────────────────────────────────────
-            Inner Suspense wraps ONLY the page content (Outlet).
-            Sidebar + AppHeader stay fully rendered on every navigation.
-            Page transitions show a content skeleton instead of a white flash.
-            ────────────────────────────────────────────────────────────────
-          */}
           <main className="flex-1 overflow-y-auto scrollbar-thin">
             <Suspense fallback={<ContentSkeleton />}>
               <div className="animate-page-in">
-                <Outlet />
+                {allowed ? (
+                  <Outlet />
+                ) : (
+                  <AccessDeniedView 
+                    userRole={user?.role || 'STAFF'} 
+                    onRedirect={() => navigate(fallbackPath)} 
+                    fallbackLabel={getRouteLabel(fallbackPath)} 
+                  />
+                )}
               </div>
             </Suspense>
           </main>

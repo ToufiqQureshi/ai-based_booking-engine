@@ -67,6 +67,21 @@ async def get_super_admin(current_user: CurrentUser):
         )
     return current_user
 
+DEFAULT_ROLE_PERMISSIONS = {
+    "OWNER": [
+        "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper", 
+        "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
+        "/channel-settings", "/integration", "/settings"
+    ],
+    "MANAGER": [
+        "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",
+        "/availability", "/bookings", "/guests", "/payments", "/settings"
+    ],
+    "STAFF": [
+        "/availability", "/bookings", "/guests"
+    ]
+}
+
 @router.get("/hotels", response_model=List[dict])
 async def list_hotels(
     session: DbSession,
@@ -90,6 +105,10 @@ async def list_hotels(
         )
         sub = sub_res.scalar_one_or_none()
         
+        # Get role permissions
+        settings_dict = hotel.settings or {}
+        role_permissions = settings_dict.get("role_permissions", DEFAULT_ROLE_PERMISSIONS)
+        
         final_result.append({
             "id": hotel.id,
             "name": hotel.name,
@@ -104,6 +123,7 @@ async def list_hotels(
             "feature_color_palette": getattr(hotel, "feature_color_palette", True),
             "feature_custom_logo": getattr(hotel, "feature_custom_logo", True),
             "feature_custom_widget": getattr(hotel, "feature_custom_widget", True),
+            "role_permissions": role_permissions,
             "subscription": {
                 "plan": sub.plan_name if sub else "None",
                 "status": sub.status if sub else "inactive",
@@ -118,6 +138,29 @@ async def list_hotels(
         })
     
     return final_result
+
+@router.patch("/hotels/{hotel_id}/permissions")
+async def update_role_permissions(
+    hotel_id: str,
+    permissions: dict,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    """Update custom role permissions for a hotel"""
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+    
+    settings_dict = dict(hotel.settings or {})
+    settings_dict["role_permissions"] = permissions
+    hotel.settings = settings_dict
+    
+    hotel.updated_at = datetime.utcnow()
+    session.add(hotel)
+    await session.commit()
+    await session.refresh(hotel)
+    return {"message": "Permissions updated successfully", "role_permissions": permissions}
+
 
 @router.patch("/hotels/{hotel_id}")
 async def update_hotel_status(
