@@ -23,9 +23,10 @@ import {
     Zap,
     Bot,
     Activity,
-    Radio,
     UserCheck,
+    Radio,
     Sliders,
+    Settings,
     Plus,
     AlertTriangle,
     Send,
@@ -209,7 +210,6 @@ export default function SuperAdminDashboard() {
 
     // Detail Drawer state
     const [detailHotel, setDetailHotel] = useState<HotelAdminData | null>(null);
-    const activeDetailHotel = detailHotel ? (hotels.find(h => h.id === detailHotel.id) || detailHotel) : null;
 
     // Subscription Editing state
     const [selectedSubHotel, setSelectedSubHotel] = useState<HotelAdminData | null>(null);
@@ -253,6 +253,8 @@ export default function SuperAdminDashboard() {
         queryFn: () => apiClient.get('/superadmin/plan-features'),
         enabled: !!user && user.role === 'SUPER_ADMIN'
     });
+
+    const activeDetailHotel = detailHotel ? (hotels.find(h => h.id === detailHotel.id) || detailHotel) : null;
 
     useEffect(() => {
         if (planFeatures && Object.keys(planFeatures).length > 0) {
