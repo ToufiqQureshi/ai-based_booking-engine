@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
+import { Switch } from '@/components/ui/switch';
 
 const weekendUpdateSchema = z.object({
     room_type_id: z.string().min(1, 'Room type is required'),
@@ -38,8 +39,9 @@ const weekendUpdateSchema = z.object({
     end_date: z.string().min(1, 'End date is required'),
     price: z.string().optional().transform(val => val && val.trim() !== '' ? parseFloat(val) : undefined),
     blocked_count: z.string().optional().transform(val => val && val.trim() !== '' ? parseInt(val, 10) : undefined),
-}).refine(data => data.price !== undefined || data.blocked_count !== undefined, {
-    message: 'Either Weekend Price or Rooms to Block must be specified',
+    reset_to_default: z.boolean().optional(),
+}).refine(data => data.reset_to_default || data.price !== undefined || data.blocked_count !== undefined, {
+    message: 'Either Weekend Price, Rooms to Block, or Reset to Defaults must be specified',
     path: ['price'],
 });
 
@@ -61,6 +63,7 @@ export function WeekendUpdateDialog({ open, onOpenChange, roomTypes, onSuccess }
             end_date: '',
             price: undefined,
             blocked_count: undefined,
+            reset_to_default: false,
         },
     });
 
@@ -68,8 +71,10 @@ export function WeekendUpdateDialog({ open, onOpenChange, roomTypes, onSuccess }
         try {
             await apiClient.post('/availability/weekend-update', values);
             toast({
-                title: 'Weekend Settings Applied',
-                description: 'Weekend rates and inventory blocks have been updated successfully.',
+                title: values.reset_to_default ? 'Weekend Settings Reset' : 'Weekend Settings Applied',
+                description: values.reset_to_default 
+                    ? 'Weekend overrides have been successfully reset to base default settings.'
+                    : 'Weekend rates and inventory blocks have been updated successfully.',
             });
             form.reset();
             onSuccess();
@@ -83,6 +88,8 @@ export function WeekendUpdateDialog({ open, onOpenChange, roomTypes, onSuccess }
             });
         }
     };
+
+    const isResetSelected = form.watch('reset_to_default');
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -152,7 +159,7 @@ export function WeekendUpdateDialog({ open, onOpenChange, roomTypes, onSuccess }
                               />
                         </div>
 
-                        <div className="p-4 rounded-xl bg-indigo-50/40 border border-indigo-100/60 dark:bg-indigo-950/20 dark:border-indigo-900/30 space-y-4">
+                         <div className="p-4 rounded-xl bg-indigo-50/40 border border-indigo-100/60 dark:bg-indigo-950/20 dark:border-indigo-900/30 space-y-4">
                             <div className="flex items-center gap-1.5 text-xs text-indigo-800 dark:text-indigo-300 font-semibold mb-1">
                                 <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                                 Adjust Weekend Values (Sat/Sun)
@@ -160,9 +167,31 @@ export function WeekendUpdateDialog({ open, onOpenChange, roomTypes, onSuccess }
 
                             <FormField
                                 control={form.control}
+                                name="reset_to_default"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-indigo-100/40 dark:border-indigo-900/20 p-3 bg-indigo-50/20">
+                                        <div className="space-y-0.5 pr-2">
+                                            <FormLabel className="text-xs font-bold text-indigo-900 dark:text-indigo-200">Reset to Defaults</FormLabel>
+                                            <FormDescription className="text-[10px] text-indigo-700/80 dark:text-indigo-400/80 leading-normal">
+                                                Wipe custom overrides and restore base room price & full availability.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                                className="data-[state=checked]:bg-indigo-600 scale-95"
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
                                 name="price"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className={isResetSelected ? "opacity-50" : ""}>
                                         <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Weekend Price (₹)</FormLabel>
                                         <FormControl>
                                             <div className="relative">
@@ -170,6 +199,7 @@ export function WeekendUpdateDialog({ open, onOpenChange, roomTypes, onSuccess }
                                                 <Input
                                                     type="number"
                                                     placeholder="Keep unchanged"
+                                                    disabled={isResetSelected}
                                                     className="h-11 rounded-xl border-border pl-7 bg-background"
                                                     value={field.value === undefined ? '' : field.value}
                                                     onChange={(e) => field.onChange(e.target.value)}
@@ -185,12 +215,13 @@ export function WeekendUpdateDialog({ open, onOpenChange, roomTypes, onSuccess }
                                 control={form.control}
                                 name="blocked_count"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className={isResetSelected ? "opacity-50" : ""}>
                                         <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rooms to Block (Sat/Sun)</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
                                                 placeholder="Keep unchanged"
+                                                disabled={isResetSelected}
                                                 className="h-11 rounded-xl border-border bg-background"
                                                 value={field.value === undefined ? '' : field.value}
                                                 onChange={(e) => field.onChange(e.target.value)}

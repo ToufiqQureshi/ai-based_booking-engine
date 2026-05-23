@@ -5,7 +5,7 @@ Real-time room inventory calculation and blocking management.
 from typing import List, Dict, Any, Optional
 from datetime import date, timedelta, datetime
 from fastapi import APIRouter, Query, Depends, HTTPException, status
-from sqlmodel import select, and_, or_
+from sqlmodel import select, and_, or_, delete
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.room import RoomType, RoomBlock, RoomBlockCreate, RoomBlockRead
@@ -454,6 +454,7 @@ class WeekendUpdateRequest(BaseModel):
     end_date: date
     price: Optional[float] = None
     blocked_count: Optional[int] = None
+    reset_to_default: Optional[bool] = False
 
 
 class CopyCalendarRequest(BaseModel):
@@ -474,23 +475,46 @@ async def update_weekends(
 ):
     """
     Update pricing and/or availability block count specifically for Saturdays and Sundays
-    within the chosen date range.
+    within the chosen date range. Or reset overrides back to defaults.
     """
     curr = data.start_date
     updated_days = 0
     while curr <= data.end_date:
         # 5 is Saturday, 6 is Sunday
         if curr.weekday() in (5, 6):
-            if data.price is not None:
-                await set_single_day_rate(session, current_user.hotel_id, data.room_type_id, curr, data.price)
-            if data.blocked_count is not None:
-                await set_single_day_block(session, current_user.hotel_id, data.room_type_id, curr, data.blocked_count)
-            updated_days += 1
+            if data.reset_to_default:
+                # Delete custom room rates for this day
+                await session.execute(
+                    delete(RoomRate).where(
+                        RoomRate.hotel_id == current_user.hotel_id,
+                        RoomRate.room_type_id == data.room_type_id,
+                        RoomRate.rate_plan_id == None,
+                        RoomRate.date_from <= curr,
+                        RoomRate.date_to >= curr
+                    )
+                )
+                # Delete custom room blocks for this day
+                await session.execute(
+                    delete(RoomBlock).where(
+                        RoomBlock.hotel_id == current_user.hotel_id,
+                        RoomBlock.room_type_id == data.room_type_id,
+                        RoomBlock.date == curr
+                    )
+                )
+                updated_days += 1
+            else:
+                if data.price is not None:
+                    await set_single_day_rate(session, current_user.hotel_id, data.room_type_id, curr, data.price)
+                if data.blocked_count is not None:
+                    await set_single_day_block(session, current_user.hotel_id, data.room_type_id, curr, data.blocked_count)
+                updated_days += 1
         curr = curr + timedelta(days=1)
         
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
-    return {"message": f"Weekend updates applied successfully for {updated_days} days."}
+    
+    action_text = "reset to defaults" if data.reset_to_default else "applied"
+    return {"message": f"Weekend updates {action_text} successfully for {updated_days} days."}
 
 
 @router.post("/copy")
