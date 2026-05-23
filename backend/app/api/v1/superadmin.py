@@ -9,8 +9,54 @@ from app.models.audit import AuditLog, SystemBroadcast
 from app.core.config import get_settings
 from datetime import datetime
 from jose import jwt
+import json
+import os
 
 router = APIRouter(prefix="/superadmin", tags=["Super Admin"])
+
+PLAN_FEATURES_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+    "core", 
+    "plan_features.json"
+)
+
+def load_plan_features():
+    if os.path.exists(PLAN_FEATURES_PATH):
+        try:
+            with open(PLAN_FEATURES_PATH, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "Free": {
+            "feature_ai_agent": False, "feature_guest_bot": False, "feature_rate_shopper": False,
+            "feature_new_booking": True, "feature_color_palette": False, "feature_custom_logo": False,
+            "feature_custom_widget": False
+        },
+        "Basic": {
+            "feature_ai_agent": False, "feature_guest_bot": False, "feature_rate_shopper": False,
+            "feature_new_booking": True, "feature_color_palette": False, "feature_custom_logo": True,
+            "feature_custom_widget": False
+        },
+        "Premium": {
+            "feature_ai_agent": False, "feature_guest_bot": True, "feature_rate_shopper": True,
+            "feature_new_booking": True, "feature_color_palette": True, "feature_custom_logo": True,
+            "feature_custom_widget": True
+        },
+        "Enterprise": {
+            "feature_ai_agent": True, "feature_guest_bot": True, "feature_rate_shopper": True,
+            "feature_new_booking": True, "feature_color_palette": True, "feature_custom_logo": True,
+            "feature_custom_widget": True
+        }
+    }
+
+def save_plan_features(data):
+    try:
+        with open(PLAN_FEATURES_PATH, "w") as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception:
+        return False
 
 # Dependency to check if user is Super Admin
 async def get_super_admin(current_user: CurrentUser):
@@ -136,6 +182,19 @@ async def update_subscription(
         sub.updated_at = datetime.utcnow()
     
     session.add(sub)
+    
+    # Sync hotel feature flags based on subscription plan
+    plan_name = sub.plan_name
+    mapped_plan = "Free" if plan_name.lower() in ["free", "free / trial", "none"] else plan_name
+    mapped_plan = mapped_plan.capitalize()
+    
+    plan_matrix = load_plan_features()
+    if mapped_plan in plan_matrix:
+        features = plan_matrix[mapped_plan]
+        for feat_key, feat_val in features.items():
+            setattr(hotel, feat_key, feat_val)
+        session.add(hotel)
+        
     await session.commit()
     return {"message": "Subscription updated successfully"}
 
@@ -509,3 +568,57 @@ async def update_quotas(
     session.add(audit)
     await session.commit()
     return {"message": "Quotas updated successfully", "quotas": sub}
+
+@router.get("/plan-features")
+async def get_plan_features(super_admin: User = Depends(get_super_admin)):
+    """Get the global plan-to-features mapping configuration"""
+    return load_plan_features()
+
+@router.post("/plan-features")
+async def update_plan_features(
+    data: dict,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin)
+):
+    """Update the global plan-to-features mapping and sync all hotels on these plans"""
+    current_mapping = load_plan_features()
+    
+    # Update mapping with input data
+    for plan, features in data.items():
+        if plan in current_mapping:
+            for feat_key, feat_val in features.items():
+                current_mapping[plan][feat_key] = bool(feat_val)
+                
+    success = save_plan_features(current_mapping)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save plan features configuration")
+        
+    # Automatically update all hotels that belong to these plans to match the new features matrix
+    for plan, features in current_mapping.items():
+        # Fetch all subscriptions for this plan
+        sub_res = await session.execute(
+            select(Subscription).where(Subscription.plan_name == plan)
+        )
+        subs = sub_res.scalars().all()
+        hotel_ids = [s.hotel_id for s in subs]
+        
+        if hotel_ids:
+            for hotel_id in hotel_ids:
+                hotel = await session.get(Hotel, hotel_id)
+                if hotel:
+                    for feat_key, feat_val in features.items():
+                        setattr(hotel, feat_key, feat_val)
+                    session.add(hotel)
+                    
+    # Audit log
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="UPDATE_PLAN_FEATURES",
+        description="Updated global subscription plan features matrix and synced active properties",
+        ip_address="127.0.0.1"
+    )
+    session.add(audit)
+    await session.commit()
+    
+    return {"message": "Plan features updated and hotels synced successfully", "plan_features": current_mapping}
