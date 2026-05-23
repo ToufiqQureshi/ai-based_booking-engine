@@ -615,7 +615,118 @@ const IntegrationPage = () => {
                             )}
                         </CardContent>
                     </Card>
+                </TabsContent>
 
+                {/* Chat Widget Tab */}
+                <TabsContent value="chat-widget" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Embed Chat Widget</CardTitle>
+                            <CardDescription>
+                                Add a floating AI guest assistant bot to your website
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="relative">
+                                {!hotel?.feature_guest_bot && (
+                                    <div className="absolute inset-0 z-10 backdrop-blur-sm bg-white/40 dark:bg-slate-950/40 rounded-xl flex flex-col items-center justify-center border border-dashed border-indigo-200 dark:border-indigo-900/30 p-6 text-center">
+                                        <Lock className="w-6 h-6 text-indigo-600 mb-2 animate-bounce" />
+                                        <span className="text-sm font-black text-slate-900 dark:text-white">Guest Bot & Widgets Locked</span>
+                                        <span className="text-xs text-slate-500 max-w-[320px] mt-1 leading-normal">
+                                            Upgrade your plan to unlock and copy the chat widget integration codes.
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="space-y-4">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <Label>HTML Code</Label>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={!hotel?.feature_guest_bot}
+                                                onClick={() => copyToClipboard(
+                                                    `<div id="hotelier-chat-widget" data-hotel-slug="${activeHotelSlug || hotel?.slug || 'my-grand-hotel'}"></div>`
+                                                )}
+                                            >
+                                                <Copy className="w-4 h-4 mr-2" />
+                                                Copy
+                                            </Button>
+                                        </div>
+                                        <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-sm">
+                                            {`<div id="hotelier-chat-widget" data-hotel-slug="${activeHotelSlug || hotel?.slug || 'my-grand-hotel'}"></div>`}
+                                        </pre>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <Label>JavaScript Code</Label>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={!hotel?.feature_guest_bot}
+                                                onClick={() => copyToClipboard(
+                                                    `<script>
+  (function() {
+    var script = document.createElement('script');
+    script.src = '${window.location.origin}/chat-loader.js';
+    script.async = true;
+    script.onload = function() {
+      HotelierChat.init({
+        hotelSlug: '${activeHotelSlug || hotel?.slug || 'my-grand-hotel'}',
+        frontendUrl: '${window.location.origin}'
+      });
+    };
+    document.head.appendChild(script);
+  })();
+</script>`
+                                                )}
+                                            >
+                                                <Copy className="w-4 h-4 mr-2" />
+                                                Copy
+                                            </Button>
+                                        </div>
+                                        <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-sm">
+                                            {`<script>
+  (function() {
+    var script = document.createElement('script');
+    script.src = '${window.location.origin}/chat-loader.js';
+    script.async = true;
+    script.onload = function() {
+      HotelierChat.init({
+        hotelSlug: '${activeHotelSlug || hotel?.slug || 'my-grand-hotel'}',
+        frontendUrl: '${window.location.origin}'
+      });
+    };
+    document.head.appendChild(script);
+  })();
+</script>`}
+                                        </pre>
+                                    </div>
+
+                                    <Alert>
+                                        <AlertDescription>
+                                            <div className="prose prose-sm max-w-none">
+                                                <pre className="whitespace-pre-wrap text-xs">
+{`# Integration Instructions
+
+## Step 1: Add the JavaScript
+Add the JavaScript script tag before the closing </body> tag on your website.
+
+## Step 2: Configure AI Agent (Optional)
+Make sure you've set up your AI Provider and API Key in the Settings tab to let the chatbot answer guest questions.`}
+                                                </pre>
+                                            </div>
+                                        </AlertDescription>
+                                    </Alert>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Settings Tab */}
+                <TabsContent value="settings" className="space-y-4">
                     <Card>
                         <CardHeader>
                             <CardTitle>System Settings</CardTitle>

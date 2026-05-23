@@ -55,34 +55,35 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
-        # Run table migrations for new columns
-        # hotels table columns:
-        # feature_new_booking, feature_color_palette, feature_custom_logo, feature_custom_widget
-        for col, col_type in [
-            ("feature_new_booking", "BOOLEAN DEFAULT TRUE"),
-            ("feature_color_palette", "BOOLEAN DEFAULT TRUE"),
-            ("feature_custom_logo", "BOOLEAN DEFAULT TRUE"),
-            ("feature_custom_widget", "BOOLEAN DEFAULT TRUE")
-        ]:
-            try:
-                await conn.execute(text(f"ALTER TABLE hotels ADD COLUMN {col} {col_type}"))
-            except Exception:
-                pass
-        
+    # Run table migrations for new columns in separate transaction blocks to avoid transaction aborts in PostgreSQL
+    for col, col_type in [
+        ("feature_new_booking", "BOOLEAN DEFAULT TRUE"),
+        ("feature_color_palette", "BOOLEAN DEFAULT TRUE"),
+        ("feature_custom_logo", "BOOLEAN DEFAULT TRUE"),
+        ("feature_custom_widget", "BOOLEAN DEFAULT TRUE")
+    ]:
         try:
-            await conn.execute(text("ALTER TABLE room_types ADD COLUMN cancellation_policy TEXT"))
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE hotels ADD COLUMN {col} {col_type}"))
         except Exception:
             pass
+    
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE room_types ADD COLUMN cancellation_policy TEXT"))
+    except Exception:
+        pass
 
-        for col, col_type in [
-            ("cancellation_fee", "NUMERIC DEFAULT 0.00"),
-            ("refund_amount", "NUMERIC DEFAULT 0.00"),
-            ("refund_status", "VARCHAR(50) DEFAULT 'none'")
-        ]:
-            try:
+    for col, col_type in [
+        ("cancellation_fee", "NUMERIC DEFAULT 0.00"),
+        ("refund_amount", "NUMERIC DEFAULT 0.00"),
+        ("refund_status", "VARCHAR(50) DEFAULT 'none'")
+    ]:
+        try:
+            async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
-            except Exception:
-                pass
+        except Exception:
+            pass
 
 
 
