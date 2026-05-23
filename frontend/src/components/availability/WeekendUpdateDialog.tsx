@@ -155,7 +155,7 @@ export function WeekendUpdateDialog({ open, onOpenChange, roomTypes, onSuccess }
                         <div className="p-4 rounded-xl bg-indigo-50/40 border border-indigo-100/60 dark:bg-indigo-950/20 dark:border-indigo-900/30 space-y-4">
                             <div className="flex items-center gap-1.5 text-xs text-indigo-800 dark:text-indigo-300 font-semibold mb-1">
                                 <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                                Select properties to apply for Sat/Sun
+                                Adjust Weekend Values (Sat/Sun)
                             </div>
 
                             <FormField
