@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    MessageCircle, X, Send, Bot, User, 
-    Calendar, Coffee, MapPin, Clock, 
-    Sparkles, CreditCard, ArrowRight, ChevronRight 
+import {
+    MessageCircle, X, Send, Bot, User,
+    Calendar, Coffee, MapPin, Clock,
+    Sparkles, CreditCard, ArrowRight, ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -251,7 +251,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                             const chatText = parts[0].replace(/\[IMAGES: .*?\]/g, '').replace(/https:\/\/.*?\.(jpg|jpeg|png|webp)(\?.*?)?/gi, '').trim();
                                             const bookingJson = parts[1];
                                             let bookingData: BookingData | null = null;
-                                            
+
                                             if (bookingJson) {
                                                 try {
                                                     bookingData = JSON.parse(bookingJson);
@@ -265,11 +265,10 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                                     key={idx}
                                                     className={`flex items-start gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
                                                 >
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
-                                                        msg.role === 'user' 
-                                                            ? 'bg-slate-200 border border-slate-300' 
-                                                            : 'bg-white border border-slate-100'
-                                                    }`}>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${msg.role === 'user'
+                                                        ? 'bg-slate-200 border border-slate-300'
+                                                        : 'bg-white border border-slate-100'
+                                                        }`}>
                                                         {msg.role === 'user' ? (
                                                             <User className="w-4 h-4 text-slate-600" />
                                                         ) : (
@@ -284,11 +283,10 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                                     <div className="flex flex-col max-w-[80%]">
                                                         {chatText && (
                                                             <div
-                                                                className={`px-4 py-3 text-[14px] leading-relaxed relative ${
-                                                                    msg.role === 'user'
-                                                                        ? 'rounded-[20px] rounded-tr-[4px] shadow-sm'
-                                                                        : 'rounded-[20px] rounded-tl-[4px] shadow-sm border border-slate-100'
-                                                                }`}
+                                                                className={`px-4 py-3 text-[14px] leading-relaxed relative ${msg.role === 'user'
+                                                                    ? 'rounded-[20px] rounded-tr-[4px] shadow-sm'
+                                                                    : 'rounded-[20px] rounded-tl-[4px] shadow-sm border border-slate-100'
+                                                                    }`}
                                                                 style={msg.role === 'user' ? {
                                                                     background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`,
                                                                     color: getContrastText(primaryColor)
@@ -322,21 +320,21 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                                                 {/* 1. Handle [IMAGES: ...] tag */}
                                                                 {msg.content.includes("[IMAGES:") && msg.content.match(/\[IMAGES: (.*?)\]/)?.[1].split(',').map((url, idx) => (
                                                                     <div key={`tagged-${idx}`} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-100 shadow-sm group">
-                                                                        <img 
-                                                                            src={url.trim()} 
-                                                                            alt="Room" 
+                                                                        <img
+                                                                            src={url.trim()}
+                                                                            alt="Room"
                                                                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                                                             onError={(e) => (e.currentTarget.style.display = 'none')}
                                                                         />
                                                                     </div>
                                                                 ))}
-                                                                
+
                                                                 {/* 2. Handle Naked Supabase URLs (Fallback) */}
                                                                 {!msg.content.includes("[IMAGES:") && msg.content.match(/https:\/\/iupgzyilraahuwqnkgqq\.supabase\.co\/storage\/v1\/object\/public\/hotel-assets\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp)/gi)?.map((url, idx) => (
                                                                     <div key={`naked-${idx}`} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-100 shadow-sm group">
-                                                                        <img 
-                                                                            src={url.trim()} 
-                                                                            alt="Room" 
+                                                                        <img
+                                                                            src={url.trim()}
+                                                                            alt="Room"
                                                                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                                                             onError={(e) => (e.currentTarget.style.display = 'none')}
                                                                         />
@@ -356,7 +354,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                                                     </div>
                                                                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                                                                 </div>
-                                                                
+
                                                                 {/* Room Details */}
                                                                 <div className="p-3.5 space-y-3">
                                                                     <div>
@@ -367,7 +365,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                                                             {bookingData.guests} Guest{bookingData.guests > 1 ? 's' : ''} ({bookingData.adults} Adult{bookingData.adults > 1 ? 's' : ''}{bookingData.children > 0 ? `, ${bookingData.children} Child${bookingData.children > 1 ? 'ren' : ''}` : ''})
                                                                         </p>
                                                                     </div>
-                                                                    
+
                                                                     {/* Check-in / Check-out Grid */}
                                                                     <div className="grid grid-cols-2 gap-3 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
                                                                         <div>
@@ -529,8 +527,9 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                             <Send className="w-3.5 h-3.5" />
                                         </Button>
                                     </form>
-                                    <p className="text-[8px] text-center text-slate-400 mt-2 font-bold uppercase tracking-widest opacity-60">Powered by RevMerito AI</p>
-                                </div>
+                                    <p className="text-[8px] text-center mt-2 font-bold uppercase tracking-widest bg-gradient-to-r from-violet-500 to-indigo-500 bg-clip-text text-transparent">
+                                        Powered by webmerito AI
+                                    </p>                                </div>
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -565,8 +564,8 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                 </div>
                                 <div className="hidden md:flex flex-col items-start pr-2 ml-1">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Live Concierge</span>
-                                    <span 
-                                        className="text-[15px] font-black tracking-tight" 
+                                    <span
+                                        className="text-[15px] font-black tracking-tight"
                                         style={{ color: primaryColor }}
                                     >
                                         How can I help?

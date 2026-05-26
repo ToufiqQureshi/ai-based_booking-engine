@@ -38,6 +38,7 @@ export function PropertyDetailsFooter({ hotel }: PropertyDetailsFooterProps) {
 
     // Determine the main display image. If hotel has photos, use the first one. Otherwise fallback to logo_url.
     const displayImage = photos && photos.length > 0 ? photos[0].url : logo_url;
+    const primaryColor = settings?.primary_color || '#7c3aed';
 
     const handleLinkClick = (e: React.MouseEvent, title: string, content: string) => {
         e.preventDefault();
@@ -61,8 +62,11 @@ export function PropertyDetailsFooter({ hotel }: PropertyDetailsFooterProps) {
                                     {displayImage ? (
                                         <img src={displayImage} alt={name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-50 to-indigo-50">
-                                            <span className="text-4xl font-black text-indigo-200">{name.charAt(0).toUpperCase()}</span>
+                                        <div 
+                                            className="w-full h-full flex items-center justify-center"
+                                            style={{ backgroundColor: `${primaryColor}0d` }}
+                                        >
+                                            <span className="text-4xl font-black" style={{ color: primaryColor }}>{name.charAt(0).toUpperCase()}</span>
                                         </div>
                                     )}
                                 </div>
@@ -86,21 +90,24 @@ export function PropertyDetailsFooter({ hotel }: PropertyDetailsFooterProps) {
                                 </div>
 
                                 {/* Links Section */}
-                                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-[13px] font-bold text-indigo-600">
+                                <div 
+                                    className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-[13px] font-bold"
+                                    style={{ color: primaryColor }}
+                                >
                                     {contact?.website ? (
-                                        <a href={contact.website.startsWith('http') ? contact.website : `https://${contact.website}`} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-800 transition-colors hover:underline">Home</a>
+                                        <a href={contact.website.startsWith('http') ? contact.website : `https://${contact.website}`} target="_blank" rel="noopener noreferrer" className="hover:underline transition-colors opacity-90 hover:opacity-100">Home</a>
                                     ) : (
-                                        <a href="#" className="hover:text-indigo-800 transition-colors hover:underline">Home</a>
+                                        <a href="#" className="hover:underline transition-colors opacity-90 hover:opacity-100">Home</a>
                                     )}
                                     
                                     {settings?.terms_conditions && (
-                                        <button onClick={(e) => handleLinkClick(e, 'Terms & Conditions', settings.terms_conditions!)} className="hover:text-indigo-800 transition-colors hover:underline">Terms & Conditions</button>
+                                        <button onClick={(e) => handleLinkClick(e, 'Terms & Conditions', settings.terms_conditions!)} className="hover:underline transition-colors opacity-90 hover:opacity-100">Terms & Conditions</button>
                                     )}
                                     {settings?.privacy_policy && (
-                                        <button onClick={(e) => handleLinkClick(e, 'Privacy Policy', settings.privacy_policy!)} className="hover:text-indigo-800 transition-colors hover:underline">Privacy Policy</button>
+                                        <button onClick={(e) => handleLinkClick(e, 'Privacy Policy', settings.privacy_policy!)} className="hover:underline transition-colors opacity-90 hover:opacity-100">Privacy Policy</button>
                                     )}
                                     {settings?.payment_policy && (
-                                        <button onClick={(e) => handleLinkClick(e, 'Payment Terms', settings.payment_policy!)} className="hover:text-indigo-800 transition-colors hover:underline">Payment Terms</button>
+                                        <button onClick={(e) => handleLinkClick(e, 'Payment Terms', settings.payment_policy!)} className="hover:underline transition-colors opacity-90 hover:opacity-100">Payment Terms</button>
                                     )}
                                 </div>
                             </div>
@@ -110,14 +117,17 @@ export function PropertyDetailsFooter({ hotel }: PropertyDetailsFooterProps) {
                         {policies.length > 0 && (
                             <div className="w-full lg:w-[350px] shrink-0 bg-slate-50 rounded-2xl p-6 border border-slate-100">
                                 <div className="flex items-center gap-2 mb-4 border-b border-slate-200/60 pb-3">
-                                    <FileText className="w-4 h-4 text-violet-500" />
+                                    <FileText className="w-4 h-4" style={{ color: primaryColor }} />
                                     <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Important Info</h3>
                                 </div>
                                 <div className="space-y-4 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
                                     {policies.map((policy) => (
                                         <div key={policy.label} className="group">
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-violet-400 transition-colors" />
+                                                <div 
+                                                    className="w-1.5 h-1.5 rounded-full transition-opacity opacity-60 group-hover:opacity-100" 
+                                                    style={{ backgroundColor: primaryColor }}
+                                                />
                                                 {policy.label}
                                             </p>
                                             <p className="text-[12px] text-slate-600 font-medium leading-relaxed pl-3 line-clamp-3">
@@ -132,13 +142,16 @@ export function PropertyDetailsFooter({ hotel }: PropertyDetailsFooterProps) {
                 </div>
 
                 {/* Bottom Address Bar */}
-                <div className="bg-amber-500 text-amber-950 px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-bold border-t border-amber-600/20">
+                <div 
+                    className="px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-bold border-t border-black/10 text-white"
+                    style={{ backgroundColor: settings?.primary_color || '#7c3aed' }}
+                >
                     <div className="flex flex-wrap items-center gap-2 justify-center text-center md:text-left">
-                        <MapPin className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                        <MapPin className="w-3.5 h-3.5 shrink-0 opacity-80" />
                         <span>{name}, {fullAddress}</span>
                     </div>
                     {settings?.gst_number && (
-                        <div className="shrink-0 flex items-center gap-1.5 px-3 py-1 bg-amber-950/10 rounded-full">
+                        <div className="shrink-0 flex items-center gap-1.5 px-3 py-1 bg-black/10 rounded-full">
                             <span>Business/GST No: <span className="font-black">{settings.gst_number}</span></span>
                         </div>
                     )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, ChevronLeft, ChevronRight, Check, ShoppingBag, X, ArrowRight, Sparkles } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Check, ShoppingBag, X, ArrowRight, Sparkles, Hotel as HotelIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -433,11 +433,57 @@ export default function BookingSelection() {
 
                     {/* Room list */}
                     <div className="lg:col-span-9">
+                        {/* Results count & Sort section header wrapper (this sits directly above the room list) */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
+                                {searchType === 'room' ? (
+                                    <>
+                                        <div 
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                            style={{ backgroundColor: `${themeColor}1a` }}
+                                        >
+                                            <HotelIcon className="w-4 h-4" style={{ color: themeColor }} />
+                                        </div>
+                                        {filteredRooms.length} Categories Available
+                                    </>
+                                ) : (
+                                    <>
+                                        <div 
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                            style={{ backgroundColor: `${themeColor}1a` }}
+                                        >
+                                            <Sparkles className="w-4 h-4" style={{ color: themeColor }} />
+                                        </div>
+                                        {filteredRooms.length} Special Offers
+                                    </>
+                                )}
+                            </h2>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-white border border-slate-200 rounded-xl shadow-sm px-4 py-2 shrink-0 max-w-[200px]">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Sort By</span>
+                                <select 
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                    className="bg-transparent text-[13px] font-bold focus:outline-none cursor-pointer w-full text-ellipsis overflow-hidden pr-2"
+                                    style={{ color: themeColor }}
+                                >
+                                    <option value="recommended">Recommended</option>
+                                    <option value="price_asc">Price: Low to High</option>
+                                    <option value="price_desc">Price: High to Low</option>
+                                </select>
+                            </div>
+                        </div>
+
                         {filteredRooms.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-slate-100 p-8 text-center">
                                 <h3 className="text-2xl font-bold text-slate-900 mb-3">No availability for these criteria</h3>
                                 <p className="text-slate-500 mb-6">Adjust your dates or filters to search again.</p>
-                                <button className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold" onClick={() => { setPriceRange([0, 20000]); setSelectedMealPlans([]); }}>Clear Filters</button>
+                                <button 
+                                    className="px-6 py-2 text-white rounded-xl font-bold transition-all active:scale-95 shadow-md" 
+                                    style={{ backgroundColor: themeColor }}
+                                    onClick={() => { setPriceRange([0, 20000]); setSelectedMealPlans([]); }}
+                                >
+                                    Clear Filters
+                                </button>
                             </div>
                         ) : (
                             <div className="space-y-8">

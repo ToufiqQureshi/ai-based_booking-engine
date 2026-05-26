@@ -95,11 +95,15 @@ export function SettingsPage() {
     description: hotel?.description || '',
     address: {
       street: hotel?.address?.street || '',
-      city: hotel?.address?.city || ''
+      city: hotel?.address?.city || '',
+      state: hotel?.address?.state || '',
+      country: hotel?.address?.country || '',
+      postal_code: hotel?.address?.postal_code || ''
     },
     contact: {
       phone: hotel?.contact?.phone || '',
-      email: hotel?.contact?.email || ''
+      email: hotel?.contact?.email || '',
+      website: hotel?.contact?.website || ''
     },
     settings: {
       check_in_time: hotel?.settings?.check_in_time || '14:00',

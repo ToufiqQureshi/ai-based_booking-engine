@@ -82,13 +82,21 @@ export function BookingCartSheet({
                 <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 text-white py-4 px-6 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] animate-slide-up">
                     <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                            <div 
+                                className="w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0"
+                                style={{ backgroundColor: `${themeColor}33`, borderColor: `${themeColor}4d`, color: themeColor }}
+                            >
                                 <ShoppingBag className="w-6 h-6 animate-pulse" />
                             </div>
                             <div>
                                 <div className="flex items-center gap-2">
                                     <span className="font-black text-lg">{cart.length} {cart.length === 1 ? 'Room' : 'Rooms'} Selected</span>
-                                    <Badge className="bg-indigo-500 text-white font-bold px-2 py-0.5 text-xs border-0">Multi-Room Cart</Badge>
+                                    <Badge 
+                                        className="text-white font-bold px-2 py-0.5 text-xs border-0"
+                                        style={{ backgroundColor: themeColor }}
+                                    >
+                                        Multi-Room Cart
+                                    </Badge>
                                 </div>
                                 <p className="text-xs text-white/70 font-medium line-clamp-1">
                                     {cart.map(c => `${c.room.name} (${c.ratePlan.name})`).join(' + ')}
@@ -120,10 +128,15 @@ export function BookingCartSheet({
                     <SheetHeader className="p-6 border-b bg-white">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <ShoppingBag className="w-5 h-5 text-indigo-600" />
+                                <ShoppingBag className="w-5 h-5" style={{ color: themeColor }} />
                                 <SheetTitle className="text-xl font-bold text-slate-900">Your Booking Cart</SheetTitle>
                             </div>
-                            <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-0 font-bold">{cart.length} {cart.length === 1 ? 'Item' : 'Items'}</Badge>
+                            <Badge 
+                                className="border-0 font-bold animate-pulse"
+                                style={{ backgroundColor: `${themeColor}1a`, color: themeColor }}
+                            >
+                                {cart.length} {cart.length === 1 ? 'Item' : 'Items'}
+                            </Badge>
                         </div>
                         <SheetDescription className="text-xs text-slate-500 mt-1">Review and manage all selected rooms and packages before secure checkout.</SheetDescription>
                     </SheetHeader>
@@ -131,8 +144,11 @@ export function BookingCartSheet({
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
                         {cart.length === 0 ? (
                             <div className="text-center py-16 space-y-3">
-                                <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mx-auto text-indigo-400">
-                                    <ShoppingBag className="w-8 h-8" />
+                                <div 
+                                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto"
+                                    style={{ backgroundColor: `${themeColor}10`, color: themeColor }}
+                                >
+                                    <ShoppingBag className="w-8 h-8 opacity-80" />
                                 </div>
                                 <p className="font-bold text-slate-700 text-base">Your booking cart is empty</p>
                                 <p className="text-xs text-slate-400 max-w-xs mx-auto">Select a room and rate plan from the list to start building your multi-room stay.</p>
@@ -192,7 +208,7 @@ export function BookingCartSheet({
                                     </p>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <span className="text-[10px] uppercase font-black text-indigo-600 tracking-widest block">Grand Total</span>
+                                    <span className="text-[10px] uppercase font-black tracking-widest block" style={{ color: themeColor }}>Grand Total</span>
                                     <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
                                         {formatCurrency(cartTotal)}
                                     </span>

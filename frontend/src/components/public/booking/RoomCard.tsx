@@ -27,7 +27,7 @@ export function RoomCard({
     const displayRates = room.rate_options || [];
 
     return (
-        <div className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-indigo-100 transition-all duration-300 group">
+        <div className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-slate-300 transition-all duration-300 group">
             <div className="flex flex-col lg:flex-row">
                 {/* Visual Section */}
                 <div className="lg:w-[35%] h-64 lg:h-auto bg-slate-50 relative overflow-hidden">
@@ -45,7 +45,7 @@ export function RoomCard({
                     {/* Header Area */}
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
                         <div className="space-y-0.5">
-                            <h3 className="text-lg font-bold text-slate-800 tracking-tight leading-snug group-hover:text-indigo-600 transition-colors duration-200">
+                            <h3 className="text-lg font-bold text-slate-800 tracking-tight leading-snug transition-colors duration-200">
                                 {room.name}
                             </h3>
                             <div className="flex items-center gap-3 text-slate-500 text-[11px] font-medium">
@@ -55,7 +55,8 @@ export function RoomCard({
                             </div>
                         </div>
                         <button 
-                            className="text-indigo-600 font-semibold text-xs hover:underline transition-all"
+                            className="font-semibold text-xs hover:underline transition-all"
+                            style={{ color: themeColor }}
                             onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}
                         >
                             Room Details
@@ -167,7 +168,10 @@ export function PackageCard({
     getImageUrl,
 }: PackageCardProps) {
     return (
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col md:flex-row mb-8 hover:shadow-xl transition-all duration-300 group border-l-4 border-l-amber-500">
+        <div 
+            className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col md:flex-row mb-8 hover:shadow-xl transition-all duration-300 group border-l-4"
+            style={{ borderLeftColor: themeColor }}
+        >
             {/* Left: Premium Image Section */}
             <div className="md:w-[400px] h-72 md:h-auto bg-slate-100 relative overflow-hidden">
                 {plan.image_url ? (
@@ -181,7 +185,10 @@ export function PackageCard({
                     <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
                 )}
                 <div className="absolute top-4 left-4 z-10">
-                    <div className="bg-amber-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2">
+                    <div 
+                        className="text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2"
+                        style={{ backgroundColor: themeColor }}
+                    >
                         <Sparkles className="w-3 h-3" /> Exclusive Offer
                     </div>
                 </div>
@@ -191,15 +198,19 @@ export function PackageCard({
             <div className="flex-1 flex flex-col p-6 md:p-8">
                 <div className="flex justify-between items-start mb-4">
                     <div className="space-y-1">
-                        <h3 className="text-2xl md:text-3xl font-black text-slate-900 group-hover:text-amber-600 transition-colors">
+                        <h3 className="text-2xl md:text-3xl font-black text-slate-900 transition-colors">
                             {plan.name}
                         </h3>
                         <p className="text-sm font-bold text-slate-500 flex items-center gap-2">
-                            <Bed className="w-4 h-4 text-amber-500" /> 
+                            <Bed className="w-4 h-4" style={{ color: themeColor }} /> 
                             Available for {room.name} and more
                         </p>
                     </div>
-                    <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50 px-3 py-1 rounded-lg font-bold">
+                    <Badge 
+                        variant="outline" 
+                        className="px-3 py-1 rounded-lg font-bold"
+                        style={{ borderColor: `${themeColor}4d`, color: themeColor, backgroundColor: `${themeColor}0d` }}
+                    >
                         Limited Time
                     </Badge>
                 </div>
@@ -230,11 +241,11 @@ export function PackageCard({
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Why Book This?</p>
                         <ul className="space-y-2.5">
                             <li className="text-xs font-bold text-slate-600 flex items-start gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1" />
+                                <div className="w-1.5 h-1.5 rounded-full mt-1" style={{ backgroundColor: themeColor }} />
                                 Best price guaranteed for this package
                             </li>
                             <li className="text-xs font-bold text-slate-600 flex items-start gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1" />
+                                <div className="w-1.5 h-1.5 rounded-full mt-1" style={{ backgroundColor: themeColor }} />
                                 Flexible modification available
                             </li>
                         </ul>

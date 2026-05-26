@@ -52,7 +52,7 @@ export function RoomFiltersSort({
             <div className={`lg:col-span-3 space-y-4 ${isFilterOpen ? 'block' : 'hidden'} lg:block`}>
                 <Card className="p-5 border-slate-200 shadow-sm rounded-xl bg-white sticky top-24">
                     <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <Search className="w-4 h-4 text-indigo-600" /> Filter Rooms
+                        <Search className="w-4 h-4" style={{ color: themeColor }} /> Filter Rooms
                     </h3>
                     
                     <div className="space-y-6">
@@ -67,7 +67,8 @@ export function RoomFiltersSort({
                                     step="500"
                                     value={priceRange[1]}
                                     onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
-                                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                                    style={{ accentColor: themeColor }}
                                 />
                                 <div className="flex justify-between mt-2 text-xs font-bold text-slate-600">
                                     <span>₹0</span>
@@ -89,9 +90,10 @@ export function RoomFiltersSort({
                                                 if (e.target.checked) setSelectedMealPlans([...selectedMealPlans, plan]);
                                                 else setSelectedMealPlans(selectedMealPlans.filter(p => p !== plan));
                                             }}
-                                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                            className="w-4 h-4 rounded border-slate-300 focus:ring-0"
+                                            style={{ accentColor: themeColor }}
                                         />
-                                        <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors">
+                                        <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
                                             {plan === 'EP' ? 'Room Only (EP)' : 
                                              plan === 'CP' ? 'With Breakfast (CP)' :
                                              plan === 'MAP' ? 'Half Board (MAP)' : 'Full Board (AP)'}
@@ -115,38 +117,6 @@ export function RoomFiltersSort({
                 </Card>
             </div>
 
-            {/* Results count & Sort section header wrapper (this sits directly above the room list) */}
-            <div className="lg:col-span-9 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
-                    {searchType === 'room' ? (
-                        <>
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                                <HotelIcon className="w-4 h-4 text-blue-600" />
-                            </div>
-                            {filteredRoomsCount} Categories Available
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                                <Sparkles className="w-4 h-4 text-amber-500" />
-                            </div>
-                            {filteredRoomsCount} Special Offers
-                        </>
-                    )}
-                </h2>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-white border border-slate-200 rounded-xl shadow-sm px-4 py-2 shrink-0 max-w-[200px]">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Sort By</span>
-                    <select 
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
-                        className="bg-transparent text-[13px] font-bold text-blue-700 focus:outline-none cursor-pointer w-full text-ellipsis overflow-hidden pr-2"
-                    >
-                        <option value="recommended">Recommended</option>
-                        <option value="price_asc">Price: Low to High</option>
-                        <option value="price_desc">Price: High to Low</option>
-                    </select>
-                </div>
-            </div>
         </>
     );
 }
