@@ -70,40 +70,6 @@ export function PublicBookingLayout() {
                 <Outlet />
             </main>
 
-            {/* Premium Hotel Policies Section */}
-            {policies.length > 0 && (
-                <section className="max-w-7xl mx-auto px-4 mt-16 mb-8 relative z-10">
-                    <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 md:p-10 relative overflow-hidden">
-                        {/* Decorative Background Elements */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-50 rounded-full blur-3xl opacity-60 -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-60 translate-y-1/3 -translate-x-1/3 pointer-events-none" />
-                        
-                        <div className="relative z-10 flex flex-col items-center text-center mb-10">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-50 flex items-center justify-center mb-4 border border-violet-100 shadow-sm">
-                                <FileText className="w-6 h-6 text-violet-600" />
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Important Information</h3>
-                            <p className="text-sm text-slate-500 mt-2 max-w-lg mx-auto">Please review our property policies to ensure a smooth and comfortable stay with us.</p>
-                        </div>
-
-                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {policies.map((policy, idx) => (
-                                <div 
-                                    key={policy.label} 
-                                    className="group bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
-                                >
-                                    <div className="flex items-center gap-3 mb-3 border-b border-slate-50 pb-3">
-                                        <div className="w-2 h-2 rounded-full bg-violet-400 group-hover:scale-150 transition-transform" />
-                                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{policy.label}</p>
-                                    </div>
-                                    <p className="text-[14px] text-slate-600 font-medium leading-relaxed">{policy.value}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-            )}
-
             {/* Premium Property Details Footer */}
             {hotel && <PropertyDetailsFooter hotel={hotel} />}
 
