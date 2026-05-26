@@ -78,6 +78,12 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str | None = None
     JULES_API_KEY: str | None = None
 
+    # Email Service (Brevo)
+    BREVO_API_KEY: str | None = None
+    BREVO_SENDER_EMAIL: str = "noreply@staybooker.ai"
+    BREVO_SENDER_NAME: str = "Staybooker"
+    HOTEL_NOTIFICATION_EMAILS: str | None = None
+
     # Redis Configuration (Support for Railway REDIS_URL)
     REDIS_URL: Optional[str] = None
     REDIS_HOST: str = "localhost"

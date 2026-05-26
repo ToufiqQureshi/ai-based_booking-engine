@@ -1,6 +1,6 @@
 from typing import List, Optional, Any, Dict
 from datetime import date, datetime
-from fastapi import APIRouter, HTTPException, Query, Depends, status
+from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks
 from sqlmodel import select, and_, or_
 from pydantic import BaseModel, EmailStr
 import uuid
@@ -15,6 +15,7 @@ from app.models.rates import RatePlan, RoomRate
 from app.models.promo import PromoCode
 from app.core.redis_client import redis_client
 import json
+from app.services.email_service import get_email_service
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -621,7 +622,8 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
 @router.post("/bookings", response_model=PublicBookingResponse)
 async def create_public_booking(
     booking_data: PublicBookingCreate,
-    session: DbSession
+    session: DbSession,
+    background_tasks: BackgroundTasks
 ):
     """
     Create a public booking without authentication.
@@ -727,6 +729,30 @@ async def create_public_booking(
             logger.error(f"Failed clearing availability cache on public booking: {e}")
 
         await session.refresh(booking)
+        
+        # Enqueue Email Notifications
+        email_service = await get_email_service()
+        
+        background_tasks.add_task(
+            email_service.send_guest_booking_confirmation,
+            guest_email=guest.email,
+            guest_name=f"{guest.first_name} {guest.last_name}",
+            booking_number=booking.booking_number,
+            check_in=str(booking.check_in),
+            check_out=str(booking.check_out),
+            total_amount=booking.total_amount
+        )
+        
+        # Send to hotel (can get from hotel model or settings, but for now passing empty to use fallback)
+        background_tasks.add_task(
+            email_service.send_hotel_booking_notification,
+            hotel_emails="", 
+            booking_number=booking.booking_number,
+            guest_name=f"{guest.first_name} {guest.last_name}",
+            check_in=str(booking.check_in),
+            check_out=str(booking.check_out),
+            total_amount=booking.total_amount
+        )
         
         return PublicBookingResponse(
             id=booking.id,

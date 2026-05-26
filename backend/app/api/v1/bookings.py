@@ -18,6 +18,7 @@ from app.models.booking import (
 from app.models.room import RoomType
 from app.core.tasks import log_timeline_task
 from app.api.v1.availability import clear_availability_cache
+from app.services.email_service import get_email_service
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -174,6 +175,30 @@ async def create_booking(
     clear_availability_cache(current_user.hotel_id)
     await session.refresh(booking)
     await session.refresh(guest)
+    
+    # Enqueue Email Notifications
+    email_service = await get_email_service()
+    
+    background_tasks.add_task(
+        email_service.send_guest_booking_confirmation,
+        guest_email=guest.email,
+        guest_name=f"{guest.first_name} {guest.last_name}",
+        booking_number=booking.booking_number,
+        check_in=str(booking.check_in),
+        check_out=str(booking.check_out),
+        total_amount=booking.total_amount
+    )
+    
+    # Send to hotel (can get from hotel model or settings, but for now passing empty to use fallback)
+    background_tasks.add_task(
+        email_service.send_hotel_booking_notification,
+        hotel_emails="", 
+        booking_number=booking.booking_number,
+        guest_name=f"{guest.first_name} {guest.last_name}",
+        check_in=str(booking.check_in),
+        check_out=str(booking.check_out),
+        total_amount=booking.total_amount
+    )
     
     response = booking.model_dump()
     response["guest"] = guest.model_dump()
