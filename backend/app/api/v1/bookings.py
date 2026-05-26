@@ -128,16 +128,26 @@ async def create_booking(
         cancellation_hours = 24
         
         rp_id = room_req.get("rate_plan_id")
+        
+        # Check for overrides on room type level
+        plan_override = {}
+        if room_type and rp_id:
+            overrides = getattr(room_type, "rate_plan_overrides", {}) or {}
+            plan_override = overrides.get(rp_id) or {} if isinstance(overrides, dict) else {}
+
         if rp_id:
             rp = await session.get(RatePlan, rp_id)
             if rp:
-                is_refundable = rp.is_refundable
-                cancellation_hours = rp.cancellation_hours
+                is_refundable = plan_override.get("is_refundable", rp.is_refundable)
+                cancellation_hours = plan_override.get("cancellation_hours", rp.cancellation_hours)
                 
         if not cancellation_policy:
-            cancellation_policy = hotel_policy
-            if not cancellation_policy:
+            if plan_override:
                 cancellation_policy = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
+            else:
+                cancellation_policy = hotel_policy
+                if not cancellation_policy:
+                    cancellation_policy = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
                 
         room_dict = dict(room_req)
         room_dict["cancellation_policy"] = cancellation_policy

@@ -148,6 +148,7 @@ export interface RoomType {
   photos: RoomPhoto[];
   amenities: RoomAmenity[];
   cancellation_policy?: string;
+  rate_plan_overrides?: Record<string, any>;
   is_active: boolean;
   created_at: string;
   updated_at: string;

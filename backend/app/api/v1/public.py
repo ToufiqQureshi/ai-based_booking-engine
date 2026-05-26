@@ -424,13 +424,25 @@ async def search_public_rooms(
                 # Logic: Use explicitly configured Rate Plans
                 if rate_plans:
                     for plan in rate_plans:
+                        # Check for overrides on per-room-type level
+                        overrides = getattr(rt, "rate_plan_overrides", {}) or {}
+                        plan_override = overrides.get(plan.id) or {} if isinstance(overrides, dict) else {}
+                        
+                        # Skip if this plan is explicitly disabled for this room type
+                        if plan_override.get("is_active", True) is False:
+                            continue
+                            
+                        # Override dynamic values if specified
+                        is_refundable = plan_override.get("is_refundable", plan.is_refundable)
+                        cancellation_hours = plan_override.get("cancellation_hours", plan.cancellation_hours)
+
                         # Dynamic Inclusions
                         inclusions = plan.inclusions if plan.inclusions else []
                         if not inclusions:
                             inclusions.append("Free Wi-Fi") # Fallback
                         
                         # Dynamic Cancellation Text
-                        cancel_text = f"Free cancellation up to {plan.cancellation_hours} hours before check-in" if plan.is_refundable else "Non-refundable"
+                        cancel_text = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
 
                         # use the user-defined price adjustment
                         # Default is Room Base Price + Plan Adjustment
@@ -488,6 +500,9 @@ async def search_public_rooms(
                                  savings_text = f"Save INR {int(discount)}"
                                  plan_total -= discount
 
+                        # cancellation policy override
+                        specific_policy = cancel_text if ("is_refundable" in plan_override or "cancellation_hours" in plan_override) else (getattr(rt, "cancellation_policy", None) or hotel_policy or cancel_text)
+
                         rate_options.append(RateOption(
                             id=plan.id,
                             name=plan.name,
@@ -495,8 +510,8 @@ async def search_public_rooms(
                             price_per_night=plan_price_nightly,
                             total_price=plan_total,
                             inclusions=inclusions,
-                            is_refundable=plan.is_refundable,
-                            cancellation_policy=getattr(rt, "cancellation_policy", None) or hotel_policy or cancel_text,
+                            is_refundable=is_refundable,
+                            cancellation_policy=specific_policy,
                             savings_text=savings_text,
                             is_package=getattr(plan, 'is_package', False),
                             image_url=getattr(plan, 'image_url', None)
@@ -683,18 +698,29 @@ async def create_public_booking(
             # Resolve rate plan cancellation settings
             is_refundable = True
             cancellation_hours = 24
+            
+            # Check for overrides on room type level
+            plan_override = {}
+            if rt and room.rate_plan_id:
+                overrides = getattr(rt, "rate_plan_overrides", {}) or {}
+                plan_override = overrides.get(room.rate_plan_id) or {} if isinstance(overrides, dict) else {}
+
             if room.rate_plan_id:
                 rp = await session.get(RatePlan, room.rate_plan_id)
                 if rp:
-                    is_refundable = rp.is_refundable
-                    cancellation_hours = rp.cancellation_hours
+                    is_refundable = plan_override.get("is_refundable", rp.is_refundable)
+                    cancellation_hours = plan_override.get("cancellation_hours", rp.cancellation_hours)
                     
             if not cancellation_policy:
-                # If room type doesn't have a specific override policy, check hotel settings
-                cancellation_policy = hotel_policy
-                if not cancellation_policy:
-                    # Fallback to rate plan configuration details
+                # If there are overrides, we prioritize the rate-specific policy text
+                if plan_override:
                     cancellation_policy = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
+                else:
+                    # If room type doesn't have a specific override policy, check hotel settings
+                    cancellation_policy = hotel_policy
+                    if not cancellation_policy:
+                        # Fallback to rate plan configuration details
+                        cancellation_policy = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
             
             room_dict = room.model_dump()
             room_dict["cancellation_policy"] = cancellation_policy

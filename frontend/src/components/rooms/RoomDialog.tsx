@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Info, Image as ImageIcon, DollarSign, ListChecks, Check, Sparkles } from 'lucide-react';
+import { Loader2, Info, Image as ImageIcon, DollarSign, ListChecks, Check, Sparkles, SlidersHorizontal } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -36,7 +36,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from '@/api/client';
-import { RoomType, Amenity, RoomPhoto, RoomAmenity } from '@/types/api';
+import { RoomType, Amenity, RoomPhoto, RoomAmenity, RatePlan } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
 import { RoomImageUploader } from './RoomImageUploader';
 import { cn } from '@/lib/utils';
@@ -70,6 +70,7 @@ const roomSchema = z.object({
     amenity_ids: z.array(z.string()).default([]),
     market_price: z.coerce.number().min(0).optional().nullable(),
     cancellation_policy: z.string().optional(),
+    rate_plan_overrides: z.record(z.any()).optional().nullable(),
     is_active: z.boolean().default(true),
 });
 
@@ -114,22 +115,28 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
             photos: [],
             market_price: undefined,
             cancellation_policy: '',
+            rate_plan_overrides: {},
             is_active: true,
         },
     });
 
     const [availableAmenities, setAvailableAmenities] = useState<Amenity[]>([]);
+    const [ratePlans, setRatePlans] = useState<RatePlan[]>([]);
 
     useEffect(() => {
-        const loadAmenities = async () => {
+        const loadData = async () => {
             try {
-                const data = await apiClient.get<Amenity[]>('/amenities');
-                setAvailableAmenities(data);
+                const [amenitiesData, ratesData] = await Promise.all([
+                    apiClient.get<Amenity[]>('/amenities'),
+                    apiClient.get<RatePlan[]>('/rates/plans'),
+                ]);
+                setAvailableAmenities(amenitiesData);
+                setRatePlans(ratesData);
             } catch (e) {
-                console.error("Failed to load amenities", e);
+                console.error("Failed to load room dialog data", e);
             }
         };
-        if (open) loadAmenities();
+        if (open) loadData();
     }, [open]);
 
     useEffect(() => {
@@ -183,6 +190,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     market_price: initialData.market_price,
                     cancellation_policy: initialData.cancellation_policy || '',
                     amenity_ids: (initialData.amenities as RoomAmenity[])?.map(a => a.id) || [],
+                    rate_plan_overrides: initialData.rate_plan_overrides || {},
                     is_active: initialData.is_active ?? true,
                 });
             } else {
@@ -211,11 +219,38 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     amenity_ids: [],
                     market_price: undefined,
                     cancellation_policy: '',
+                    rate_plan_overrides: {},
                     is_active: true,
                 });
             }
         }
     }, [open, initialData, form]);
+
+    const handleToggleOverride = (planId: string, enabled: boolean, defaultPlanSettings: RatePlan) => {
+        const currentOverrides = { ...(form.getValues('rate_plan_overrides') || {}) };
+        if (enabled) {
+            currentOverrides[planId] = {
+                is_active: true,
+                is_refundable: defaultPlanSettings.is_refundable,
+                cancellation_hours: defaultPlanSettings.cancellation_hours ?? 24
+            };
+        } else {
+            delete currentOverrides[planId];
+        }
+        form.setValue('rate_plan_overrides', currentOverrides, { shouldDirty: true });
+    };
+
+    const handleUpdateOverride = (planId: string, field: string, value: any) => {
+        const currentOverrides = { ...(form.getValues('rate_plan_overrides') || {}) };
+        if (!currentOverrides[planId]) {
+            currentOverrides[planId] = { is_active: true, is_refundable: true, cancellation_hours: 24 };
+        }
+        currentOverrides[planId] = {
+            ...currentOverrides[planId],
+            [field]: value
+        };
+        form.setValue('rate_plan_overrides', currentOverrides, { shouldDirty: true });
+    };
 
     const onSubmit = async (values: z.infer<typeof roomSchema>) => {
         try {
@@ -264,7 +299,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
                             <div className="px-8 pt-4">
-                                <TabsList className="grid grid-cols-4 w-full h-11 bg-muted/60 p-1 rounded-xl">
+                                <TabsList className="grid grid-cols-5 w-full h-11 bg-muted/60 p-1 rounded-xl">
                                     <TabsTrigger value="basic" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
                                         <Info className="w-3.5 h-3.5 mr-2" /> Basic Info
                                     </TabsTrigger>
@@ -276,6 +311,9 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                     </TabsTrigger>
                                     <TabsTrigger value="amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
                                         <ListChecks className="w-3.5 h-3.5 mr-2" /> Amenities
+                                    </TabsTrigger>
+                                    <TabsTrigger value="rates" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
+                                        <SlidersHorizontal className="w-3.5 h-3.5 mr-2" /> Rate Settings
                                     </TabsTrigger>
                                 </TabsList>
                             </div>
@@ -709,6 +747,135 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         </FormItem>
                                     )}
                                 />
+                            </TabsContent>
+
+                            {/* ── TAB 5: RATE PLAN OVERRIDES ── */}
+                            <TabsContent value="rates" className="flex-1 overflow-y-auto px-8 pb-8 mt-6">
+                                <div className="space-y-6">
+                                    <div className="mb-6">
+                                        <h3 className="text-sm font-bold text-foreground mb-1">Custom Rate Settings</h3>
+                                        <p className="text-xs text-muted-foreground">
+                                            Configure room-specific cancellation policies, refundability, or active status for each rate plan. Left unmodified, the global rate plan settings will apply.
+                                        </p>
+                                    </div>
+
+                                    {ratePlans.length === 0 ? (
+                                        <div className="text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border">
+                                            <p className="text-sm text-muted-foreground font-medium">No rate plans found.</p>
+                                            <Button type="button" variant="link" className="text-blue-600 font-bold" onClick={() => navigate('/finance/rates')}>
+                                                Manage Rate Plans
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {ratePlans.map((plan) => {
+                                                const currentOverrides = form.watch('rate_plan_overrides') || {};
+                                                const hasOverride = !!currentOverrides[plan.id];
+                                                const overrideVal = currentOverrides[plan.id] || {};
+                                                
+                                                const isActive = hasOverride ? (overrideVal.is_active ?? true) : plan.is_active;
+                                                const isRefundable = hasOverride ? (overrideVal.is_refundable ?? false) : plan.is_refundable;
+                                                const cancellationHours = hasOverride ? (overrideVal.cancellation_hours ?? 24) : (plan.cancellation_hours ?? 24);
+
+                                                return (
+                                                    <div 
+                                                        key={plan.id}
+                                                        className={cn(
+                                                            "p-5 rounded-2xl border transition-all duration-200 bg-background",
+                                                            hasOverride ? "border-indigo-200 ring-1 ring-indigo-50/50" : "border-border hover:border-slate-300"
+                                                        )}
+                                                    >
+                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <h4 className="text-sm font-bold text-foreground">{plan.name}</h4>
+                                                                    <Badge variant="outline" className="text-[10px] py-0.5 px-2 font-semibold bg-muted/40 uppercase">
+                                                                        {plan.meal_plan}
+                                                                    </Badge>
+                                                                    {plan.is_package && (
+                                                                        <Badge className="text-[10px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/25 border-emerald-500/20 py-0.5 px-2 font-semibold">
+                                                                            Package
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-xs text-muted-foreground mt-1">
+                                                                    Default: {plan.is_refundable ? `Refundable (${plan.cancellation_hours}h)` : "Non-refundable"} | Global Status: {plan.is_active ? "Active" : "Inactive"}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-xs font-bold text-muted-foreground">Override</span>
+                                                                <Switch 
+                                                                    type="button"
+                                                                    checked={hasOverride}
+                                                                    onCheckedChange={(checked) => handleToggleOverride(plan.id, checked, plan)}
+                                                                    className="data-[state=checked]:bg-indigo-600"
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        {hasOverride && (
+                                                            <div className="mt-4 pt-4 border-t border-dashed border-muted grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                                <div className="flex flex-col gap-1.5 justify-center">
+                                                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Plan Status</label>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <Switch 
+                                                                            type="button"
+                                                                            checked={isActive}
+                                                                            onCheckedChange={(checked) => handleUpdateOverride(plan.id, 'is_active', checked)}
+                                                                            className="data-[state=checked]:bg-indigo-600"
+                                                                        />
+                                                                        <span className="text-xs font-semibold text-foreground">
+                                                                            {isActive ? "Available for booking" : "Hidden / Disabled"}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex flex-col gap-1.5 justify-center">
+                                                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Refundability</label>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <Switch 
+                                                                            type="button"
+                                                                            checked={isRefundable}
+                                                                            onCheckedChange={(checked) => handleUpdateOverride(plan.id, 'is_refundable', checked)}
+                                                                            className="data-[state=checked]:bg-indigo-600"
+                                                                            disabled={!isActive}
+                                                                        />
+                                                                        <span className="text-xs font-semibold text-foreground">
+                                                                            {isRefundable ? "Refundable" : "Non-refundable"}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {isRefundable && isActive && (
+                                                                    <div className="flex flex-col gap-1.5">
+                                                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cancellation Window</label>
+                                                                        <Select 
+                                                                            value={String(cancellationHours)} 
+                                                                            onValueChange={(val) => handleUpdateOverride(plan.id, 'cancellation_hours', Number(val))}
+                                                                        >
+                                                                            <SelectTrigger className="h-10 rounded-xl border-border bg-background">
+                                                                                <SelectValue placeholder="Hours before check-in" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent className="rounded-xl">
+                                                                                <SelectItem value="12">12 hours before check-in</SelectItem>
+                                                                                <SelectItem value="24">24 hours before check-in</SelectItem>
+                                                                                <SelectItem value="48">48 hours before check-in</SelectItem>
+                                                                                <SelectItem value="72">72 hours before check-in</SelectItem>
+                                                                                <SelectItem value="96">96 hours before check-in</SelectItem>
+                                                                                <SelectItem value="120">5 days before check-in</SelectItem>
+                                                                                <SelectItem value="168">7 days before check-in</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             </TabsContent>
                         </Tabs>
 

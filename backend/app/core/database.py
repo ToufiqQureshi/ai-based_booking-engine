@@ -74,6 +74,12 @@ async def init_db():
     except Exception:
         pass
 
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE room_types ADD COLUMN rate_plan_overrides JSON"))
+    except Exception:
+        pass
+
     for col, col_type in [
         ("cancellation_fee", "NUMERIC DEFAULT 0.00"),
         ("refund_amount", "NUMERIC DEFAULT 0.00"),
