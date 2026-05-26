@@ -48,6 +48,7 @@ interface CreatedKey {
 }
 
 import { useAuth } from '@/contexts/AuthContext';
+import { ChatWidget } from '@/components/public/ChatWidget';
 
 const IntegrationPage = () => {
     const { hotel } = useAuth();
@@ -774,6 +775,11 @@ Make sure you've set up your AI Provider and API Key in the Settings tab to let 
                             </div>
                         </CardContent>
                     </Card>
+                    
+                    {/* Live Preview of the Chat Widget */}
+                    {hotel?.feature_guest_bot && (
+                        <ChatWidget hotelSlug={activeHotelSlug || hotel?.slug || ''} />
+                    )}
                 </TabsContent>
 
                 {/* Settings Tab */}

@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Check, ShoppingBag, X, ArrowRight, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetDescription,
+    SheetFooter,
+} from "@/components/ui/sheet";
 import { apiClient } from '@/api/client';
+import { cn } from '@/lib/utils';
 import { PublicRoomSearchResult, RateOption, AddOn, Hotel } from '@/types/api';
 import { RoomDetailModal } from '@/components/public/RoomDetailModal';
 import { BookingStepper } from '@/components/public/BookingStepper';
@@ -484,6 +494,65 @@ export default function BookingSelection() {
             />
 
             {/* Enhancements Add-on Sheet */}
+            <Sheet open={isAddonSheetOpen} onOpenChange={setIsAddonSheetOpen}>
+                <SheetContent className="w-full sm:max-w-md p-0 flex flex-col bg-slate-50">
+                    <SheetHeader className="p-6 border-b bg-white">
+                        <SheetTitle className="text-xl font-bold flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-indigo-500" />
+                            Enhance Your Stay
+                        </SheetTitle>
+                        <SheetDescription>
+                            Select optional add-ons to customize your experience.
+                        </SheetDescription>
+                    </SheetHeader>
+                    
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        {addons.length === 0 ? (
+                            <p className="text-sm text-slate-500 text-center py-8">No add-ons available for this property.</p>
+                        ) : (
+                            addons.map((addon) => {
+                                const isSelected = selectedAddons.some(a => a.id === addon.id);
+                                return (
+                                    <div
+                                        key={addon.id}
+                                        className={cn(
+                                            "flex items-start gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer",
+                                            isSelected ? "border-indigo-500 bg-indigo-50/50" : "border-slate-100 bg-white hover:border-slate-200"
+                                        )}
+                                        onClick={() => toggleAddon(addon)}
+                                    >
+                                        <div className="mt-1">
+                                            <div className={cn(
+                                                "w-5 h-5 rounded flex items-center justify-center border",
+                                                isSelected ? "bg-indigo-500 border-indigo-500 text-white" : "border-slate-300 bg-white"
+                                            )}>
+                                                {isSelected && <Check className="w-3.5 h-3.5" />}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-slate-900">{addon.name}</h4>
+                                            {addon.description && <p className="text-xs text-slate-500 mt-1">{addon.description}</p>}
+                                            <p className="text-indigo-600 font-black mt-2">{formatCurrency(addon.price)}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                    
+                    <SheetFooter className="p-6 border-t bg-white">
+                        <Button
+                            className="w-full h-14 text-base font-bold rounded-xl gap-2 text-white shadow-lg"
+                            style={{ backgroundColor: themeColor }}
+                            onClick={handleProceedToCheckout}
+                        >
+                            Proceed to {hotel?.settings?.multi_room_cart !== false ? 'Cart' : 'Checkout'}
+                            <ArrowRight className="w-5 h-5" />
+                        </Button>
+                    </SheetFooter>
+                </SheetContent>
+            </Sheet>
+
             <BookingCartSheet
                 cart={cart}
                 setCart={setCart}
