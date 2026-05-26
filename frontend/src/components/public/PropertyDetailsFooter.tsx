@@ -38,7 +38,7 @@ export function PropertyDetailsFooter({ hotel }: PropertyDetailsFooterProps) {
 
     // Determine the main display image. If hotel has photos, use the first one. Otherwise fallback to logo_url.
     const displayImage = photos && photos.length > 0 ? photos[0].url : logo_url;
-    const primaryColor = settings?.primary_color || '#7c3aed';
+    const primaryColor = hotel?.primary_color || '#7c3aed';
 
     const handleLinkClick = (e: React.MouseEvent, title: string, content: string) => {
         e.preventDefault();
@@ -144,7 +144,7 @@ export function PropertyDetailsFooter({ hotel }: PropertyDetailsFooterProps) {
                 {/* Bottom Address Bar */}
                 <div 
                     className="px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-bold border-t border-black/10 text-white"
-                    style={{ backgroundColor: settings?.primary_color || '#7c3aed' }}
+                    style={{ backgroundColor: primaryColor }}
                 >
                     <div className="flex flex-wrap items-center gap-2 justify-center text-center md:text-left">
                         <MapPin className="w-3.5 h-3.5 shrink-0 opacity-80" />
