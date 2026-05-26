@@ -4,6 +4,7 @@ from sqlmodel import select, desc, func
 from sqlalchemy import tuple_
 from datetime import date, timedelta, datetime
 import json
+import logging
 from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, DbSession
@@ -15,11 +16,21 @@ from app.core.redis_client import redis_client
 from app.core.database import async_session
 from app.schemas.rate_ingest import RateIngestRequest
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/competitors", tags=["Competitor Rates"])
+
+def check_rate_shopper_feature(current_user: CurrentUser):
+    if not current_user.hotel or not getattr(current_user.hotel, "feature_rate_shopper", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Rate Shopper feature is not enabled for your subscription plan"
+        )
 
 @router.get("", response_model=List[Competitor])
 async def list_competitors(current_user: CurrentUser, session: DbSession):
     """List all competitors for current hotel"""
+    check_rate_shopper_feature(current_user)
     query = select(Competitor).where(Competitor.hotel_id == current_user.hotel_id)
     result = await session.execute(query)
     return result.scalars().all()
@@ -27,6 +38,7 @@ async def list_competitors(current_user: CurrentUser, session: DbSession):
 @router.post("", response_model=Competitor)
 async def add_competitor(comp_data: Competitor, current_user: CurrentUser, session: DbSession, background_tasks: BackgroundTasks):
     """Add a new competitor to track"""
+    check_rate_shopper_feature(current_user)
     # Force hotel_id
     comp_data.hotel_id = current_user.hotel_id
     
@@ -51,21 +63,26 @@ async def add_competitor(comp_data: Competitor, current_user: CurrentUser, sessi
 @router.post("/{comp_id}/scrape")
 async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSession, background_tasks: BackgroundTasks):
     """Manually trigger a scrape"""
+    check_rate_shopper_feature(current_user)
     background_tasks.add_task(run_background_scrape, comp_id)
     return {"message": "Scrape started in background"}
 
 async def run_background_scrape(comp_id: str):
-    """Wrapper to run scrape in its own DB session"""
-    print(f"Starting Background Scrape for {comp_id}")
+    """Wrapper to run scrape in its own DB session.
+    Currently, scraping is driven on the client-side via the Chrome extension which pushes rates.
+    This background task placeholder is kept for future server-side crawling/scraping support.
+    """
+    logger.info(f"Starting Background Scrape for competitor ID: {comp_id}")
     try:
-        # Placeholder for actual scraping logic if needed in future
+        # Server-side scraping is currently handled client-side by Chrome Extension
         pass
     except Exception as e:
-        print(f"Background Scrape CRASHED for {comp_id}: {e}")
+        logger.error(f"Background Scrape CRASHED for {comp_id}: {e}")
 
 @router.delete("/{comp_id}")
 async def delete_competitor(comp_id: str, current_user: CurrentUser, session: DbSession):
     """Delete a competitor and all their rate history"""
+    check_rate_shopper_feature(current_user)
     comp = await session.get(Competitor, comp_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Competitor not found")
@@ -103,6 +120,7 @@ async def get_market_analysis(
     days: int = 7,
     start_date: date = None
 ):
+    check_rate_shopper_feature(current_user)
     """
     Analyzes market rates for the next N days.
     Optimized: 15s -> <500ms using Redis + Efficient Queries
@@ -228,6 +246,7 @@ async def get_market_analysis(
 
 @router.get("/rates/comparison")
 async def get_rate_comparison(current_user: CurrentUser, session: DbSession, start_date: date = None):
+    check_rate_shopper_feature(current_user)
     """
     Get data for chart: My Rate vs Competitors for next 7 days.
     """
@@ -344,6 +363,7 @@ async def ingest_competitor_rates(
     session: DbSession,
     current_user: CurrentUser
 ):
+    check_rate_shopper_feature(current_user)
     """
     Ingest rates from Chrome Extension (Authenticated).
     """
@@ -421,7 +441,7 @@ async def ingest_competitor_rates(
 
         pipe.execute()
     except Exception as e:
-         print(f"Redis Write Failed (Ignored): {e}")
+         logger.warning(f"Redis Write Failed (Ignored): {e}")
 
     return {
         "message": f"Processed {len(valid_rates_payload)} rates (New: {count_new}, Updated: {count_update})",
@@ -460,7 +480,7 @@ async def check_scrape_freshness(jobs: List[ScrapeJobItem], session: DbSession):
             else:
                 redis_misses.append(jobs[i])
     except Exception as e:
-        print(f"Redis Check Failed: {e}")
+        logger.warning(f"Redis Check Failed: {e}")
         redis_misses = jobs # Fallback to DB check for all if Redis fails
     
     if not redis_misses:

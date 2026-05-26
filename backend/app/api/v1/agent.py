@@ -1,10 +1,13 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from typing import List
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage, AIMessage
+import logging
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.agent import create_agent_executor
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agent", tags=["AI Agent"])
 
@@ -21,6 +24,13 @@ async def chat_with_agent(
     current_user: CurrentUser,
     session: DbSession
 ):
+    # Enforce SaaS feature flag guard
+    if not current_user.hotel or not getattr(current_user.hotel, "feature_ai_agent", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="AI Agent feature is not enabled for your subscription plan"
+        )
+
     try:
         # 1. Initialize Agent (returns Graph)
         graph = create_agent_executor(session, current_user)
@@ -54,5 +64,5 @@ async def chat_with_agent(
         # Likely missing API Key
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
-        print(f"Agent Error: {e}")
+        logger.error(f"Agent Error: {e}")
         raise HTTPException(status_code=500, detail=f"AI Agent Error: {str(e)}")

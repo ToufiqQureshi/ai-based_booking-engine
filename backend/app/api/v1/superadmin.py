@@ -21,34 +21,16 @@ PLAN_FEATURES_PATH = os.path.join(
 )
 
 def load_plan_features():
-    if os.path.exists(PLAN_FEATURES_PATH):
-        try:
-            with open(PLAN_FEATURES_PATH, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {
-        "Free": {
-            "feature_ai_agent": False, "feature_guest_bot": False, "feature_rate_shopper": False,
-            "feature_new_booking": True, "feature_color_palette": False, "feature_custom_logo": False,
-            "feature_custom_widget": False
-        },
-        "Basic": {
-            "feature_ai_agent": False, "feature_guest_bot": False, "feature_rate_shopper": False,
-            "feature_new_booking": True, "feature_color_palette": False, "feature_custom_logo": True,
-            "feature_custom_widget": False
-        },
-        "Premium": {
-            "feature_ai_agent": False, "feature_guest_bot": True, "feature_rate_shopper": True,
-            "feature_new_booking": True, "feature_color_palette": True, "feature_custom_logo": True,
-            "feature_custom_widget": True
-        },
-        "Enterprise": {
-            "feature_ai_agent": True, "feature_guest_bot": True, "feature_rate_shopper": True,
-            "feature_new_booking": True, "feature_color_palette": True, "feature_custom_logo": True,
-            "feature_custom_widget": True
-        }
-    }
+    try:
+        with open(PLAN_FEATURES_PATH, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to load plan features from {PLAN_FEATURES_PATH}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Plan features configuration error: File not found or corrupted"
+        )
 
 def save_plan_features(data):
     try:

@@ -1,6 +1,6 @@
 from typing import List, Optional, Any, Dict
 from datetime import date, datetime
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, status
 from sqlmodel import select, and_, or_
 from pydantic import BaseModel, EmailStr
 import uuid
@@ -322,18 +322,14 @@ async def search_public_rooms(
                             "is_featured": a.is_featured
                         })
         except Exception as e:
-            logger.exception("Error fetching amenities")
+            logger.warning(f"Error fetching amenities: {e}. Falling back to default.")
             # Continue without real-time amenities, falling back to JSON
-            pass
 
     # 1b. Get all Rate Plans
     rp_query = select(RatePlan).where(RatePlan.hotel_id == hotel_id, RatePlan.is_active == True)
     rp_result = await session.execute(rp_query)
     rate_plans = rp_result.scalars().all()
     logger.debug("HotelID=%s - Found %d Rate Plans", hotel_id, len(rate_plans))
-    for p in rate_plans:
-        pass
-        # print(f"DEBUG: Plan {p.name} - Adj: {p.price_adjustment}")
 
     # 1c. Fetch Daily Rates (Base Price Overrides)
     # rate_plan_id=None means it is a base price override
@@ -775,7 +771,7 @@ async def chat_with_guest_ai(
 ):
     """
     Chat endpoint for hotel guests.
-    Uses Ollama (Deepseek) with RAG context.
+    Uses LLM with tools to answer guest questions.
     """
     try:
         import uuid
@@ -798,6 +794,13 @@ async def chat_with_guest_ai(
             # Fallback: Check if it's a valid ID but passed as slug
             # (This logic is now covered by the OR condition above)
             raise HTTPException(status_code=404, detail="Hotel not found")
+
+        # Enforce SaaS feature flag guard
+        if not getattr(hotel, "feature_guest_bot", False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Guest chatbot feature is not enabled for this hotel"
+            )
 
         # Fetch integration settings for dynamic AI provider/keys
         from app.models.integration import IntegrationSettings

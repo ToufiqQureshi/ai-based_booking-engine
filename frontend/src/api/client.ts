@@ -13,7 +13,7 @@ const getBaseUrl = () => {
   }
   
   // Local development fallback
-  return 'http://localhost:8000/api/v1';
+  return '/api/v1';
 };
 
 const API_BASE_URL = getBaseUrl();

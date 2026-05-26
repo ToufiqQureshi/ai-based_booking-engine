@@ -86,13 +86,13 @@ class HotelBase(SQLModel):
     amenities: List[str] = Field(default_factory=list, sa_column=Column(JSON)) # Property-level amenities like "Free Parking", "Pool"
     
     # Feature Flags (Controlled by Super Admin)
-    feature_rate_shopper: bool = Field(default=True)
-    feature_ai_agent: bool = Field(default=True)
-    feature_guest_bot: bool = Field(default=True)
+    feature_rate_shopper: bool = Field(default=False)
+    feature_ai_agent: bool = Field(default=False)
+    feature_guest_bot: bool = Field(default=False)
     feature_new_booking: bool = Field(default=True)
-    feature_color_palette: bool = Field(default=True)
-    feature_custom_logo: bool = Field(default=True)
-    feature_custom_widget: bool = Field(default=True)
+    feature_color_palette: bool = Field(default=False)
+    feature_custom_logo: bool = Field(default=False)
+    feature_custom_widget: bool = Field(default=False)
 
 
 class Hotel(HotelBase, table=True):

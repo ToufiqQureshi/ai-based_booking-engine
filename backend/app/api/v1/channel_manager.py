@@ -3,6 +3,10 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 import httpx
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.channel_manager import (
@@ -161,7 +165,8 @@ async def test_connection(current_user: CurrentUser, session: DbSession):
         status_code = response.status_code
         try:
             r_json = response.json()
-        except:
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse channel response as JSON: {e}")
             r_json = {"raw": response.text}
             
         if response.ok:
