@@ -115,7 +115,9 @@ export function SettingsPage() {
       payment_policy: hotel?.settings?.payment_policy || '',
       child_policy: hotel?.settings?.child_policy || '',
       privacy_policy: hotel?.settings?.privacy_policy || '',
+      terms_conditions: hotel?.settings?.terms_conditions || '',
       important_info: hotel?.settings?.important_info || '',
+      gst_number: hotel?.settings?.gst_number || '',
       multi_room_cart: hotel?.settings?.multi_room_cart !== false,
       featured_room_type_id: hotel?.settings?.featured_room_type_id || '',
       smtp_host: hotel?.settings?.smtp_host || '',
@@ -349,11 +351,11 @@ export function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
+                  <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="address">Street Address</Label>
                     <Input
                       id="address"
-                      value={formData.address.street}
+                      value={formData.address.street || ''}
                       onChange={(e) => handleUpdate('address', 'street', e.target.value)}
                     />
                   </div>
@@ -366,10 +368,39 @@ export function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      value={formData.address.state || ''}
+                      onChange={(e) => handleUpdate('address', 'state', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country</Label>
+                    <Input
+                      id="country"
+                      value={formData.address.country}
+                      onChange={(e) => handleUpdate('address', 'country', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="postal_code">Postal Code</Label>
+                    <Input
+                      id="postal_code"
+                      value={formData.address.postal_code || ''}
+                      onChange={(e) => handleUpdate('address', 'postal_code', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2 mt-4">
+                    <h4 className="text-sm font-semibold text-slate-800">Contact & Business Details</h4>
+                  </div>
+                  
+                  <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
                     <Input
                       id="phone"
-                      value={formData.contact.phone}
+                      value={formData.contact.phone || ''}
                       onChange={(e) => handleUpdate('contact', 'phone', e.target.value)}
                     />
                   </div>
@@ -378,8 +409,25 @@ export function SettingsPage() {
                     <Input
                       id="email"
                       type="email"
-                      value={formData.contact.email}
+                      value={formData.contact.email || ''}
                       onChange={(e) => handleUpdate('contact', 'email', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      value={formData.contact.website || ''}
+                      onChange={(e) => handleUpdate('contact', 'website', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gst_number">GST / Business Number</Label>
+                    <Input
+                      id="gst_number"
+                      placeholder="e.g. 27AAACH2059P1Z9"
+                      value={formData.settings.gst_number || ''}
+                      onChange={(e) => handleUpdate('settings', 'gst_number', e.target.value)}
                     />
                   </div>
                 </div>

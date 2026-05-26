@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react';
 import { startTimeTracking, stopTimeTracking, trackEvent } from '@/lib/tracker';
 import { Shield, FileText } from 'lucide-react';
 import { apiClient } from '@/api/client';
+import { PropertyDetailsFooter } from '@/components/public/PropertyDetailsFooter';
 
 export function PublicBookingLayout() {
     const { hotelSlug } = useParams();
+    const [hotel, setHotel] = useState<any>(null);
     const [hotelSettings, setHotelSettings] = useState<any>(null);
 
     useEffect(() => {
@@ -13,9 +15,12 @@ export function PublicBookingLayout() {
             startTimeTracking(hotelSlug);
             trackEvent(hotelSlug, "page_view");
             
-            // Fetch hotel data for policies
+            // Fetch hotel data for policies and footer
             apiClient.get<any>(`/public/hotels/${hotelSlug}`)
-                .then(res => setHotelSettings(res?.settings || null))
+                .then(res => {
+                    setHotel(res);
+                    setHotelSettings(res?.settings || null);
+                })
                 .catch(() => {});
         }
         return () => {
@@ -99,7 +104,10 @@ export function PublicBookingLayout() {
                 </section>
             )}
 
-            <footer className="border-t border-slate-200 bg-white py-5 mt-4">
+            {/* Premium Property Details Footer */}
+            {hotel && <PropertyDetailsFooter hotel={hotel} />}
+
+            <footer className="border-t border-slate-200 bg-white py-5">
                 <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <p className="text-xs text-slate-400 font-medium">
                         Powered by <span className="text-violet-600 font-bold">Staybooker.ai</span>

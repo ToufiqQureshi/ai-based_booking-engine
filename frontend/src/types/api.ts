@@ -97,7 +97,9 @@ export interface HotelSettings {
   payment_policy?: string;
   child_policy?: string;
   privacy_policy?: string;
+  terms_conditions?: string;
   important_info?: string;
+  gst_number?: string;
   notify_new_booking?: boolean;
   notify_cancellation?: boolean;
   show_viewers_count?: boolean;

@@ -563,15 +563,12 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                     <div className="absolute inset-0 rounded-full animate-ping scale-150 opacity-10" style={{ backgroundColor: primaryColor }} />
                                     <img src="/webmerito-icon.png" alt="Chat" className="w-full h-full object-contain relative z-10 drop-shadow-md group-hover:rotate-12 transition-transform" />
                                 </div>
-                                <div className="hidden md:flex flex-col items-start pr-2">
-                                    <span className="text-[9px] font-bold text-slate-400/80 uppercase tracking-widest leading-none mb-1">Live Concierge</span>
-                                    <span className="text-[17px] font-black tracking-tight" style={{
-                                        fontFamily: 'Inter, sans-serif, system-ui',
-                                        background: `linear-gradient(to right, ${primaryColor}, #5735B8)`,
-                                        backgroundClip: 'text',
-                                        WebkitBackgroundClip: 'text',
-                                        color: 'transparent'
-                                    } as any}>
+                                <div className="hidden md:flex flex-col items-start pr-2 ml-1">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Live Concierge</span>
+                                    <span 
+                                        className="text-[15px] font-black tracking-tight" 
+                                        style={{ color: primaryColor }}
+                                    >
                                         How can I help?
                                     </span>
                                 </div>

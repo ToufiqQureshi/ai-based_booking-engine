@@ -134,12 +134,12 @@ export function RoomFiltersSort({
                         </>
                     )}
                 </h2>
-                <div className="flex items-center gap-3 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort By</span>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-white border border-slate-200 rounded-xl shadow-sm px-4 py-2 shrink-0 max-w-[200px]">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Sort By</span>
                     <select 
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as any)}
-                        className="bg-transparent text-xs font-bold text-blue-700 focus:outline-none cursor-pointer"
+                        className="bg-transparent text-[13px] font-bold text-blue-700 focus:outline-none cursor-pointer w-full text-ellipsis overflow-hidden pr-2"
                     >
                         <option value="recommended">Recommended</option>
                         <option value="price_asc">Price: Low to High</option>

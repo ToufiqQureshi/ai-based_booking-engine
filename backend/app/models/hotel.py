@@ -47,7 +47,9 @@ class HotelSettings(SQLModel):
     payment_policy: Optional[str] = None
     child_policy: Optional[str] = None
     privacy_policy: Optional[str] = None
+    terms_conditions: Optional[str] = None
     important_info: Optional[str] = None
+    gst_number: Optional[str] = None
     notify_new_booking: bool = True
     notify_cancellation: bool = True
     
