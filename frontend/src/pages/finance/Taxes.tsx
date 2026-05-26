@@ -463,9 +463,14 @@ export default function Taxes() {
                 <span className="text-2xl font-black text-slate-900 leading-none">{formatCurrency(calculatedTotal)}</span>
               </div>
               <p className="text-[9px] text-right text-slate-400 font-bold uppercase tracking-tight">
-                {formData.room_tax_type === 'exclusive' || formData.addon_tax_type === 'exclusive'
-                  ? `+ Taxes Extra (${formatCurrency(calculatedTax)} exclusive taxes)`
-                  : 'Inclusive of all taxes & fees'}
+                {(() => {
+                  const exclusiveTax = (formData.room_tax_type === 'exclusive' ? roomTaxAmount : 0) +
+                                       (formData.addon_tax_type === 'exclusive' ? addonTaxAmount : 0);
+                  if (exclusiveTax > 0) {
+                    return `+ Taxes Extra (${formatCurrency(exclusiveTax)} exclusive taxes)`;
+                  }
+                  return 'Inclusive of all taxes & fees';
+                })()}
               </p>
             </div>
 

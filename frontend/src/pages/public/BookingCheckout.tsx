@@ -269,9 +269,11 @@ function BookingCheckoutInner() {
     // Calculate room subtotal & room tax room-by-room
     let roomSubtotal = 0;
     let roomTaxAmount = 0;
+    let appliedRoomTaxRate = 0;
     if (state.rooms && state.rooms.length > 0) {
         state.rooms.forEach((room: any) => {
             const r_rate = getRoomTaxRate(room.price_per_night);
+            appliedRoomTaxRate = r_rate;
             const r_total = room.total_price || 0;
             if (roomTaxType === 'inclusive') {
                 const r_sub = r_total / (1 + (r_rate / 100));
@@ -576,7 +578,7 @@ function BookingCheckoutInner() {
                                         </div>
                                         <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/60 space-y-2 text-xs">
                                             <div className="flex justify-between items-center text-slate-600 font-medium">
-                                                <span>Room {taxName} {roomTaxCalculationMethod === 'flat' ? `(${roomTaxRate}%)` : '(Slab)'}</span>
+                                                <span>Room {taxName} ({appliedRoomTaxRate}%{roomTaxCalculationMethod === 'slab' ? ' slab' : ''} · {roomTaxType})</span>
                                                 <span className="font-bold text-slate-900">
                                                     {roomTaxType === 'inclusive' ? `Included (${formatCurrency(roomTaxAmount)})` : formatCurrency(roomTaxAmount)}
                                                 </span>

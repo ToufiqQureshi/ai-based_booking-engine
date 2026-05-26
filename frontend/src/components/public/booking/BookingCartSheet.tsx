@@ -1,5 +1,5 @@
 import { addDays } from 'date-fns';
-import { ShoppingBag, ArrowRight, Trash2, Plus, Check } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -77,6 +77,7 @@ export function BookingCartSheet({
         const addonTotal = cart.reduce((sum, item) => sum + item.addons.reduce((as, a) => as + a.price, 0), 0);
 
         const settings = hotel?.settings;
+        const taxName = settings?.tax_name || 'GST';
         const roomTaxRate = Number(settings?.room_tax_rate) || 0;
         const roomTaxType = settings?.room_tax_type || 'exclusive';
         const roomTaxCalculationMethod = settings?.room_tax_calculation_method || 'flat';
@@ -88,7 +89,7 @@ export function BookingCartSheet({
             if (roomTaxCalculationMethod === 'flat') {
                 return roomTaxRate;
             }
-            const slab = roomTaxSlabs.find(s => 
+            const slab = roomTaxSlabs.find((s: any) => 
                 price >= s.from && (s.to === 0 || s.to === null || price <= s.to)
             );
             if (slab) return slab.rate;
@@ -97,9 +98,12 @@ export function BookingCartSheet({
             return 18;
         };
 
+        // Calculate per-room tax with applied rate tracking
         let roomTaxAmount = 0;
+        let appliedRoomTaxRate = 0;
         cart.forEach(item => {
             const r_rate = getRoomTaxRate(item.ratePlan.price_per_night);
+            appliedRoomTaxRate = r_rate; // Track last applied rate for display
             const r_total = item.ratePlan.total_price;
             if (roomTaxType === 'inclusive') {
                 const r_sub = r_total / (1 + (r_rate / 100));
@@ -122,10 +126,20 @@ export function BookingCartSheet({
                          (addonTaxType === 'exclusive' ? addonTotal : addonTotal - addonTaxAmount);
         const grandTotal = subtotal + taxTotal;
 
-        return { subtotal, taxTotal, grandTotal, roomTaxType, addonTaxType };
+        return { 
+            roomTotal, addonTotal, subtotal, taxTotal, grandTotal, 
+            roomTaxType, addonTaxType, taxName,
+            roomTaxAmount, addonTaxAmount, addonTaxRate, appliedRoomTaxRate,
+            roomTaxCalculationMethod
+        };
     };
 
-    const { grandTotal, taxTotal, roomTaxType, addonTaxType } = getCartSummary();
+    const { 
+        roomTotal, addonTotal, grandTotal, taxTotal, subtotal,
+        roomTaxType, addonTaxType, taxName,
+        roomTaxAmount, addonTaxAmount, addonTaxRate, appliedRoomTaxRate,
+        roomTaxCalculationMethod
+    } = getCartSummary();
 
     return (
         <>
@@ -160,6 +174,13 @@ export function BookingCartSheet({
                             <div className="text-right hidden sm:block">
                                 <span className="text-[10px] uppercase font-black tracking-wider text-white/60 block">Estimated Total</span>
                                 <span className="text-xl font-black text-yellow-300">{formatCurrency(grandTotal)}</span>
+                                {taxTotal > 0 && (
+                                    <span className="text-[9px] text-white/50 font-semibold block">
+                                        {roomTaxType === 'exclusive' || addonTaxType === 'exclusive' 
+                                            ? `+ ${formatCurrency(taxTotal)} ${taxName}` 
+                                            : `incl. ${formatCurrency(taxTotal)} ${taxName}`}
+                                    </span>
+                                )}
                             </div>
                             <Button 
                                 onClick={() => setIsCartSheetOpen(true)}
@@ -250,17 +271,61 @@ export function BookingCartSheet({
                     </div>
 
                     {cart.length > 0 && (
-                        <SheetFooter className="p-6 border-t bg-white flex flex-col sm:flex-col sm:space-x-0 gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] w-full">
-                            <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-3 w-full">
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Stay Cart Summary</p>
-                                    <p className="text-sm font-extrabold text-slate-800 truncate">{cart.length} {cart.length === 1 ? 'Room' : 'Rooms'} Selected</p>
-                                    <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5 truncate">
-                                        <Check className="w-3 h-3 shrink-0" /> <span>{roomTaxType === 'exclusive' || addonTaxType === 'exclusive' ? `Excl. ${formatCurrency(taxTotal)} taxes` : `Incl. ${formatCurrency(taxTotal)} taxes`}</span>
-                                    </p>
+                        <SheetFooter className="p-5 border-t bg-white flex flex-col sm:flex-col sm:space-x-0 gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] w-full">
+                            {/* Itemized Tax Breakdown */}
+                            <div className="bg-slate-50/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-100 w-full space-y-2">
+                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">Price Breakdown</p>
+                                
+                                {/* Room subtotal */}
+                                <div className="flex justify-between text-xs text-slate-600">
+                                    <span>Room{cart.length > 1 ? 's' : ''} ({cart.length})</span>
+                                    <span className="font-bold text-slate-800">{formatCurrency(roomTotal)}</span>
                                 </div>
-                                <div className="text-right shrink-0">
-                                    <span className="text-[10px] uppercase font-black tracking-widest block" style={{ color: themeColor }}>Grand Total</span>
+
+                                {/* Addon subtotal */}
+                                {addonTotal > 0 && (
+                                    <div className="flex justify-between text-xs text-slate-600">
+                                        <span>Experiences & Activities</span>
+                                        <span className="font-bold text-slate-800">{formatCurrency(addonTotal)}</span>
+                                    </div>
+                                )}
+
+                                {/* Tax lines */}
+                                <div className="border-t border-dashed border-slate-200 pt-2 mt-1 space-y-1.5">
+                                    {roomTaxAmount > 0 && (
+                                        <div className="flex justify-between text-[11px] text-slate-500">
+                                            <span>Room {taxName} ({appliedRoomTaxRate}%{roomTaxCalculationMethod === 'slab' ? ' slab' : ''} · {roomTaxType})</span>
+                                            <span className="font-semibold text-slate-700">
+                                                {roomTaxType === 'inclusive' ? `Incl.` : `+ ${formatCurrency(roomTaxAmount)}`}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {addonTotal > 0 && addonTaxRate > 0 && (
+                                        <div className="flex justify-between text-[11px] text-slate-500">
+                                            <span>Exp. & Activities {taxName} ({addonTaxRate}% · {addonTaxType})</span>
+                                            <span className="font-semibold text-slate-700">
+                                                {addonTaxType === 'inclusive' ? `Incl.` : `+ ${formatCurrency(addonTaxAmount)}`}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {taxTotal > 0 && (
+                                        <div className="flex justify-between text-xs font-bold text-emerald-600 pt-1 border-t border-slate-200">
+                                            <span>Total Taxes</span>
+                                            <span>{formatCurrency(taxTotal)}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Grand total */}
+                                <div className="flex justify-between items-end pt-2 border-t border-slate-200">
+                                    <div>
+                                        <span className="text-[10px] uppercase font-black tracking-widest text-slate-400 block">Grand Total</span>
+                                        <span className="text-[10px] text-slate-400 font-medium">
+                                            {roomTaxType === 'exclusive' || addonTaxType === 'exclusive' 
+                                                ? 'incl. all applicable taxes' 
+                                                : 'inclusive of taxes'}
+                                        </span>
+                                    </div>
                                     <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
                                         {formatCurrency(grandTotal)}
                                     </span>
