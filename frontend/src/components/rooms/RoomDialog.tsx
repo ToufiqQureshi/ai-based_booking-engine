@@ -400,44 +400,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         )}
                                     />
 
-                                    <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                                        <FormField
-                                            control={form.control}
-                                            name="smoking_allowed"
-                                            render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30 dark:bg-muted/10">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
-                                                    </FormControl>
-                                                    <FormLabel className="font-semibold text-foreground text-xs cursor-pointer">Smoking OK</FormLabel>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="is_pet_friendly"
-                                            render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30 dark:bg-muted/10">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
-                                                    </FormControl>
-                                                    <FormLabel className="font-semibold text-foreground text-xs cursor-pointer">Pet Friendly</FormLabel>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="extra_bed_allowed"
-                                            render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30 dark:bg-muted/10">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
-                                                    </FormControl>
-                                                    <FormLabel className="font-semibold text-foreground text-xs cursor-pointer">Extra Bed OK</FormLabel>
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
+
                                 </div>
                             </TabsContent>
 
