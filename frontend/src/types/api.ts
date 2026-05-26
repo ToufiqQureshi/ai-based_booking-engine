@@ -121,6 +121,11 @@ export interface HotelSettings {
   whatsapp_api_key?: string;
   whatsapp_phone_number_id?: string;
   whatsapp_business_account_id?: string;
+  tax_name?: string;
+  room_tax_rate?: number;
+  room_tax_type?: 'inclusive' | 'exclusive';
+  addon_tax_rate?: number;
+  addon_tax_type?: 'inclusive' | 'exclusive';
 }
 
 // ============== Room Types ==============
@@ -269,6 +274,10 @@ export interface Booking {
   cancellation_fee?: number;
   refund_amount?: number;
   refund_status?: string;
+  subtotal_amount?: number;
+  tax_amount?: number;
+  discount_amount?: number;
+  tax_details?: any;
 }
 
 export interface BookingRoom {

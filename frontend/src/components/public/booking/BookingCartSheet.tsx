@@ -10,7 +10,7 @@ import {
     SheetDescription,
     SheetFooter,
 } from "@/components/ui/sheet";
-import { PublicRoomSearchResult, RateOption, AddOn } from '@/types/api';
+import { PublicRoomSearchResult, RateOption, AddOn, Hotel } from '@/types/api';
 
 interface CartItem {
     id: string;
@@ -34,6 +34,7 @@ interface BookingCartSheetProps {
     checkOutDate: Date | undefined;
     adults: number;
     children: number;
+    hotel?: Hotel | null;
 }
 
 export function BookingCartSheet({
@@ -49,6 +50,7 @@ export function BookingCartSheet({
     checkOutDate,
     adults,
     children,
+    hotel,
 }: BookingCartSheetProps) {
     const handleCheckout = () => {
         setIsCartSheetOpen(false);
@@ -70,10 +72,41 @@ export function BookingCartSheet({
         });
     };
 
-    const cartTotal = cart.reduce(
-        (sum, item) => sum + item.ratePlan.total_price + item.addons.reduce((as, a) => as + a.price, 0),
-        0
-    );
+    const getCartSummary = () => {
+        const roomTotal = cart.reduce((sum, item) => sum + item.ratePlan.total_price, 0);
+        const addonTotal = cart.reduce((sum, item) => sum + item.addons.reduce((as, a) => as + a.price, 0), 0);
+
+        const settings = hotel?.settings;
+        const roomTaxRate = Number(settings?.room_tax_rate) || 0;
+        const roomTaxType = settings?.room_tax_type || 'exclusive';
+        const addonTaxRate = Number(settings?.addon_tax_rate) || 0;
+        const addonTaxType = settings?.addon_tax_type || 'exclusive';
+
+        let roomTaxAmount = 0;
+        if (roomTaxType === 'exclusive') {
+            roomTaxAmount = roomTotal * (roomTaxRate / 100);
+        } else {
+            const roomSub = roomTotal / (1 + (roomTaxRate / 100));
+            roomTaxAmount = roomTotal - roomSub;
+        }
+
+        let addonTaxAmount = 0;
+        if (addonTaxType === 'exclusive') {
+            addonTaxAmount = addonTotal * (addonTaxRate / 100);
+        } else {
+            const addonSub = addonTotal / (1 + (addonTaxRate / 100));
+            addonTaxAmount = addonTotal - addonSub;
+        }
+
+        const taxTotal = roomTaxAmount + addonTaxAmount;
+        const subtotal = (roomTaxType === 'exclusive' ? roomTotal : roomTotal - roomTaxAmount) +
+                         (addonTaxType === 'exclusive' ? addonTotal : addonTotal - addonTaxAmount);
+        const grandTotal = subtotal + taxTotal;
+
+        return { subtotal, taxTotal, grandTotal, roomTaxType, addonTaxType };
+    };
+
+    const { grandTotal, taxTotal, roomTaxType, addonTaxType } = getCartSummary();
 
     return (
         <>
@@ -107,7 +140,7 @@ export function BookingCartSheet({
                         <div className="flex items-center gap-4 shrink-0">
                             <div className="text-right hidden sm:block">
                                 <span className="text-[10px] uppercase font-black tracking-wider text-white/60 block">Estimated Total</span>
-                                <span className="text-xl font-black text-yellow-300">{formatCurrency(cartTotal)}</span>
+                                <span className="text-xl font-black text-yellow-300">{formatCurrency(grandTotal)}</span>
                             </div>
                             <Button 
                                 onClick={() => setIsCartSheetOpen(true)}
@@ -204,13 +237,13 @@ export function BookingCartSheet({
                                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Stay Cart Summary</p>
                                     <p className="text-sm font-extrabold text-slate-800 truncate">{cart.length} {cart.length === 1 ? 'Room' : 'Rooms'} Selected</p>
                                     <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5 truncate">
-                                        <Check className="w-3 h-3 shrink-0" /> <span>Taxes & fees included</span>
+                                        <Check className="w-3 h-3 shrink-0" /> <span>{roomTaxType === 'exclusive' || addonTaxType === 'exclusive' ? `Excl. ${formatCurrency(taxTotal)} taxes` : `Incl. ${formatCurrency(taxTotal)} taxes`}</span>
                                     </p>
                                 </div>
                                 <div className="text-right shrink-0">
                                     <span className="text-[10px] uppercase font-black tracking-widest block" style={{ color: themeColor }}>Grand Total</span>
                                     <span className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
-                                        {formatCurrency(cartTotal)}
+                                        {formatCurrency(grandTotal)}
                                     </span>
                                 </div>
                             </div>

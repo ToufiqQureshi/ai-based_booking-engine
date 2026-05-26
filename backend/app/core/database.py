@@ -91,6 +91,18 @@ async def init_db():
         except Exception:
             pass
 
+    for col, col_type in [
+        ("subtotal_amount", "NUMERIC DEFAULT 0.00"),
+        ("tax_amount", "NUMERIC DEFAULT 0.00"),
+        ("discount_amount", "NUMERIC DEFAULT 0.00"),
+        ("tax_details", "JSON DEFAULT '{}'")
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
 
 
 async def get_session() -> AsyncSession:

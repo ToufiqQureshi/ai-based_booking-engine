@@ -241,9 +241,41 @@ function BookingCheckoutInner() {
         return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
     };
 
+    const settings = hotel?.settings;
+    const taxName = settings?.tax_name || 'GST';
+    const roomTaxRate = Number(settings?.room_tax_rate) || 0;
+    const roomTaxType = settings?.room_tax_type || 'exclusive';
+    const addonTaxRate = Number(settings?.addon_tax_rate) || 0;
+    const addonTaxType = settings?.addon_tax_type || 'exclusive';
+
     const addonsTotal = state.addons?.reduce((sum, a) => sum + a.price, 0) || 0;
     const grandTotal = state.totalRoomPrice + addonsTotal;
-    const finalTotal = grandTotal - discountAmount;
+
+    // Room subtotal & tax
+    let roomSubtotal = state.totalRoomPrice;
+    let roomTaxAmount = 0;
+    if (roomTaxType === 'inclusive') {
+        roomSubtotal = state.totalRoomPrice / (1 + (roomTaxRate / 100));
+        roomTaxAmount = state.totalRoomPrice - roomSubtotal;
+    } else {
+        roomTaxAmount = state.totalRoomPrice * (roomTaxRate / 100);
+    }
+
+    // Addon subtotal & tax
+    let addonSubtotal = addonsTotal;
+    let addonTaxAmount = 0;
+    if (addonTaxType === 'inclusive') {
+        addonSubtotal = addonsTotal / (1 + (addonTaxRate / 100));
+        addonTaxAmount = addonsTotal - addonSubtotal;
+    } else {
+        addonTaxAmount = addonsTotal * (addonTaxRate / 100);
+    }
+
+    const subtotalAmount = roomSubtotal + addonSubtotal;
+    const taxAmount = roomTaxAmount + addonTaxAmount;
+    const totalBeforeDiscount = (roomTaxType === 'exclusive' ? state.totalRoomPrice + roomTaxAmount : state.totalRoomPrice) + 
+                                (addonTaxType === 'exclusive' ? addonsTotal + addonTaxAmount : addonsTotal);
+    const finalTotal = totalBeforeDiscount - discountAmount;
 
     const handleApplyPromo = async (codeToApply?: string) => {
         const code = codeToApply || promoCode;
@@ -506,9 +538,31 @@ function BookingCheckoutInner() {
                                         </div>
                                     )}
 
-                                    <div className="flex justify-between items-center text-sm text-green-600 bg-green-50 px-4 py-2 rounded-xl border border-green-100">
-                                        <span className="font-bold">Taxes & Fees</span>
-                                        <span className="font-black uppercase tracking-tighter">Included</span>
+                                    <div className="space-y-2.5 pt-3 border-t border-dashed border-slate-100">
+                                        <div className="flex justify-between items-center text-xs text-slate-400 font-black uppercase tracking-widest ml-1">
+                                            <span>Tax Breakdown ({taxName})</span>
+                                            <span>{roomTaxType === 'exclusive' || (addonsTotal > 0 && addonTaxType === 'exclusive') ? 'Extra' : 'Included'}</span>
+                                        </div>
+                                        <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/60 space-y-2 text-xs">
+                                            <div className="flex justify-between items-center text-slate-600 font-medium">
+                                                <span>Room {taxName} ({roomTaxRate}%)</span>
+                                                <span className="font-bold text-slate-900">
+                                                    {roomTaxType === 'inclusive' ? `Included (${formatCurrency(roomTaxAmount)})` : formatCurrency(roomTaxAmount)}
+                                                </span>
+                                            </div>
+                                            {addonsTotal > 0 && addonTaxRate > 0 && (
+                                                <div className="flex justify-between items-center text-slate-600 font-medium">
+                                                    <span>Add-on {taxName} ({addonTaxRate}%)</span>
+                                                    <span className="font-bold text-slate-900">
+                                                        {addonTaxType === 'inclusive' ? `Included (${formatCurrency(addonTaxAmount)})` : formatCurrency(addonTaxAmount)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-center text-emerald-600 font-bold pt-1.5 border-t border-slate-200">
+                                                <span>Total Taxes</span>
+                                                <span>{formatCurrency(taxAmount)}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -552,8 +606,16 @@ function BookingCheckoutInner() {
                                 <div className="pt-8 border-t border-slate-100">
                                     <div className="space-y-2 mb-6">
                                         <div className="flex justify-between items-center text-slate-400 font-bold">
-                                            <span className="text-xs uppercase tracking-widest">Subtotal</span>
-                                            <span className="text-sm">{formatCurrency(grandTotal)}</span>
+                                            <span className="text-xs uppercase tracking-widest">Base Subtotal</span>
+                                            <span className="text-sm">{formatCurrency(subtotalAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-400 font-bold">
+                                            <span className="text-xs uppercase tracking-widest">Taxes</span>
+                                            <span className="text-sm">
+                                                {roomTaxType === 'exclusive' || (addonsTotal > 0 && addonTaxType === 'exclusive') 
+                                                    ? `+ ${formatCurrency(taxAmount)}` 
+                                                    : `Incl. ${formatCurrency(taxAmount)}`}
+                                            </span>
                                         </div>
                                         {appliedPromo && (
                                             <div className="flex justify-between items-center text-green-600 font-bold animate-in fade-in slide-in-from-top-1">
@@ -569,7 +631,11 @@ function BookingCheckoutInner() {
                                             <span className="text-4xl font-black text-slate-900 tracking-tighter block">{formatCurrency(finalTotal)}</span>
                                         </div>
                                     </div>
-                                    <p className="text-[10px] text-right text-slate-400 font-bold uppercase tracking-tighter">No hidden charges • All taxes included</p>
+                                    <p className="text-[10px] text-right text-slate-400 font-bold uppercase tracking-tighter">
+                                        {roomTaxType === 'exclusive' || (addonsTotal > 0 && addonTaxType === 'exclusive')
+                                            ? `Exclusive of Taxes (added above)`
+                                            : 'Inclusive of all taxes & fees'}
+                                    </p>
                                 </div>
 
                                 {/* Submit Button */}

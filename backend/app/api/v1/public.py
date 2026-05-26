@@ -681,15 +681,77 @@ async def create_public_booking(
             session.add(guest)
             await session.flush()
         
-        # Calculate total amount
+        # Get Hotel Settings for Tax rules
+        hotel = await session.get(Hotel, hotel_id)
+        settings = hotel.settings if hotel and hotel.settings else {}
+        tax_name = settings.get("tax_name", "GST")
+        room_tax_rate = float(settings.get("room_tax_rate", 0.0))
+        room_tax_type = settings.get("room_tax_type", "exclusive")
+        addon_tax_rate = float(settings.get("addon_tax_rate", 0.0))
+        addon_tax_type = settings.get("addon_tax_type", "exclusive")
+
+        # Calculate totals passed from client
         room_total = sum(room.total_price for room in booking_data.rooms)
         addon_total = sum(addon.price for addon in booking_data.addons)
-        total_amount = room_total + addon_total
+        
+        # Calculate subtotal and tax per item type
+        if room_tax_type == "inclusive":
+            room_subtotal = room_total / (1 + (room_tax_rate / 100))
+            room_tax_amount = room_total - room_subtotal
+        else:
+            room_subtotal = room_total
+            room_tax_amount = room_total * (room_tax_rate / 100)
+            
+        if addon_tax_type == "inclusive":
+            addon_subtotal = addon_total / (1 + (addon_tax_rate / 100))
+            addon_tax_amount = addon_total - addon_subtotal
+        else:
+            addon_subtotal = addon_total
+            addon_tax_amount = addon_total * (addon_tax_rate / 100)
+            
+        subtotal_amount = round(room_subtotal + addon_subtotal, 2)
+        tax_amount = round(room_tax_amount + addon_tax_amount, 2)
+        total_before_discount = subtotal_amount + tax_amount
+        
+        # Apply Promo Code if valid on backend
+        discount_amount = 0.0
+        if booking_data.promo_code:
+            promo_query = select(PromoCode).where(
+                PromoCode.code == booking_data.promo_code,
+                PromoCode.hotel_id == hotel_id,
+                PromoCode.is_active == True
+            )
+            promo_res = await session.execute(promo_query)
+            promo = promo_res.scalar_one_or_none()
+            if promo:
+                if promo.discount_type == "percentage":
+                    discount_amount = (total_before_discount * promo.discount_value) / 100
+                else:
+                    discount_amount = promo.discount_value
+                discount_amount = min(discount_amount, total_before_discount)
+                # Increment usage
+                promo.current_usage = (promo.current_usage or 0) + 1
+                session.add(promo)
+                
+        total_amount = round(total_before_discount - discount_amount, 2)
+        discount_amount = round(discount_amount, 2)
+        
+        # Build tax details object
+        tax_details = {
+            "tax_name": tax_name,
+            "room_tax_rate": room_tax_rate,
+            "room_tax_type": room_tax_type,
+            "room_base_amount": round(room_subtotal, 2),
+            "room_tax_amount": round(room_tax_amount, 2),
+            "addon_tax_rate": addon_tax_rate,
+            "addon_tax_type": addon_tax_type,
+            "addon_base_amount": round(addon_subtotal, 2),
+            "addon_tax_amount": round(addon_tax_amount, 2)
+        }
         
         # Convert rooms/addons to dict format with cancellation policy freeze
         rooms_list = []
-        hotel = await session.get(Hotel, hotel_id)
-        hotel_policy = hotel.settings.get("cancellation_policy") if hotel and hotel.settings else None
+        hotel_policy = settings.get("cancellation_policy")
         
         for room in booking_data.rooms:
             rt = await session.get(RoomType, room.room_type_id)
@@ -742,6 +804,10 @@ async def create_public_booking(
             special_requests=booking_data.special_requests,
             promo_code=booking_data.promo_code,
             total_amount=total_amount,
+            subtotal_amount=subtotal_amount,
+            tax_amount=tax_amount,
+            discount_amount=discount_amount,
+            tax_details=tax_details,
             status=BookingStatus.PENDING
         )
         session.add(booking)

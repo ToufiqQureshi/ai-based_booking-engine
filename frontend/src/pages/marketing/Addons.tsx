@@ -134,12 +134,11 @@ export default function AddonsPage() {
     );
 
     // ==========================================
-    // TAB 2: AMENITIES STATE & LOGIC
+    // TAB 2 & 3: AMENITIES STATE & LOGIC
     // ==========================================
     const [amenities, setAmenities] = useState<Amenity[]>([]);
     const [isAmenitiesLoading, setIsAmenitiesLoading] = useState(true);
     const [amenitiesSearchQuery, setAmenitiesSearchQuery] = useState('');
-    const [filterScope, setFilterScope] = useState<'all' | 'hotel' | 'room'>('all');
     const [isAmenityDialogOpen, setIsAmenityDialogOpen] = useState(false);
     const [isAmenitySubmitting, setIsAmenitySubmitting] = useState(false);
 
@@ -174,6 +173,17 @@ export default function AddonsPage() {
         }
     }, [toast]);
 
+    const handleCreateAmenityOpen = (scope: 'room' | 'hotel') => {
+        setAmenityFormData({
+            name: '',
+            icon_slug: 'star',
+            category: 'general',
+            scope: scope,
+            is_featured: false
+        });
+        setIsAmenityDialogOpen(true);
+    };
+
     const handleCreateAmenity = async () => {
         if (!amenityFormData.name) return;
         setIsAmenitySubmitting(true);
@@ -181,8 +191,7 @@ export default function AddonsPage() {
             const newAmenity = await apiClient.post<Amenity>('/amenities', amenityFormData);
             setAmenities(prev => [...prev, newAmenity]);
             setIsAmenityDialogOpen(false);
-            setAmenityFormData({ name: '', icon_slug: 'star', category: 'general', scope: 'room', is_featured: false });
-            toast({ title: "Success", description: "Amenity definition added successfully." });
+            toast({ title: "Success", description: `${amenityFormData.scope === 'room' ? 'Room' : 'Property'} amenity added successfully.` });
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Failed to create amenity definition." });
         } finally {
@@ -206,12 +215,19 @@ export default function AddonsPage() {
         return <Icon className={className} />;
     };
 
-    const filteredAmenities = amenities.filter(a => {
-        const matchesSearch = a.name.toLowerCase().includes(amenitiesSearchQuery.toLowerCase()) || 
-                             a.category.toLowerCase().includes(amenitiesSearchQuery.toLowerCase());
-        const matchesScope = filterScope === 'all' || a.scope === filterScope;
-        return matchesSearch && matchesScope;
-    });
+    const filteredRoomAmenities = amenities.filter(a => 
+        a.scope === 'room' && (
+            a.name.toLowerCase().includes(amenitiesSearchQuery.toLowerCase()) || 
+            a.category.toLowerCase().includes(amenitiesSearchQuery.toLowerCase())
+        )
+    );
+
+    const filteredHotelAmenities = amenities.filter(a => 
+        a.scope === 'hotel' && (
+            a.name.toLowerCase().includes(amenitiesSearchQuery.toLowerCase()) || 
+            a.category.toLowerCase().includes(amenitiesSearchQuery.toLowerCase())
+        )
+    );
 
     // ==========================================
     // INITIAL LOAD
@@ -227,28 +243,38 @@ export default function AddonsPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Add-ons & Services</h1>
-                    <p className="text-muted-foreground">Manage extra guest services and room/property wide rules or amenities.</p>
+                    <p className="text-muted-foreground">Manage extra guest services, room rules, and property-wide amenities.</p>
                 </div>
-                {activeTab === 'services' ? (
+                {activeTab === 'services' && (
                     <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-100 dark:shadow-none" onClick={handleCreateAddonOpen}>
                         <Plus className="h-4 w-4" />
                         Add Service
                     </Button>
-                ) : (
-                    <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-100 dark:shadow-none" onClick={() => setIsAmenityDialogOpen(true)}>
+                )}
+                {activeTab === 'room_amenities' && (
+                    <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-100 dark:shadow-none" onClick={() => handleCreateAmenityOpen('room')}>
                         <Plus className="h-4 w-4" />
-                        Add Rule/Amenity
+                        Add Room Amenity
+                    </Button>
+                )}
+                {activeTab === 'hotel_amenities' && (
+                    <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-lg shadow-emerald-100 dark:shadow-none" onClick={() => handleCreateAmenityOpen('hotel')}>
+                        <Plus className="h-4 w-4" />
+                        Add Property Amenity
                     </Button>
                 )}
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid grid-cols-2 max-w-md h-11 bg-muted/60 p-1 rounded-xl">
+                <TabsList className="grid grid-cols-3 max-w-xl h-11 bg-muted/60 p-1 rounded-xl">
                     <TabsTrigger value="services" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
                         <Sparkles className="w-3.5 h-3.5 mr-2" /> Add-on Services
                     </TabsTrigger>
-                    <TabsTrigger value="amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
-                        <LayoutGrid className="w-3.5 h-3.5 mr-2" /> Room Rules & Amenities
+                    <TabsTrigger value="room_amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
+                        <BedDouble className="w-3.5 h-3.5 mr-2" /> Room Amenities
+                    </TabsTrigger>
+                    <TabsTrigger value="hotel_amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm">
+                        <Hotel className="w-3.5 h-3.5 mr-2" /> Property Amenities
                     </TabsTrigger>
                 </TabsList>
 
@@ -357,51 +383,33 @@ export default function AddonsPage() {
                     )}
                 </TabsContent>
 
-                {/* ── TAB 2: ROOM RULES & AMENITIES ── */}
-                <TabsContent value="amenities" className="space-y-4 outline-none">
-                    {/* Filters */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="relative md:col-span-2">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                placeholder="Search rules or amenities (e.g. Pet Friendly, Smoking)..."
-                                className="pl-10 h-10 rounded-xl"
-                                value={amenitiesSearchQuery}
-                                onChange={(e) => setAmenitiesSearchQuery(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <Select value={filterScope} onValueChange={(val: any) => setFilterScope(val)}>
-                                <SelectTrigger className="h-10 rounded-xl bg-background border-border">
-                                    <div className="flex items-center gap-2">
-                                        <Filter className="w-3.5 h-3.5 text-indigo-400" />
-                                        <SelectValue placeholder="Filter Scope" />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent className="rounded-xl border-border">
-                                    <SelectItem value="all">All Scopes</SelectItem>
-                                    <SelectItem value="hotel">Property Wide Assets</SelectItem>
-                                    <SelectItem value="room">Room Specific Features/Rules</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                {/* ── TAB 2: ROOM AMENITIES ── */}
+                <TabsContent value="room_amenities" className="space-y-4 outline-none">
+                    <div className="relative max-w-sm">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            placeholder="Search room specific amenities..."
+                            className="pl-10 h-10 rounded-xl"
+                            value={amenitiesSearchQuery}
+                            onChange={(e) => setAmenitiesSearchQuery(e.target.value)}
+                        />
                     </div>
 
                     {isAmenitiesLoading ? (
                         <div className="flex flex-col items-center justify-center h-64 gap-2">
                             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Amenities...</span>
+                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Room Amenities...</span>
                         </div>
-                    ) : filteredAmenities.length === 0 ? (
+                    ) : filteredRoomAmenities.length === 0 ? (
                         <Card className="border-dashed rounded-2xl">
                             <CardContent className="flex flex-col items-center justify-center py-12">
                                 <LayoutGrid className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                                <h3 className="text-lg font-medium">No Amenities Found</h3>
+                                <h3 className="text-lg font-medium">No Room Amenities</h3>
                                 <p className="text-muted-foreground text-center mt-1 max-w-xs text-sm">
-                                    Create dynamic guest rules like "Pet Friendly" or "No Smoking" to configure room layouts.
+                                    Create room traits like "Pet Friendly", "Mini Bar", or "Balcony".
                                 </p>
-                                <Button className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl" onClick={() => setIsAmenityDialogOpen(true)}>
-                                    Create First Rule/Amenity
+                                <Button className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl" onClick={() => handleCreateAmenityOpen('room')}>
+                                    Add First Room Amenity
                                 </Button>
                             </CardContent>
                         </Card>
@@ -413,12 +421,11 @@ export default function AddonsPage() {
                                         <TableHead className="w-[80px] h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider pl-6">Icon</TableHead>
                                         <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Name</TableHead>
                                         <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Category</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Scope</TableHead>
                                         <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider text-right pr-6">Operations</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredAmenities.map((amenity) => (
+                                    {filteredRoomAmenities.map((amenity) => (
                                         <TableRow key={amenity.id} className="hover:bg-muted/10 border-border group">
                                             <TableCell className="pl-6 py-3.5">
                                                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/20 dark:to-slate-900/40 border border-indigo-100/50 dark:border-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm group-hover:scale-105 transition-transform">
@@ -431,7 +438,7 @@ export default function AddonsPage() {
                                                     {amenity.is_featured && (
                                                         <div className="flex items-center gap-0.5 mt-0.5 text-amber-500">
                                                             <Star className="w-2.5 h-2.5 fill-current" />
-                                                            <span className="text-[9px] font-bold uppercase tracking-wider">Prominent Highlight</span>
+                                                            <span className="text-[9px] font-bold uppercase tracking-wider">Highlight</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -443,16 +450,6 @@ export default function AddonsPage() {
                                                 )}>
                                                     {amenity.category}
                                                 </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                                    {amenity.scope === 'hotel' ? (
-                                                        <Hotel className="w-3.5 h-3.5 text-indigo-400" />
-                                                    ) : (
-                                                        <BedDouble className="w-3.5 h-3.5 text-indigo-400" />
-                                                    )}
-                                                    <span className="capitalize">{amenity.scope} Wide</span>
-                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right pr-6">
                                                 <Button 
@@ -470,118 +467,192 @@ export default function AddonsPage() {
                             </Table>
                         </Card>
                     )}
+                </TabsContent>
 
-                    {/* Dialog for Custom Rule/Amenity */}
-                    <Dialog open={isAmenityDialogOpen} onOpenChange={setIsAmenityDialogOpen}>
-                        <DialogContent className="sm:max-w-[460px] bg-background border-border shadow-2xl rounded-2xl p-0 overflow-hidden">
-                            <DialogHeader className="p-6 pb-4 bg-muted/40 border-b border-border">
-                                <DialogTitle className="text-lg font-bold text-foreground">New Amenity or Rule Definition</DialogTitle>
-                                <DialogDescription className="text-xs text-muted-foreground mt-1">
-                                    Create dynamic characteristics (e.g. Pet Friendly, No Smoking) for your rooms or property.
-                                </DialogDescription>
-                            </DialogHeader>
-                            
-                            <div className="p-6 space-y-5">
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Rule / Amenity Name</Label>
-                                    <Input
-                                        placeholder="e.g. Pet Friendly, No Smoking, Minibar"
-                                        value={amenityFormData.name}
-                                        onChange={(e) => setAmenityFormData(prev => ({ ...prev, name: e.target.value }))}
-                                        className="h-11 rounded-xl"
-                                    />
-                                </div>
+                {/* ── TAB 3: PROPERTY WIDE AMENITIES ── */}
+                <TabsContent value="hotel_amenities" className="space-y-4 outline-none">
+                    <div className="relative max-w-sm">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            placeholder="Search property wide amenities..."
+                            className="pl-10 h-10 rounded-xl"
+                            value={amenitiesSearchQuery}
+                            onChange={(e) => setAmenitiesSearchQuery(e.target.value)}
+                        />
+                    </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</Label>
-                                        <Select
-                                            value={amenityFormData.category}
-                                            onValueChange={(val) => setAmenityFormData(prev => ({ ...prev, category: val }))}
-                                        >
-                                            <SelectTrigger className="h-11 rounded-xl bg-background">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-xl border-border shadow-2xl">
-                                                {AMENITY_CATEGORIES.map(cat => (
-                                                    <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Target Level (Scope)</Label>
-                                        <Select
-                                            value={amenityFormData.scope}
-                                            onValueChange={(val) => setAmenityFormData(prev => ({ ...prev, scope: val as 'hotel' | 'room' }))}
-                                        >
-                                            <SelectTrigger className="h-11 rounded-xl bg-background">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-xl border-border shadow-2xl">
-                                                <SelectItem value="hotel">Property Wide</SelectItem>
-                                                <SelectItem value="room">Room Specific</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Visual Symbol (Icon)</Label>
-                                    <div className="max-h-36 overflow-y-auto p-3 bg-muted/40 rounded-xl border border-border scrollbar-thin">
-                                        <div className="grid grid-cols-8 gap-2">
-                                            {Object.keys(ICONS).map(slug => (
-                                                <button
-                                                    key={slug}
-                                                    type="button"
-                                                    onClick={() => setAmenityFormData(prev => ({ ...prev, icon_slug: slug }))}
-                                                    className={cn(
-                                                        "w-9 h-9 rounded-lg flex items-center justify-center transition-all border border-transparent",
-                                                        amenityFormData.icon_slug === slug 
-                                                            ? "bg-indigo-600 text-white shadow-md scale-105" 
-                                                            : "bg-background text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20"
+                    {isAmenitiesLoading ? (
+                        <div className="flex flex-col items-center justify-center h-64 gap-2">
+                            <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Property Amenities...</span>
+                        </div>
+                    ) : filteredHotelAmenities.length === 0 ? (
+                        <Card className="border-dashed rounded-2xl">
+                            <CardContent className="flex flex-col items-center justify-center py-12">
+                                <Hotel className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
+                                <h3 className="text-lg font-medium">No Property Amenities</h3>
+                                <p className="text-muted-foreground text-center mt-1 max-w-xs text-sm">
+                                    Create hotel features like "Swimming Pool", "Gym", "Restaurant", or "Free Parking".
+                                </p>
+                                <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl" onClick={() => handleCreateAmenityOpen('hotel')}>
+                                    Add First Property Amenity
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
+                            <Table>
+                                <TableHeader className="bg-muted/30">
+                                    <TableRow>
+                                        <TableHead className="w-[80px] h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider pl-6">Icon</TableHead>
+                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Name</TableHead>
+                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Category</TableHead>
+                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider text-right pr-6">Operations</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredHotelAmenities.map((amenity) => (
+                                        <TableRow key={amenity.id} className="hover:bg-muted/10 border-border group">
+                                            <TableCell className="pl-6 py-3.5">
+                                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-slate-900/40 border border-emerald-100/50 dark:border-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm group-hover:scale-105 transition-transform">
+                                                    {getAmenityIcon(amenity.icon_slug, "w-4.5 h-4.5")}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="font-semibold text-sm text-foreground">
+                                                <div className="flex flex-col">
+                                                    <span>{amenity.name}</span>
+                                                    {amenity.is_featured && (
+                                                        <div className="flex items-center gap-0.5 mt-0.5 text-amber-500">
+                                                            <Star className="w-2.5 h-2.5 fill-current" />
+                                                            <span className="text-[9px] font-bold uppercase tracking-wider">Highlight</span>
+                                                        </div>
                                                     )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={cn(
+                                                    "px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border-none shadow-none",
+                                                    AMENITY_CATEGORIES.find(c => c.value === amenity.category)?.color || 'bg-muted'
+                                                )}>
+                                                    {amenity.category}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right pr-6">
+                                                <Button 
+                                                    size="icon" 
+                                                    variant="ghost" 
+                                                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                                                    onClick={() => handleDeleteAmenity(amenity.id)}
                                                 >
-                                                    {getAmenityIcon(slug, "w-4 h-4")}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-border">
-                                    <div className="space-y-0.5">
-                                        <Label className="font-bold text-foreground text-sm">Prominent Highlight</Label>
-                                        <p className="text-[10px] text-muted-foreground">Display with priority on public pages</p>
-                                    </div>
-                                    <Switch
-                                        checked={amenityFormData.is_featured}
-                                        onCheckedChange={(checked) => setAmenityFormData(prev => ({ ...prev, is_featured: checked }))}
-                                        className="data-[state=checked]:bg-indigo-600 scale-90"
-                                    />
-                                </div>
-                            </div>
-
-                            <DialogFooter className="p-6 pt-0 flex gap-3">
-                                <Button 
-                                    variant="ghost" 
-                                    onClick={() => setIsAmenityDialogOpen(false)}
-                                    className="flex-1 h-11 rounded-xl font-bold text-sm"
-                                >
-                                    Cancel
-                                </Button>
-                                <Button 
-                                    onClick={handleCreateAmenity} 
-                                    disabled={isAmenitySubmitting}
-                                    className="flex-[2] h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md"
-                                >
-                                    {isAmenitySubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Definition"}
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </Card>
+                    )}
                 </TabsContent>
             </Tabs>
+
+            {/* Dialog for Custom Rule/Amenity */}
+            <Dialog open={isAmenityDialogOpen} onOpenChange={setIsAmenityDialogOpen}>
+                <DialogContent className="sm:max-w-[460px] bg-background border-border shadow-2xl rounded-2xl p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-4 bg-muted/40 border-b border-border">
+                        <DialogTitle className="text-lg font-bold text-foreground">
+                            New {amenityFormData.scope === 'room' ? 'Room' : 'Property'} Rule/Amenity
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground mt-1">
+                            Create characteristics like "Pet Friendly" or "Swimming Pool".
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="p-6 space-y-5">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Rule / Amenity Name</Label>
+                            <Input
+                                placeholder={amenityFormData.scope === 'room' ? "e.g. Pet Friendly, No Smoking" : "e.g. Swimming Pool, Free Parking"}
+                                value={amenityFormData.name}
+                                onChange={(e) => setAmenityFormData(prev => ({ ...prev, name: e.target.value }))}
+                                className="h-11 rounded-xl"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</Label>
+                            <Select
+                                value={amenityFormData.category}
+                                onValueChange={(val) => setAmenityFormData(prev => ({ ...prev, category: val }))}
+                            >
+                                <SelectTrigger className="h-11 rounded-xl bg-background">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-border shadow-2xl">
+                                    {AMENITY_CATEGORIES.map(cat => (
+                                        <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Visual Symbol (Icon)</Label>
+                            <div className="max-h-36 overflow-y-auto p-3 bg-muted/40 rounded-xl border border-border scrollbar-thin">
+                                <div className="grid grid-cols-8 gap-2">
+                                    {Object.keys(ICONS).map(slug => (
+                                        <button
+                                            key={slug}
+                                            type="button"
+                                            onClick={() => setAmenityFormData(prev => ({ ...prev, icon_slug: slug }))}
+                                            className={cn(
+                                                "w-9 h-9 rounded-lg flex items-center justify-center transition-all border border-transparent",
+                                                amenityFormData.icon_slug === slug 
+                                                    ? "bg-indigo-600 text-white shadow-md scale-105" 
+                                                    : "bg-background text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20"
+                                            )}
+                                        >
+                                            {getAmenityIcon(slug, "w-4 h-4")}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-border">
+                            <div className="space-y-0.5">
+                                <Label className="font-bold text-foreground text-sm">Prominent Highlight</Label>
+                                <p className="text-[10px] text-muted-foreground">Display with priority on public pages</p>
+                            </div>
+                            <Switch
+                                checked={amenityFormData.is_featured}
+                                onCheckedChange={(checked) => setAmenityFormData(prev => ({ ...prev, is_featured: checked }))}
+                                className="data-[state=checked]:bg-indigo-600 scale-90"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="p-6 pt-0 flex gap-3">
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => setIsAmenityDialogOpen(false)}
+                            className="flex-1 h-11 rounded-xl font-bold text-sm"
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={handleCreateAmenity} 
+                            disabled={isAmenitySubmitting}
+                            className={cn(
+                                "flex-[2] h-11 rounded-xl text-white font-bold text-sm shadow-md",
+                                amenityFormData.scope === 'room' ? "bg-indigo-600 hover:bg-indigo-700" : "bg-emerald-600 hover:bg-emerald-700"
+                            )}
+                        >
+                            {isAmenitySubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Definition"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

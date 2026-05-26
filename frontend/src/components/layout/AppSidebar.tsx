@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Bed, IndianRupee, Calendar, BookOpen,
   Users, CreditCard, Settings, LogOut, Building2, Plug,
-  Sparkles, Link2, Coffee, TrendingUp, Bot, LineChart,
+  Sparkles, Link2, Coffee, TrendingUp, Bot, LineChart, Percent,
 } from 'lucide-react';
 import { NavLink } from '@/components/layout/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,9 +25,9 @@ const mainNavItems = [
   { title: 'Rate Shopper',    url: '/rate-shopper',     icon: TrendingUp },
   { title: 'Calendar',        url: '/availability',     icon: Calendar },
   { title: 'Bookings',        url: '/bookings',         icon: BookOpen },
+  { title: 'Taxes',           url: '/taxes',            icon: Percent },
   { title: 'Guests',          url: '/guests',           icon: Users },
   { title: 'Payments',        url: '/payments',         icon: CreditCard },
-  { title: 'Amenities',       url: '/amenities',        icon: Coffee },
   { title: 'Add-ons',         url: '/addons',           icon: Sparkles },
   { title: 'Channel Manager', url: '/channel-settings', icon: Link2 },
 ];
@@ -40,11 +40,11 @@ const settingsNavItems = [
 const DEFAULT_ROLE_PERMISSIONS = {
   OWNER: [
     "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper", 
-    "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
+    "/availability", "/bookings", "/taxes", "/guests", "/payments", "/addons",
     "/channel-settings", "/integration", "/settings"
   ],
   MANAGER: [
-    "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",
+    "/dashboard", "/analytics", "/rooms", "/rates", "/taxes",
     "/availability", "/bookings", "/guests", "/payments", "/settings"
   ],
   STAFF: [

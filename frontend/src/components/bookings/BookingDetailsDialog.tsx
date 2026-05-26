@@ -154,9 +154,27 @@ export function BookingDetailsDialog({ open, onOpenChange, booking, onStatusChan
                                             <td className="p-2 text-right align-top">{formatCurrency(room.total_price)}</td>
                                         </tr>
                                     ))}
-                                    <tr className="bg-muted/10 font-bold">
+                                    <tr className="bg-muted/10 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                                        <td className="p-2">Pricing Summary</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr className="text-slate-600">
+                                        <td className="p-2 pl-4">Subtotal</td>
+                                        <td className="p-2 text-right">{formatCurrency(booking.subtotal_amount ?? booking.total_amount)}</td>
+                                    </tr>
+                                    <tr className="text-slate-600">
+                                        <td className="p-2 pl-4">Taxes ({booking.tax_details?.tax_name || 'GST'})</td>
+                                        <td className="p-2 text-right">{formatCurrency(booking.tax_amount ?? 0)}</td>
+                                    </tr>
+                                    {booking.discount_amount > 0 && (
+                                        <tr className="text-green-600 font-medium">
+                                            <td className="p-2 pl-4">Promo Discount</td>
+                                            <td className="p-2 text-right">-{formatCurrency(booking.discount_amount)}</td>
+                                        </tr>
+                                    )}
+                                    <tr className="bg-primary/5 font-bold text-foreground">
                                         <td className="p-2">Total Amount</td>
-                                        <td className="p-2 text-right">{formatCurrency(booking.total_amount)}</td>
+                                        <td className="p-2 text-right text-base text-primary">{formatCurrency(booking.total_amount)}</td>
                                     </tr>
                                     {(booking.status === 'cancelled' || booking.status === 'cancel_requested') && (
                                         <>

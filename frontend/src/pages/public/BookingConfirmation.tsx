@@ -73,19 +73,27 @@ export default function BookingConfirmation() {
         doc.line(14, 76, 196, 76);
 
         // Table
-        const tableBody = booking.rooms.flatMap((room: any) => [
+        const roomsListBody = booking.rooms.flatMap((room: any) => [
             [
                 room.cancellation_policy 
                     ? `${room.room_type_name}\nPolicy: ${room.cancellation_policy}`
                     : `${room.room_type_name}`,
-                `1 Night x 1 Room`,
+                `Room Stay`,
                 new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(room.total_price)
             ]
         ]);
 
+        const addonsListBody = (booking.addons || []).map((addon: any) => [
+            addon.name,
+            `Add-on`,
+            new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(addon.price)
+        ]);
+
+        const tableBody = [...roomsListBody, ...addonsListBody];
+
         autoTable(doc, {
             startY: 85,
-            head: [['Description', 'Quantity', 'Amount']],
+            head: [['Description', 'Type', 'Amount']],
             body: tableBody,
             theme: 'striped',
             headStyles: { fillColor: [51, 65, 85] },
@@ -94,12 +102,46 @@ export default function BookingConfirmation() {
         // @ts-ignore
         const finalY = doc.lastAutoTable.finalY || 150;
 
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        
+        let yOffset = finalY + 10;
+        
+        // Subtotal
+        doc.text("Subtotal:", 140, yOffset);
+        doc.text(
+            new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.subtotal_amount || booking.total_amount),
+            196, yOffset,
+            { align: 'right' }
+        );
+        yOffset += 6;
+
+        // Taxes
+        const taxName = booking.tax_details?.tax_name || "Taxes";
+        doc.text(`${taxName}:`, 140, yOffset);
+        doc.text(
+            new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.tax_amount || 0),
+            196, yOffset,
+            { align: 'right' }
+        );
+        yOffset += 6;
+
+        if (booking.discount_amount > 0) {
+            doc.text("Discount:", 140, yOffset);
+            doc.text(
+                `-${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.discount_amount)}`,
+                196, yOffset,
+                { align: 'right' }
+            );
+            yOffset += 6;
+        }
+
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text("Total Paid:", 140, finalY + 15);
+        doc.text("Total Paid:", 140, yOffset + 2);
         doc.text(
             new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount),
-            196, finalY + 15,
+            196, yOffset + 2,
             { align: 'right' }
         );
 
@@ -180,36 +222,76 @@ export default function BookingConfirmation() {
                         </div>
                     </div>
 
-                    <div className="bg-slate-50/50 p-8 border-t border-slate-100">
-                        <h3 className="font-bold text-slate-900 mb-4">Itinerary</h3>
-                        {booking.rooms && booking.rooms.length > 0 ? (
-                            <div className="space-y-3">
-                                {booking.rooms.map((room: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
-                                        <div>
-                                            <p className="font-bold text-slate-900">{room.room_type_name}</p>
-                                            <p className="text-sm text-slate-500">{room.rate_plan_name}</p>
-                                            {room.cancellation_policy && (
-                                                <p className="text-xs text-red-500 font-semibold mt-1">
-                                                    Cancellation Policy: {room.cancellation_policy}
-                                                </p>
-                                            )}
+                    <div className="bg-slate-50/50 p-8 border-t border-slate-100 space-y-6">
+                        <div>
+                            <h3 className="font-bold text-slate-900 mb-4">Itinerary</h3>
+                            {booking.rooms && booking.rooms.length > 0 ? (
+                                <div className="space-y-3">
+                                    {booking.rooms.map((room: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center p-4 rounded-2xl bg-white border border-slate-100 shadow-sm animate-enter">
+                                            <div>
+                                                <p className="font-bold text-slate-900">{room.room_type_name}</p>
+                                                <p className="text-sm text-slate-500">{room.rate_plan_name}</p>
+                                                {room.cancellation_policy && (
+                                                    <p className="text-xs text-red-500 font-semibold mt-1">
+                                                        Cancellation Policy: {room.cancellation_policy}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <span className="font-bold text-slate-900">
+                                                {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(room.total_price)}
+                                            </span>
                                         </div>
-                                        <span className="font-bold text-slate-900">
-                                            {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(room.total_price)}
-                                        </span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-slate-400 italic">Room details unavailable.</p>
+                            )}
+                        </div>
+
+                        {booking.addons && booking.addons.length > 0 && (
+                            <div>
+                                <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-indigo-500" /> Selected Add-ons</h3>
+                                <div className="space-y-2">
+                                    {booking.addons.map((addon: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm text-sm">
+                                            <span className="text-slate-600 font-medium">{addon.name}</span>
+                                            <span className="font-bold text-slate-900">
+                                                {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(addon.price)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        ) : (
-                            <p className="text-slate-400 italic">Room details unavailable.</p>
                         )}
 
-                        <div className="flex justify-between items-center pt-8 mt-4 border-t border-slate-200 border-dashed">
-                            <p className="text-slate-500 font-medium">Total Paid</p>
-                            <p className="text-3xl font-bold tracking-tight" style={{ color: themeColor }}>
-                                {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount)}
-                            </p>
+                        <div className="border-t border-slate-200 border-dashed pt-4 space-y-2 text-sm text-slate-500">
+                            <div className="flex justify-between">
+                                <span>Subtotal</span>
+                                <span className="font-semibold text-slate-800">
+                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.subtotal_amount || booking.total_amount)}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Taxes ({booking.tax_details?.tax_name || "GST"})</span>
+                                <span className="font-semibold text-slate-800">
+                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.tax_amount || 0)}
+                                </span>
+                            </div>
+                            {booking.discount_amount > 0 && (
+                                <div className="flex justify-between text-green-600">
+                                    <span>Discount</span>
+                                    <span className="font-bold">
+                                        -{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.discount_amount)}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center pt-4 border-t border-slate-200 border-dashed">
+                                <p className="text-slate-900 font-bold text-base">Total Paid</p>
+                                <p className="text-3xl font-black tracking-tight" style={{ color: themeColor }}>
+                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount)}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </Card>

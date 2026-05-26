@@ -679,6 +679,7 @@ export default function BookingSelection() {
                 checkOutDate={checkOutDate}
                 adults={adults}
                 children={children}
+                hotel={hotel}
             />
 
             <RateSelectDialog

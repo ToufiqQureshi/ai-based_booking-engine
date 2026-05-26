@@ -81,6 +81,13 @@ class HotelSettings(SQLModel):
     whatsapp_phone_number_id: Optional[str] = None
     whatsapp_business_account_id: Optional[str] = None
 
+    # Tax Configurations
+    tax_name: str = "GST"
+    room_tax_rate: float = 0.0
+    room_tax_type: str = "exclusive"  # "inclusive" or "exclusive"
+    addon_tax_rate: float = 0.0
+    addon_tax_type: str = "exclusive"  # "inclusive" or "exclusive"
+
 
 
 class HotelBase(SQLModel):
