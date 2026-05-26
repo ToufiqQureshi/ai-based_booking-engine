@@ -7,6 +7,7 @@ import { ICONS } from '@/lib/amenityIcons';
 
 interface RoomCardProps {
     room: PublicRoomSearchResult;
+    filteredRates?: RateOption[];
     formatCurrency: (amount: number | undefined | null) => string;
     themeColor: string;
     handleSelectRate: (room: PublicRoomSearchResult, ratePlan: RateOption) => void;
@@ -17,6 +18,7 @@ interface RoomCardProps {
 
 export function RoomCard({
     room,
+    filteredRates,
     formatCurrency,
     themeColor,
     handleSelectRate,
@@ -24,7 +26,7 @@ export function RoomCard({
     setIsModalOpen,
     getImageUrl,
 }: RoomCardProps) {
-    const displayRates = room.rate_options || [];
+    const displayRates = filteredRates || (room.rate_options || []).filter(o => !o.is_package);
 
     return (
         <div className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-slate-300 transition-all duration-300 group">

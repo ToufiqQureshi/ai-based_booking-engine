@@ -93,11 +93,10 @@ export default function BookingSelection() {
     // Filtered rooms logic
     const filteredRooms = rooms
         .filter(room => {
-            const relevantRates = (room.rate_options || []).filter(o => {
+            const displayRates = (room.rate_options || []).filter(o => {
                 if ((searchType as string) === 'package') return !!o.is_package;
                 return !o.is_package;
             });
-            const displayRates = relevantRates.length > 0 ? relevantRates : (room.rate_options || []);
             if (displayRates.length === 0) return false;
 
             const minPrice = Math.min(...displayRates.map(o => o.total_price || 0));
@@ -107,7 +106,10 @@ export default function BookingSelection() {
         })
         .sort((a, b) => {
             const getMinPrice = (r: any) => {
-                const rates = r.rate_options || [];
+                const rates = (r.rate_options || []).filter(o => {
+                    if ((searchType as string) === 'package') return !!o.is_package;
+                    return !o.is_package;
+                });
                 return rates.length > 0 ? Math.min(...rates.map((o: any) => o.total_price || 0)) : 0;
             };
             return sortBy === 'price_asc' ? getMinPrice(a) - getMinPrice(b) : getMinPrice(b) - getMinPrice(a);
@@ -511,18 +513,28 @@ export default function BookingSelection() {
                                         />
                                     ))
                                 ) : (
-                                    filteredRooms.map((room) => (
-                                        <RoomCard
-                                            key={room.id}
-                                            room={room}
-                                            formatCurrency={formatCurrency}
-                                            themeColor={themeColor}
-                                            handleSelectRate={handleSelectRate}
-                                            setSelectedRoom={setSelectedRoom}
-                                            setIsModalOpen={setIsModalOpen}
-                                            getImageUrl={getImageUrl}
-                                        />
-                                    ))
+                                    filteredRooms.map((room) => {
+                                        const roomFilteredRates = (room.rate_options || []).filter(o => {
+                                            if (o.is_package) return false;
+                                            const matchesPrice = (o.total_price || 0) <= priceRange[1] || priceRange[1] === 0 || priceRange[1] >= 20000;
+                                            const matchesMeal = selectedMealPlans.length === 0 || selectedMealPlans.includes(o.meal_plan_code || '');
+                                            return matchesPrice && matchesMeal;
+                                        });
+
+                                        return (
+                                            <RoomCard
+                                                key={room.id}
+                                                room={room}
+                                                filteredRates={roomFilteredRates}
+                                                formatCurrency={formatCurrency}
+                                                themeColor={themeColor}
+                                                handleSelectRate={handleSelectRate}
+                                                setSelectedRoom={setSelectedRoom}
+                                                setIsModalOpen={setIsModalOpen}
+                                                getImageUrl={getImageUrl}
+                                            />
+                                        );
+                                    })
                                 )}
                             </div>
                         )}
