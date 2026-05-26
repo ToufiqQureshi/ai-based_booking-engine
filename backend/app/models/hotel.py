@@ -68,6 +68,12 @@ class HotelSettings(SQLModel):
     smtp_password: Optional[str] = None
     smtp_from_email: Optional[str] = None
 
+    # Custom Email Notification Configuration
+    email_sender_name: Optional[str] = None
+    email_sender_address: Optional[str] = None
+    email_cc_list: Optional[str] = None
+    email_signature: Optional[str] = None
+
     # WhatsApp Configuration
     whatsapp_api_key: Optional[str] = None
     whatsapp_phone_number_id: Optional[str] = None

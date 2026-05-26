@@ -112,6 +112,10 @@ export interface HotelSettings {
   smtp_username?: string;
   smtp_password?: string;
   smtp_from_email?: string;
+  email_sender_name?: string;
+  email_sender_address?: string;
+  email_cc_list?: string;
+  email_signature?: string;
   whatsapp_api_key?: string;
   whatsapp_phone_number_id?: string;
   whatsapp_business_account_id?: string;

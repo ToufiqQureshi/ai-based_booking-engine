@@ -123,6 +123,10 @@ export function SettingsPage() {
       smtp_username: hotel?.settings?.smtp_username || '',
       smtp_password: hotel?.settings?.smtp_password || '',
       smtp_from_email: hotel?.settings?.smtp_from_email || '',
+      email_sender_name: hotel?.settings?.email_sender_name || '',
+      email_sender_address: hotel?.settings?.email_sender_address || '',
+      email_cc_list: hotel?.settings?.email_cc_list || '',
+      email_signature: hotel?.settings?.email_signature || '',
       whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
       whatsapp_phone_number_id: hotel?.settings?.whatsapp_phone_number_id || '',
       whatsapp_business_account_id: hotel?.settings?.whatsapp_business_account_id || '',
@@ -698,10 +702,79 @@ export function SettingsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mail className="h-5 w-5 text-primary" />
-                  SMTP Email Configuration
+                  Booking Notifications & Sender Profile
                 </CardTitle>
                 <CardDescription>
-                  Configure SMTP server details to send system notification and confirmation emails using your own domain.
+                  Configure your sender details, notification recipients, and email signature.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="emailSenderName">Sender Name</Label>
+                    <Input
+                      id="emailSenderName"
+                      placeholder="e.g. Grand Plaza Reservations"
+                      value={formData.settings.email_sender_name || ''}
+                      onChange={(e) => handleUpdate('settings', 'email_sender_name', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="emailSenderAddress">Sender Email Address</Label>
+                    <Input
+                      id="emailSenderAddress"
+                      type="email"
+                      placeholder="reservations@yourhotel.com"
+                      value={formData.settings.email_sender_address || ''}
+                      onChange={(e) => handleUpdate('settings', 'email_sender_address', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground text-orange-600 dark:text-orange-400">
+                      Note: This email must be verified in your primary Brevo account, otherwise sending will fail.
+                    </p>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="emailCcList">Hotel Notification CC List</Label>
+                    <Input
+                      id="emailCcList"
+                      placeholder="manager@hotel.com, frontdesk@hotel.com"
+                      value={formData.settings.email_cc_list || ''}
+                      onChange={(e) => handleUpdate('settings', 'email_cc_list', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated list of emails that should receive new booking alerts.
+                    </p>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="emailSignature">Email Signature (HTML)</Label>
+                    <Textarea
+                      id="emailSignature"
+                      rows={4}
+                      placeholder="<p>Best Regards,<br><strong>Grand Plaza Team</strong></p>"
+                      value={formData.settings.email_signature || ''}
+                      onChange={(e) => handleUpdate('settings', 'email_signature', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This signature will be appended at the bottom of guest booking confirmations. You can use HTML tags.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save Email Settings
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
+                  Legacy SMTP Email Configuration
+                </CardTitle>
+                <CardDescription>
+                  Configure SMTP server details to send system notification and confirmation emails (if not using global API).
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -744,7 +817,7 @@ export function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="smtpFromEmail">Sender Email Address (From)</Label>
+                    <Label htmlFor="smtpFromEmail">Legacy Sender Email Address (From)</Label>
                     <Input
                       id="smtpFromEmail"
                       type="email"
@@ -757,7 +830,7 @@ export function SettingsPage() {
                 <div className="flex justify-end">
                   <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save Email Settings
+                    Save Legacy Settings
                   </Button>
                 </div>
               </CardContent>

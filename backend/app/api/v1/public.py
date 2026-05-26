@@ -733,6 +733,13 @@ async def create_public_booking(
         # Enqueue Email Notifications
         email_service = await get_email_service()
         
+        # Extract multi-tenant settings
+        h_settings = hotel.settings if hotel and hotel.settings else {}
+        sender_email = h_settings.get("email_sender_address")
+        sender_name = h_settings.get("email_sender_name")
+        cc_list = h_settings.get("email_cc_list")
+        signature = h_settings.get("email_signature")
+        
         background_tasks.add_task(
             email_service.send_guest_booking_confirmation,
             guest_email=guest.email,
@@ -740,18 +747,25 @@ async def create_public_booking(
             booking_number=booking.booking_number,
             check_in=str(booking.check_in),
             check_out=str(booking.check_out),
-            total_amount=booking.total_amount
+            total_amount=booking.total_amount,
+            sender_email=sender_email,
+            sender_name=sender_name,
+            signature=signature
         )
         
-        # Send to hotel (can get from hotel model or settings, but for now passing empty to use fallback)
+        # Send to hotel (can get from hotel contact or settings, fallback to global)
+        hotel_emails = hotel.contact.get("email", "") if hotel and hotel.contact else ""
         background_tasks.add_task(
             email_service.send_hotel_booking_notification,
-            hotel_emails="", 
+            hotel_emails=hotel_emails, 
             booking_number=booking.booking_number,
             guest_name=f"{guest.first_name} {guest.last_name}",
             check_in=str(booking.check_in),
             check_out=str(booking.check_out),
-            total_amount=booking.total_amount
+            total_amount=booking.total_amount,
+            cc_list=cc_list,
+            sender_email=sender_email,
+            sender_name=sender_name
         )
         
         return PublicBookingResponse(
