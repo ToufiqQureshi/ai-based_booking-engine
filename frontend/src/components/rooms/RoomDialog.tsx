@@ -87,10 +87,6 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
     const isEditing = !!initialData;
     const [activeTab, setActiveTab] = useState('basic');
 
-    const [isCancellationAllowed, setIsCancellationAllowed] = useState(true);
-    const [cancellationWindow, setCancellationWindow] = useState('24');
-    const [customCancellationText, setCustomCancellationText] = useState('');
-
 
     const form = useForm<z.infer<typeof roomSchema>>({
         resolver: zodResolver(roomSchema),
@@ -143,31 +139,6 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
         if (open) {
             setActiveTab('basic');
             if (initialData) {
-                const policy = initialData.cancellation_policy || '';
-                if (policy === 'Non-refundable') {
-                    setIsCancellationAllowed(false);
-                    setCancellationWindow('24');
-                    setCustomCancellationText('');
-                } else if (policy.startsWith('Free cancellation up to ') && policy.endsWith(' hours before check-in')) {
-                    setIsCancellationAllowed(true);
-                    const hours = policy.replace('Free cancellation up to ', '').replace(' hours before check-in', '');
-                    if (['24', '48', '72'].includes(hours)) {
-                        setCancellationWindow(hours);
-                        setCustomCancellationText('');
-                    } else {
-                        setCancellationWindow('custom');
-                        setCustomCancellationText(policy);
-                    }
-                } else if (policy) {
-                    setIsCancellationAllowed(true);
-                    setCancellationWindow('custom');
-                    setCustomCancellationText(policy);
-                } else {
-                    setIsCancellationAllowed(true);
-                    setCancellationWindow('24');
-                    setCustomCancellationText('');
-                }
-
                 form.reset({
                     name: initialData.name,
                     description: initialData.description || '',
@@ -194,9 +165,6 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     is_active: initialData.is_active ?? true,
                 });
             } else {
-                setIsCancellationAllowed(true);
-                setCancellationWindow('24');
-                setCustomCancellationText('');
                 form.reset({
                     name: '',
                     description: '',
@@ -254,16 +222,6 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
 
     const onSubmit = async (values: z.infer<typeof roomSchema>) => {
         try {
-            let compiledPolicy = 'Non-refundable';
-            if (isCancellationAllowed) {
-                if (cancellationWindow === 'custom') {
-                    compiledPolicy = customCancellationText || 'Free Cancellation';
-                } else {
-                    compiledPolicy = `Free cancellation up to ${cancellationWindow} hours before check-in`;
-                }
-            }
-            values.cancellation_policy = compiledPolicy;
-
             if (isEditing && initialData) {
                 await apiClient.patch(`/rooms/${initialData.id}`, values);
                 toast({ title: 'Success', description: 'Room details updated successfully.' });
@@ -357,65 +315,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                         />
                                     </div>
 
-                                    <div className="md:col-span-2 space-y-4 bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-border">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                            <div>
-                                                <h4 className="text-sm font-bold text-foreground">Cancellation & Refunds</h4>
-                                                <p className="text-xs text-muted-foreground">Select if cancellations are allowed and configure policies.</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-muted-foreground">{isCancellationAllowed ? "Refundable" : "Non-Refundable"}</span>
-                                                <Switch 
-                                                    checked={isCancellationAllowed} 
-                                                    onCheckedChange={(checked) => {
-                                                        setIsCancellationAllowed(checked);
-                                                        form.setValue('cancellation_policy', checked ? `Free cancellation up to ${cancellationWindow} hours before check-in` : 'Non-refundable');
-                                                    }} 
-                                                />
-                                            </div>
-                                        </div>
 
-                                        {isCancellationAllowed && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cancellation Window</label>
-                                                    <Select value={cancellationWindow} onValueChange={(val) => {
-                                                        setCancellationWindow(val);
-                                                        if (val !== 'custom') {
-                                                            form.setValue('cancellation_policy', `Free cancellation up to ${val} hours before check-in`);
-                                                        } else {
-                                                            form.setValue('cancellation_policy', customCancellationText || 'Free Cancellation');
-                                                        }
-                                                    }}>
-                                                        <SelectTrigger className="h-11 rounded-xl border-border bg-background">
-                                                            <SelectValue placeholder="Select window" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="rounded-xl">
-                                                            <SelectItem value="24">Free cancel up to 24 hours before</SelectItem>
-                                                            <SelectItem value="48">Free cancel up to 48 hours before</SelectItem>
-                                                            <SelectItem value="72">Free cancel up to 72 hours before</SelectItem>
-                                                            <SelectItem value="custom">Custom Policy Text</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                {cancellationWindow === 'custom' && (
-                                                    <div className="space-y-2 sm:col-span-2">
-                                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Custom Policy Description</label>
-                                                        <Textarea
-                                                            placeholder="Specify custom cancellation rules (e.g. Free cancellation up to 7 days before check-in)..."
-                                                            className="min-h-[80px] rounded-xl border-border bg-background resize-none p-4"
-                                                            value={customCancellationText}
-                                                            onChange={(e) => {
-                                                                setCustomCancellationText(e.target.value);
-                                                                form.setValue('cancellation_policy', e.target.value);
-                                                            }}
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
 
                                     <FormField
                                         control={form.control}
