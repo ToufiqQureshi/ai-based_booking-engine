@@ -98,10 +98,10 @@ export function AddonDialog({ open, onOpenChange, onSuccess, initialData }: Addo
         try {
             if (isEditing && initialData) {
                 await apiClient.patch(`/addons/${initialData.id}`, values);
-                toast({ title: 'Add-on Updated', description: 'Add-on details have been saved.' });
+                toast({ title: 'Experience Updated', description: 'Experience details have been saved.' });
             } else {
                 await apiClient.post('/addons', values);
-                toast({ title: 'Add-on Created', description: 'New add-on has been added.' });
+                toast({ title: 'Experience Created', description: 'New experience has been added.' });
             }
             onOpenChange(false);
             onSuccess();
@@ -110,7 +110,7 @@ export function AddonDialog({ open, onOpenChange, onSuccess, initialData }: Addo
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Failed to save add-on details.',
+                description: 'Failed to save experience details.',
             });
         }
     };
@@ -119,9 +119,9 @@ export function AddonDialog({ open, onOpenChange, onSuccess, initialData }: Addo
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>{isEditing ? 'Edit Add-on' : 'Add New Service'}</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Edit Experience' : 'Add New Experience'}</DialogTitle>
                     <DialogDescription>
-                        {isEditing ? 'Modify existing service details.' : 'Add a new extra service or amenity for guests.'}
+                        {isEditing ? 'Modify existing experience details.' : 'Add a new extra experience or package for guests.'}
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -249,7 +249,7 @@ export function AddonDialog({ open, onOpenChange, onSuccess, initialData }: Addo
                             </Button>
                             <Button type="submit" disabled={form.formState.isSubmitting}>
                                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isEditing ? 'Save Changes' : 'Create Service'}
+                                {isEditing ? 'Save Changes' : 'Create Experience'}
                             </Button>
                         </DialogFooter>
                     </form>

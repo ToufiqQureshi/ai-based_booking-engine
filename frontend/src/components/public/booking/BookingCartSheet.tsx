@@ -79,16 +79,35 @@ export function BookingCartSheet({
         const settings = hotel?.settings;
         const roomTaxRate = Number(settings?.room_tax_rate) || 0;
         const roomTaxType = settings?.room_tax_type || 'exclusive';
+        const roomTaxCalculationMethod = settings?.room_tax_calculation_method || 'flat';
+        const roomTaxSlabs = settings?.room_tax_slabs || [];
         const addonTaxRate = Number(settings?.addon_tax_rate) || 0;
         const addonTaxType = settings?.addon_tax_type || 'exclusive';
 
+        const getRoomTaxRate = (price: number) => {
+            if (roomTaxCalculationMethod === 'flat') {
+                return roomTaxRate;
+            }
+            const slab = roomTaxSlabs.find(s => 
+                price >= s.from && (s.to === 0 || s.to === null || price <= s.to)
+            );
+            if (slab) return slab.rate;
+            if (price < 1000) return 0;
+            if (price < 7500) return 12;
+            return 18;
+        };
+
         let roomTaxAmount = 0;
-        if (roomTaxType === 'exclusive') {
-            roomTaxAmount = roomTotal * (roomTaxRate / 100);
-        } else {
-            const roomSub = roomTotal / (1 + (roomTaxRate / 100));
-            roomTaxAmount = roomTotal - roomSub;
-        }
+        cart.forEach(item => {
+            const r_rate = getRoomTaxRate(item.ratePlan.price_per_night);
+            const r_total = item.ratePlan.total_price;
+            if (roomTaxType === 'inclusive') {
+                const r_sub = r_total / (1 + (r_rate / 100));
+                roomTaxAmount += (r_total - r_sub);
+            } else {
+                roomTaxAmount += r_total * (r_rate / 100);
+            }
+        });
 
         let addonTaxAmount = 0;
         if (addonTaxType === 'exclusive') {
@@ -216,7 +235,7 @@ export function BookingCartSheet({
 
                                     {item.addons.length > 0 && (
                                         <div className="text-xs border-t pt-2 space-y-1">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Selected Add-ons</span>
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Experiences & Activities</span>
                                             {item.addons.map(a => (
                                                 <div key={a.id} className="flex justify-between text-slate-600">
                                                     <span>• {a.name}</span>

@@ -560,7 +560,7 @@ export default function BookingSelection() {
                             Enhance Your Stay
                         </SheetTitle>
                         <SheetDescription>
-                            Select optional add-ons to customize your experience.
+                            Select optional experiences & activities to customize your stay.
                         </SheetDescription>
                     </SheetHeader>
                     
@@ -571,7 +571,7 @@ export default function BookingSelection() {
                                     <Sparkles className="w-8 h-8 text-slate-300" />
                                 </div>
                                 <h3 className="text-slate-800 font-bold mb-1">No Extras Available</h3>
-                                <p className="text-sm text-slate-500 max-w-[250px]">We don't have any optional add-ons available for this selection right now.</p>
+                                <p className="text-sm text-slate-500 max-w-[250px]">We don't have any optional experiences or activities available for this selection right now.</p>
                             </div>
                         ) : (
                             addons.map((addon) => {

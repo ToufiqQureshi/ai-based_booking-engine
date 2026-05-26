@@ -245,20 +245,51 @@ function BookingCheckoutInner() {
     const taxName = settings?.tax_name || 'GST';
     const roomTaxRate = Number(settings?.room_tax_rate) || 0;
     const roomTaxType = settings?.room_tax_type || 'exclusive';
+    const roomTaxCalculationMethod = settings?.room_tax_calculation_method || 'flat';
+    const roomTaxSlabs = settings?.room_tax_slabs || [];
     const addonTaxRate = Number(settings?.addon_tax_rate) || 0;
     const addonTaxType = settings?.addon_tax_type || 'exclusive';
 
     const addonsTotal = state.addons?.reduce((sum, a) => sum + a.price, 0) || 0;
     const grandTotal = state.totalRoomPrice + addonsTotal;
 
-    // Room subtotal & tax
-    let roomSubtotal = state.totalRoomPrice;
+    const getRoomTaxRate = (price: number) => {
+        if (roomTaxCalculationMethod === 'flat') {
+            return roomTaxRate;
+        }
+        const slab = roomTaxSlabs.find(s => 
+            price >= s.from && (s.to === 0 || s.to === null || price <= s.to)
+        );
+        if (slab) return slab.rate;
+        if (price < 1000) return 0;
+        if (price < 7500) return 12;
+        return 18;
+    };
+
+    // Calculate room subtotal & room tax room-by-room
+    let roomSubtotal = 0;
     let roomTaxAmount = 0;
-    if (roomTaxType === 'inclusive') {
-        roomSubtotal = state.totalRoomPrice / (1 + (roomTaxRate / 100));
-        roomTaxAmount = state.totalRoomPrice - roomSubtotal;
+    if (state.rooms && state.rooms.length > 0) {
+        state.rooms.forEach((room: any) => {
+            const r_rate = getRoomTaxRate(room.price_per_night);
+            const r_total = room.total_price || 0;
+            if (roomTaxType === 'inclusive') {
+                const r_sub = r_total / (1 + (r_rate / 100));
+                roomSubtotal += r_sub;
+                roomTaxAmount += (r_total - r_sub);
+            } else {
+                roomSubtotal += r_total;
+                roomTaxAmount += r_total * (r_rate / 100);
+            }
+        });
     } else {
-        roomTaxAmount = state.totalRoomPrice * (roomTaxRate / 100);
+        if (roomTaxType === 'inclusive') {
+            roomSubtotal = state.totalRoomPrice / (1 + (roomTaxRate / 100));
+            roomTaxAmount = state.totalRoomPrice - roomSubtotal;
+        } else {
+            roomSubtotal = state.totalRoomPrice;
+            roomTaxAmount = state.totalRoomPrice * (roomTaxRate / 100);
+        }
     }
 
     // Addon subtotal & tax
@@ -545,14 +576,14 @@ function BookingCheckoutInner() {
                                         </div>
                                         <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/60 space-y-2 text-xs">
                                             <div className="flex justify-between items-center text-slate-600 font-medium">
-                                                <span>Room {taxName} ({roomTaxRate}%)</span>
+                                                <span>Room {taxName} {roomTaxCalculationMethod === 'flat' ? `(${roomTaxRate}%)` : '(Slab)'}</span>
                                                 <span className="font-bold text-slate-900">
                                                     {roomTaxType === 'inclusive' ? `Included (${formatCurrency(roomTaxAmount)})` : formatCurrency(roomTaxAmount)}
                                                 </span>
                                             </div>
                                             {addonsTotal > 0 && addonTaxRate > 0 && (
                                                 <div className="flex justify-between items-center text-slate-600 font-medium">
-                                                    <span>Add-on {taxName} ({addonTaxRate}%)</span>
+                                                    <span>Experiences & Activities {taxName} ({addonTaxRate}%)</span>
                                                     <span className="font-bold text-slate-900">
                                                         {addonTaxType === 'inclusive' ? `Included (${formatCurrency(addonTaxAmount)})` : formatCurrency(addonTaxAmount)}
                                                     </span>

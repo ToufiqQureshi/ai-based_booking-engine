@@ -124,6 +124,8 @@ export interface HotelSettings {
   tax_name?: string;
   room_tax_rate?: number;
   room_tax_type?: 'inclusive' | 'exclusive';
+  room_tax_calculation_method?: 'flat' | 'slab';
+  room_tax_slabs?: Array<{ from: number; to: number; rate: number }>;
   addon_tax_rate?: number;
   addon_tax_type?: 'inclusive' | 'exclusive';
 }

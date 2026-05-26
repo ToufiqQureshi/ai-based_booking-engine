@@ -85,7 +85,7 @@ export default function BookingConfirmation() {
 
         const addonsListBody = (booking.addons || []).map((addon: any) => [
             addon.name,
-            `Add-on`,
+            `Experience / Activity`,
             new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(addon.price)
         ]);
 
@@ -251,7 +251,7 @@ export default function BookingConfirmation() {
 
                         {booking.addons && booking.addons.length > 0 && (
                             <div>
-                                <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-indigo-500" /> Selected Add-ons</h3>
+                                <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-indigo-500" /> Experiences & Activities</h3>
                                 <div className="space-y-2">
                                     {booking.addons.map((addon: any, i: number) => (
                                         <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm text-sm">

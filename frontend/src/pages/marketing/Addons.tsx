@@ -96,7 +96,7 @@ export default function AddonsPage() {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Failed to load add-ons. Please try again.',
+                description: 'Failed to load experiences. Please try again.',
             });
         } finally {
             setIsAddonsLoading(false);
@@ -117,13 +117,13 @@ export default function AddonsPage() {
         if (!confirm("Are you sure you want to delete this service?")) return;
         try {
             await apiClient.delete(`/addons/${id}`);
-            toast({ title: 'Deleted', description: 'Add-on deleted successfully.' });
+            toast({ title: 'Deleted', description: 'Experience deleted successfully.' });
             fetchAddons();
         } catch (error) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Failed to delete add-on.',
+                description: 'Failed to delete experience.',
             });
         }
     };
@@ -242,13 +242,13 @@ export default function AddonsPage() {
             {/* Page Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Add-ons & Services</h1>
-                    <p className="text-muted-foreground">Manage extra guest services, room rules, and property-wide amenities.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Experiences & Activities</h1>
+                    <p className="text-muted-foreground">Manage extra guest services, experience packages, room rules, and property-wide amenities.</p>
                 </div>
                 {activeTab === 'services' && (
                     <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-100 dark:shadow-none" onClick={handleCreateAddonOpen}>
                         <Plus className="h-4 w-4" />
-                        Add Service
+                        Add Experience
                     </Button>
                 )}
                 {activeTab === 'room_amenities' && (
@@ -268,7 +268,7 @@ export default function AddonsPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 <TabsList className="grid grid-cols-3 max-w-xl h-11 bg-muted/60 p-1 rounded-xl">
                     <TabsTrigger value="services" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
-                        <Sparkles className="w-3.5 h-3.5 mr-2" /> Add-on Services
+                        <Sparkles className="w-3.5 h-3.5 mr-2" /> Experiences & Activities
                     </TabsTrigger>
                     <TabsTrigger value="room_amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
                         <BedDouble className="w-3.5 h-3.5 mr-2" /> Room Amenities
@@ -308,12 +308,12 @@ export default function AddonsPage() {
                         <Card className="border-dashed rounded-2xl">
                             <CardContent className="flex flex-col items-center justify-center py-12">
                                 <Sparkles className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                                <h3 className="text-lg font-medium">No Services Yet</h3>
+                                <h3 className="text-lg font-medium">No Experiences Yet</h3>
                                 <p className="text-muted-foreground text-center mt-1 max-w-xs text-sm">
-                                    Enhance guest experience by adding extra services like breakfast, airport transfer or spa.
+                                    Enhance guest experience by adding extra services like adventure park, candlelight dinner, or spa.
                                 </p>
                                 <Button className="mt-4 bg-blue-600 hover:bg-blue-700 rounded-xl" onClick={handleCreateAddonOpen}>
-                                    Add First Service
+                                    Add First Experience
                                 </Button>
                             </CardContent>
                         </Card>

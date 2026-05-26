@@ -1,6 +1,6 @@
 // Taxes Management Page — Modern Premium Design
 import { useState, useEffect } from 'react';
-import { Percent, Save, Loader2, Info, Sparkles, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Percent, Save, Loader2, Info, Sparkles, ShieldCheck, HelpCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,8 @@ export default function Taxes() {
     tax_name: hotel?.settings?.tax_name || 'GST',
     room_tax_rate: hotel?.settings?.room_tax_rate || 0,
     room_tax_type: hotel?.settings?.room_tax_type || 'exclusive',
+    room_tax_calculation_method: hotel?.settings?.room_tax_calculation_method || 'flat',
+    room_tax_slabs: hotel?.settings?.room_tax_slabs || [] as Array<{ from: number; to: number; rate: number }>,
     addon_tax_rate: hotel?.settings?.addon_tax_rate || 0,
     addon_tax_type: hotel?.settings?.addon_tax_type || 'exclusive',
   });
@@ -31,6 +33,8 @@ export default function Taxes() {
         tax_name: hotel.settings.tax_name || 'GST',
         room_tax_rate: hotel.settings.room_tax_rate || 0,
         room_tax_type: hotel.settings.room_tax_type || 'exclusive',
+        room_tax_calculation_method: hotel.settings.room_tax_calculation_method || 'flat',
+        room_tax_slabs: hotel.settings.room_tax_slabs || [],
         addon_tax_rate: hotel.settings.addon_tax_rate || 0,
         addon_tax_type: hotel.settings.addon_tax_type || 'exclusive',
       });
@@ -39,6 +43,28 @@ export default function Taxes() {
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const addSlab = () => {
+    setFormData(prev => ({
+      ...prev,
+      room_tax_slabs: [...prev.room_tax_slabs, { from: 0, to: 0, rate: 0 }]
+    }));
+  };
+
+  const removeSlab = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      room_tax_slabs: prev.room_tax_slabs.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateSlab = (index: number, field: 'from' | 'to' | 'rate', value: number) => {
+    setFormData(prev => {
+      const newSlabs = [...prev.room_tax_slabs];
+      newSlabs[index] = { ...newSlabs[index], [field]: value };
+      return { ...prev, room_tax_slabs: newSlabs };
+    });
   };
 
   const handleSave = async () => {
@@ -50,6 +76,12 @@ export default function Taxes() {
           tax_name: formData.tax_name,
           room_tax_rate: Number(formData.room_tax_rate),
           room_tax_type: formData.room_tax_type,
+          room_tax_calculation_method: formData.room_tax_calculation_method,
+          room_tax_slabs: formData.room_tax_slabs.map(slab => ({
+            from: Number(slab.from),
+            to: Number(slab.to),
+            rate: Number(slab.rate)
+          })),
           addon_tax_rate: Number(formData.addon_tax_rate),
           addon_tax_type: formData.addon_tax_type,
         }
@@ -73,20 +105,37 @@ export default function Taxes() {
   // Live Calculator variables
   const sampleRoomPrice = 5000;
   const sampleAddonPrice = 1000;
-  const roomTaxRate = Number(formData.room_tax_rate) || 0;
+  
+  const getRoomTaxRate = (price: number) => {
+    if (formData.room_tax_calculation_method === 'flat') {
+      return Number(formData.room_tax_rate) || 0;
+    }
+    // Search matching slab
+    const slab = formData.room_tax_slabs.find(s => 
+      price >= s.from && (s.to === 0 || s.to === null || price <= s.to)
+    );
+    if (slab) return slab.rate;
+    
+    // Indian GST default fallback:
+    if (price < 1000) return 0;
+    if (price < 7500) return 12;
+    return 18;
+  };
+
+  const calculatedRoomTaxRate = getRoomTaxRate(sampleRoomPrice);
   const addonTaxRate = Number(formData.addon_tax_rate) || 0;
 
   // Room tax calculations
   let roomSubtotal = sampleRoomPrice;
   let roomTaxAmount = 0;
   if (formData.room_tax_type === 'inclusive') {
-    roomSubtotal = sampleRoomPrice / (1 + roomTaxRate / 100);
+    roomSubtotal = sampleRoomPrice / (1 + calculatedRoomTaxRate / 100);
     roomTaxAmount = sampleRoomPrice - roomSubtotal;
   } else {
-    roomTaxAmount = sampleRoomPrice * (roomTaxRate / 100);
+    roomTaxAmount = sampleRoomPrice * (calculatedRoomTaxRate / 100);
   }
 
-  // Addon tax calculations
+  // Experiences & Activities tax calculations
   let addonSubtotal = sampleAddonPrice;
   let addonTaxAmount = 0;
   if (formData.addon_tax_type === 'inclusive') {
@@ -116,7 +165,7 @@ export default function Taxes() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Taxes Management</h1>
           <p className="text-muted-foreground text-sm">
-            Configure room bookings & add-on services tax rules to build trust with guests.
+            Configure room bookings & experiences / activities tax rules to build trust with guests.
           </p>
         </div>
         <Button onClick={handleSave} disabled={isSaving} className="gap-2 shrink-0 h-10 px-5 shadow-sm">
@@ -138,11 +187,11 @@ export default function Taxes() {
               Tax Policy Settings
             </CardTitle>
             <CardDescription>
-              Set label names and individual percentages for room and addon taxes.
+              Set label names and individual percentages for room tariffs and experience packages.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Tax Name Label */}
+            {/* Tax Display Name */}
             <div className="space-y-2">
               <Label htmlFor="tax_name" className="text-sm font-semibold text-foreground">Tax Display Name</Label>
               <Input
@@ -161,14 +210,41 @@ export default function Taxes() {
 
             {/* Room Tax Section */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">Room Reservation Taxes</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Configure tax rate applicable on base room rates.</p>
-                </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Room Reservation Taxes</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Configure tax rates applicable on base room rates.</p>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Calculation Method</Label>
+                  <div className="flex items-center gap-3 h-10 border rounded-lg px-3 bg-muted/20">
+                    <span className={`text-xs font-bold transition-all ${formData.room_tax_calculation_method === 'flat' ? 'text-indigo-600' : 'text-slate-400'}`}>Flat Rate</span>
+                    <Switch
+                      checked={formData.room_tax_calculation_method === 'slab'}
+                      onCheckedChange={(checked) => handleChange('room_tax_calculation_method', checked ? 'slab' : 'flat')}
+                      className="data-[state=checked]:bg-indigo-600"
+                    />
+                    <span className={`text-xs font-bold transition-all ${formData.room_tax_calculation_method === 'slab' ? 'text-indigo-600' : 'text-slate-400'}`}>Slab-based</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tax Type (Inclusive / Exclusive)</Label>
+                  <div className="flex items-center gap-3 h-10 border rounded-lg px-3 bg-muted/20">
+                    <span className={`text-xs font-bold transition-all ${formData.room_tax_type === 'inclusive' ? 'text-indigo-600' : 'text-slate-400'}`}>Inclusive</span>
+                    <Switch
+                      checked={formData.room_tax_type === 'exclusive'}
+                      onCheckedChange={(checked) => handleChange('room_tax_type', checked ? 'exclusive' : 'inclusive')}
+                      className="data-[state=checked]:bg-indigo-600"
+                    />
+                    <span className={`text-xs font-bold transition-all ${formData.room_tax_type === 'exclusive' ? 'text-indigo-600' : 'text-slate-400'}`}>Exclusive</span>
+                  </div>
+                </div>
+              </div>
+
+              {formData.room_tax_calculation_method === 'flat' ? (
+                <div className="space-y-2 max-w-xs">
                   <Label htmlFor="room_tax_rate" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tax Rate (%)</Label>
                   <Input
                     id="room_tax_rate"
@@ -182,19 +258,82 @@ export default function Taxes() {
                     className="h-10"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tax Calculation Type</Label>
-                  <div className="flex items-center gap-3 h-10 border rounded-lg px-3 bg-muted/20">
-                    <span className={`text-xs font-bold transition-all ${formData.room_tax_type === 'inclusive' ? 'text-indigo-600' : 'text-slate-400'}`}>Inclusive</span>
-                    <Switch
-                      checked={formData.room_tax_type === 'exclusive'}
-                      onCheckedChange={(checked) => handleChange('room_tax_type', checked ? 'exclusive' : 'inclusive')}
-                      className="data-[state=checked]:bg-indigo-600"
-                    />
-                    <span className={`text-xs font-bold transition-all ${formData.room_tax_type === 'exclusive' ? 'text-indigo-600' : 'text-slate-400'}`}>Exclusive</span>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Configure Price Slabs (INR)</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addSlab} className="h-8 text-xs font-semibold bg-white">
+                      + Add Slab
+                    </Button>
+                  </div>
+                  
+                  <div className="border rounded-lg overflow-hidden bg-white/50">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-100/80 border-b font-semibold text-slate-600">
+                          <th className="p-2.5">Rate From</th>
+                          <th className="p-2.5">Rate To</th>
+                          <th className="p-2.5">Tax Value (%)</th>
+                          <th className="p-2.5 w-12 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {formData.room_tax_slabs.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="p-4 text-center text-muted-foreground">
+                              No custom slabs configured. Slabs default to standard Indian GST settings: <br/>
+                              <span className="font-semibold text-slate-700">₹0 - ₹999 = 0%</span>, <span className="font-semibold text-slate-700">₹1,000 - ₹7,499 = 12%</span>, <span className="font-semibold text-slate-700">₹7,500+ = 18%</span>.
+                            </td>
+                          </tr>
+                        ) : (
+                          formData.room_tax_slabs.map((slab, i) => (
+                            <tr key={i} className="border-b last:border-0 hover:bg-slate-50/50">
+                              <td className="p-2">
+                                <Input
+                                  type="number"
+                                  value={slab.from}
+                                  onChange={(e) => updateSlab(i, 'from', Number(e.target.value))}
+                                  placeholder="e.g. 1000"
+                                  className="h-8 text-xs bg-white"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <Input
+                                  type="number"
+                                  value={slab.to}
+                                  onChange={(e) => updateSlab(i, 'to', Number(e.target.value))}
+                                  placeholder="e.g. 7499"
+                                  className="h-8 text-xs bg-white"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <Input
+                                  type="number"
+                                  value={slab.rate}
+                                  onChange={(e) => updateSlab(i, 'rate', Number(e.target.value))}
+                                  placeholder="e.g. 12"
+                                  className="h-8 text-xs bg-white"
+                                />
+                              </td>
+                              <td className="p-2 text-center">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeSlab(i)}
+                                  className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <Separator />
@@ -202,8 +341,8 @@ export default function Taxes() {
             {/* Addon Tax Section */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-foreground">Add-on Services Taxes</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Configure taxes applicable on paid enhancements and extra services.</p>
+                <h3 className="text-sm font-bold text-foreground">Experiences & Activities Taxes</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Configure taxes applicable on paid experiences, dining packages, and extra activities.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -260,11 +399,11 @@ export default function Taxes() {
                 <span className="font-semibold text-foreground">{formatCurrency(sampleRoomPrice)}</span>
               </div>
               <div className="flex justify-between text-slate-500">
-                <span>Add-on</span>
-                <span>Breakfast & Spa Combo Pack</span>
+                <span>Experience / Activity</span>
+                <span>Adventure Park & Candle Light Dinner Combo</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Add-on Price</span>
+                <span>Experience Price</span>
                 <span className="font-semibold text-foreground">{formatCurrency(sampleAddonPrice)}</span>
               </div>
             </div>
@@ -281,17 +420,17 @@ export default function Taxes() {
               {/* Room Tax details */}
               <div className="flex justify-between text-slate-500">
                 <span>
-                  Room {formData.tax_name} ({roomTaxRate}% {formData.room_tax_type})
+                  Room {formData.tax_name} ({calculatedRoomTaxRate}% {formData.room_tax_type})
                 </span>
                 <span className="font-semibold">
                   {formData.room_tax_type === 'inclusive' ? 'Included' : formatCurrency(roomTaxAmount)}
                 </span>
               </div>
 
-              {/* Addon Tax details */}
+              {/* Experiences & Activities Tax details */}
               <div className="flex justify-between text-slate-500">
                 <span>
-                  Add-on {formData.tax_name} ({addonTaxRate}% {formData.addon_tax_type})
+                  Experiences & Activities {formData.tax_name} ({addonTaxRate}% {formData.addon_tax_type})
                 </span>
                 <span className="font-semibold">
                   {formData.addon_tax_type === 'inclusive' ? 'Included' : formatCurrency(addonTaxAmount)}

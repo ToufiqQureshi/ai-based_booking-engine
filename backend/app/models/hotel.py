@@ -85,6 +85,12 @@ class HotelSettings(SQLModel):
     tax_name: str = "GST"
     room_tax_rate: float = 0.0
     room_tax_type: str = "exclusive"  # "inclusive" or "exclusive"
+    room_tax_calculation_method: str = "flat"  # "flat" or "slab"
+    room_tax_slabs: List[dict] = [
+        {"from": 0.0, "to": 999.0, "rate": 0.0},
+        {"from": 1000.0, "to": 7499.0, "rate": 12.0},
+        {"from": 7500.0, "to": 999999.0, "rate": 18.0}
+    ]
     addon_tax_rate: float = 0.0
     addon_tax_type: str = "exclusive"  # "inclusive" or "exclusive"
 

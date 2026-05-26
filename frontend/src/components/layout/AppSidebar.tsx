@@ -28,7 +28,7 @@ const mainNavItems = [
   { title: 'Taxes',           url: '/taxes',            icon: Percent },
   { title: 'Guests',          url: '/guests',           icon: Users },
   { title: 'Payments',        url: '/payments',         icon: CreditCard },
-  { title: 'Add-ons',         url: '/addons',           icon: Sparkles },
+  { title: 'Experiences & Activities', url: '/addons',  icon: Sparkles },
   { title: 'Channel Manager', url: '/channel-settings', icon: Link2 },
 ];
 

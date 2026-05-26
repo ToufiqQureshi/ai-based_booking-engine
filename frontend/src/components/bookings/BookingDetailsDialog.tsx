@@ -194,17 +194,17 @@ export function BookingDetailsDialog({ open, onOpenChange, booking, onStatusChan
                     </div>
                     <Separator />
 
-                    {/* Add-ons */}
+                    {/* Experiences & Activities */}
                     {booking.addons && booking.addons.length > 0 && (
                         <div className="space-y-3">
                             <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <PlusCircle className="h-4 w-4" /> Add-ons
+                                <PlusCircle className="h-4 w-4" /> Experiences & Activities
                             </h4>
                             <div className="border rounded-lg overflow-hidden">
                                 <table className="w-full text-sm">
                                     <thead className="bg-muted text-muted-foreground text-left">
                                         <tr>
-                                            <th className="p-2 font-medium">Add-on Name</th>
+                                            <th className="p-2 font-medium">Experience / Activity Name</th>
                                             <th className="p-2 font-medium text-right">Price</th>
                                         </tr>
                                     </thead>

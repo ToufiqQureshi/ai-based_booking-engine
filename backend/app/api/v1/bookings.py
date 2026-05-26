@@ -160,21 +160,49 @@ async def create_booking(
     tax_name = settings.get("tax_name", "GST")
     room_tax_rate = float(settings.get("room_tax_rate", 0.0))
     room_tax_type = settings.get("room_tax_type", "exclusive")
+    room_tax_calculation_method = settings.get("room_tax_calculation_method", "flat")
+    room_tax_slabs = settings.get("room_tax_slabs", [])
     addon_tax_rate = float(settings.get("addon_tax_rate", 0.0))
     addon_tax_type = settings.get("addon_tax_type", "exclusive")
 
-    # Calculate totals
-    room_total = sum(room.get("total_price", 0) for room in rooms_list)
+    def resolve_room_rate_tax(nightly_price: float) -> float:
+        if room_tax_calculation_method == "flat":
+            return room_tax_rate
+        for slab in room_tax_slabs:
+            if float(slab.get("from", 0.0)) <= nightly_price <= float(slab.get("to", 999999.0)):
+                return float(slab.get("rate", 0.0))
+        if nightly_price < 1000:
+            return 0.0
+        elif nightly_price < 7500:
+            return 12.0
+        else:
+            return 18.0
+
+    # Calculate room subtotal & room tax
+    room_subtotal = 0.0
+    room_tax_amount = 0.0
+    for room in rooms_list:
+        price_per_night = room.get("price_per_night")
+        total_price = room.get("total_price", 0.0)
+        if price_per_night is None:
+            nights = (booking_data.check_out - booking_data.check_in).days
+            if nights < 1:
+                nights = 1
+            price_per_night = total_price / nights
+        
+        r_rate = resolve_room_rate_tax(float(price_per_night))
+        r_total = float(total_price)
+        if room_tax_type == "inclusive":
+            r_sub = r_total / (1 + (r_rate / 100))
+            r_tax = r_total - r_sub
+        else:
+            r_sub = r_total
+            r_tax = r_total * (r_rate / 100)
+        room_subtotal += r_sub
+        room_tax_amount += r_tax
+
     addon_total = sum(addon.get("price", 0) for addon in booking_data.addons) if booking_data.addons else 0.0
     
-    # Calculate subtotal and tax per item type
-    if room_tax_type == "inclusive":
-        room_subtotal = room_total / (1 + (room_tax_rate / 100))
-        room_tax_amount = room_total - room_subtotal
-    else:
-        room_subtotal = room_total
-        room_tax_amount = room_total * (room_tax_rate / 100)
-        
     if addon_tax_type == "inclusive":
         addon_subtotal = addon_total / (1 + (addon_tax_rate / 100))
         addon_tax_amount = addon_total - addon_subtotal
