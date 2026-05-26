@@ -505,7 +505,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                             control={form.control}
                                             name="smoking_allowed"
                                             render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30/30">
+                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30 dark:bg-muted/10">
                                                     <FormControl>
                                                         <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
                                                     </FormControl>
@@ -517,7 +517,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                             control={form.control}
                                             name="is_pet_friendly"
                                             render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30/30">
+                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30 dark:bg-muted/10">
                                                     <FormControl>
                                                         <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
                                                     </FormControl>
@@ -529,7 +529,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                             control={form.control}
                                             name="extra_bed_allowed"
                                             render={({ field }) => (
-                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30/30">
+                                                <FormItem className="flex items-center space-x-3 space-y-0 border border-border rounded-xl px-4 py-3 bg-muted/30 dark:bg-muted/10">
                                                     <FormControl>
                                                         <Checkbox checked={field.value} onCheckedChange={field.onChange} className="rounded-md" />
                                                     </FormControl>
@@ -714,8 +714,10 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                         name="amenity_ids"
                                                         render={({ field }) => (
                                                             <FormItem className={cn(
-                                                                "flex flex-row items-center space-x-3 space-y-0 border rounded-xl p-3.5 cursor-pointer transition-all hover:border-blue-200",
-                                                                field.value?.includes(amenity.id) ? "bg-blue-50 border-blue-200" : "bg-muted/30/50 border-border"
+                                                                "flex flex-row items-center space-x-3 space-y-0 border rounded-xl p-3.5 cursor-pointer transition-all hover:border-blue-200 dark:hover:border-blue-800",
+                                                                field.value?.includes(amenity.id) 
+                                                                    ? "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/60" 
+                                                                    : "bg-muted/30 dark:bg-muted/10 border-border"
                                                             )}>
                                                                 <FormControl>
                                                                     <Checkbox
