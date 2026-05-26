@@ -20,6 +20,7 @@ interface ChatWidgetProps {
     hotelSlug: string;
     primaryColor?: string;
     bottomOffset?: string;
+    isStaticPreview?: boolean;
 }
 
 interface BookingData {
@@ -85,7 +86,7 @@ const getNights = (inDate: string, outDate: string) => {
     }
 };
 
-export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c3aed', bottomOffset = 'bottom-4' }: ChatWidgetProps) {
+export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c3aed', bottomOffset = 'bottom-4', isStaticPreview = false }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [hotelInfo, setHotelInfo] = useState<{ name: string, primary_color: string, logo_url?: string } | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -195,7 +196,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
     };
 
     return (
-        <div className={`fixed ${bottomOffset} right-4 z-50 flex flex-col items-end font-sans transition-all duration-300`}>
+        <div className={`${isStaticPreview ? 'absolute bottom-4 right-4' : `fixed ${bottomOffset} right-4`} z-50 flex flex-col items-end font-sans transition-all duration-300`}>
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
@@ -203,7 +204,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 15 }}
                         transition={{ duration: 0.25, ease: 'easeOut' }}
-                        className="mb-4 w-[calc(100vw-2rem)] md:w-[380px] shadow-[0_20px_50px_rgba(0,0,0,0.12)] rounded-3xl overflow-hidden border border-slate-100"
+                        className="mb-4 w-full max-w-[calc(100vw-2rem)] md:w-[380px] shadow-[0_20px_50px_rgba(0,0,0,0.12)] rounded-3xl overflow-hidden border border-slate-100"
                     >
                         <Card className="border-0 shadow-none h-[calc(100vh-140px)] max-h-[580px] min-h-[420px] flex flex-col bg-white overflow-hidden rounded-3xl">
                             {/* Premium Glassmorphic Header */}

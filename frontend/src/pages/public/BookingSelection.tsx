@@ -506,9 +506,15 @@ export default function BookingSelection() {
                         </SheetDescription>
                     </SheetHeader>
                     
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
                         {addons.length === 0 ? (
-                            <p className="text-sm text-slate-500 text-center py-8">No add-ons available for this property.</p>
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                                    <Sparkles className="w-8 h-8 text-slate-300" />
+                                </div>
+                                <h3 className="text-slate-800 font-bold mb-1">No Extras Available</h3>
+                                <p className="text-sm text-slate-500 max-w-[250px]">We don't have any optional add-ons available for this selection right now.</p>
+                            </div>
                         ) : (
                             addons.map((addon) => {
                                 const isSelected = selectedAddons.some(a => a.id === addon.id);
@@ -516,23 +522,72 @@ export default function BookingSelection() {
                                     <div
                                         key={addon.id}
                                         className={cn(
-                                            "flex items-start gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer",
-                                            isSelected ? "border-indigo-500 bg-indigo-50/50" : "border-slate-100 bg-white hover:border-slate-200"
+                                            "group relative flex flex-col sm:flex-row items-stretch gap-4 p-3 rounded-2xl border transition-all cursor-pointer overflow-hidden",
+                                            isSelected 
+                                                ? "border-indigo-500 bg-indigo-50/20 shadow-[0_4px_20px_rgba(99,102,241,0.12)]" 
+                                                : "border-slate-200 bg-white hover:border-indigo-200 hover:shadow-md"
                                         )}
                                         onClick={() => toggleAddon(addon)}
                                     >
-                                        <div className="mt-1">
-                                            <div className={cn(
-                                                "w-5 h-5 rounded flex items-center justify-center border",
-                                                isSelected ? "bg-indigo-500 border-indigo-500 text-white" : "border-slate-300 bg-white"
-                                            )}>
-                                                {isSelected && <Check className="w-3.5 h-3.5" />}
+                                        {/* Selection Indicator Background */}
+                                        <div className={cn(
+                                            "absolute inset-0 bg-indigo-50/50 transition-opacity duration-300 pointer-events-none",
+                                            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-50"
+                                        )} />
+                                        
+                                        {/* Add-on Image if available, otherwise a premium placeholder */}
+                                        <div className="relative w-full sm:w-28 h-32 sm:h-auto shrink-0 rounded-xl overflow-hidden bg-slate-100 shadow-sm z-10">
+                                            {addon.image_url ? (
+                                                <img 
+                                                    src={addon.image_url} 
+                                                    alt={addon.name}
+                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 text-indigo-300 transition-transform duration-500 group-hover:scale-105">
+                                                    <Sparkles className="w-8 h-8 opacity-50 mb-1" />
+                                                </div>
+                                            )}
+                                            {/* Price Badge over Image */}
+                                            <div className="absolute bottom-2 right-2 sm:hidden bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm">
+                                                <span className="text-xs font-black text-indigo-700">{formatCurrency(addon.price)}</span>
                                             </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <h4 className="font-bold text-slate-900">{addon.name}</h4>
-                                            {addon.description && <p className="text-xs text-slate-500 mt-1">{addon.description}</p>}
-                                            <p className="text-indigo-600 font-black mt-2">{formatCurrency(addon.price)}</p>
+
+                                        <div className="flex-1 flex flex-col justify-center relative z-10 py-1 pr-2">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <Badge variant="outline" className="text-[9px] uppercase tracking-wider font-bold bg-white text-slate-500 border-slate-200 px-1.5 py-0">
+                                                            {addon.category || 'Enhancement'}
+                                                        </Badge>
+                                                    </div>
+                                                    <h4 className="font-extrabold text-slate-800 text-[15px] leading-tight group-hover:text-indigo-700 transition-colors">{addon.name}</h4>
+                                                </div>
+                                                
+                                                {/* Checkbox / Plus Icon */}
+                                                <div className="shrink-0 mt-1">
+                                                    <div className={cn(
+                                                        "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm",
+                                                        isSelected 
+                                                            ? "bg-indigo-600 text-white shadow-indigo-200" 
+                                                            : "bg-white border-2 border-slate-200 text-slate-400 group-hover:border-indigo-300 group-hover:text-indigo-400"
+                                                    )}>
+                                                        {isSelected ? <Check className="w-3.5 h-3.5" /> : <span className="text-lg leading-none font-light mb-[2px]">+</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {addon.description && (
+                                                <p className="text-[12px] text-slate-500 mt-2 leading-relaxed line-clamp-2">
+                                                    {addon.description}
+                                                </p>
+                                            )}
+                                            
+                                            <div className="mt-3 pt-3 border-t border-slate-100/60 hidden sm:flex items-center justify-between">
+                                                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Additional</span>
+                                                <span className="text-[14px] font-black text-indigo-600">{formatCurrency(addon.price)}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 );

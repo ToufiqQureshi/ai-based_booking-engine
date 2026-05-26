@@ -778,7 +778,25 @@ Make sure you've set up your AI Provider and API Key in the Settings tab to let 
                     
                     {/* Live Preview of the Chat Widget */}
                     {hotel?.feature_guest_bot && (
-                        <ChatWidget hotelSlug={activeHotelSlug || hotel?.slug || ''} />
+                        <div className="mt-8 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50 relative h-[600px] shadow-sm flex flex-col">
+                            <div className="bg-slate-100 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                                </div>
+                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Live Preview</span>
+                                <div className="w-16"></div>
+                            </div>
+                            <div className="flex-1 relative bg-[url('https://images.unsplash.com/photo-1542314831-c53cd4b85d0e?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
+                                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"></div>
+                                <div className="absolute inset-0 flex items-center justify-center p-8 text-center flex-col z-10 pointer-events-none">
+                                    <h1 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">Your Website Here</h1>
+                                    <p className="text-white/80 max-w-md drop-shadow-md">This is a preview of how the widget will appear on your actual website.</p>
+                                </div>
+                                <ChatWidget hotelSlug={activeHotelSlug || hotel?.slug || ''} isStaticPreview={true} />
+                            </div>
+                        </div>
                     )}
                 </TabsContent>
 
