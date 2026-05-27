@@ -1229,6 +1229,18 @@ async def public_cancel_confirm(data: GuestCancelRequest, session: DbSession):
 import razorpay
 from app.core.config import get_settings
 
+# Patch Razorpay Client to fix Python 3.12+/3.13+ strict header validation issue (Illegal header value due to trailing space in User-Agent)
+def patched_update_user_agent_header(self, options):
+    user_agent = "{}{}".format('Razorpay-Python/', self._get_version())
+    if 'headers' in options:
+        options['headers']['User-Agent'] = user_agent
+    else:
+        options['headers'] = {'User-Agent': user_agent}
+    return options
+
+razorpay.Client._update_user_agent_header = patched_update_user_agent_header
+
+
 class RazorpayOrderRequest(BaseModel):
     amount: float
     currency: str = "INR"
