@@ -21,7 +21,15 @@ export default function BookingWidget() {
     // Fetch Widget Configuration and Starting Price
     useEffect(() => {
         if (!hotelSlug) return;
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://ai-basedbooking-engine-production.up.railway.app/api/v1'; // Fallback
+        const getApiUrl = () => {
+            if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+            const hostname = window.location.hostname;
+            if (hostname.includes('staybooker.ai')) {
+                return 'https://api.staybooker.ai/api/v1';
+            }
+            return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
+        };
+        const apiUrl = getApiUrl();
 
         // Fetch config
         fetch(`${apiUrl}/public/hotels/slug/${hotelSlug}/widget-config`)
