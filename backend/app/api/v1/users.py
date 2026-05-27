@@ -41,6 +41,85 @@ from pydantic import BaseModel
 from fastapi import HTTPException, status
 from app.core import security
 
+class TeamMemberCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str
+
+@router.post("", response_model=UserRead)
+async def create_team_member(
+    data: TeamMemberCreate,
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """
+    Add a new team member to the hotel.
+    """
+    from app.models.user import UserRole, User
+    from sqlmodel import select
+    
+    if current_user.role not in [UserRole.OWNER, UserRole.MANAGER]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to add team members")
+        
+    existing_stmt = select(User).where(User.email == data.email.lower().strip())
+    res_existing = await session.execute(existing_stmt)
+    if res_existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="A user with this email already exists")
+        
+    from app.core.supabase import get_supabase
+    supabase_client = get_supabase()
+    
+    from app.models.hotel import Hotel
+    hotel = await session.get(Hotel, current_user.hotel_id)
+    hotel_name = hotel.name if hotel else "Hotel"
+    
+    try:
+        sb_user = supabase_client.auth.admin.create_user({
+            "email": data.email.lower().strip(),
+            "password": data.password,
+            "email_confirm": True,
+            "user_metadata": {
+                "name": data.name,
+                "hotel_name": hotel_name
+            }
+        })
+        supabase_id = sb_user.user.id
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
+        )
+        
+    if data.role not in [r.value for r in UserRole]:
+        try:
+            supabase_client.auth.admin.delete_user(supabase_id)
+        except:
+            pass
+        raise HTTPException(status_code=400, detail="Invalid role")
+        
+    if current_user.role == UserRole.MANAGER and data.role == UserRole.OWNER.value:
+        try:
+            supabase_client.auth.admin.delete_user(supabase_id)
+        except:
+            pass
+        raise HTTPException(status_code=403, detail="Managers cannot create owners")
+        
+    new_user = User(
+        id=supabase_id,
+        email=data.email.lower().strip(),
+        hashed_password="",
+        name=data.name,
+        role=UserRole(data.role),
+        hotel_id=current_user.hotel_id
+    )
+    
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)
+    
+    return new_user
+
 class UserUpdateProfile(BaseModel):
     name: str | None = None
 

@@ -889,7 +889,7 @@ function BookingCheckoutInner() {
                                                     {roomTaxType === 'inclusive' ? `Included (${formatCurrency(roomTaxAmount)})` : formatCurrency(roomTaxAmount)}
                                                 </span>
                                             </div>
-                                            {addonsTotal > 0 && addonTaxRate > 0 && (
+                                            {addonsTotal > 0 && (
                                                 <div className="flex justify-between items-center text-slate-600 font-medium">
                                                     <span>Experiences & Activities {taxName} ({addonTaxRate}%)</span>
                                                     <span className="font-bold text-slate-900">

@@ -292,29 +292,29 @@ export function BookingCartSheet({
 
                                 {/* Tax lines */}
                                 <div className="border-t border-dashed border-slate-200 pt-2 mt-1 space-y-1.5">
-                                    {roomTaxAmount > 0 && (
+                                    <div className="flex justify-between text-[11px] text-slate-500">
+                                        <span>Room {taxName} ({appliedRoomTaxRate}%{roomTaxCalculationMethod === 'slab' ? ' slab' : ''} · {roomTaxType})</span>
+                                        <span className="font-semibold text-slate-700">
+                                            {roomTaxType === 'inclusive' ? `Incl.` : `+ ${formatCurrency(roomTaxAmount)}`}
+                                        </span>
+                                    </div>
+                                    
+                                    {addonTotal > 0 && (
                                         <div className="flex justify-between text-[11px] text-slate-500">
-                                            <span>Room {taxName} ({appliedRoomTaxRate}%{roomTaxCalculationMethod === 'slab' ? ' slab' : ''} · {roomTaxType})</span>
-                                            <span className="font-semibold text-slate-700">
-                                                {roomTaxType === 'inclusive' ? `Incl.` : `+ ${formatCurrency(roomTaxAmount)}`}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {addonTotal > 0 && addonTaxRate > 0 && (
-                                        <div className="flex justify-between text-[11px] text-slate-500">
-                                            <span>Exp. & Activities {taxName} ({addonTaxRate}% · {addonTaxType})</span>
+                                            <span>Activities {taxName} ({addonTaxRate}% · {addonTaxType})</span>
                                             <span className="font-semibold text-slate-700">
                                                 {addonTaxType === 'inclusive' ? `Incl.` : `+ ${formatCurrency(addonTaxAmount)}`}
                                             </span>
                                         </div>
                                     )}
-                                    {taxTotal > 0 && (
-                                        <div className="flex justify-between text-xs font-bold text-emerald-600 pt-1 border-t border-slate-200">
-                                            <span>Total Taxes</span>
-                                            <span>{formatCurrency(taxTotal)}</span>
-                                        </div>
-                                    )}
                                 </div>
+                                
+                                {taxTotal > 0 && (
+                                    <div className="flex justify-between text-xs font-bold text-emerald-600 pt-1 border-t border-slate-200">
+                                        <span>Total Taxes</span>
+                                        <span>{formatCurrency(taxTotal)}</span>
+                                    </div>
+                                )}
 
                                 {/* Grand total */}
                                 <div className="flex justify-between items-end pt-2 border-t border-slate-200">

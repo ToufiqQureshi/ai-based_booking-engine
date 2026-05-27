@@ -105,6 +105,7 @@ class PublicBookingCreate(BaseModel):
     addons: List[PublicAddOn] = []
     special_requests: Optional[str] = None
     promo_code: Optional[str] = None
+    payment_method: Optional[str] = None
 
 class PublicBookingResponse(BaseModel):
     id: str
@@ -132,22 +133,9 @@ async def get_public_hotel_by_slug(hotel_slug: str, session: DbSession):
     No authentication required.
     """
     hotel_id = await resolve_hotel_id(hotel_slug, session)
-    cache_key = f"public:hotel-details:{hotel_id}"
-    try:
-        cached = redis_client.get_value(cache_key)
-        if cached:
-            return HotelRead.model_validate_json(cached)
-    except Exception as e:
-        logger.error(f"Failed to get cached hotel details: {e}")
-
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
-        
-    try:
-        redis_client.set_value(cache_key, hotel.model_dump_json(), expire=600)
-    except Exception as e:
-        logger.error(f"Failed to cache hotel details: {e}")
         
     return hotel
 
@@ -848,43 +836,49 @@ async def create_public_booking(
 
         await session.refresh(booking)
         
-        # Enqueue Email Notifications
-        email_service = await get_email_service()
-        
-        # Extract multi-tenant settings
-        h_settings = hotel.settings if hotel and hotel.settings else {}
-        sender_email = h_settings.get("email_sender_address")
-        sender_name = h_settings.get("email_sender_name")
-        cc_list = h_settings.get("email_cc_list")
-        signature = h_settings.get("email_signature")
-        
-        background_tasks.add_task(
-            email_service.send_guest_booking_confirmation,
-            guest_email=guest.email,
-            guest_name=f"{guest.first_name} {guest.last_name}",
-            booking_number=booking.booking_number,
-            check_in=str(booking.check_in),
-            check_out=str(booking.check_out),
-            total_amount=booking.total_amount,
-            sender_email=sender_email,
-            sender_name=sender_name,
-            signature=signature
-        )
-        
-        # Send to hotel (can get from hotel contact or settings, fallback to global)
-        hotel_emails = hotel.contact.get("email", "") if hotel and hotel.contact else ""
-        background_tasks.add_task(
-            email_service.send_hotel_booking_notification,
-            hotel_emails=hotel_emails, 
-            booking_number=booking.booking_number,
-            guest_name=f"{guest.first_name} {guest.last_name}",
-            check_in=str(booking.check_in),
-            check_out=str(booking.check_out),
-            total_amount=booking.total_amount,
-            cc_list=cc_list,
-            sender_email=sender_email,
-            sender_name=sender_name
-        )
+        # Enqueue Email Notifications ONLY if Pay at Property
+        # For Razorpay, we'll send it upon successful verification
+        if booking_data.payment_method == "pay_at_property":
+            booking.status = BookingStatus.CONFIRMED
+            session.add(booking)
+            await session.commit()
+            
+            email_service = await get_email_service()
+            
+            # Extract multi-tenant settings
+            h_settings = hotel.settings if hotel and hotel.settings else {}
+            sender_email = h_settings.get("email_sender_address")
+            sender_name = h_settings.get("email_sender_name")
+            cc_list = h_settings.get("email_cc_list")
+            signature = h_settings.get("email_signature")
+            
+            background_tasks.add_task(
+                email_service.send_guest_booking_confirmation,
+                guest_email=guest.email,
+                guest_name=f"{guest.first_name} {guest.last_name}",
+                booking_number=booking.booking_number,
+                check_in=str(booking.check_in),
+                check_out=str(booking.check_out),
+                total_amount=booking.total_amount,
+                sender_email=sender_email,
+                sender_name=sender_name,
+                signature=signature
+            )
+            
+            # Send to hotel (can get from hotel contact or settings, fallback to global)
+            hotel_emails = hotel.contact.get("email", "") if hotel and hotel.contact else ""
+            background_tasks.add_task(
+                email_service.send_hotel_booking_notification,
+                hotel_emails=hotel_emails, 
+                booking_number=booking.booking_number,
+                guest_name=f"{guest.first_name} {guest.last_name}",
+                check_in=str(booking.check_in),
+                check_out=str(booking.check_out),
+                total_amount=booking.total_amount,
+                cc_list=cc_list,
+                sender_email=sender_email,
+                sender_name=sender_name
+            )
         
         return PublicBookingResponse(
             id=booking.id,
@@ -1330,6 +1324,50 @@ async def verify_razorpay_payment(data: RazorpayVerifyRequest, session: DbSessio
         
         session.add(booking)
         await session.commit()
+        
+        # Send confirmation email
+        hotel = await session.get(Hotel, booking.hotel_id)
+        guest = await session.get(Guest, booking.guest_id)
+        
+        if hotel and guest:
+            from fastapi import BackgroundTasks
+            background_tasks = BackgroundTasks()
+            
+            email_service = await get_email_service()
+            h_settings = hotel.settings if hotel and hotel.settings else {}
+            sender_email = h_settings.get("email_sender_address")
+            sender_name = h_settings.get("email_sender_name")
+            cc_list = h_settings.get("email_cc_list")
+            signature = h_settings.get("email_signature")
+            
+            background_tasks.add_task(
+                email_service.send_guest_booking_confirmation,
+                guest_email=guest.email,
+                guest_name=f"{guest.first_name} {guest.last_name}",
+                booking_number=booking.booking_number,
+                check_in=str(booking.check_in),
+                check_out=str(booking.check_out),
+                total_amount=booking.total_amount,
+                sender_email=sender_email,
+                sender_name=sender_name,
+                signature=signature
+            )
+            
+            hotel_emails = hotel.contact.get("email", "") if hotel.contact else ""
+            background_tasks.add_task(
+                email_service.send_hotel_booking_notification,
+                hotel_emails=hotel_emails, 
+                booking_number=booking.booking_number,
+                guest_name=f"{guest.first_name} {guest.last_name}",
+                check_in=str(booking.check_in),
+                check_out=str(booking.check_out),
+                total_amount=booking.total_amount,
+                cc_list=cc_list,
+                sender_email=sender_email,
+                sender_name=sender_name
+            )
+            # Execute background tasks immediately for this route
+            await background_tasks()
         
         return {"status": "success", "message": "Payment verified and booking confirmed"}
         
