@@ -121,6 +121,12 @@ export function DashboardLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  // Redirect to app subdomain if logged in on root domain
+  if (!window.location.hostname.startsWith('app.') && window.location.hostname.includes('staybooker.ai')) {
+    window.location.href = `https://app.staybooker.ai${location.pathname}${location.search}`;
+    return null;
+  }
+
   // ── Deactivated state ────────────────────────────────────────────────────
   if ((hotel && hotel.is_active === false) || (user && user.is_active === false)) {
     return (
