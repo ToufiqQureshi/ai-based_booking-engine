@@ -21,17 +21,15 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
     """
     Dashboard ke liye summary stats.
-    Parallel execution optimized.
+    Parallel execution optimized + Redis cache (5 min TTL).
     """
-    # cache_key = f"dashboard_stats:{current_user.hotel_id}"
-    # r = None
-    # try:
-    #     r = redis_client.get_instance()
-    #     cached_data = r.get(cache_key)
-    #     if cached_data:
-    #         return json.loads(cached_data)
-    # except Exception as e:
-    #     print(f"Redis Read Failed or Not Configured: {e}")
+    cache_key = f"dashboard_stats:{current_user.hotel_id}"
+    try:
+        cached_data = redis_client.get_value(cache_key)
+        if cached_data:
+            return json.loads(cached_data)
+    except Exception as e:
+        print(f"Redis Read Failed or Not Configured: {e}")
 
     today = date.today()
     yesterday = today - timedelta(days=1)
@@ -115,31 +113,27 @@ async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
         }
     }
 
-    # # Cache result if Redis is working
-    # if r:
-    #     try:
-    #         r.setex(cache_key, 300, json.dumps(data))
-    #     except Exception as e:
-    #         print(f"Redis Write Failed: {e}")
-
-    return data
+    # Cache result in Redis (5 minutes)
+    try:
+        redis_client.set_value(cache_key, json.dumps(data), expire=300)
+    except Exception as e:
+        print(f"Redis Write Failed: {e}")
 
     return data
 
 
 @router.get("/recent-bookings")
 async def get_recent_bookings(current_user: CurrentUser, session: DbSession):
-    """Recent 5 bookings for dashboard"""
+    """Recent 5 bookings for dashboard — Redis cache (1 min TTL)"""
     from app.models.booking import Guest
     
-    # # Check Cache
-    # cache_key = f"dashboard_recent_bookings:{current_user.hotel_id}"
-    # try:
-    #     r = redis_client.get_instance()
-    #     cached = r.get(cache_key)
-    #     if cached:
-    #         return json.loads(cached)
-    # except: pass
+    cache_key = f"dashboard_recent_bookings:{current_user.hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
     
     result = await session.execute(
         select(Booking, Guest)
@@ -165,9 +159,10 @@ async def get_recent_bookings(current_user: CurrentUser, session: DbSession):
         booking_dict["guest"] = guest_dict
         response.append(booking_dict)
     
-    # # Cache for 1 min only (updates frequently)
-    # try:
-    #     r.setex(cache_key, 60, json.dumps(response))
-    # except: pass
+    # Cache for 1 min (bookings update frequently)
+    try:
+        redis_client.set_value(cache_key, json.dumps(response), expire=60)
+    except Exception:
+        pass
 
     return response

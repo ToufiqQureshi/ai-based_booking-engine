@@ -127,9 +127,40 @@ function BookingCheckoutInner() {
                 } catch (e) {
                     console.error("Failed to parse pending booking state");
                 }
+            } else {
+                // Fallback: restore checkout state from sessionStorage (e.g. back-navigation from payment page)
+                const checkoutKey = `checkout_state:${hotelSlug}`;
+                const savedCheckout = sessionStorage.getItem(checkoutKey);
+                if (savedCheckout) {
+                    try {
+                        const parsed = JSON.parse(savedCheckout);
+                        const CACHE_TTL = 5 * 60 * 1000;
+                        if (parsed._savedAt && Date.now() - parsed._savedAt < CACHE_TTL) {
+                            setState(parsed.state);
+                        } else {
+                            sessionStorage.removeItem(checkoutKey);
+                        }
+                    } catch {
+                        sessionStorage.removeItem(`checkout_state:${hotelSlug}`);
+                    }
+                }
             }
         }
-    }, [location.state, setValue]);
+    }, [location.state, setValue, hotelSlug]);
+
+    // Persist checkout state to sessionStorage so back-navigation from payment page works
+    useEffect(() => {
+        if (state && hotelSlug) {
+            try {
+                sessionStorage.setItem(`checkout_state:${hotelSlug}`, JSON.stringify({
+                    state,
+                    _savedAt: Date.now()
+                }));
+            } catch {
+                // sessionStorage full — silently ignore
+            }
+        }
+    }, [state, hotelSlug]);
 
     // Check loyalty when email is entered
     const handleEmailBlur = async () => {
@@ -219,6 +250,9 @@ function BookingCheckoutInner() {
             };
 
             const response = await apiClient.post('/public/bookings', bookingPayload);
+
+            // Clear checkout session cache after successful booking
+            try { sessionStorage.removeItem(`checkout_state:${hotelSlug}`); } catch { /* ignore */ }
 
             navigate(`/book/${hotelSlug}/confirmation`, {
                 state: { booking: response }

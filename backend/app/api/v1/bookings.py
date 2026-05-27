@@ -19,6 +19,15 @@ from app.models.room import RoomType
 from app.core.tasks import log_timeline_task
 from app.api.v1.availability import clear_availability_cache
 from app.services.email_service import get_email_service
+from app.core.redis_client import redis_client as _redis
+
+def _clear_dashboard_cache(hotel_id: str):
+    """Dashboard stats + recent bookings cache clear karta hai jab booking change ho."""
+    try:
+        _redis.delete_value(f"dashboard_stats:{hotel_id}")
+        _redis.delete_value(f"dashboard_recent_bookings:{hotel_id}")
+    except Exception:
+        pass
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -285,6 +294,7 @@ async def create_booking(
     
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
+    _clear_dashboard_cache(current_user.hotel_id)
     await session.refresh(booking)
     await session.refresh(guest)
     
@@ -454,6 +464,7 @@ async def update_booking(
     session.add(booking)
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
+    _clear_dashboard_cache(current_user.hotel_id)
     await session.refresh(booking)
     
     guest_result = await session.execute(select(Guest).where(Guest.id == booking.guest_id))
