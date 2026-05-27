@@ -116,6 +116,7 @@ export function SettingsPage() {
       notify_cancellation: hotel?.settings?.notify_cancellation !== false,
       cancellation_policy: hotel?.settings?.cancellation_policy || '',
       cancellation_mode: hotel?.settings?.cancellation_mode || 'instant',
+      payment_mode: hotel?.settings?.payment_mode || 'both',
       payment_policy: hotel?.settings?.payment_policy || '',
       child_policy: hotel?.settings?.child_policy || '',
       privacy_policy: hotel?.settings?.privacy_policy || '',
@@ -982,7 +983,27 @@ export function SettingsPage() {
                       Choose whether guest cancellation requests are processed automatically/instantly or require manual approval in the bookings table first.
                     </p>
                   </div>
-                  
+
+                  <div className="space-y-2">
+                    <Label htmlFor="payment_mode">Online Payment Mode</Label>
+                    <Select
+                      value={formData.settings.payment_mode || 'both'}
+                      onValueChange={(val) => handleUpdate('settings', 'payment_mode', val)}
+                    >
+                      <SelectTrigger id="payment_mode" className="w-full">
+                        <SelectValue placeholder="Select payment mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="online_only">Pay Now Only (Razorpay online payment required)</SelectItem>
+                        <SelectItem value="property_only">Pay at Property Only (No online payment)</SelectItem>
+                        <SelectItem value="both">Both Options (Guest can choose)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Control how guests can pay on the public booking page. "Both" lets guests choose between paying online now or at the property.
+                    </p>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="payment_policy">Payment Policy</Label>
                     <Textarea

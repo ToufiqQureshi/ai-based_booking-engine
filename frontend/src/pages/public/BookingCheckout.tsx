@@ -66,6 +66,7 @@ function BookingCheckoutInner() {
     const location = useLocation();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<'online' | 'property'>('online');
 
     const { register, setValue, watch, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>();
 
@@ -94,6 +95,15 @@ function BookingCheckoutInner() {
     const [hasCheckedLoyalty, setHasCheckedLoyalty] = useState(false);
 
     const emailValue = watch('email');
+
+    // Auto-set paymentMethod when hotel setting loads
+    useEffect(() => {
+        if (!hotel) return;
+        const mode = hotel?.settings?.payment_mode || 'both';
+        if (mode === 'online_only') setPaymentMethod('online');
+        else if (mode === 'property_only') setPaymentMethod('property');
+        // 'both' -> keep current state (default 'online')
+    }, [hotel]);
 
     useEffect(() => {
         if (hotelSlug) {
@@ -249,14 +259,81 @@ function BookingCheckoutInner() {
                 special_requests: data.specialRequests
             };
 
-            const response = await apiClient.post('/public/bookings', bookingPayload);
+            // First create the booking
+            const response = await apiClient.post('/public/bookings', bookingPayload) as any;
+            const bookingId = response.id as string;
 
-            // Clear checkout session cache after successful booking
-            try { sessionStorage.removeItem(`checkout_state:${hotelSlug}`); } catch { /* ignore */ }
+            if (paymentMethod === 'online') {
+                // Load Razorpay Script
+                const loadRazorpayScript = (): Promise<boolean> => {
+                    return new Promise((resolve) => {
+                        if ((window as any).Razorpay) { resolve(true); return; } // Already loaded
+                        const script = document.createElement('script');
+                        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                        script.onload = () => resolve(true);
+                        script.onerror = () => resolve(false);
+                        document.body.appendChild(script);
+                    });
+                };
 
-            navigate(`/book/${hotelSlug}/confirmation`, {
-                state: { booking: response }
-            });
+                const sdkLoaded = await loadRazorpayScript();
+                if (!sdkLoaded) {
+                    toast({ variant: 'destructive', title: 'Connection Error', description: 'Failed to load Razorpay SDK. Please check your internet connection.' });
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                // Create Razorpay Order on backend
+                const orderData = await apiClient.post('/public/razorpay/create-order', {
+                    amount: finalTotal,
+                    receipt: bookingId
+                }) as any;
+
+                // Open Razorpay Checkout Popup
+                const options = {
+                    key: 'rzp_test_SuHDIa6RIMTJhm',
+                    amount: orderData.amount as number,
+                    currency: orderData.currency as string,
+                    name: hotel?.name || 'Hotel Booking',
+                    description: `Booking ${response.booking_number}`,
+                    order_id: orderData.id as string,
+                    handler: async function (paymentResponse: any) {
+                        try {
+                            setIsSubmitting(true);
+                            await apiClient.post('/public/razorpay/verify', {
+                                razorpay_order_id: paymentResponse.razorpay_order_id,
+                                razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                razorpay_signature: paymentResponse.razorpay_signature,
+                                booking_id: bookingId
+                            });
+                            try { sessionStorage.removeItem(`checkout_state:${hotelSlug}`); } catch { /* ignore */ }
+                            navigate(`/book/${hotelSlug}/confirmation`, { state: { booking: response } });
+                        } catch {
+                            setIsSubmitting(false);
+                            toast({ variant: 'destructive', title: 'Payment Verification Failed', description: 'Your payment was received but could not be verified. Please contact support with your payment ID.' });
+                        }
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            setIsSubmitting(false);
+                        }
+                    },
+                    prefill: {
+                        name: `${data.firstName} ${data.lastName}`,
+                        email: data.email,
+                        contact: data.phone
+                    },
+                    theme: { color: themeColor }
+                };
+
+                const paymentObject = new (window as any).Razorpay(options);
+                paymentObject.open();
+
+            } else {
+                // Pay at Property — booking already created, just confirm
+                try { sessionStorage.removeItem(`checkout_state:${hotelSlug}`); } catch { /* ignore */ }
+                navigate(`/book/${hotelSlug}/confirmation`, { state: { booking: response } });
+            }
 
         } catch (error) {
             console.error('Booking failed:', error);
@@ -281,6 +358,9 @@ function BookingCheckoutInner() {
     const roomTaxType = settings?.room_tax_type || 'exclusive';
     const roomTaxCalculationMethod = settings?.room_tax_calculation_method || 'flat';
     const roomTaxSlabs = settings?.room_tax_slabs || [];
+
+    // Payment mode from hotel settings: 'online_only' | 'property_only' | 'both'
+    const hotelPaymentMode: string = settings?.payment_mode || 'both';
     const addonTaxRate = Number(settings?.addon_tax_rate) || 0;
     const addonTaxType = settings?.addon_tax_type || 'exclusive';
 
@@ -500,35 +580,134 @@ function BookingCheckoutInner() {
                         </div>
 
                         {/* Payment Section */}
-                        <div className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
-                            <div className="absolute inset-x-0 bottom-0 h-1.5 bg-gradient-to-r from-transparent via-green-500/20 to-transparent" />
-
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-5">
-                                    <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 -rotate-3 group-hover:rotate-0 transition-transform">
-                                        <ShieldCheck className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Payment Details</h2>
-                                        <p className="text-sm text-green-600 font-bold flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                            Pay at the Property
-                                        </p>
-                                    </div>
+                        <div className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/40">
+                            {/* Header */}
+                            <div className="px-8 md:px-10 pt-8 md:pt-10 pb-6 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                    <ShieldCheck className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Payment</h2>
+                                    <p className="text-sm font-medium" style={{ color: themeColor }}>
+                                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse align-middle" />
+                                        Powered by Razorpay • 256-bit SSL Encrypted
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200/50 flex flex-col md:flex-row items-center gap-6 text-center md:text-left hover:border-green-200 transition-colors">
-                                <div className="w-16 h-16 rounded-full bg-white shadow-inner flex items-center justify-center">
-                                    <CreditCard className="w-8 h-8 text-slate-400" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-xl font-black text-slate-900 mb-1">Guarantee Policy</h3>
-                                    <p className="text-slate-500 leading-relaxed font-medium">Your card details are only used to guarantee your booking. No charges will be made today. Full payment will be collected at the hotel during check-in or check-out.</p>
-                                </div>
+                            {/* Payment Options */}
+                            <div className="px-8 md:px-10 pb-8 md:pb-10 space-y-3">
+
+                                {/* --- ONLINE ONLY: Just a clean info block, no choice --- */}
+                                {hotelPaymentMode === 'online_only' && (
+                                    <div className="flex items-start gap-4 p-5 rounded-2xl border-2 border-emerald-500 bg-emerald-50/40">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <CreditCard className="w-5 h-5 text-emerald-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-black text-slate-900">Secure Online Payment</h3>
+                                                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-widest">Required</span>
+                                            </div>
+                                            <p className="text-sm text-slate-500 font-medium">Complete your booking with a secure online payment via Credit/Debit Card, UPI, or Net Banking.</p>
+                                            <div className="flex items-center gap-2 mt-3">
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-4 opacity-50" />
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-50" />
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">+ UPI, NetBanking</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* --- PROPERTY ONLY: Just a clean info block, no choice --- */}
+                                {hotelPaymentMode === 'property_only' && (
+                                    <div className="flex items-start gap-4 p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/50">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <CreditCard className="w-5 h-5 text-slate-500" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-black text-slate-900">Pay at Property</h3>
+                                                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full uppercase tracking-widest">No Charge Today</span>
+                                            </div>
+                                            <p className="text-sm text-slate-500 font-medium">Your booking is guaranteed. Full payment is collected directly at the hotel during check-in or check-out.</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* --- BOTH: Guest chooses --- */}
+                                {hotelPaymentMode === 'both' && (
+                                    <>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Choose how you'd like to pay</p>
+
+                                        {/* Pay Now Option */}
+                                        <label
+                                            htmlFor="pay-online"
+                                            className={cn(
+                                                "flex items-start gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200",
+                                                paymentMethod === 'online'
+                                                    ? "border-emerald-500 bg-emerald-50/40 shadow-sm shadow-emerald-100"
+                                                    : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50/50"
+                                            )}
+                                        >
+                                            <div className="flex items-center pt-0.5">
+                                                <input
+                                                    id="pay-online"
+                                                    type="radio"
+                                                    name="paymentMethod"
+                                                    value="online"
+                                                    checked={paymentMethod === 'online'}
+                                                    onChange={() => setPaymentMethod('online')}
+                                                    className="w-4 h-4 accent-emerald-600"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="font-black text-slate-900">Pay Now (Online)</h3>
+                                                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-widest">Instant Confirm</span>
+                                                </div>
+                                                <p className="text-sm text-slate-500 font-medium">Pay securely via Credit/Debit Card, UPI, or Net Banking. Booking confirmed instantly.</p>
+                                                <div className="flex items-center gap-2 mt-2.5">
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className={cn("h-3.5 transition-opacity", paymentMethod === 'online' ? 'opacity-70' : 'opacity-30')} />
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className={cn("h-5 transition-opacity", paymentMethod === 'online' ? 'opacity-70' : 'opacity-30')} />
+                                                    <span className={cn("text-[10px] font-bold uppercase tracking-wider transition-colors", paymentMethod === 'online' ? 'text-slate-400' : 'text-slate-300")}>+ UPI, NetBanking</span>
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        {/* Pay at Property Option */}
+                                        <label
+                                            htmlFor="pay-property"
+                                            className={cn(
+                                                "flex items-start gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200",
+                                                paymentMethod === 'property'
+                                                    ? "border-slate-400 bg-slate-50/60 shadow-sm"
+                                                    : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50/50"
+                                            )}
+                                        >
+                                            <div className="flex items-center pt-0.5">
+                                                <input
+                                                    id="pay-property"
+                                                    type="radio"
+                                                    name="paymentMethod"
+                                                    value="property"
+                                                    checked={paymentMethod === 'property'}
+                                                    onChange={() => setPaymentMethod('property')}
+                                                    className="w-4 h-4 accent-slate-600"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="font-black text-slate-900">Pay at Property</h3>
+                                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full uppercase tracking-widest">No Charge Today</span>
+                                                </div>
+                                                <p className="text-sm text-slate-500 font-medium">No charges today. Your booking is guaranteed and payment is collected at the hotel.</p>
+                                            </div>
+                                        </label>
+                                    </>
+                                )}
                             </div>
                         </div>
-                    </div>
 
                     {/* Right Column: Summary */}
                     <div className="lg:sticky lg:top-8 h-fit animate-enter" style={{ animationDelay: '0.1s' }}>
@@ -727,10 +906,15 @@ function BookingCheckoutInner() {
                         </div>
 
                         <div className="text-center mt-10">
-                            <div className="flex items-center justify-center gap-3 mb-4 grayscale opacity-40">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-4" />
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3" />
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5" />
+                            <div className="flex items-center justify-center gap-4 mb-4">
+                                <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
+                                    <ShieldCheck className="w-4 h-4 text-slate-500" />
+                                    <span className="text-xs font-bold text-slate-600 uppercase">256-Bit SSL Secured</span>
+                                </div>
+                                <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-2.5 opacity-50" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-4 opacity-50" />
+                                </div>
                             </div>
                             <p className="text-[10px] text-slate-400 max-w-xs mx-auto font-bold uppercase tracking-widest leading-relaxed">
                                 By proceeding, you agree to our <a href="#" className="text-primary hover:underline">Terms</a> & <a href="#" className="text-primary hover:underline">Privacy Policy</a>.

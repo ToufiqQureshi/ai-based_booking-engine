@@ -90,6 +90,10 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
 
+    # Razorpay Payment Gateway
+    RAZORPAY_KEY_ID: Optional[str] = None
+    RAZORPAY_KEY_SECRET: Optional[str] = None
+
     class Config:
         env_file = ".env"
         extra = "ignore"

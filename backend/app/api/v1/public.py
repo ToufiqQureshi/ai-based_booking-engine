@@ -1225,3 +1225,99 @@ async def public_cancel_confirm(data: GuestCancelRequest, session: DbSession):
         "message": "Your booking has been successfully cancelled."
     }
 
+# --- Razorpay Integration ---
+import razorpay
+from app.core.config import get_settings
+
+class RazorpayOrderRequest(BaseModel):
+    amount: float
+    currency: str = "INR"
+    receipt: str
+
+@router.post("/razorpay/create-order")
+async def create_razorpay_order(data: RazorpayOrderRequest):
+    """
+    Creates a Razorpay order and returns the order details.
+    Amount should be in INR (not paise, we convert it here).
+    """
+    settings = get_settings()
+    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+        raise HTTPException(status_code=500, detail="Razorpay is not configured on the server")
+        
+    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    
+    try:
+        # Razorpay expects amount in smallest currency unit (paise for INR)
+        amount_in_paise = int(data.amount * 100)
+        
+        order_data = {
+            "amount": amount_in_paise,
+            "currency": data.currency,
+            "receipt": data.receipt,
+            "payment_capture": 1 # Auto capture
+        }
+        
+        order = client.order.create(data=order_data)
+        return order
+    except Exception as e:
+        logger.error(f"Failed to create razorpay order: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class RazorpayVerifyRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    booking_id: str
+
+@router.post("/razorpay/verify")
+async def verify_razorpay_payment(data: RazorpayVerifyRequest, session: DbSession):
+    """
+    Verifies the Razorpay signature and updates the booking status to CONFIRMED.
+    """
+    settings = get_settings()
+    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+        raise HTTPException(status_code=500, detail="Razorpay is not configured on the server")
+        
+    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    
+    try:
+        # Verify Signature
+        client.utility.verify_payment_signature({
+            'razorpay_order_id': data.razorpay_order_id,
+            'razorpay_payment_id': data.razorpay_payment_id,
+            'razorpay_signature': data.razorpay_signature
+        })
+        
+        # If verification is successful, update booking status
+        booking = await session.get(Booking, data.booking_id)
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+            
+        booking.status = BookingStatus.CONFIRMED
+        booking.paid_amount = booking.total_amount # Assuming full payment was made online
+        booking.updated_at = datetime.utcnow()
+        
+        # Record the payment in DB if payment model exists
+        from app.models.payment import Payment
+        payment = Payment(
+            hotel_id=booking.hotel_id,
+            booking_id=booking.id,
+            amount=booking.total_amount,
+            payment_method="razorpay",
+            transaction_id=data.razorpay_payment_id,
+            status="completed",
+            reference_number=data.razorpay_order_id
+        )
+        session.add(payment)
+        
+        session.add(booking)
+        await session.commit()
+        
+        return {"status": "success", "message": "Payment verified and booking confirmed"}
+        
+    except razorpay.errors.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid payment signature")
+    except Exception as e:
+        logger.error(f"Payment verification failed: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error during verification")
+
