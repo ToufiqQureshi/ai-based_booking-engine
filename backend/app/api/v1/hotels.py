@@ -90,4 +90,18 @@ async def update_my_hotel(
     await session.commit()
     await session.refresh(hotel)
     
+    # Invalidate public caches on settings change (e.g. tax settings update)
+    try:
+        from app.core.redis_client import redis_client
+        redis_client.delete_key(f"public:hotel-details:{hotel.id}")
+        redis_client.delete_key(f"public:widget-config:{hotel.id}")
+        redis_client.delete_key(f"public:slug-to-id:{hotel.slug}")
+        redis_client.delete_key(f"public:slug-to-id:{hotel.id}")
+        # Clear rooms and availability cache
+        from app.api.v1.availability import clear_availability_cache
+        clear_availability_cache(hotel.id)
+    except Exception as e:
+        pass
+    
     return hotel
+

@@ -44,7 +44,10 @@ class PublicRoomSearchResult(RoomTypeRead):
 
 
 async def resolve_hotel_id(identifier: str, session: DbSession) -> str:
-    cache_key = f"public:slug-to-id:{identifier}"
+    # Normalize identifier (convert spaces and %20 to hyphens, lowercase)
+    normalized = identifier.strip().replace("%20", "-").replace(" ", "-").lower()
+    
+    cache_key = f"public:slug-to-id:{normalized}"
     try:
         cached = redis_client.get_value(cache_key)
         if cached:
@@ -53,7 +56,7 @@ async def resolve_hotel_id(identifier: str, session: DbSession) -> str:
         logger.error(f"Failed to get slug-to-id cache: {e}")
 
     # Query DB
-    query = select(Hotel).where(or_(Hotel.slug == identifier, Hotel.id == identifier))
+    query = select(Hotel).where(or_(Hotel.slug == normalized, Hotel.id == identifier, Hotel.id == normalized))
     result = await session.execute(query)
     hotel = result.scalar_one_or_none()
     
@@ -62,10 +65,13 @@ async def resolve_hotel_id(identifier: str, session: DbSession) -> str:
         try:
             redis_client.set_value(f"public:slug-to-id:{hotel.slug}", hotel.id, expire=86400)
             redis_client.set_value(f"public:slug-to-id:{hotel.id}", hotel.id, expire=86400)
+            if normalized != hotel.slug:
+                redis_client.set_value(f"public:slug-to-id:{normalized}", hotel.id, expire=86400)
         except Exception as e:
             logger.error(f"Failed to set slug-to-id cache: {e}")
         return hotel.id
     return identifier
+
 
 # --- Public Booking Schemas ---
 class PublicGuestCreate(BaseModel):
