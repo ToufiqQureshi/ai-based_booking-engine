@@ -29,19 +29,39 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link 
-              to="/login" 
-              className="text-sm font-bold text-slate-300 hover:text-white px-4 py-2 transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link 
-              to="/signup" 
-              className="group relative inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-extrabold text-white shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-            >
-              Get Started
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+            {window.location.hostname.includes('staybooker.ai') && !window.location.hostname.startsWith('app.') ? (
+              <>
+                <a 
+                  href="https://app.staybooker.ai/login" 
+                  className="text-sm font-bold text-slate-300 hover:text-white px-4 py-2 transition-colors"
+                >
+                  Sign In
+                </a>
+                <a 
+                  href="https://app.staybooker.ai/signup" 
+                  className="group relative inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-extrabold text-white shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+                >
+                  Get Started
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              </>
+            ) : (
+              <>
+                <Link 
+                  to="/login" 
+                  className="text-sm font-bold text-slate-300 hover:text-white px-4 py-2 transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link 
+                  to="/signup" 
+                  className="group relative inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-extrabold text-white shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+                >
+                  Get Started
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -63,12 +83,21 @@ export default function LandingPage() {
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
-          <Link 
-            to="/signup" 
-            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-          >
-            Create Your Hotel Account
-          </Link>
+          {window.location.hostname.includes('staybooker.ai') && !window.location.hostname.startsWith('app.') ? (
+            <a 
+              href="https://app.staybooker.ai/signup" 
+              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+            >
+              Create Your Hotel Account
+            </a>
+          ) : (
+            <Link 
+              to="/signup" 
+              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+            >
+              Create Your Hotel Account
+            </Link>
+          )}
           <a 
             href="#features" 
             className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white/5 border border-white/10 text-base font-extrabold text-slate-300 hover:text-white hover:bg-white/10 transition-all duration-200"
@@ -260,12 +289,21 @@ export default function LandingPage() {
             Create an owner account in less than 2 minutes. Start using your test API keys instantly.
           </p>
           <div className="mt-8 flex justify-center">
-            <Link 
-              to="/signup" 
-              className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-            >
-              Sign Up For Free Account
-            </Link>
+            {window.location.hostname.includes('staybooker.ai') && !window.location.hostname.startsWith('app.') ? (
+              <a 
+                href="https://app.staybooker.ai/signup" 
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+              >
+                Sign Up For Free Account
+              </a>
+            ) : (
+              <Link 
+                to="/signup" 
+                className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+              >
+                Sign Up For Free Account
+              </Link>
+            )}
           </div>
         </div>
       </section>
