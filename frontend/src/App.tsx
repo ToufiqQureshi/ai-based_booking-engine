@@ -44,6 +44,7 @@ const BookingConfirmation = lazy(() => import("@/pages/public/BookingConfirmatio
 const BookingCancel = lazy(() => import("@/pages/public/BookingCancel"));
 const BookingWidget = lazy(() => import("@/pages/public/BookingWidget"));
 const ChatEmbed = lazy(() => import("@/pages/public/ChatEmbed"));
+const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
 
 // Slim top progress bar — does NOT block the whole screen
 const PageLoader = () => <div className="page-progress" />;
@@ -130,7 +131,16 @@ const App = () => {
                     <Route path="/book/:hotelSlug/chat" element={<ChatEmbed />} />
 
                     {/* Redirects */}
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route 
+                      path="/" 
+                      element={
+                        window.location.hostname.startsWith('app.') ? (
+                          <Navigate to="/dashboard" replace />
+                        ) : (
+                          <LandingPage />
+                        )
+                      } 
+                    />
 
                     {/* 404 */}
                     <Route path="*" element={<NotFound />} />
