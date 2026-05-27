@@ -147,13 +147,7 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
     Includes allowed_domains for security check.
     """
     hotel_id = await resolve_hotel_id(hotel_slug, session)
-    cache_key = f"public:widget-config:{hotel_id}"
-    try:
-        cached = redis_client.get_value(cache_key)
-        if cached:
-            return json.loads(cached)
-    except Exception as e:
-        logger.error(f"Failed to get cached widget-config: {e}")
+    hotel_id = await resolve_hotel_id(hotel_slug, session)
 
     from app.models.integration import IntegrationSettings
     
@@ -189,11 +183,6 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         "widget_enabled": widget_enabled
     }
 
-    try:
-        redis_client.set_value(cache_key, json.dumps(res_dict), expire=600)
-    except Exception as e:
-        logger.error(f"Failed to cache widget-config: {e}")
-
     return res_dict
 
 @router.get("/hotels/{hotel_identifier}", response_model=HotelRead)
@@ -203,14 +192,7 @@ async def get_public_hotel(hotel_identifier: str, session: DbSession):
     Supports both ID (UUID) and Slug.
     """
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
-    cache_key = f"public:hotel-details:{hotel_id}"
-    try:
-        cached = redis_client.get_value(cache_key)
-        if cached:
-            return HotelRead.model_validate_json(cached)
-    except Exception as e:
-        logger.error(f"Failed to get cached hotel details: {e}")
-
+    hotel_id = await resolve_hotel_id(hotel_identifier, session)
     # Get Hotel by ID since we resolved it
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
@@ -223,10 +205,6 @@ async def get_public_hotel(hotel_identifier: str, session: DbSession):
     if settings and getattr(settings, 'widget_primary_color', None):
         hotel.primary_color = settings.widget_primary_color
         
-    try:
-        redis_client.set_value(cache_key, hotel.model_dump_json(), expire=600)
-    except Exception as e:
-        logger.error(f"Failed to cache hotel details: {e}")
         
     return hotel
 
@@ -255,14 +233,7 @@ async def search_public_rooms(
 
     hotel_policy = hotel.settings.get("cancellation_policy") if hotel.settings else None
 
-    cache_key = f"public:rooms:{hotel_id}:{check_in.isoformat()}:{check_out.isoformat()}:{guests}:{adults}:{children}:{promo_code or ''}"
-    try:
-        cached = redis_client.get_value(cache_key)
-        if cached:
-            data = json.loads(cached)
-            return [PublicRoomSearchResult(**item) for item in data]
-    except Exception as e:
-        logger.error(f"Failed to get cached public rooms search: {e}")
+    # Cache removed to allow instant updates
 
     logger.debug("Searching rooms for resolved hotel ID: %s", hotel_id)
 
@@ -584,11 +555,7 @@ async def search_public_rooms(
                 )
                 available_rooms_list.append(room_res)
 
-    try:
-        rooms_dump = [item.model_dump(mode='json') for item in available_rooms_list]
-        redis_client.set_value(cache_key, json.dumps(rooms_dump), expire=120)
-    except Exception as e:
-        logger.error(f"Failed to cache public rooms search: {e}")
+
 
     return available_rooms_list
 
@@ -601,14 +568,7 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
     Get active add-ons for a hotel by slug or ID.
     """
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
-    cache_key = f"public:addons:{hotel_id}"
-    try:
-        cached = redis_client.get_value(cache_key)
-        if cached:
-            data = json.loads(cached)
-            return [AddOn(**item) for item in data]
-    except Exception as e:
-        logger.error(f"Failed to get cached addons: {e}")
+    # Cache removed to allow instant updates
 
     # Validate hotel exists
     hotel = await session.get(Hotel, hotel_id)
@@ -619,11 +579,7 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
     addon_res = await session.execute(addon_query)
     addons = addon_res.scalars().all()
     
-    try:
-        addons_dump = [item.model_dump(mode='json') for item in addons]
-        redis_client.set_value(cache_key, json.dumps(addons_dump), expire=600)
-    except Exception as e:
-        logger.error(f"Failed to cache addons: {e}")
+
         
     return addons
 
