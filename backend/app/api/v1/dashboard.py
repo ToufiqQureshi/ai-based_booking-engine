@@ -36,64 +36,58 @@ async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
     start_of_day = datetime.combine(today, datetime.min.time())
     start_of_yest = start_of_day - timedelta(days=1)
 
-    # Parallel Execution of DB Queries
-    queries = [
-        # arrivals_today
-        session.execute(select(func.count(Booking.id)).where(
-            Booking.hotel_id == current_user.hotel_id, Booking.check_in == today,
-            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
-        )),
-        # departures_today
-        session.execute(select(func.count(Booking.id)).where(
-            Booking.hotel_id == current_user.hotel_id, Booking.check_out == today,
-            Booking.status == BookingStatus.CHECKED_IN
-        )),
-        # occupancy_today
-        session.execute(select(func.count(Booking.id)).where(
-            Booking.hotel_id == current_user.hotel_id, Booking.status == BookingStatus.CHECKED_IN
-        )),
-        # revenue_today
-        session.execute(select(func.sum(Booking.total_amount)).where(
-            Booking.hotel_id == current_user.hotel_id, Booking.created_at >= start_of_day
-        )),
-        # arrivals_yest
-        session.execute(select(func.count(Booking.id)).where(
-            Booking.hotel_id == current_user.hotel_id, Booking.check_in == yesterday,
-            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
-        )),
-        # occupancy_yest
-        session.execute(select(func.count(Booking.id)).where(
-            Booking.hotel_id == current_user.hotel_id, 
-            Booking.status == BookingStatus.CHECKED_IN,
-            Booking.updated_at < start_of_day
-        )),
-        # revenue_yest
-        session.execute(select(func.sum(Booking.total_amount)).where(
-            Booking.hotel_id == current_user.hotel_id, 
-            Booking.created_at >= start_of_yest,
-            Booking.created_at < start_of_day
-        )),
-        # pending_bookings
-        session.execute(select(func.count(Booking.id)).where(
-            Booking.hotel_id == current_user.hotel_id, Booking.status == BookingStatus.PENDING
-        )),
-        # total_rooms
-        session.execute(select(func.sum(RoomType.total_inventory)).where(
-            RoomType.hotel_id == current_user.hotel_id, RoomType.is_active == True
-        ))
-    ]
+    # Sequential execution of DB queries (SQLAlchemy AsyncSession does not allow parallel execution)
+    arrivals_today_res = await session.execute(select(func.count(Booking.id)).where(
+        Booking.hotel_id == current_user.hotel_id, Booking.check_in == today,
+        Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
+    ))
+    arrivals_today = arrivals_today_res.scalar() or 0
 
-    results = await asyncio.gather(*queries)
+    departures_today_res = await session.execute(select(func.count(Booking.id)).where(
+        Booking.hotel_id == current_user.hotel_id, Booking.check_out == today,
+        Booking.status == BookingStatus.CHECKED_IN
+    ))
+    departures_today = departures_today_res.scalar() or 0
 
-    arrivals_today = results[0].scalar() or 0
-    departures_today = results[1].scalar() or 0
-    occupancy_today = results[2].scalar() or 0
-    revenue_today = float(results[3].scalar() or 0)
-    arrivals_yest = results[4].scalar() or 0
-    occupancy_yest = results[5].scalar() or 0
-    revenue_yest = float(results[6].scalar() or 0)
-    pending_bookings = results[7].scalar() or 0
-    total_rooms = results[8].scalar() or 0
+    occupancy_today_res = await session.execute(select(func.count(Booking.id)).where(
+        Booking.hotel_id == current_user.hotel_id, Booking.status == BookingStatus.CHECKED_IN
+    ))
+    occupancy_today = occupancy_today_res.scalar() or 0
+
+    revenue_today_res = await session.execute(select(func.sum(Booking.total_amount)).where(
+        Booking.hotel_id == current_user.hotel_id, Booking.created_at >= start_of_day
+    ))
+    revenue_today = float(revenue_today_res.scalar() or 0)
+
+    arrivals_yest_res = await session.execute(select(func.count(Booking.id)).where(
+        Booking.hotel_id == current_user.hotel_id, Booking.check_in == yesterday,
+        Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
+    ))
+    arrivals_yest = arrivals_yest_res.scalar() or 0
+
+    occupancy_yest_res = await session.execute(select(func.count(Booking.id)).where(
+        Booking.hotel_id == current_user.hotel_id, 
+        Booking.status == BookingStatus.CHECKED_IN,
+        Booking.updated_at < start_of_day
+    ))
+    occupancy_yest = occupancy_yest_res.scalar() or 0
+
+    revenue_yest_res = await session.execute(select(func.sum(Booking.total_amount)).where(
+        Booking.hotel_id == current_user.hotel_id, 
+        Booking.created_at >= start_of_yest,
+        Booking.created_at < start_of_day
+    ))
+    revenue_yest = float(revenue_yest_res.scalar() or 0)
+
+    pending_bookings_res = await session.execute(select(func.count(Booking.id)).where(
+        Booking.hotel_id == current_user.hotel_id, Booking.status == BookingStatus.PENDING
+    ))
+    pending_bookings = pending_bookings_res.scalar() or 0
+
+    total_rooms_res = await session.execute(select(func.sum(RoomType.total_inventory)).where(
+        RoomType.hotel_id == current_user.hotel_id, RoomType.is_active == True
+    ))
+    total_rooms = total_rooms_res.scalar() or 0
 
     def calc_trend(curr, prev):
         if prev == 0: return 100 if curr > 0 else 0

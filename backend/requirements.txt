@@ -32,3 +32,4 @@ matplotlib
 langchain-community
 user-agents
 brevo-python
+razorpay
