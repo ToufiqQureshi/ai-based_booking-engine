@@ -318,7 +318,7 @@ function BookingCheckoutInner() {
 
                 // Open Razorpay Checkout Popup
                 const options = {
-                    key: 'rzp_test_SuHDIa6RIMTJhm',
+                    key: 'rzp_test_SuLAf6S8NNoGNT',
                     amount: orderData.amount as number,
                     currency: orderData.currency as string,
                     name: hotel?.name || 'Hotel Booking',
