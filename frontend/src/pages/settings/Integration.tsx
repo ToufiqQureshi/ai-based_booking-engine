@@ -275,12 +275,12 @@ const IntegrationPage = () => {
                                 <Label>Direct Booking Link</Label>
                                 <div className="flex gap-2">
                                     <Input
-                                        value={`${window.location.origin}/book/${activeHotelSlug || 'my-grand-hotel'}/rooms`}
+                                        value={`${window.location.origin.replace('//app.', '//').replace('//superadmin.', '//')}/book/${activeHotelSlug || 'my-grand-hotel'}/rooms`}
                                         readOnly
                                     />
                                     <Button
                                         variant="outline"
-                                        onClick={() => copyToClipboard(`${window.location.origin}/book/${activeHotelSlug || 'my-grand-hotel'}/rooms`)}
+                                        onClick={() => copyToClipboard(`${window.location.origin.replace('//app.', '//').replace('//superadmin.', '//')}/book/${activeHotelSlug || 'my-grand-hotel'}/rooms`)}
                                     >
                                         Copy
                                     </Button>

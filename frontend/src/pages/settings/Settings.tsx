@@ -320,7 +320,7 @@ export function SettingsPage() {
                   </div>
                   <div className="flex rounded-xl shadow-sm border border-input focus-within:ring-2 focus-within:ring-violet-600 focus-within:border-violet-600 overflow-hidden transition-all bg-background">
                     <span className="px-4 bg-muted dark:bg-slate-900 text-muted-foreground flex items-center text-xs font-mono border-r select-none">
-                      {window.location.host}/book/
+                      {window.location.host.replace('app.', '').replace('superadmin.', '')}/book/
                     </span>
                     <Input
                       id="hotelSlug"
