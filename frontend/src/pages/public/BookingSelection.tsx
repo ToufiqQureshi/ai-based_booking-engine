@@ -213,21 +213,23 @@ export default function BookingSelection() {
                 const cachedHotel = sessionStorage.getItem(hotelCacheKey);
                 const cachedAddons = sessionStorage.getItem(addonsCacheKey);
 
-                if (cachedRooms && cachedHotel && cachedAddons) {
+                // Only cache room availability search, keep hotel settings and addons fresh
+                if (cachedRooms) {
                     try {
                         const parsedRooms = JSON.parse(cachedRooms);
-                        const parsedHotel = JSON.parse(cachedHotel);
-                        const parsedAddons = JSON.parse(cachedAddons);
-
                         const roomsFresh = Date.now() - (parsedRooms._cachedAt || 0) < CACHE_TTL;
-                        const hotelFresh = Date.now() - (parsedHotel._cachedAt || 0) < CACHE_TTL;
 
-                        if (roomsFresh && hotelFresh) {
+                        if (roomsFresh) {
                             setRooms(parsedRooms.data);
-                            setHotel(parsedHotel.data);
-                            setAddons((parsedAddons.data || []).filter((a: any) => a.is_active !== false));
+                            // Fetch hotel details and addons fresh to ensure settings (taxes, policies) are in sync
+                            const [addonsData, hotelData] = await Promise.all([
+                                apiClient.get<AddOn[]>(`/public/hotels/${hotelSlug}/addons`),
+                                apiClient.get<Hotel>(`/public/hotels/${hotelSlug}`)
+                            ]);
+                            setHotel(hotelData);
+                            setAddons((addonsData || []).filter((a: any) => a.is_active !== false));
                             setIsLoading(false);
-                            return; // Cache hit — no API call needed
+                            return;
                         }
                     } catch {
                         // Corrupted cache — continue to fetch fresh
