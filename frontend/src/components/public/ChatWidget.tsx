@@ -87,11 +87,11 @@ const getNights = (inDate: string, outDate: string) => {
 };
 
 const getApiUrl = () => {
-    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
     const hostname = window.location.hostname;
     if (hostname.includes('staybooker.ai')) {
         return 'https://api.staybooker.ai/api/v1';
     }
+    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
     return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
 };
 
