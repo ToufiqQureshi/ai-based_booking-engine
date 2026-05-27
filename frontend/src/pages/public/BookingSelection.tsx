@@ -203,40 +203,6 @@ export default function BookingSelection() {
                     promo_code: urlPromo || ''
                 }).toString();
 
-                // --- 5-min sessionStorage cache ---
-                const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in ms
-                const cacheKey = `booking_cache:${hotelSlug}:${query}`;
-                const hotelCacheKey = `booking_hotel:${hotelSlug}`;
-                const addonsCacheKey = `booking_addons:${hotelSlug}`;
-
-                const cachedRooms = sessionStorage.getItem(cacheKey);
-                const cachedHotel = sessionStorage.getItem(hotelCacheKey);
-                const cachedAddons = sessionStorage.getItem(addonsCacheKey);
-
-                // Only cache room availability search, keep hotel settings and addons fresh
-                if (cachedRooms) {
-                    try {
-                        const parsedRooms = JSON.parse(cachedRooms);
-                        const roomsFresh = Date.now() - (parsedRooms._cachedAt || 0) < CACHE_TTL;
-
-                        if (roomsFresh) {
-                            setRooms(parsedRooms.data);
-                            // Fetch hotel details and addons fresh to ensure settings (taxes, policies) are in sync
-                            const [addonsData, hotelData] = await Promise.all([
-                                apiClient.get<AddOn[]>(`/public/hotels/${hotelSlug}/addons`),
-                                apiClient.get<Hotel>(`/public/hotels/${hotelSlug}`)
-                            ]);
-                            setHotel(hotelData);
-                            setAddons((addonsData || []).filter((a: any) => a.is_active !== false));
-                            setIsLoading(false);
-                            return;
-                        }
-                    } catch {
-                        // Corrupted cache — continue to fetch fresh
-                    }
-                }
-                // --- End cache check ---
-
                 const [roomsData, addonsData, hotelData] = await Promise.all([
                     apiClient.get<PublicRoomSearchResult[]>(`/public/hotels/${hotelSlug}/rooms?${query}`),
                     apiClient.get<AddOn[]>(`/public/hotels/${hotelSlug}/addons`),
@@ -247,15 +213,6 @@ export default function BookingSelection() {
                 setAddons(addonsData.filter(a => a.is_active !== false));
                 setHotel(hotelData);
 
-                // --- Save to sessionStorage cache ---
-                try {
-                    sessionStorage.setItem(cacheKey, JSON.stringify({ data: roomsData, _cachedAt: Date.now() }));
-                    sessionStorage.setItem(hotelCacheKey, JSON.stringify({ data: hotelData, _cachedAt: Date.now() }));
-                    sessionStorage.setItem(addonsCacheKey, JSON.stringify({ data: addonsData, _cachedAt: Date.now() }));
-                } catch {
-                    // sessionStorage full — silently ignore
-                }
-                // --- End cache save ---
 
             } catch (error) {
                 console.error('Failed to fetch data:', error);
