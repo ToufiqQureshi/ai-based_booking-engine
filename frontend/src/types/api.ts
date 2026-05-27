@@ -128,6 +128,7 @@ export interface HotelSettings {
   room_tax_slabs?: Array<{ from: number; to: number; rate: number }>;
   addon_tax_rate?: number;
   addon_tax_type?: 'inclusive' | 'exclusive';
+  payment_mode?: 'online_only' | 'property_only' | 'both';
 }
 
 // ============== Room Types ==============

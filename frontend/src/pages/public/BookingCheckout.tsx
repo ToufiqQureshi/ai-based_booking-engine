@@ -670,7 +670,7 @@ function BookingCheckoutInner() {
                                                 <div className="flex items-center gap-2 mt-2.5">
                                                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className={cn("h-3.5 transition-opacity", paymentMethod === 'online' ? 'opacity-70' : 'opacity-30')} />
                                                     <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className={cn("h-5 transition-opacity", paymentMethod === 'online' ? 'opacity-70' : 'opacity-30')} />
-                                                    <span className={cn("text-[10px] font-bold uppercase tracking-wider transition-colors", paymentMethod === 'online' ? 'text-slate-400' : 'text-slate-300")}>+ UPI, NetBanking</span>
+                                                    <span className={cn("text-[10px] font-bold uppercase tracking-wider transition-colors", paymentMethod === 'online' ? 'text-slate-400' : 'text-slate-300')}>+ UPI, NetBanking</span>
                                                 </div>
                                             </div>
                                         </label>
@@ -708,7 +708,7 @@ function BookingCheckoutInner() {
                                 )}
                             </div>
                         </div>
-
+                    </div>
                     {/* Right Column: Summary */}
                     <div className="lg:sticky lg:top-8 h-fit animate-enter" style={{ animationDelay: '0.1s' }}>
                         <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-300/50 border border-slate-100">
