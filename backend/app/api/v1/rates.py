@@ -8,6 +8,7 @@ from sqlmodel import select
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.rates import RatePlan, RatePlanCreate, RatePlanRead
+from app.api.v1.availability import clear_availability_cache
 
 router = APIRouter(prefix="/rates", tags=["Rates"])
 
@@ -48,6 +49,7 @@ async def update_rate_plan(
     session.add(rate_plan)
     await session.commit()
     await session.refresh(rate_plan)
+    clear_availability_cache(current_user.hotel_id)
     return rate_plan
 
 @router.post("/plans", response_model=RatePlanRead)
@@ -64,6 +66,7 @@ async def create_rate_plan(
     session.add(rate_plan)
     await session.commit()
     await session.refresh(rate_plan)
+    clear_availability_cache(current_user.hotel_id)
     return rate_plan
 
 @router.delete("/plans/{plan_id}")
@@ -85,4 +88,5 @@ async def delete_rate_plan(plan_id: str, current_user: CurrentUser, session: DbS
         
     session.delete(rate_plan)
     await session.commit()
+    clear_availability_cache(current_user.hotel_id)
     return {"message": "Rate plan deleted"}

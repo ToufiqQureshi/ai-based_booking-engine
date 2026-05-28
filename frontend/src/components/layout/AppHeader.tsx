@@ -1,5 +1,4 @@
-// Application Header with hotel selector and user menu
-import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare } from 'lucide-react';
+import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -26,23 +25,23 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { NotificationPopover } from '@/components/notifications/NotificationPopover';
-
 import { ChatWidget } from '@/components/support/ChatWidget';
+import { cn } from '@/lib/utils';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export function AppHeader() {
   const { user, hotel, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [properties, setProperties] = React.useState<any[]>([]);
   const [isAddPropertyOpen, setIsAddPropertyOpen] = React.useState(false);
   const [isHelpOpen, setIsHelpOpen] = React.useState(false);
-  const [isChatOpen, setIsChatOpen] = React.useState(false); // Chat state
+  const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [newPropName, setNewPropName] = React.useState('');
   const [newPropSlug, setNewPropSlug] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
   const navigate = useNavigate();
 
-  // ... (fetch properties effect)
   React.useEffect(() => {
-    // Only fetch if user is logged in
     if (user) {
       import('@/api/client').then(({ apiClient }) => {
         apiClient.get('/properties')
@@ -59,7 +58,6 @@ export function AppHeader() {
       window.location.reload();
     } catch (error) {
       console.error("Failed to switch property", error);
-      alert("Failed to switch property");
     }
   };
 
@@ -72,10 +70,8 @@ export function AppHeader() {
         name: newPropName,
         slug: newPropSlug
       });
-      window.location.reload(); // Reload to switch to new property automatically
+      window.location.reload();
     } catch (error) {
-      console.error("Failed to create property", error);
-      alert("Failed to create property. Slug might be taken.");
       setIsCreating(false);
     }
   };
@@ -88,178 +84,201 @@ export function AppHeader() {
     .slice(0, 2) || 'U';
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6 shadow-sm">
-      {/* Sidebar Toggle */}
-      <SidebarTrigger className="-ml-2">
-        <Menu className="h-5 w-5" />
-        <span className="sr-only">Toggle sidebar</span>
+    <header className="sticky top-0 z-40 flex h-14 items-center gap-3 bg-background dark:bg-slate-900 px-6 border-b border-border dark:border-slate-800">
+      
+      {/* Sidebar Trigger */}
+      <SidebarTrigger className="-ml-2 h-9 w-9 rounded-lg hover:bg-muted/30 transition-colors">
+        <Menu className="h-5 w-5 text-muted-foreground" />
       </SidebarTrigger>
 
-      {/* Hotel Selector (for multi-property users) */}
+      {/* Property Selector */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="gap-2 font-medium">
-            <span className="hidden sm:inline">{hotel?.name || 'Select Hotel'}</span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <Button variant="ghost" className="h-10 px-3 gap-3 rounded-lg hover:bg-muted/30 border border-transparent hover:border-border transition-all group">
+            <div className="h-7 w-7 rounded-md bg-blue-600 flex items-center justify-center shadow-sm">
+                <Building2 className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex flex-col items-start">
+                <span className="text-xs font-bold text-foreground leading-none mb-1">{hotel?.name || 'Select Hotel'}</span>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider leading-none">Main Branch</span>
+            </div>
+            <ChevronDown className="h-3 w-3 text-muted-foreground group-hover:text-blue-600 transition-colors" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Switch Property</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+        <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-xl border-border shadow-xl bg-popover">
+          <div className="px-3 py-2 mb-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Your Properties</p>
+          </div>
+          <DropdownMenuSeparator className="bg-muted" />
 
-          {properties.map(p => (
-            <DropdownMenuItem key={p.id} className="gap-2" onClick={() => handleSwitchProperty(p.id)}>
-              <Badge variant={p.is_current ? "default" : "outline"} className="h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs">
-                {p.name[0]}
-              </Badge>
-              {p.name}
-              {p.is_current && <span className="ml-auto text-xs opacity-50">Active</span>}
-            </DropdownMenuItem>
-          ))}
+          <div className="max-h-[300px] overflow-y-auto space-y-0.5 my-1">
+            {properties.map(p => (
+                <DropdownMenuItem key={p.id} className={cn(
+                    "flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all",
+                    p.is_current ? "bg-blue-50 text-blue-700" : "hover:bg-muted/30 text-muted-foreground"
+                )} onClick={() => handleSwitchProperty(p.id)}>
+                <div className={cn(
+                    "h-7 w-7 rounded-md flex items-center justify-center font-bold text-xs",
+                    p.is_current ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground"
+                )}>
+                    {p.name[0]}
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-semibold text-sm">{p.name}</span>
+                    {p.is_current && <span className="text-[9px] font-bold uppercase text-blue-500">Current</span>}
+                </div>
+                </DropdownMenuItem>
+            ))}
+          </div>
 
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-primary cursor-pointer" onSelect={(e) => { e.preventDefault(); setIsAddPropertyOpen(true); }}>
-            + Add New Property
+          <DropdownMenuSeparator className="bg-muted" />
+          <DropdownMenuItem className="p-2.5 rounded-lg text-blue-600 font-bold text-xs cursor-pointer hover:bg-blue-600 hover:text-white transition-all gap-2" onSelect={(e) => { e.preventDefault(); setIsAddPropertyOpen(true); }}>
+            <Plus className="h-4 w-4" />
+            Add New Property
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Add Property Dialog */}
-      <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Property</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="prop-name">Hotel Name</Label>
-              <Input id="prop-name" value={newPropName} onChange={(e) => {
-                setNewPropName(e.target.value);
-                // Auto-generate slug
-                setNewPropSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-'));
-              }} placeholder="e.g. Lagoona Goa" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="prop-slug">URL Slug</Label>
-              <Input id="prop-slug" value={newPropSlug} onChange={(e) => setNewPropSlug(e.target.value)} placeholder="e.g. lagoona-goa" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddProperty} disabled={isCreating}>
-              {isCreating ? 'Creating...' : 'Create Property'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Help Dialog */}
-      <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Help & Support</DialogTitle>
-            <DialogDescription>
-              Need assistance? We are here to help you 24/7.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
-              <div className="bc-primary/10 p-2 rounded-full text-primary">
-                <Phone className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Call Us</p>
-                <p className="text-sm text-muted-foreground">+91 98765 43210</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/50">
-              <div className="bc-primary/10 p-2 rounded-full text-primary">
-                <Mail className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Email Support</p>
-                <p className="text-sm text-muted-foreground">support@hotelierhub.com</p>
-              </div>
-            </div>
-
-            <div
-              className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-              onClick={() => {
-                setIsHelpOpen(false);
-                setIsChatOpen(true);
-              }}
-            >
-              <div className="bc-primary/10 p-2 rounded-full text-primary group-hover:bg-primary/20">
-                <MessageSquare className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="font-medium">Live Chat</p>
-                <p className="text-sm text-muted-foreground">Chat with our support team</p>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsHelpOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Search (Desktop) */}
-      <div className="hidden flex-1 md:flex md:max-w-md">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      {/* Global Search */}
+      <div className="hidden flex-1 md:flex md:max-w-md mx-4">
+        <div className="relative w-full group">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-blue-600 transition-colors" />
           <Input
             type="search"
-            placeholder="Search bookings, guests..."
-            className="w-full pl-10 bg-muted/50 border-0 focus-visible:ring-1"
+            placeholder="Search bookings, rooms, guests..."
+            className="w-full h-10 pl-11 bg-muted/30/50 border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-blue-600/10 focus-visible:bg-background transition-all text-sm font-medium text-foreground placeholder:text-muted-foreground"
           />
         </div>
       </div>
 
-      {/* Right Section */}
+      {/* Control Cluster */}
       <div className="ml-auto flex items-center gap-2">
-        {/* Notifications */}
+        {/* Dark Mode Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground dark:hover:text-slate-200 hover:bg-muted dark:hover:bg-slate-800 transition-all"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark'
+            ? <Sun className="h-4 w-4" />
+            : <Moon className="h-4 w-4" />
+          }
+        </Button>
+
+        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-muted-foreground hover:text-blue-600 hover:bg-muted/30 dark:hover:bg-slate-800 transition-all" onClick={() => setIsHelpOpen(true)}>
+            <HelpCircle className="h-5 w-5" />
+        </Button>
         <NotificationPopover />
 
-        {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 pl-2 pr-1">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+            <Button variant="ghost" className="h-10 pl-1 pr-2 gap-2 rounded-lg hover:bg-muted/30 border border-transparent transition-all">
+              <Avatar className="h-8 w-8 rounded-lg shadow-sm">
+                <AvatarFallback className="bg-blue-600 text-white text-[10px] font-bold uppercase">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden flex-col items-start text-left md:flex">
-                <span className="text-sm font-medium">{user?.name || 'User'}</span>
-                <span className="text-xs text-muted-foreground">{user?.role || 'Manager'}</span>
+                <span className="text-xs font-bold text-foreground leading-none mb-1">{user?.name || 'User'}</span>
+                <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider leading-none">{user?.role || 'Staff'}</span>
               </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-3 w-3 text-slate-300" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
-              Profile Settings
+          <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl border-border shadow-xl bg-popover">
+            <DropdownMenuLabel className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Account</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-muted" />
+            <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-muted/30 text-foreground font-semibold text-sm gap-2.5" onSelect={() => navigate('/settings/profile')}>
+              <User className="h-4 w-4 text-muted-foreground" /> My Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/settings?tab=notifications')}>
-              Notification Preferences
+            <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-muted/30 text-foreground font-semibold text-sm gap-2.5" onSelect={() => navigate('/settings?tab=notifications')}>
+              <Bell className="h-4 w-4 text-muted-foreground" /> Notifications
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsHelpOpen(true)}>
-              Help & Support
+            <DropdownMenuItem className="p-2.5 rounded-lg cursor-pointer hover:bg-muted/30 text-foreground font-semibold text-sm gap-2.5" onSelect={() => setIsHelpOpen(true)}>
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" /> Help & Support
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-muted" />
             <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={logout}
+              className="p-2.5 rounded-lg cursor-pointer hover:bg-rose-50 text-rose-600 font-bold text-xs uppercase tracking-wider gap-2.5"
+              onSelect={logout}
             >
-              Sign Out
+              <LogOut className="h-4 w-4" /> Log Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Dialogs */}
+      <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
+        <DialogContent className="rounded-2xl p-0 overflow-hidden bg-background border-none shadow-2xl max-w-md">
+            <div className="bg-blue-600 p-8 text-white">
+                <DialogTitle className="text-xl font-bold mb-1">Add New Property</DialogTitle>
+                <DialogDescription className="text-blue-100 text-sm">Fill in the details below to add another hotel to your account.</DialogDescription>
+            </div>
+            <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Property Name</Label>
+                    <Input className="h-11 rounded-lg border-border bg-muted/30/50 font-medium text-foreground" value={newPropName} onChange={(e) => {
+                        setNewPropName(e.target.value);
+                        setNewPropSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-'));
+                    }} placeholder="e.g. The Grand Plaza" />
+                </div>
+                <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Property URL Slug</Label>
+                    <Input className="h-11 rounded-lg border-border bg-muted/30/50 font-medium text-muted-foreground" value={newPropSlug} onChange={(e) => setNewPropSlug(e.target.value)} placeholder="e.g. grand-plaza" />
+                </div>
+            </div>
+            <DialogFooter className="p-6 bg-muted/50 flex gap-3">
+                <Button variant="ghost" className="rounded-lg font-bold text-muted-foreground" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
+                <Button className="rounded-lg bg-blue-600 hover:bg-blue-700 h-11 px-8 font-bold text-sm shadow-sm" onClick={handleAddProperty} disabled={isCreating}>
+                    {isCreating ? 'Saving...' : 'Add Property'}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
+        <DialogContent className="rounded-2xl p-0 overflow-hidden bg-background border-none shadow-2xl max-w-md">
+            <div className="bg-slate-900 p-8 text-white">
+                <DialogTitle className="text-xl font-bold mb-1">Help & Support</DialogTitle>
+                <DialogDescription className="text-muted-foreground text-sm">Need help? Our team is available 24/7 to assist you.</DialogDescription>
+            </div>
+            <div className="p-6 space-y-3">
+                {[
+                    { icon: Phone, label: 'Call Support', val: '+91 98765 43210' },
+                    { icon: Mail, label: 'Email Support', val: 'support@staybooker.ai' },
+                ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border">
+                        <div className="h-10 w-10 rounded-lg bg-background shadow-sm flex items-center justify-center text-blue-600 border border-border">
+                            <item.icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">{item.label}</p>
+                            <p className="font-bold text-foreground text-sm">{item.val}</p>
+                        </div>
+                    </div>
+                ))}
+
+                <button 
+                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all mt-2 group text-left"
+                    onClick={() => { setIsHelpOpen(false); setIsChatOpen(true); }}
+                >
+                    <div className="h-10 w-10 rounded-lg bg-background/10 flex items-center justify-center">
+                        <MessageSquare className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-blue-200 mb-0.5">Live Chat</p>
+                        <p className="font-bold text-white text-sm">Start a Conversation</p>
+                    </div>
+                </button>
+            </div>
+            <div className="p-4 text-center border-t border-border">
+                <Button variant="ghost" className="text-xs font-bold text-muted-foreground hover:text-blue-600" onClick={() => setIsHelpOpen(false)}>Close</Button>
+            </div>
+        </DialogContent>
+      </Dialog>
 
       <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </header>

@@ -6,26 +6,31 @@ Development mein SQLite, Production mein PostgreSQL use karo.
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
 
 from app.core.config import get_settings
 
 settings = get_settings()
 
-# Supabase/PgBouncer Compatibility Configuration
-connect_args = {
-    "prepared_statement_cache_size": 0,
-    "statement_cache_size": 0,
-    "server_settings": {"jit": "off"}
-}
+is_sqlite = "sqlite" in settings.DATABASE_URL
 
-engine_args = {
-    "echo": False,
-    "future": True,
-    "pool_size": 20,
-    "max_overflow": 10,
-    "pool_timeout": 30,
-    "pool_pre_ping": True,
-}
+if is_sqlite:
+    connect_args = {"check_same_thread": False}
+    engine_args = {"echo": False, "future": True}
+else:
+    connect_args = {
+        "prepared_statement_cache_size": 0,
+        "statement_cache_size": 0,
+        "server_settings": {"jit": "off"}
+    }
+    engine_args = {
+        "echo": False,
+        "future": True,
+        "pool_size": 20,
+        "max_overflow": 10,
+        "pool_timeout": 30,
+        "pool_pre_ping": True,
+    }
 
 engine = create_async_engine(
     settings.DATABASE_URL,
@@ -49,6 +54,55 @@ async def init_db():
     """
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+
+    # Run table migrations for new columns in separate transaction blocks to avoid transaction aborts in PostgreSQL
+    for col, col_type in [
+        ("feature_new_booking", "BOOLEAN DEFAULT TRUE"),
+        ("feature_color_palette", "BOOLEAN DEFAULT TRUE"),
+        ("feature_custom_logo", "BOOLEAN DEFAULT TRUE"),
+        ("feature_custom_widget", "BOOLEAN DEFAULT TRUE")
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE hotels ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+    
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE room_types ADD COLUMN cancellation_policy TEXT"))
+    except Exception:
+        pass
+
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE room_types ADD COLUMN rate_plan_overrides JSON"))
+    except Exception:
+        pass
+
+    for col, col_type in [
+        ("cancellation_fee", "NUMERIC DEFAULT 0.00"),
+        ("refund_amount", "NUMERIC DEFAULT 0.00"),
+        ("refund_status", "VARCHAR(50) DEFAULT 'none'")
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
+    for col, col_type in [
+        ("subtotal_amount", "NUMERIC DEFAULT 0.00"),
+        ("tax_amount", "NUMERIC DEFAULT 0.00"),
+        ("discount_amount", "NUMERIC DEFAULT 0.00"),
+        ("tax_details", "JSON DEFAULT '{}'")
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
 
 
 async def get_session() -> AsyncSession:

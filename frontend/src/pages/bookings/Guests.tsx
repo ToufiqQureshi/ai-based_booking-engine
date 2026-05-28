@@ -28,6 +28,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { apiClient } from '@/api/client';
 import { Guest } from '@/types/api';
+import { PageShell } from '@/components/layout/PageShell';
 
 export function GuestsPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -95,16 +96,10 @@ export function GuestsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Guests</h1>
-          <p className="text-muted-foreground">
-            View and manage your guest directory
-          </p>
-        </div>
-      </div>
+    <PageShell
+      title="Guests"
+      subtitle="View and manage your guest directory"
+    >
 
       {/* Stats Cards - Calculated from real data */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -282,7 +277,7 @@ export function GuestsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }
 

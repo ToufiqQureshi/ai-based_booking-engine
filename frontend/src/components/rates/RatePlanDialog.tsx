@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, TrendingUp, Info, Clock, Calendar, Package, DollarSign, HelpCircle, Check, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -33,6 +33,9 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { RatePlan } from '@/types/api';
+import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
+import { ImageUpload } from '@/components/common/ImageUpload';
 
 const ratePlanSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -44,19 +47,24 @@ const ratePlanSchema = z.object({
     is_active: z.boolean(),
     min_los: z.coerce.number().min(1),
     advance_purchase_days: z.coerce.number().min(0),
-    inclusions: z.string().optional(), // Comma-separated string, will be converted to array
+    inclusions: z.string().optional(),
+    is_package: z.boolean().default(false),
+    package_items: z.string().optional(),
+    market_price: z.coerce.number().min(0).optional().nullable(),
+    image_url: z.string().optional(),
 });
 
 interface RatePlanDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    planToEdit?: RatePlan | null; // If present, we are editing
+    initialData?: RatePlan | null;
     onSuccess: () => void;
+    defaultIsPackage?: boolean;
 }
 
-export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: RatePlanDialogProps) {
+export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, defaultIsPackage = false }: RatePlanDialogProps) {
     const { toast } = useToast();
-    const isEditing = !!planToEdit;
+    const isEditing = !!initialData;
 
     const form = useForm<z.infer<typeof ratePlanSchema>>({
         resolver: zodResolver(ratePlanSchema),
@@ -71,22 +79,33 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: Ra
             min_los: 1,
             advance_purchase_days: 0,
             inclusions: '',
+            is_package: false,
+            package_items: '',
+            market_price: undefined,
+            image_url: '',
         },
     });
 
+    const isRefundable = form.watch('is_refundable');
+    const cancellationHours = form.watch('cancellation_hours');
+
     useEffect(() => {
-        if (planToEdit) {
+        if (initialData) {
             form.reset({
-                name: planToEdit.name,
-                description: planToEdit.description || '',
-                meal_plan: planToEdit.meal_plan || 'EP',
-                price_adjustment: planToEdit.price_adjustment || 0,
-                is_refundable: planToEdit.is_refundable,
-                cancellation_hours: planToEdit.cancellation_hours,
-                is_active: planToEdit.is_active,
-                min_los: planToEdit.min_los || 1,
-                advance_purchase_days: planToEdit.advance_purchase_days || 0,
-                inclusions: (planToEdit.inclusions || []).join(', '),
+                name: initialData.name,
+                description: initialData.description || '',
+                meal_plan: initialData.meal_plan || 'EP',
+                price_adjustment: initialData.price_adjustment || 0,
+                is_refundable: initialData.is_refundable,
+                cancellation_hours: initialData.cancellation_hours,
+                is_active: initialData.is_active,
+                min_los: initialData.min_los || 1,
+                advance_purchase_days: initialData.advance_purchase_days || 0,
+                inclusions: (initialData.inclusions || []).join(', '),
+                is_package: initialData.is_package || false,
+                package_items: (initialData.package_items || []).join(', '),
+                market_price: initialData.market_price,
+                image_url: initialData.image_url || '',
             });
         } else {
             form.reset({
@@ -100,37 +119,42 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: Ra
                 min_los: 1,
                 advance_purchase_days: 0,
                 inclusions: '',
+                is_package: defaultIsPackage,
+                package_items: '',
+                market_price: undefined,
+                image_url: '',
             });
         }
-    }, [planToEdit, form, open]);
+    }, [initialData, form, open, defaultIsPackage]);
 
     const onSubmit = async (values: z.infer<typeof ratePlanSchema>) => {
         try {
-            // Parse inclusions string to array
             const payload = {
                 ...values,
                 inclusions: values.inclusions
                     ? values.inclusions.split(',').map(s => s.trim()).filter(Boolean)
+                    : [],
+                package_items: values.package_items
+                    ? values.package_items.split(',').map(s => s.trim()).filter(Boolean)
                     : []
             };
 
             if (isEditing) {
-                await apiClient.patch(`/rates/plans/${planToEdit.id}`, payload);
+                await apiClient.patch(`/rates/plans/${initialData.id}`, payload);
                 toast({
-                    title: 'Rate Plan Updated',
-                    description: 'Changes saved successfully.',
+                    title: 'Success',
+                    description: 'Rate plan updated successfully.',
                 });
             } else {
                 await apiClient.post('/rates/plans', payload);
                 toast({
-                    title: 'Rate Plan Created',
-                    description: 'New rate plan added successfully.',
+                    title: 'Success',
+                    description: 'New rate plan created successfully.',
                 });
             }
             onSuccess();
             onOpenChange(false);
         } catch (error) {
-            console.error(error);
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -141,204 +165,363 @@ export function RatePlanDialog({ open, onOpenChange, planToEdit, onSuccess }: Ra
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{isEditing ? 'Edit Rate Plan' : 'Add New Rate Plan'}</DialogTitle>
-                    <DialogDescription>
-                        {isEditing ? 'Modify existing rate plan details.' : 'Create a new pricing strategy for your rooms.'}
-                    </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Rate Plan Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g. Bed & Breakfast, Special Deal" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Short description for guests" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="meal_plan"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Meal Plan</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select meal plan" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="EP">EP (Room Only)</SelectItem>
-                                                <SelectItem value="CP">CP (Breakfast)</SelectItem>
-                                                <SelectItem value="MAP">MAP (Breakfast + Dinner)</SelectItem>
-                                                <SelectItem value="AP">AP (All Meals)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="price_adjustment"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Extra Rate (Markup)</FormLabel>
-                                        <FormControl>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
-                                                <Input type="number" min={0} className="pl-7" {...field} />
-                                            </div>
-                                        </FormControl>
-                                        <FormDescription>Added to room base price per night</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="cancellation_hours"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Cancellation (Hours)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" min={0} {...field} value={field.value} onChange={e => field.onChange(e.target.value)} />
-                                        </FormControl>
-                                        <FormDescription>Hours before check-in</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="min_los"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Min Stay (Nights)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" min={1} {...field} />
-                                        </FormControl>
-                                        <FormDescription>Minimum nights required</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="advance_purchase_days"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Advance Purchase (Days)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" min={0} {...field} />
-                                        </FormControl>
-                                        <FormDescription>Book this many days before</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+            <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-background border-none shadow-2xl rounded-2xl">
+                {/* Header */}
+                <div className="bg-muted/50 p-6 sm:p-8 border-b border-border">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-blue-600 mb-2">
+                            <TrendingUp className="w-4 h-4" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Rate Management</span>
                         </div>
+                        <DialogTitle className="text-2xl font-bold text-foreground">
+                            {isEditing ? 'Edit Rate Plan' : 'Add Rate Plan'}
+                        </DialogTitle>
+                        <DialogDescription className="text-muted-foreground text-sm">
+                            {isEditing 
+                                ? 'Update your pricing rules and cancellation policies.' 
+                                : 'Create a new pricing plan for your rooms.'}
+                        </DialogDescription>
+                    </div>
+                </div>
 
-                        <FormField
-                            control={form.control}
-                            name="inclusions"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Inclusions</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g. Free WiFi, Airport Pickup, Welcome Drink" {...field} />
-                                    </FormControl>
-                                    <FormDescription>Comma-separated list of perks</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
+                <div className="max-h-[60vh] overflow-y-auto px-6 sm:px-8 py-6">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                            
+                            {/* Section 1: Basic Info */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-foreground">
+                                    <Info className="h-4 w-4" />
+                                    <h3 className="text-base font-bold">Basic Information</h3>
+                                </div>
+                                
+                                <div className="grid gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Plan Name</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="e.g. Early Bird Offer, Winter Special" className="h-10 border-border focus-visible:ring-blue-600" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Short Description</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="What makes this plan special?" className="h-10 border-border focus-visible:ring-blue-600" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="image_url"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Plan / Package Image</FormLabel>
+                                                <FormControl>
+                                                    <ImageUpload
+                                                        existingImage={field.value}
+                                                        onUploadComplete={(url) => field.onChange(url)}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription className="text-[10px]">
+                                                    Upload an image to display with this rate plan/package on the booking engine.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+
+                            <Separator className="bg-muted" />
+
+                            {/* Section 2: Pricing */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-foreground">
+                                    <DollarSign className="h-4 w-4" />
+                                    <h3 className="text-base font-bold">Pricing Rules</h3>
+                                </div>
+
+                                <div className="grid sm:grid-cols-2 gap-6 p-6 rounded-xl bg-muted/30 border border-border">
+                                    <FormField
+                                        control={form.control}
+                                        name="price_adjustment"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Markup / Add-on Price</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</div>
+                                                        <Input type="number" className="h-10 border-border pl-7" {...field} />
+                                                    </div>
+                                                </FormControl>
+                                                <FormDescription className="text-[10px]">Added to room base price</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="market_price"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Display Price (M.R.P.)</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</div>
+                                                        <Input type="number" placeholder="Original price..." className="h-10 border-border pl-7" {...field} value={field.value ?? ''} />
+                                                    </div>
+                                                </FormControl>
+                                                <FormDescription className="text-[10px]">For strike-through display</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="meal_plan"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Meal Plan</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-10 border-border">
+                                                            <SelectValue placeholder="Select meal plan" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="EP">EP (Room Only)</SelectItem>
+                                                        <SelectItem value="CP">CP (Breakfast Only)</SelectItem>
+                                                        <SelectItem value="MAP">MAP (Breakfast & Dinner)</SelectItem>
+                                                        <SelectItem value="AP">AP (All Meals)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="min_los"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Min. Nights Stay</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" className="h-10 border-border" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Section 3: Policies */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-foreground">
+                                    <Clock className="h-4 w-4" />
+                                    <h3 className="text-base font-bold">Cancellation & Booking Policies</h3>
+                                </div>
+
+                                <div className="grid sm:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="cancellation_hours"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Free Cancellation Before</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <Input type="number" className="h-10 border-border pr-14" {...field} />
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground uppercase">Hours</span>
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="advance_purchase_days"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold text-muted-foreground">Advance Booking Req.</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <Input type="number" className="h-10 border-border pr-14" {...field} />
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground uppercase">Days</span>
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/40 border border-border">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-bold text-foreground">Active Status</p>
+                                            <p className="text-[10px] text-muted-foreground">Show this plan to guests</p>
+                                        </div>
+                                        <FormField
+                                            control={form.control}
+                                            name="is_active"
+                                            render={({ field }) => (
+                                                <FormControl>
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/40 border border-border">
+                                        <div className="space-y-0.5">
+                                            <p className="text-sm font-bold text-foreground">Refundable</p>
+                                            <p className="text-[10px] text-muted-foreground">Allow refunds on cancellation</p>
+                                        </div>
+                                        <FormField
+                                            control={form.control}
+                                            name="is_refundable"
+                                            render={({ field }) => (
+                                                <FormControl>
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                            )}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Guest Live Preview Banner */}
+                                <div className="mt-2 p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                            <Eye className="w-4 h-4 text-indigo-600" />
+                                            Guest View Live Preview on Booking Engine
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded-full bg-background text-[10px] text-indigo-700 font-bold border border-indigo-200">Live Preview</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-0.5">
+                                        <span className="text-xs text-muted-foreground font-medium">Cancellation Policy Display:</span>
+                                        <span className={`text-xs font-bold px-3 py-1 rounded-md shadow-xs border ${
+                                            isRefundable 
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                                                : "bg-rose-50 text-rose-700 border-rose-200"
+                                        }`}>
+                                            {isRefundable ? `Free cancellation up to ${cancellationHours || 0} hours before check-in` : 'Non-Refundable'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 4: Package Inclusions */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-foreground">
+                                    <Package className="h-4 w-4" />
+                                    <h3 className="text-base font-bold">Bundle Package Details</h3>
+                                </div>
+
+                                <div className={cn(
+                                    "p-6 rounded-xl border transition-all",
+                                    form.watch('is_package') 
+                                        ? "bg-blue-50/30 border-blue-100" 
+                                        : "bg-muted/30 border-border"
+                                )}>
+                                    <FormField
+                                        control={form.control}
+                                        name="is_package"
+                                        render={({ field }) => (
+                                            <FormItem className="flex items-center justify-between mb-4">
+                                                <div className="space-y-0.5">
+                                                    <FormLabel className="text-sm font-bold text-foreground">Enable as Package</FormLabel>
+                                                    <FormDescription className="text-[10px]">Bundle extra services with room stay</FormDescription>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {form.watch('is_package') && (
+                                        <div className="space-y-4">
+                                            <FormField
+                                                control={form.control}
+                                                name="package_items"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs font-semibold text-muted-foreground">Package Inclusions (Comma separated)</FormLabel>
+                                                        <FormControl>
+                                                            <Input placeholder="e.g. Free Sightseeing, Spa Session, Welcome Drink" className="h-10 border-border" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className="mt-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="inclusions"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-semibold text-muted-foreground">Standard Amenities (Comma separated)</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="e.g. Free WiFi, AC, Geyser" className="h-10 border-border" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </Form>
+                </div>
+
+                <DialogFooter className="p-6 bg-muted/50 flex items-center justify-between border-t border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <HelpCircle className="h-4 w-4" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Updates will sync instantly</span>
+                    </div>
+                    <div className="flex gap-3">
+                        <Button variant="ghost" className="rounded-lg text-sm font-semibold" onClick={() => onOpenChange(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            disabled={form.formState.isSubmitting}
+                            onClick={form.handleSubmit(onSubmit)}
+                            className="rounded-lg bg-blue-600 hover:bg-blue-700 h-10 px-8 font-bold text-sm shadow-sm flex gap-2"
+                        >
+                            {form.formState.isSubmitting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Check className="h-4 w-4" />
                             )}
-                        />
-
-                        <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/20">
-                            <FormField
-                                control={form.control}
-                                name="is_refundable"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center justify-between rounded-lg p-0">
-                                        <div className="space-y-0.5">
-                                            <FormLabel className="text-base">Refundable</FormLabel>
-                                            <FormDescription>
-                                                Can guests cancel for a refund?
-                                            </FormDescription>
-                                        </div>
-                                        <FormControl>
-                                            <Switch
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="is_active"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center justify-between rounded-lg p-0">
-                                        <div className="space-y-0.5">
-                                            <FormLabel className="text-base">Active Status</FormLabel>
-                                            <FormDescription>
-                                                Visible to guests on booking engine
-                                            </FormDescription>
-                                        </div>
-                                        <FormControl>
-                                            <Switch
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isEditing ? 'Save Changes' : 'Create Plan'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                            {isEditing ? 'Save Changes' : 'Create Plan'}
+                        </Button>
+                    </div>
+                </DialogFooter>
             </DialogContent>
         </Dialog >
     );

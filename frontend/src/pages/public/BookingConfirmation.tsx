@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { CheckCircle2, Calendar, MapPin, Printer, Home, Download, FileText, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,10 +7,21 @@ import { Separator } from '@/components/ui/separator';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+import { apiClient } from '@/api/client';
 
 export default function BookingConfirmation() {
     const { hotelSlug } = useParams();
     const location = useLocation();
+
+    const [hotel, setHotel] = useState<any>(null);
+
+    useEffect(() => {
+        if (hotelSlug) {
+            apiClient.get(`/public/hotels/${hotelSlug}`)
+                .then(res => setHotel(res))
+                .catch(console.error);
+        }
+    }, [hotelSlug]);
 
     const booking = location.state?.booking;
 
@@ -61,17 +73,27 @@ export default function BookingConfirmation() {
         doc.line(14, 76, 196, 76);
 
         // Table
-        const tableBody = booking.rooms.flatMap((room: any) => [
+        const roomsListBody = booking.rooms.flatMap((room: any) => [
             [
-                `${room.room_type_name}`,
-                `1 Night x 1 Room`,
+                room.cancellation_policy 
+                    ? `${room.room_type_name}\nPolicy: ${room.cancellation_policy}`
+                    : `${room.room_type_name}`,
+                `Room Stay`,
                 new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(room.total_price)
             ]
         ]);
 
+        const addonsListBody = (booking.addons || []).map((addon: any) => [
+            addon.name,
+            `Experience / Activity`,
+            new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(addon.price)
+        ]);
+
+        const tableBody = [...roomsListBody, ...addonsListBody];
+
         autoTable(doc, {
             startY: 85,
-            head: [['Description', 'Quantity', 'Amount']],
+            head: [['Description', 'Type', 'Amount']],
             body: tableBody,
             theme: 'striped',
             headStyles: { fillColor: [51, 65, 85] },
@@ -80,17 +102,56 @@ export default function BookingConfirmation() {
         // @ts-ignore
         const finalY = doc.lastAutoTable.finalY || 150;
 
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        
+        let yOffset = finalY + 10;
+        
+        // Subtotal
+        doc.text("Subtotal:", 140, yOffset);
+        doc.text(
+            new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.subtotal_amount || booking.total_amount),
+            196, yOffset,
+            { align: 'right' }
+        );
+        yOffset += 6;
+
+        // Taxes
+        const taxName = booking.tax_details?.tax_name || "Taxes";
+        doc.text(`${taxName}:`, 140, yOffset);
+        doc.text(
+            new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.tax_amount || 0),
+            196, yOffset,
+            { align: 'right' }
+        );
+        yOffset += 6;
+
+        if (booking.discount_amount > 0) {
+            doc.text("Discount:", 140, yOffset);
+            doc.text(
+                `-${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.discount_amount)}`,
+                196, yOffset,
+                { align: 'right' }
+            );
+            yOffset += 6;
+        }
+
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text("Total Paid:", 140, finalY + 15);
+        doc.text("Total Paid:", 140, yOffset + 2);
         doc.text(
             new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount),
-            196, finalY + 15,
+            196, yOffset + 2,
             { align: 'right' }
         );
 
         doc.save(`Invoice_${booking.booking_number}.pdf`);
     };
+
+    const getNormalizedColor = (col?: string | null) => {
+        return col || '#7c3aed';
+    };
+    const themeColor = getNormalizedColor(hotel?.primary_color);
 
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-4 selection:bg-primary/10">
@@ -114,7 +175,7 @@ export default function BookingConfirmation() {
                 {/* Ticket Card */}
                 <Card className="overflow-hidden border-0 shadow-2xl shadow-slate-200/50 rounded-3xl bg-white relative">
                     {/* Decorative top border */}
-                    <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-primary via-purple-500 to-primary" />
+                    <div className="absolute top-0 inset-x-0 h-2" style={{ backgroundColor: themeColor }} />
 
                     <div className="p-8 pb-0">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -126,7 +187,7 @@ export default function BookingConfirmation() {
                                 <Button variant="outline" size="sm" onClick={() => window.print()} className="rounded-full border-slate-200 hover:bg-slate-50">
                                     <Printer className="mr-2 h-4 w-4" /> Print
                                 </Button>
-                                <Button size="sm" onClick={handleDownloadInvoice} className="rounded-full shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-transform">
+                                <Button size="sm" onClick={handleDownloadInvoice} className="rounded-full shadow-lg text-white hover:-translate-y-0.5 transition-transform" style={{ backgroundColor: themeColor }}>
                                     <Download className="mr-2 h-4 w-4" /> Invoice
                                 </Button>
                             </div>
@@ -161,31 +222,76 @@ export default function BookingConfirmation() {
                         </div>
                     </div>
 
-                    <div className="bg-slate-50/50 p-8 border-t border-slate-100">
-                        <h3 className="font-bold text-slate-900 mb-4">Itinerary</h3>
-                        {booking.rooms && booking.rooms.length > 0 ? (
-                            <div className="space-y-3">
-                                {booking.rooms.map((room: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
-                                        <div>
-                                            <p className="font-bold text-slate-900">{room.room_type_name}</p>
-                                            <p className="text-sm text-slate-500">{room.rate_plan_name}</p>
+                    <div className="bg-slate-50/50 p-8 border-t border-slate-100 space-y-6">
+                        <div>
+                            <h3 className="font-bold text-slate-900 mb-4">Itinerary</h3>
+                            {booking.rooms && booking.rooms.length > 0 ? (
+                                <div className="space-y-3">
+                                    {booking.rooms.map((room: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center p-4 rounded-2xl bg-white border border-slate-100 shadow-sm animate-enter">
+                                            <div>
+                                                <p className="font-bold text-slate-900">{room.room_type_name}</p>
+                                                <p className="text-sm text-slate-500">{room.rate_plan_name}</p>
+                                                {room.cancellation_policy && (
+                                                    <p className="text-xs text-red-500 font-semibold mt-1">
+                                                        Cancellation Policy: {room.cancellation_policy}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <span className="font-bold text-slate-900">
+                                                {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(room.total_price)}
+                                            </span>
                                         </div>
-                                        <span className="font-bold text-slate-900">
-                                            {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(room.total_price)}
-                                        </span>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-slate-400 italic">Room details unavailable.</p>
+                            )}
+                        </div>
+
+                        {booking.addons && booking.addons.length > 0 && (
+                            <div>
+                                <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-indigo-500" /> Experiences & Activities</h3>
+                                <div className="space-y-2">
+                                    {booking.addons.map((addon: any, i: number) => (
+                                        <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm text-sm">
+                                            <span className="text-slate-600 font-medium">{addon.name}</span>
+                                            <span className="font-bold text-slate-900">
+                                                {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(addon.price)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        ) : (
-                            <p className="text-slate-400 italic">Room details unavailable.</p>
                         )}
 
-                        <div className="flex justify-between items-center pt-8 mt-4 border-t border-slate-200 border-dashed">
-                            <p className="text-slate-500 font-medium">Total Paid</p>
-                            <p className="text-3xl font-bold text-primary tracking-tight">
-                                {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount)}
-                            </p>
+                        <div className="border-t border-slate-200 border-dashed pt-4 space-y-2 text-sm text-slate-500">
+                            <div className="flex justify-between">
+                                <span>Subtotal</span>
+                                <span className="font-semibold text-slate-800">
+                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.subtotal_amount || booking.total_amount)}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Taxes ({booking.tax_details?.tax_name || "GST"})</span>
+                                <span className="font-semibold text-slate-800">
+                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.tax_amount || 0)}
+                                </span>
+                            </div>
+                            {booking.discount_amount > 0 && (
+                                <div className="flex justify-between text-green-600">
+                                    <span>Discount</span>
+                                    <span className="font-bold">
+                                        -{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.discount_amount)}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center pt-4 border-t border-slate-200 border-dashed">
+                                <p className="text-slate-900 font-bold text-base">Total Paid</p>
+                                <p className="text-3xl font-black tracking-tight" style={{ color: themeColor }}>
+                                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount)}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </Card>

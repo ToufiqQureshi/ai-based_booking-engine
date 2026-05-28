@@ -2,10 +2,10 @@
 Availability Router
 Real-time room inventory calculation and blocking management.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import date, timedelta, datetime
 from fastapi import APIRouter, Query, Depends, HTTPException, status
-from sqlmodel import select, and_, or_
+from sqlmodel import select, and_, or_, delete
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.room import RoomType, RoomBlock, RoomBlockCreate, RoomBlockRead
@@ -18,11 +18,8 @@ from app.core.redis_client import redis_client
 
 def clear_availability_cache(hotel_id: str):
     try:
-        r = redis_client.get_instance()
-        if r:
-            keys = r.keys(f"availability:{hotel_id}:*")
-            if keys:
-                r.delete(*keys)
+        redis_client.delete_pattern(f"availability:{hotel_id}:*")
+        redis_client.delete_pattern(f"public:rooms:{hotel_id}:*")
     except Exception as e:
         print(f"Failed clearing availability cache for hotel {hotel_id}: {e}")
 
@@ -315,3 +312,275 @@ async def update_daily_rates(
     clear_availability_cache(current_user.hotel_id)
     
     return {"message": "Rates updated successfully"}
+
+
+# --- HELPER FUNCTIONS FOR CLEAN CALENDAR OVERRIDES ---
+
+async def set_single_day_rate(session: DbSession, hotel_id: str, room_type_id: str, d: date, price: float):
+    # Query any overlapping rates
+    stmt = select(RoomRate).where(
+        RoomRate.hotel_id == hotel_id,
+        RoomRate.room_type_id == room_type_id,
+        RoomRate.rate_plan_id == None,
+        RoomRate.date_from <= d,
+        RoomRate.date_to >= d
+    )
+    res = await session.execute(stmt)
+    overlaps = res.scalars().all()
+    
+    if not overlaps:
+        new_rate = RoomRate(
+            hotel_id=hotel_id,
+            room_type_id=room_type_id,
+            rate_plan_id=None,
+            date_from=d,
+            date_to=d,
+            price=price
+        )
+        session.add(new_rate)
+        return
+        
+    for existing in overlaps:
+        if existing.date_from == d and existing.date_to == d:
+            existing.price = price
+            session.add(existing)
+        elif existing.date_from < d and existing.date_to > d:
+            left_rate = RoomRate(
+                hotel_id=hotel_id,
+                room_type_id=room_type_id,
+                rate_plan_id=None,
+                date_from=existing.date_from,
+                date_to=d - timedelta(days=1),
+                price=existing.price
+            )
+            right_rate = RoomRate(
+                hotel_id=hotel_id,
+                room_type_id=room_type_id,
+                rate_plan_id=None,
+                date_from=d + timedelta(days=1),
+                date_to=existing.date_to,
+                price=existing.price
+            )
+            session.add(left_rate)
+            session.add(right_rate)
+            
+            existing.date_from = d
+            existing.date_to = d
+            existing.price = price
+            session.add(existing)
+        elif existing.date_from < d and existing.date_to == d:
+            existing.date_to = d - timedelta(days=1)
+            session.add(existing)
+            target_rate = RoomRate(
+                hotel_id=hotel_id,
+                room_type_id=room_type_id,
+                rate_plan_id=None,
+                date_from=d,
+                date_to=d,
+                price=price
+            )
+            session.add(target_rate)
+        elif existing.date_from == d and existing.date_to > d:
+            existing.date_from = d + timedelta(days=1)
+            session.add(existing)
+            target_rate = RoomRate(
+                hotel_id=hotel_id,
+                room_type_id=room_type_id,
+                rate_plan_id=None,
+                date_from=d,
+                date_to=d,
+                price=price
+            )
+            session.add(target_rate)
+
+
+async def set_single_day_block(session: DbSession, hotel_id: str, room_type_id: str, d: date, blocked_count: int):
+    stmt = select(RoomBlock).where(
+        RoomBlock.hotel_id == hotel_id,
+        RoomBlock.room_type_id == room_type_id,
+        RoomBlock.start_date <= d,
+        RoomBlock.end_date >= d
+    )
+    res = await session.execute(stmt)
+    overlaps = res.scalars().all()
+    
+    for existing in overlaps:
+        if existing.start_date == d and existing.end_date == d:
+            await session.delete(existing)
+        elif existing.start_date < d and existing.end_date > d:
+            left_block = RoomBlock(
+                hotel_id=hotel_id,
+                room_type_id=room_type_id,
+                start_date=existing.start_date,
+                end_date=d - timedelta(days=1),
+                reason=existing.reason,
+                blocked_count=existing.blocked_count
+            )
+            right_block = RoomBlock(
+                hotel_id=hotel_id,
+                room_type_id=room_type_id,
+                start_date=d + timedelta(days=1),
+                end_date=existing.end_date,
+                reason=existing.reason,
+                blocked_count=existing.blocked_count
+            )
+            session.add(left_block)
+            session.add(right_block)
+            await session.delete(existing)
+        elif existing.start_date < d and existing.end_date == d:
+            existing.end_date = d - timedelta(days=1)
+            session.add(existing)
+        elif existing.start_date == d and existing.end_date > d:
+            existing.start_date = d + timedelta(days=1)
+            session.add(existing)
+            
+    if blocked_count > 0:
+        new_block = RoomBlock(
+            hotel_id=hotel_id,
+            room_type_id=room_type_id,
+            start_date=d,
+            end_date=d,
+            reason="Weekend Block Override",
+            blocked_count=blocked_count
+        )
+        session.add(new_block)
+
+
+# --- REQUEST SCHEMAS & ENDPOINTS ---
+
+class WeekendUpdateRequest(BaseModel):
+    room_type_id: str
+    start_date: date
+    end_date: date
+    price: Optional[float] = None
+    blocked_count: Optional[int] = None
+    reset_to_default: Optional[bool] = False
+
+
+class CopyCalendarRequest(BaseModel):
+    room_type_id: str
+    source_start_date: date
+    source_end_date: date
+    target_start_date: date
+    target_end_date: date
+    copy_price: bool
+    copy_availability: bool
+
+
+@router.post("/weekend-update")
+async def update_weekends(
+    data: WeekendUpdateRequest,
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """
+    Update pricing and/or availability block count specifically for Saturdays and Sundays
+    within the chosen date range. Or reset overrides back to defaults.
+    """
+    curr = data.start_date
+    updated_days = 0
+    while curr <= data.end_date:
+        # 5 is Saturday, 6 is Sunday
+        if curr.weekday() in (5, 6):
+            if data.reset_to_default:
+                # Delete custom room rates for this day
+                await session.execute(
+                    delete(RoomRate).where(
+                        RoomRate.hotel_id == current_user.hotel_id,
+                        RoomRate.room_type_id == data.room_type_id,
+                        RoomRate.rate_plan_id == None,
+                        RoomRate.date_from <= curr,
+                        RoomRate.date_to >= curr
+                    )
+                )
+                # Delete custom room blocks for this day
+                await session.execute(
+                    delete(RoomBlock).where(
+                        RoomBlock.hotel_id == current_user.hotel_id,
+                        RoomBlock.room_type_id == data.room_type_id,
+                        RoomBlock.start_date == curr,
+                        RoomBlock.end_date == curr
+                    )
+                )
+                updated_days += 1
+            else:
+                if data.price is not None:
+                    await set_single_day_rate(session, current_user.hotel_id, data.room_type_id, curr, data.price)
+                if data.blocked_count is not None:
+                    await set_single_day_block(session, current_user.hotel_id, data.room_type_id, curr, data.blocked_count)
+                updated_days += 1
+        curr = curr + timedelta(days=1)
+        
+    await session.commit()
+    clear_availability_cache(current_user.hotel_id)
+    
+    action_text = "reset to defaults" if data.reset_to_default else "applied"
+    return {"message": f"Weekend updates {action_text} successfully for {updated_days} days."}
+
+
+@router.post("/copy")
+async def copy_calendar(
+    data: CopyCalendarRequest,
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """
+    Copy pricing and/or availability settings from a source date range to a target date range.
+    Maps day-by-day sequentially.
+    """
+    room_type = await session.get(RoomType, data.room_type_id)
+    if not room_type or room_type.hotel_id != current_user.hotel_id:
+        raise HTTPException(status_code=404, detail="Room type not found")
+        
+    days_to_copy = (data.source_end_date - data.source_start_date).days + 1
+    
+    # Fetch source rates
+    rates_stmt = select(RoomRate).where(
+        RoomRate.hotel_id == current_user.hotel_id,
+        RoomRate.room_type_id == data.room_type_id,
+        RoomRate.rate_plan_id == None,
+        RoomRate.date_from <= data.source_end_date,
+        RoomRate.date_to >= data.source_start_date
+    )
+    rates_res = await session.execute(rates_stmt)
+    source_rates = rates_res.scalars().all()
+    
+    price_map = {}
+    for r in source_rates:
+        curr = r.date_from
+        while curr <= r.date_to:
+            price_map[curr] = r.price
+            curr = curr + timedelta(days=1)
+            
+    # Fetch source blocks
+    blocks_stmt = select(RoomBlock).where(
+        RoomBlock.hotel_id == current_user.hotel_id,
+        RoomBlock.room_type_id == data.room_type_id,
+        RoomBlock.start_date <= data.source_end_date,
+        RoomBlock.end_date >= data.source_start_date
+    )
+    blocks_res = await session.execute(blocks_stmt)
+    source_blocks = blocks_res.scalars().all()
+    
+    block_map = {}
+    for b in source_blocks:
+        curr = b.start_date
+        while curr <= b.end_date:
+            block_map[curr] = block_map.get(curr, 0) + b.blocked_count
+            curr = curr + timedelta(days=1)
+            
+    for i in range(days_to_copy):
+        src_day = data.source_start_date + timedelta(days=i)
+        tgt_day = data.target_start_date + timedelta(days=i)
+        
+        if data.copy_price:
+            price = price_map.get(src_day, float(room_type.base_price))
+            await set_single_day_rate(session, current_user.hotel_id, data.room_type_id, tgt_day, price)
+            
+        if data.copy_availability:
+            blocked_count = block_map.get(src_day, 0)
+            await set_single_day_block(session, current_user.hotel_id, data.room_type_id, tgt_day, blocked_count)
+            
+    await session.commit()
+    clear_availability_cache(current_user.hotel_id)
+    return {"message": f"Calendar settings copied successfully for {days_to_copy} days."}

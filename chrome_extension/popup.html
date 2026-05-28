@@ -1,37 +1,123 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
     <style>
-      body { width: 220px; padding: 15px; font-family: sans-serif; text-align: center; }
-      h3 { margin: 0 0 5px 0; color: #1e40af; }
-      p { margin: 0 0 15px 0; font-size: 12px; color: #64748b; }
-      .status-box { 
-        background: #f0fdf4; 
-        border: 1px solid #bbf7d0; 
-        border-radius: 6px; 
-        padding: 10px;
-        color: #15803d; 
-        font-weight: bold; 
-        font-size: 14px;
+      :root {
+        --primary: #4f46e5;
+        --primary-dark: #3730a3;
+        --success: #10b981;
+        --bg: #ffffff;
+        --text: #1f2937;
+        --text-muted: #6b7280;
+      }
+      body { 
+        width: 280px; 
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        background: var(--bg);
+        color: var(--text);
+        overflow: hidden;
+      }
+      .header {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        padding: 20px 15px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+      }
+      .logo-container {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 10px;
+        margin-bottom: 5px;
       }
-      .dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; display: inline-block; }
+      .logo-icon {
+        width: 24px;
+        height: 24px;
+        background: white;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: var(--primary);
+        font-size: 14px;
+      }
+      h3 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.025em; }
+      .subtitle { font-size: 11px; opacity: 0.8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+      
+      .content { padding: 20px; }
+      
+      .status-card { 
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px; 
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+      .status-active {
+        border-color: #bbf7d0;
+        background: #f0fdf4;
+      }
+      .status-icon {
+        width: 40px;
+        height: 40px;
+        background: #d1fae5;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        color: var(--success);
+      }
+      .status-text { font-weight: 700; color: #065f46; font-size: 14px; }
+      .status-desc { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+      .footer {
+        padding: 15px;
+        border-top: 1px solid #f3f4f6;
+        text-align: center;
+        font-size: 11px;
+        color: var(--text-muted);
+        background: #fcfcfc;
+      }
+      .footer b { color: var(--primary); }
+
+      .pulse {
+        animation: pulse-animation 2s infinite;
+        border-radius: 50%;
+      }
+      @keyframes pulse-animation {
+        0% { box-shadow: 0 0 0 0px rgba(16, 185, 129, 0.4); }
+        100% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      }
     </style>
   </head>
   <body>
-    <h3>Staybooker</h3>
-    <p>Rate Shopper Companion</p>
-    
-    <div class="status-box">
-        <span class="dot"></span>
-        Active & Ready
+    <div class="header">
+      <div class="logo-container">
+        <div class="logo-icon">S</div>
+        <h3>Staybooker</h3>
+      </div>
+      <div class="subtitle">AI Rate Intelligence</div>
     </div>
     
-    <div style="margin-top: 15px; font-size: 11px; color: #94a3b8;">
-        Use the Dashboard to<br>Sync Rates
+    <div class="content">
+      <div class="status-card status-active">
+        <div class="status-icon pulse">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        </div>
+        <div class="status-text">System Active</div>
+        <div class="status-desc">Ready to sync competitor rates</div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      Sync rates directly from the<br><b>Staybooker Dashboard</b>
     </div>
     <script src="popup.js"></script>
   </body>

@@ -29,7 +29,7 @@ from app.core.database import init_db
 from app.core.limiter import limiter, _rate_limit_exceeded_handler, RateLimitExceeded
 
 # Import routers
-from app.api.v1 import auth, users, hotels, rooms, bookings, dashboard, rates, payments, availability, reports, public, integration, upload, addons, channel_manager, amenities, properties, competitors, admin, agent, promos, notifications, analytics
+from app.api.v1 import auth, users, hotels, rooms, bookings, dashboard, rates, payments, availability, reports, public, integration, upload, addons, channel_manager, amenities, properties, competitors, admin, agent, promos, notifications, analytics, leads, superadmin
 
 
 
@@ -74,10 +74,19 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
-# CORS Middleware - Frontend ko allow karna hai
+# Prepare CORS Origins (Settings + SuperAdmin subdomains)
+allowed_origins = list(settings.CORS_ORIGINS)
+extra_origins = [
+    "https://superadmin.staybooker.ai",
+    "https://www.superadmin.staybooker.ai"
+]
+for origin in extra_origins:
+    if origin not in allowed_origins:
+        allowed_origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,11 +102,19 @@ async def health_check():
     return {"status": "healthy", "version": settings.APP_VERSION}
 
 
-# Cache-Control middleware for performance
+# Cache-Control and Advanced Enterprise Security Headers middleware
 @app.middleware("http")
-async def add_cache_headers(request: Request, call_next):
+async def add_security_and_cache_headers(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
+
+    # Security Headers (OWASP Recommended)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
 
     # Cacheable read-only endpoints (60 seconds)
     cacheable_prefixes = [
@@ -143,6 +160,8 @@ app.include_router(agent.router, prefix=API_V1_PREFIX, tags=["AI Agent"])
 app.include_router(promos.router, prefix=API_V1_PREFIX + "/promos", tags=["Promos"])
 app.include_router(notifications.router, prefix=API_V1_PREFIX, tags=["Notifications"])
 app.include_router(analytics.router, prefix=API_V1_PREFIX + "/analytics", tags=["Analytics"])
+app.include_router(leads.router, prefix=API_V1_PREFIX + "/leads", tags=["Leads"])
+app.include_router(superadmin.router, prefix=API_V1_PREFIX)
 
 
 # Root endpoint

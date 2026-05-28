@@ -1,4 +1,4 @@
-
+﻿
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Tag, Loader2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -223,7 +223,7 @@ export function PromoManager() {
                 ) : (
                     <div className="space-y-4">
                         {promos.map(promo => (
-                            <div key={promo.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors">
+                            <div key={promo.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors">
                                 <div className="flex items-center gap-4">
                                     <div className="h-10 w-10 bg-green-100 text-green-700 rounded-full flex items-center justify-center">
                                         <Tag className="h-5 w-5" />

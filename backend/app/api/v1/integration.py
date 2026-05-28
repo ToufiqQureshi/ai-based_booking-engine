@@ -19,6 +19,7 @@ from app.models.integration import (
     WidgetCodeResponse
 )
 from app.models.hotel import Hotel
+from app.core.redis_client import redis_client
 
 router = APIRouter(prefix="/integration", tags=["Integration"])
 
@@ -94,7 +95,7 @@ async def update_integration_settings(
             setattr(settings, key, value)
         settings.updated_at = datetime.utcnow()
     
-    # Sync AI parameters into Hotel table for synchronous background accesses
+    # Sync AI parameters and primary color into Hotel table for synchronous background accesses
     from app.models.hotel import Hotel
     hotel_query = select(Hotel).where(Hotel.id == current_user.hotel_id)
     hotel_res = await session.execute(hotel_query)
@@ -105,10 +106,25 @@ async def update_integration_settings(
             hotel.ai_provider = updates_dict['ai_provider']
         if 'ai_api_key' in updates_dict:
             hotel.ai_api_key = updates_dict['ai_api_key']
+        if 'ai_model' in updates_dict:
+            hotel.ai_model = updates_dict['ai_model']
+        if 'ai_base_url' in updates_dict:
+            hotel.ai_base_url = updates_dict['ai_base_url']
+        if 'widget_primary_color' in updates_dict and updates_dict['widget_primary_color']:
+            hotel.primary_color = updates_dict['widget_primary_color']
         session.add(hotel)
 
     await session.commit()
     await session.refresh(settings)
+    
+    # Invalidate public widget-config cache for this hotel
+    try:
+        cache_key = f"public:widget-config:{current_user.hotel_id}"
+        redis_client.delete_key(cache_key)
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to clear widget-config cache: {e}")
+        
     return settings
 
 
@@ -262,19 +278,21 @@ async def get_widget_code(
 <div id="hotelier-booking-widget" 
      data-hotel-slug="{hotel_slug}"
      data-theme="{settings.widget_theme}"
-     data-color="{settings.widget_primary_color}">
+     data-color="{settings.widget_primary_color}"
+     data-widget-layout="{getattr(settings, "widget_layout", "modern")}">
 </div>'''
     
     javascript_code = f'''<script>
   (function() {{
     var script = document.createElement('script');
-    script.src = '{frontend_url}/widget.js';
+    script.src = '{frontend_url}/widget-v3.js';
     script.async = true;
     script.onload = function() {{
       HotelierWidget.init({{
         hotelSlug: '{hotel_slug}',
         primaryColor: '{settings.widget_primary_color}',
         theme: '{settings.widget_theme}',
+        widgetLayout: '{getattr(settings, "widget_layout", "modern")}',
         apiUrl: '{api_url}',
         frontendUrl: '{frontend_url}'
       }});
@@ -408,3 +426,43 @@ async def test_webhook(
         "http_status": status_code,
         "note": "Check your webhook endpoint for the test event"
     }
+
+@router.post("/test-ai")
+async def test_ai_connection(
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Test AI credentials by sending a simple prompt"""
+    from app.core.guest_agent import create_guest_agent_graph
+    
+    # Get settings
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    res = await session.execute(query)
+    settings = res.scalar_one_or_none()
+    
+    if not settings or not settings.ai_api_key:
+        return {"status": "error", "message": "API Key is missing."}
+        
+    try:
+        agent = create_guest_agent_graph(
+            session, 
+            current_user.hotel_id,
+            settings.ai_provider,
+            settings.ai_api_key,
+            settings.ai_model,
+            settings.ai_base_url,
+            "Test Hotel"
+        )
+        
+        if not agent:
+            return {"status": "error", "message": "Agent failed to initialize. Check your Model ID."}
+            
+        from langchain_core.messages import HumanMessage
+        # Use short timeout for testing
+        response = await agent.ainvoke({"messages": [HumanMessage(content="Respond with 'Ready' only.")]})
+        ai_msg = response["messages"][-1].content
+        
+        return {"status": "success", "message": f"Connection Successful! AI says: {ai_msg}"}
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

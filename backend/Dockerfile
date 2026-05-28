@@ -27,4 +27,4 @@ COPY . .
 # With Pandas and Langchain, 2 workers will easily exceed Railway's 1GB RAM limit
 # and cause "Application failed to respond" (OOM crash).
 # A single Uvicorn process is much safer for a 1GB environment.
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --proxy-headers --forwarded-allow-ips='*'
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8001} --proxy-headers --forwarded-allow-ips='*'

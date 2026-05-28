@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -112,8 +112,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <div
                 className={cn(
                     "relative border-2 border-dashed rounded-lg p-6 transition-colors text-center cursor-pointer min-h-[200px] flex flex-col items-center justify-center gap-2",
-                    isDragging ? "border-primary bg-primary/5" : "border-slate-200 hover:bg-slate-50",
-                    preview ? "border-solid border-slate-200 bg-slate-50" : ""
+                    isDragging ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30",
+                    preview ? "border-solid border-border bg-muted/30" : ""
                 )}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -161,10 +161,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                             <Upload className="h-6 w-6 text-primary" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-sm font-medium text-slate-900">
+                            <p className="text-sm font-medium text-foreground">
                                 Click to upload or drag and drop
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                                 SVG, PNG, JPG or GIF (max 5MB)
                             </p>
                         </div>

@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Suspense, lazy } from "react";
-import { Loader2 } from "lucide-react";
 
 // Auth Pages
 const LoginPage = lazy(() => import("@/pages/auth/Login"));
@@ -22,17 +22,17 @@ const AvailabilityPage = lazy(() => import("@/pages/rooms/Availability"));
 const BookingsPage = lazy(() => import("@/pages/bookings/Bookings"));
 const GuestsPage = lazy(() => import("@/pages/bookings/Guests"));
 const PaymentsPage = lazy(() => import("@/pages/finance/Payments"));
-const ReportsPage = lazy(() => import("@/pages/finance/Reports"));
 const AddonsPage = lazy(() => import("@/pages/marketing/Addons"));
 const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
 const IntegrationPage = lazy(() => import("@/pages/settings/Integration"));
 const ChannelSettings = lazy(() => import("@/pages/dashboard/ChannelSettings"));
-const Amenities = lazy(() => import("@/pages/dashboard/Amenities"));
+const TaxesPage = lazy(() => import("@/pages/finance/Taxes"));
 const RatesShopper = lazy(() => import("@/pages/marketing/RatesShopper"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
-const AgentPage = lazy(() => import("@/pages/agent/AgentPage"));
+const AgentPage = lazy(() => import("@/pages/agent/AgentPage").then(m => ({ default: m.default })));
 const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
+const SuperAdminDashboard = lazy(() => import("@/pages/superadmin/SuperAdminDashboard"));
 
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -41,17 +41,13 @@ const PublicBookingLayout = lazy(() => import("@/layouts/PublicBookingLayout").t
 const BookingSelection = lazy(() => import("@/pages/public/BookingSelection"));
 const BookingCheckout = lazy(() => import("@/pages/public/BookingCheckout"));
 const BookingConfirmation = lazy(() => import("@/pages/public/BookingConfirmation"));
+const BookingCancel = lazy(() => import("@/pages/public/BookingCancel"));
 const BookingWidget = lazy(() => import("@/pages/public/BookingWidget"));
 const ChatEmbed = lazy(() => import("@/pages/public/ChatEmbed"));
+const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
 
-const PageLoader = () => (
-  <div className="h-screen w-full flex items-center justify-center bg-background">
-    <div className="flex flex-col items-center gap-4">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading Staybooker...</p>
-    </div>
-  </div>
-);
+// Slim top progress bar — does NOT block the whole screen
+const PageLoader = () => <div className="page-progress" />;
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -67,69 +63,98 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <ErrorBoundary>
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Public Auth Routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+import { isSuperAdminSubdomain } from "@/utils/subdomain";
 
+const App = () => {
+  const isSuperAdmin = isSuperAdminSubdomain();
 
-              {/* Protected Dashboard Routes */}
-              <Route element={<DashboardLayout />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/rooms" element={<RoomsPage />} />
-                <Route path="/rates" element={<RatesPage />} />
-                <Route path="/availability" element={<AvailabilityPage />} />
-                <Route path="/analytics" element={<AnalyticsDashboard />} />
-                <Route path="/bookings" element={<BookingsPage />} />
-                <Route path="/guests" element={<GuestsPage />} />
-                <Route path="/rate-shopper" element={<RatesShopper />} />
-                <Route path="/payments" element={<PaymentsPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/addons" element={<AddonsPage />} />
-                <Route path="/amenities" element={<Amenities />} />
-                <Route path="/channel-settings" element={<ChannelSettings />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/integration" element={<IntegrationPage />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/agent" element={<AgentPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-              </Route>
+  return (
+    <ErrorBoundary>
+    <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public Auth Routes */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-              {/* Public Booking Engine Routes */}
-              <Route path="/book/:hotelSlug" element={<PublicBookingLayout />}>
-                <Route index element={<Navigate to="rooms" replace />} />
-                <Route path="rooms" element={<BookingSelection />} />
-                <Route path="checkout" element={<BookingCheckout />} />
-                <Route path="confirmation" element={<BookingConfirmation />} />
-              </Route>
+                {/* Super Admin Specialized Routing */}
+                {isSuperAdmin ? (
+                  <Route path="/">
+                    <Route path="/superadmin" element={<SuperAdminDashboard />} />
+                    <Route index element={<Navigate to="/superadmin" replace />} />
+                    <Route path="*" element={<Navigate to="/superadmin" replace />} />
+                  </Route>
+                ) : (
+                  <>
+                    {/* Protected Dashboard Routes */}
+                    <Route element={<DashboardLayout />}>
+                      <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="/rooms" element={<RoomsPage />} />
+                      <Route path="/rates" element={<RatesPage />} />
+                      <Route path="/availability" element={<AvailabilityPage />} />
+                      <Route path="/analytics" element={<AnalyticsDashboard />} />
+                      <Route path="/bookings" element={<BookingsPage />} />
+                      <Route path="/guests" element={<GuestsPage />} />
+                      <Route path="/rate-shopper" element={<RatesShopper />} />
+                      <Route path="/payments" element={<PaymentsPage />} />
+                      <Route path="/addons" element={<AddonsPage />} />
+                      <Route path="/taxes" element={<TaxesPage />} />
+                      <Route path="/channel-settings" element={<ChannelSettings />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/integration" element={<IntegrationPage />} />
+                      <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/agent" element={<AgentPage />} />
+                      <Route path="/settings/profile" element={<ProfilePage />} />
+                    
+                    {/* Note: /superadmin is only available on the admin subdomain above */}
+                  </Route>
 
-              {/* Standalone Widget Route */}
-              <Route path="/book/:hotelSlug/widget" element={<BookingWidget />} />
-              <Route path="/book/:hotelSlug/chat" element={<ChatEmbed />} />
+                    {/* Public Booking Engine Routes */}
+                    <Route path="/book/:hotelSlug" element={<PublicBookingLayout />}>
+                      <Route index element={<Navigate to="rooms" replace />} />
+                      <Route path="rooms" element={<BookingSelection />} />
+                      <Route path="checkout" element={<BookingCheckout />} />
+                      <Route path="confirmation" element={<BookingConfirmation />} />
+                      <Route path="cancel" element={<BookingCancel />} />
+                    </Route>
 
-              {/* Redirects */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    {/* Standalone Widget Route */}
+                    <Route path="/book/:hotelSlug/widget" element={<BookingWidget />} />
+                    <Route path="/book/:hotelSlug/chat" element={<ChatEmbed />} />
 
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-  </ErrorBoundary>
-);
+                    {/* Redirects */}
+                    <Route 
+                      path="/" 
+                      element={
+                        window.location.hostname.startsWith('app.') ? (
+                          <Navigate to="/dashboard" replace />
+                        ) : (
+                          <LandingPage />
+                        )
+                      } 
+                    />
+
+                    {/* 404 */}
+                    <Route path="*" element={<NotFound />} />
+                  </>
+                )}
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+    </ThemeProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;

@@ -1,6 +1,6 @@
 // Settings Page - Real API Integration
 import { useState } from 'react';
-import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload } from 'lucide-react';
+import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag, Lock, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
@@ -23,91 +24,78 @@ import { Hotel } from '@/types/api';
 
 import { useEffect } from 'react';
 import { PromoManager } from '@/components/settings/PromoManager';
+import { PropertyGallery } from '@/components/settings/PropertyGallery';
 
-function TeamList() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const data = await apiClient.get<any[]>('/users');
-        setUsers(data);
-      } catch (error) {
-        console.error('Failed to fetch team:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  if (isLoading) return <div className="text-sm text-muted-foreground">Loading team...</div>;
-
-  return (
-    <div className="space-y-4">
-      {users.map(u => (
-        <div key={u.id} className="flex items-center justify-between p-4 border rounded-lg">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-sm font-medium text-primary">
-                {u.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-              </span>
-            </div>
-            <div>
-              <p className="font-medium">{u.name}</p>
-              <p className="text-sm text-muted-foreground">{u.email}</p>
-            </div>
-          </div>
-          <div className="text-sm font-medium text-primary">{u.role}</div>
-        </div>
-      ))}
-      <Button variant="outline" className="w-full gap-2" onClick={() => {
-        // Simple alert for now as full invite flow needs email server
-        alert("Invite Feature: In a production app, this would open a form to send an invite email. For now, you can register new users via the Signup page.");
-      }}>
-        <Users className="h-4 w-4" />
-        Invite Team Member
-      </Button>
-    </div>
-  );
-}
-
+import { GeneralTab } from '@/components/settings/GeneralTab';
+import { BrandingTab } from '@/components/settings/BrandingTab';
+import { EmailTab } from '@/components/settings/EmailTab';
+import { PoliciesTab } from '@/components/settings/PoliciesTab';
+import { TeamList } from '@/components/settings/TeamList';
 export function SettingsPage() {
   const { hotel, user, setHotel } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [rooms, setRooms] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (hotel?.slug) {
+      apiClient.get<any[]>(`/public/hotels/${hotel.slug}/rooms`)
+        .then(res => setRooms(res || []))
+        .catch(() => {});
+    }
+  }, [hotel?.slug]);
 
   const [formData, setFormData] = useState({
     name: hotel?.name || '',
+    slug: hotel?.slug || '',
     star_rating: hotel?.star_rating || 3,
     description: hotel?.description || '',
     address: {
       street: hotel?.address?.street || '',
-      city: hotel?.address?.city || ''
+      city: hotel?.address?.city || '',
+      state: hotel?.address?.state || '',
+      country: hotel?.address?.country || '',
+      postal_code: hotel?.address?.postal_code || ''
     },
     contact: {
       phone: hotel?.contact?.phone || '',
-      email: hotel?.contact?.email || ''
+      email: hotel?.contact?.email || '',
+      website: hotel?.contact?.website || ''
     },
     settings: {
       check_in_time: hotel?.settings?.check_in_time || '14:00',
       check_out_time: hotel?.settings?.check_out_time || '11:00',
       currency: hotel?.settings?.currency || 'INR',
       timezone: hotel?.settings?.timezone || 'Asia/Kolkata',
-      // Store branding in settings json for now to match form structure or map to top level if backend requires
-      // Backend Hotel model has them at top level (logo_url, primary_color) but our handleUpdate maps simplistic sections.
-      // Let's check handleSave.
-      primary_color: hotel?.primary_color || '#3B82F6',
+      primary_color: hotel?.primary_color || '#7C3AED',
       logo_url: hotel?.logo_url || '',
       notify_new_booking: hotel?.settings?.notify_new_booking !== false,
       notify_cancellation: hotel?.settings?.notify_cancellation !== false,
       cancellation_policy: hotel?.settings?.cancellation_policy || '',
+      cancellation_mode: hotel?.settings?.cancellation_mode || 'instant',
+      payment_mode: hotel?.settings?.payment_mode || 'both',
       payment_policy: hotel?.settings?.payment_policy || '',
       child_policy: hotel?.settings?.child_policy || '',
       privacy_policy: hotel?.settings?.privacy_policy || '',
+      terms_conditions: hotel?.settings?.terms_conditions || '',
       important_info: hotel?.settings?.important_info || '',
-    }
+      gst_number: hotel?.settings?.gst_number || '',
+      multi_room_cart: hotel?.settings?.multi_room_cart !== false,
+      featured_room_type_id: hotel?.settings?.featured_room_type_id || '',
+      smtp_host: hotel?.settings?.smtp_host || '',
+      smtp_port: hotel?.settings?.smtp_port || '',
+      smtp_username: hotel?.settings?.smtp_username || '',
+      smtp_password: hotel?.settings?.smtp_password || '',
+      smtp_from_email: hotel?.settings?.smtp_from_email || '',
+      email_sender_name: hotel?.settings?.email_sender_name || '',
+      email_sender_address: hotel?.settings?.email_sender_address || '',
+      email_cc_list: hotel?.settings?.email_cc_list || '',
+      email_signature: hotel?.settings?.email_signature || '',
+      whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
+      whatsapp_phone_number_id: hotel?.settings?.whatsapp_phone_number_id || '',
+      whatsapp_business_account_id: hotel?.settings?.whatsapp_business_account_id || '',
+    },
+    photos: hotel?.photos || []
   });
 
   const handleUpdate = (section: string, field: string, value: any) => {
@@ -133,11 +121,13 @@ export function SettingsPage() {
       setIsSaving(true);
       const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
         name: formData.name,
+        slug: formData.slug || undefined,
         star_rating: Number(formData.star_rating),
         description: formData.description,
         address: formData.address,
         contact: formData.contact,
         settings: formData.settings,
+        photos: formData.photos,
         // Map back from settings state to top level fields
         logo_url: formData.settings.logo_url,
         primary_color: formData.settings.primary_color
@@ -145,13 +135,14 @@ export function SettingsPage() {
       setHotel(updatedHotel);
       toast({
         title: 'Settings saved',
-        description: 'Your hotel profile has been updated.',
+        description: 'Your hotel profile has been updated successfully.',
       });
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || 'Failed to save settings. URL slug might already be taken.';
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to save settings.',
+        title: 'Error saving settings',
+        description: errorMsg,
       });
     } finally {
       setIsSaving(false);
@@ -208,177 +199,38 @@ export function SettingsPage() {
             <span className="font-medium">Branding</span>
           </TabsTrigger>
           <TabsTrigger 
+            value="email" 
+            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+          >
+            <Mail className="h-4 w-4" />
+            <span className="font-medium">Email Settings</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="whatsapp" 
+            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span className="font-medium">WhatsApp Settings</span>
+          </TabsTrigger>
+          <TabsTrigger 
             value="policies" 
             className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
           >
             <Key className="h-4 w-4" />
             <span className="font-medium">Policies & Privacy</span>
           </TabsTrigger>
+          <TabsTrigger 
+            value="gallery" 
+            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+          >
+            <Image className="h-4 w-4" />
+            <span className="font-medium">Property Gallery</span>
+          </TabsTrigger>
         </TabsList>
 
         <div className="flex-1">
           {/* Hotel Settings */}
-          <TabsContent value="hotel" className="space-y-6 mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Hotel Profile</CardTitle>
-                <CardDescription>
-                  Basic information about your property
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="hotelName">Hotel Name</Label>
-                    <Input
-                      id="hotelName"
-                      value={formData.name}
-                      onChange={(e) => handleUpdate('root', 'name', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="starRating">Star Rating</Label>
-                    <Select
-                      value={String(formData.star_rating)}
-                      onValueChange={(val) => handleUpdate('root', 'star_rating', val)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 Star</SelectItem>
-                        <SelectItem value="2">2 Stars</SelectItem>
-                        <SelectItem value="3">3 Stars</SelectItem>
-                        <SelectItem value="4">4 Stars</SelectItem>
-                        <SelectItem value="5">5 Stars</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => handleUpdate('root', 'description', e.target.value)}
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Location & Contact</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Street Address</Label>
-                    <Input
-                      id="address"
-                      value={formData.address.street}
-                      onChange={(e) => handleUpdate('address', 'street', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      value={formData.address.city}
-                      onChange={(e) => handleUpdate('address', 'city', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={formData.contact.phone}
-                      onChange={(e) => handleUpdate('contact', 'phone', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.contact.email}
-                      onChange={(e) => handleUpdate('contact', 'email', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Operational Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="checkIn">Check-in Time</Label>
-                    <Input
-                      id="checkIn"
-                      type="time"
-                      value={formData.settings.check_in_time}
-                      onChange={(e) => handleUpdate('settings', 'check_in_time', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="checkOut">Check-out Time</Label>
-                    <Input
-                      id="checkOut"
-                      type="time"
-                      value={formData.settings.check_out_time}
-                      onChange={(e) => handleUpdate('settings', 'check_out_time', e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Currency</Label>
-                    <Select
-                      value={formData.settings.currency}
-                      onValueChange={(val) => handleUpdate('settings', 'currency', val)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                        <SelectItem value="USD">USD - US Dollar</SelectItem>
-                        <SelectItem value="EUR">EUR - Euro</SelectItem>
-                        <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select
-                      value={formData.settings.timezone}
-                      onValueChange={(val) => handleUpdate('settings', 'timezone', val)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Asia/Kolkata">Asia/Kolkata (IST)</SelectItem>
-                        <SelectItem value="Asia/Dubai">Asia/Dubai (GST)</SelectItem>
-                        <SelectItem value="Europe/London">Europe/London (GMT)</SelectItem>
-                        <SelectItem value="America/New_York">America/New_York (EST)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save Changes
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <GeneralTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
 
           {/* Team Settings */}
           <TabsContent value="team" className="space-y-6 mt-0">
@@ -438,196 +290,86 @@ export function SettingsPage() {
           </TabsContent>
 
           {/* Branding Settings */}
-          <TabsContent value="branding" className="space-y-6 mt-0">
+          <BrandingTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} setIsSaving={setIsSaving} hotel={hotel} rooms={rooms} />
+          <EmailTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
+          <TabsContent value="whatsapp" className="space-y-6 mt-0">
             <Card>
               <CardHeader>
-                <CardTitle>Booking Engine Branding</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  WhatsApp Business API Configuration
+                </CardTitle>
                 <CardDescription>
-                  Customize how your booking engine looks to guests
+                  Provide Meta WhatsApp Cloud API credentials to dispatch instant guest confirmations and reservation followups.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-1">
                   <div className="space-y-2">
-                    <Label htmlFor="primaryColor">Primary Color</Label>
-                    <div className="flex items-center gap-2">
+                    <Label htmlFor="whatsappApiKey">WhatsApp API Key / Access Token</Label>
+                    <Input
+                      id="whatsappApiKey"
+                      type="password"
+                      placeholder="EAAGz..."
+                      value={formData.settings.whatsapp_api_key || ''}
+                      onChange={(e) => handleUpdate('settings', 'whatsapp_api_key', e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
                       <Input
-                        id="primaryColor"
-                        type="color"
-                        className="w-12 h-10 p-1 cursor-pointer"
-                        value={formData.settings.primary_color || '#3B82F6'}
-                        onChange={(e) => handleUpdate('settings', 'primary_color', e.target.value)}
-                      />
-                      <Input
-                        value={formData.settings.primary_color || '#3B82F6'}
-                        onChange={(e) => handleUpdate('settings', 'primary_color', e.target.value)}
-                        placeholder="#3B82F6"
+                        id="whatsappPhoneNumberId"
+                        placeholder="1098485747..."
+                        value={formData.settings.whatsapp_phone_number_id || ''}
+                        onChange={(e) => handleUpdate('settings', 'whatsapp_phone_number_id', e.target.value)}
                       />
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      This color will be used for buttons and highlights on your booking page.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="logoUpload">Hotel Logo</Label>
-                    <div className="flex gap-4 items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="relative"
-                            disabled={isSaving}
-                          >
-                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                            Upload New Logo
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="absolute inset-0 opacity-0 cursor-pointer"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-
-                                try {
-                                  setIsSaving(true);
-                                  const formData = new FormData();
-                                  formData.append('file', file);
-
-                                  const response = await apiClient.post<{ url: string }>('/upload', formData);
-                                  handleUpdate('settings', 'logo_url', response.url);
-
-                                  toast({
-                                    title: "Logo Uploaded",
-                                    description: "Don't forget to click Save Branding to apply changes.",
-                                  });
-                                } catch (error) {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Upload Failed",
-                                    description: "Could not upload logo. Try a smaller file.",
-                                  });
-                                } finally {
-                                  setIsSaving(false);
-                                }
-                              }}
-                            />
-                          </Button>
-                          {formData.settings.logo_url && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive h-8"
-                              onClick={() => handleUpdate('settings', 'logo_url', '')}
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Recommended size: 200x200px. formats: PNG, JPG.
-                        </p>
-                      </div>
-
-                      <div className="h-20 w-20 border rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden relative">
-                        {formData.settings.logo_url ? (
-                          <img
-                            src={formData.settings.logo_url}
-                            alt="Logo Preview"
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground text-center px-1">No Logo</span>
-                        )}
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>
+                      <Input
+                        id="whatsappBusinessAccountId"
+                        placeholder="948475839..."
+                        value={formData.settings.whatsapp_business_account_id || ''}
+                        onChange={(e) => handleUpdate('settings', 'whatsapp_business_account_id', e.target.value)}
+                      />
                     </div>
                   </div>
                 </div>
-
-                <div className="flex justify-end mt-4">
+                <div className="flex justify-end">
                   <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save Branding
+                    Save WhatsApp Settings
                   </Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* Policies Settings */}
-          <TabsContent value="policies" className="space-y-6 mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Hotel Policies</CardTitle>
-                <CardDescription>
-                  Define your hotel's rules and terms for guests
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="cancellation_policy">Cancellation Policy</Label>
-                    <Textarea
-                      id="cancellation_policy"
-                      placeholder="e.g. Free cancellation up to 24 hours before arrival..."
-                      value={formData.settings.cancellation_policy}
-                      onChange={(e) => handleUpdate('settings', 'cancellation_policy', e.target.value)}
-                      className="min-h-[100px]"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="payment_policy">Payment Policy</Label>
-                    <Textarea
-                      id="payment_policy"
-                      placeholder="e.g. 50% deposit required at booking..."
-                      value={formData.settings.payment_policy}
-                      onChange={(e) => handleUpdate('settings', 'payment_policy', e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="child_policy">Child & Extra Bed Policy</Label>
-                    <Textarea
-                      id="child_policy"
-                      placeholder="e.g. Children under 5 stay for free..."
-                      value={formData.settings.child_policy}
-                      onChange={(e) => handleUpdate('settings', 'child_policy', e.target.value)}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <Label htmlFor="privacy_policy">Privacy Policy</Label>
-                    <Textarea
-                      id="privacy_policy"
-                      placeholder="How you handle guest data..."
-                      value={formData.settings.privacy_policy}
-                      onChange={(e) => handleUpdate('settings', 'privacy_policy', e.target.value)}
-                      className="min-h-[150px]"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="important_info">Important Information</Label>
-                    <Textarea
-                      id="important_info"
-                      placeholder="e.g. Construction nearby, parking rules..."
-                      value={formData.settings.important_info}
-                      onChange={(e) => handleUpdate('settings', 'important_info', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-6">
-                  <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save Policies
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <PoliciesTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
+          <TabsContent value="gallery" className="space-y-6 mt-0">
+            <PropertyGallery 
+              photos={formData.photos} 
+              onChange={(photos) => setFormData(prev => ({ ...prev, photos }))}
+              onSave={async (photos) => {
+                try {
+                  const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
+                    photos: photos
+                  });
+                  setHotel(updatedHotel);
+                  toast({
+                    title: 'Gallery saved',
+                    description: 'Property photos have been updated.',
+                  });
+                } catch (error) {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: 'Failed to save gallery.',
+                  });
+                  throw error;
+                }
+              }}
+            />
           </TabsContent>
         </div>
       </Tabs>

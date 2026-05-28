@@ -1,9 +1,8 @@
-import { MoreHorizontal, Users, Bed, Edit, Trash2, BedDouble, Ruler } from 'lucide-react';
+﻿import { MoreHorizontal, Users, Bed, Edit, Trash2, BedDouble, Ruler, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, getImageUrl } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -20,83 +19,124 @@ interface RoomCardProps {
 }
 
 export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardProps) {
-    // Logic to find primary photo or fallback to first
-    const primaryPhoto = room.photos?.find(p => p.is_primary) ?? room.photos?.[0];
+    const primaryPhoto = room.photos?.find(p => p.is_primary) || room.photos?.[0] || null;
 
     return (
-        <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-none ring-1 ring-border/50">
-            <div className="aspect-video relative overflow-hidden bg-muted flex items-center justify-center">
+        <Card className="overflow-hidden group hover:shadow-md transition-all duration-200 border border-border bg-card rounded-xl relative flex flex-col">
+            {/* Image Section */}
+            <div className="aspect-[16/10] relative overflow-hidden bg-muted">
                 {primaryPhoto ? (
                     <img
                         src={getImageUrl(primaryPhoto.url)}
                         alt={room.name}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                 ) : (
-                    <div className="flex flex-col items-center justify-center text-muted-foreground/50">
-                        <Bed className="h-12 w-12 mb-2" />
-                        <span className="text-xs font-medium">No Image</span>
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                        <Bed className="h-10 w-10 mb-2 opacity-20" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">No Image</span>
                     </div>
                 )}
-                <div className="absolute top-2 right-2 flex gap-2">
+                
+                {/* Status Badges */}
+                <div className="absolute top-3 left-3 flex gap-2">
                     {room.is_active ? (
-                        <Badge className="bg-emerald-500/90 hover:bg-emerald-500 backdrop-blur-sm shadow-sm">Active</Badge>
+                        <Badge className="bg-green-500 hover:bg-green-600 text-white border-none text-[10px] font-bold px-2 py-0.5">
+                            Active
+                        </Badge>
                     ) : (
-                        <Badge variant="secondary" className="backdrop-blur-sm shadow-sm bg-background/80">Inactive</Badge>
+                        <Badge variant="secondary" className="bg-slate-200 text-muted-foreground text-[10px] font-bold px-2 py-0.5">
+                            Paused
+                        </Badge>
                     )}
                 </div>
-            </div>
-            <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg font-semibold tracking-tight">{room.name}</CardTitle>
+
+                {/* Actions Dropdown */}
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground">
-                                <MoreHorizontal className="h-4 w-4" />
+                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-lg bg-background/90 backdrop-blur-sm border border-border shadow-sm">
+                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(room)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Details
+                        <DropdownMenuContent align="end" className="rounded-lg p-1 min-w-[140px]">
+                            <DropdownMenuItem onClick={() => onEdit(room)} className="rounded-md cursor-pointer text-sm font-medium">
+                                <Edit className="mr-2 h-4 w-4 text-muted-foreground" />
+                                Edit Room
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
+                                className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer text-sm font-medium"
                                 onClick={() => onDelete(room.id)}
                             >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Room
+                                Delete
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-                <CardDescription className="line-clamp-2 min-h-[2.5em]">{room.description || 'No description available for this room type.'}</CardDescription>
+            </div>
+
+            {/* Content Section */}
+            <CardHeader className="p-4 pb-2 flex-none">
+                <div className="space-y-1">
+                    <CardTitle className="text-base font-bold text-foreground leading-tight">
+                        {room.name}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2 text-muted-foreground text-xs font-medium leading-relaxed min-h-[32px]">
+                        {room.description || 'No description provided for this room category.'}
+                    </CardDescription>
+                </div>
             </CardHeader>
-            <CardContent>
-                <div className="flex items-center justify-between text-sm pt-2 border-t">
-                    <div className="flex items-center gap-4 text-muted-foreground">
-                        <span className="flex items-center gap-1.5" title="Occupancy">
-                            <Users className="h-4 w-4" />
-                            {room.base_occupancy}-{room.max_occupancy}
-                        </span>
-                        <div className="flex items-center gap-1">
-                            <Bed className="h-4 w-4" />
-                            <span>Max {room.max_occupancy} Guests</span>
-                        </div>
 
-                        <div className="flex items-center gap-1">
-                            <BedDouble className="h-4 w-4" />
-                            <span>{room.bed_type || 'Queen'} Bed</span>
-                        </div>
-
-                        {room.room_size ? (
-                            <div className="flex items-center gap-1">
-                                <Ruler className="h-4 w-4" />
-                                <span>{room.room_size} sq ft</span>
-                            </div>
-                        ) : null}
+            <CardContent className="p-4 pt-2 space-y-3 flex flex-col flex-1">
+                {/* Stats Row */}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
+                    <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{room.base_occupancy}-{room.max_occupancy} Pax</span>
                     </div>
-                    <span className="font-bold text-primary">{formatCurrency(room.base_price)}<span className="text-xs font-normal text-muted-foreground">/night</span></span>
+                    <div className="w-1 h-1 rounded-full bg-border" />
+                    <div className="flex items-center gap-1.5">
+                        <BedDouble className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{room.bed_type || 'Double'}</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                    {room.room_size && (
+                        <div className="flex items-center gap-1.5">
+                            <Ruler className="h-3 w-3" />
+                            <span>{room.room_size} SQ FT</span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                        <span>Inventory: {room.total_inventory}</span>
+                    </div>
+                </div>
+
+                {/* Price Footer - mt-auto pushes it to bottom */}
+                <div className="mt-auto pt-3 border-t border-border flex items-center justify-between">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Price / Night</span>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-xl font-bold text-blue-600">
+                                {formatCurrency(room.base_price)}
+                            </span>
+                            {room.market_price && room.market_price > room.base_price && (
+                                <span className="text-xs font-medium text-slate-300 line-through">
+                                    {formatCurrency(room.market_price)}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <Button 
+                        size="sm"
+                        onClick={() => onEdit(room)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-8 px-4"
+                    >
+                        Edit
+                    </Button>
                 </div>
             </CardContent>
         </Card>

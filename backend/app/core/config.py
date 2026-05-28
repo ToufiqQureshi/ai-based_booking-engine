@@ -32,6 +32,8 @@ class Settings(BaseSettings):
         "http://localhost:8080",
         "https://staybooker.ai",
         "https://www.staybooker.ai",
+        "https://superadmin.staybooker.ai",
+        "https://www.superadmin.staybooker.ai",
         "https://api.staybooker.ai",
         "https://staybooker.railway.app",
         "https://staybooker-production.up.railway.app"
@@ -74,12 +76,23 @@ class Settings(BaseSettings):
     OLLAMA_API_KEY: str | None = None
     OLLAMA_HOST: str = "http://localhost:11434"
     GROQ_API_KEY: str | None = None
+    JULES_API_KEY: str | None = None
+
+    # Email Service (Brevo)
+    BREVO_API_KEY: str | None = None
+    BREVO_SENDER_EMAIL: str = "noreply@staybooker.ai"
+    BREVO_SENDER_NAME: str = "Staybooker"
+    HOTEL_NOTIFICATION_EMAILS: str | None = None
 
     # Redis Configuration (Support for Railway REDIS_URL)
     REDIS_URL: Optional[str] = None
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
+
+    # Razorpay Payment Gateway
+    RAZORPAY_KEY_ID: Optional[str] = None
+    RAZORPAY_KEY_SECRET: Optional[str] = None
 
     class Config:
         env_file = ".env"

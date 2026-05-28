@@ -1,23 +1,26 @@
 {
     "manifest_version": 3,
     "name": "Staybooker Companion",
-    "version": "2.2",
+    "version": "2.6",
     "description": "Secure Distributed Rate Scraping Client for Staybooker",
     "permissions": [
         "activeTab",
         "scripting",
         "storage",
         "tabs",
-        "alarms"
+        "alarms",
+        "notifications"
     ],
     "host_permissions": [
         "https://www.makemytrip.com/*",
+        "https://www.goibibo.com/*",
         "https://www.agoda.com/*",
         "https://ycs.agoda.com/*",
         "http://localhost:*/*",
         "http://127.0.0.1:*/*",
         "https://api.gadget4me.in/*",
-        "https://app.gadget4me.in/*"
+        "https://app.gadget4me.in/*",
+        "https://*.staybooker.ai/*"
     ],
     "background": {
         "service_worker": "background.js"
@@ -25,7 +28,13 @@
     "content_scripts": [
         {
             "matches": [
-                "<all_urls>"
+                "https://*.makemytrip.com/*",
+                "https://*.goibibo.com/*",
+                "https://*.agoda.com/*",
+                "https://ycs.agoda.com/*",
+                "http://localhost/*",
+                "http://127.0.0.1/*",
+                "https://*.staybooker.ai/*"
             ],
             "js": [
                 "content.js"

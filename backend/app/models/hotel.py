@@ -43,12 +43,56 @@ class HotelSettings(SQLModel):
     check_in_time: str = "14:00"
     check_out_time: str = "11:00"
     cancellation_policy: Optional[str] = None
+    cancellation_mode: str = "instant"
     payment_policy: Optional[str] = None
     child_policy: Optional[str] = None
     privacy_policy: Optional[str] = None
+    terms_conditions: Optional[str] = None
     important_info: Optional[str] = None
+    gst_number: Optional[str] = None
     notify_new_booking: bool = True
     notify_cancellation: bool = True
+    
+    # Social Proof / Marketing Control
+    show_viewers_count: bool = True
+    show_last_booked: bool = True
+    show_popular_badge: bool = True
+    popular_badge_text: str = "Popular choice! {count} bookings this month"
+    
+    # STAAH & Multi-Room Booking Controls
+    multi_room_cart: bool = True
+    featured_room_type_id: Optional[str] = None
+
+    # SMTP Configuration
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+
+    # Custom Email Notification Configuration
+    email_sender_name: Optional[str] = None
+    email_sender_address: Optional[str] = None
+    email_cc_list: Optional[str] = None
+    email_signature: Optional[str] = None
+
+    # WhatsApp Configuration
+    whatsapp_api_key: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
+
+    # Tax Configurations
+    tax_name: str = "GST"
+    room_tax_rate: float = 0.0
+    room_tax_type: str = "exclusive"  # "inclusive" or "exclusive"
+    room_tax_calculation_method: str = "flat"  # "flat" or "slab"
+    room_tax_slabs: List[dict] = [
+        {"from": 0.0, "to": 999.0, "rate": 0.0},
+        {"from": 1000.0, "to": 7499.0, "rate": 12.0},
+        {"from": 7500.0, "to": 999999.0, "rate": 18.0}
+    ]
+    addon_tax_rate: float = 0.0
+    addon_tax_type: str = "exclusive"  # "inclusive" or "exclusive"
 
 
 
@@ -59,12 +103,17 @@ class HotelBase(SQLModel):
     description: Optional[str] = None
     star_rating: Optional[int] = Field(default=None, ge=1, le=5)
     logo_url: Optional[str] = None
-    primary_color: Optional[str] = Field(default="#3B82F6")
+    primary_color: Optional[str] = Field(default="#7C3AED")
+    amenities: List[str] = Field(default_factory=list, sa_column=Column(JSON)) # Property-level amenities like "Free Parking", "Pool"
     
     # Feature Flags (Controlled by Super Admin)
-    feature_rate_shopper: bool = Field(default=True)
-    feature_ai_agent: bool = Field(default=True)
-    feature_guest_bot: bool = Field(default=True)
+    feature_rate_shopper: bool = Field(default=False)
+    feature_ai_agent: bool = Field(default=False)
+    feature_guest_bot: bool = Field(default=False)
+    feature_new_booking: bool = Field(default=True)
+    feature_color_palette: bool = Field(default=False)
+    feature_custom_logo: bool = Field(default=False)
+    feature_custom_widget: bool = Field(default=False)
 
 
 class Hotel(HotelBase, table=True):
@@ -80,6 +129,7 @@ class Hotel(HotelBase, table=True):
     address: dict = Field(default_factory=lambda: {"city": "Unknown", "country": "India"}, sa_column=Column(JSON))
     contact: dict = Field(default_factory=dict, sa_column=Column(JSON))
     settings: dict = Field(default_factory=lambda: HotelSettings().model_dump(), sa_column=Column(JSON))
+    photos: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
     
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -88,13 +138,30 @@ class Hotel(HotelBase, table=True):
     # AI dynamic configurations
     ai_provider: Optional[str] = Field(default="groq")
     ai_api_key: Optional[str] = Field(default=None)
-
+    ai_model: Optional[str] = Field(default="llama-3.1-70b-versatile")
+    ai_base_url: Optional[str] = Field(default=None)
+    
     # Relationships
-    users: List["User"] = Relationship(back_populates="hotel")
-    room_types: List["RoomType"] = Relationship(back_populates="hotel")
-    bookings: List["Booking"] = Relationship(back_populates="hotel")
-    rate_plans: List["RatePlan"] = Relationship(back_populates="hotel")
-    subscription: Optional["Subscription"] = Relationship(back_populates="hotel")
+    users: List["User"] = Relationship(
+        back_populates="hotel", 
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    room_types: List["RoomType"] = Relationship(
+        back_populates="hotel",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    bookings: List["Booking"] = Relationship(
+        back_populates="hotel",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    rate_plans: List["RatePlan"] = Relationship(
+        back_populates="hotel",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    subscription: Optional["Subscription"] = Relationship(
+        back_populates="hotel",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
 class HotelCreate(SQLModel):
@@ -109,6 +176,8 @@ class HotelRead(HotelBase):
     address: dict
     contact: dict
     settings: dict
+    photos: List[dict] = []
+    amenities: List[str] = []
     created_at: datetime
     updated_at: datetime
 
@@ -116,6 +185,7 @@ class HotelRead(HotelBase):
 class HotelUpdate(SQLModel):
     """Partial update schema"""
     name: Optional[str] = None
+    slug: Optional[str] = None
     description: Optional[str] = None
     star_rating: Optional[int] = None
     logo_url: Optional[str] = None
@@ -123,8 +193,13 @@ class HotelUpdate(SQLModel):
     address: Optional[dict] = None
     contact: Optional[dict] = None
     settings: Optional[dict] = None
+    photos: Optional[List[dict]] = None
     # Feature Flags
     feature_rate_shopper: Optional[bool] = None
     feature_ai_agent: Optional[bool] = None
     feature_guest_bot: Optional[bool] = None
+    feature_new_booking: Optional[bool] = None
+    feature_color_palette: Optional[bool] = None
+    feature_custom_logo: Optional[bool] = None
+    feature_custom_widget: Optional[bool] = None
     is_active: Optional[bool] = None

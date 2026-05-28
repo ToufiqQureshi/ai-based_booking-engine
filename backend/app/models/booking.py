@@ -22,6 +22,7 @@ class BookingStatus(str, Enum):
     CANCELLED = "cancelled"
     CHECKED_IN = "checked_in"
     CHECKED_OUT = "checked_out"
+    CANCEL_REQUESTED = "cancel_requested"
 
 
 class BookingSource(str, Enum):
@@ -78,6 +79,7 @@ class BookingRoom(SQLModel):
     children: int = 0
     price_per_night: float
     total_price: float
+    cancellation_policy: Optional[str] = None
 
 
 class BookingBase(SQLModel):
@@ -90,6 +92,12 @@ class BookingBase(SQLModel):
     special_requests: Optional[str] = None
     promo_code: Optional[str] = None
     source: BookingSource = Field(default=BookingSource.DIRECT)
+    cancellation_fee: float = Field(default=0.0, ge=0)
+    refund_amount: float = Field(default=0.0, ge=0)
+    refund_status: Optional[str] = Field(default="none")
+    subtotal_amount: float = Field(default=0.0)
+    tax_amount: float = Field(default=0.0)
+    discount_amount: float = Field(default=0.0)
 
 
 class Booking(BookingBase, table=True):
@@ -108,6 +116,7 @@ class Booking(BookingBase, table=True):
     rooms: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
     # Addons JSON array mein
     addons: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    tax_details: dict = Field(default_factory=dict, sa_column=Column(JSON))
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

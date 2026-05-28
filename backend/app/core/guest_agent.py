@@ -11,35 +11,45 @@ from app.models.booking import Booking, BookingStatus, BookingSource
 from app.models.room import RoomType
 from app.models.hotel import Hotel, HotelSettings
 from app.models.amenity import Amenity
+from app.models.lead import Lead
 from app.core.config import get_settings
 
 # Explicitly Read-Only System Prompt
-SYSTEM_PROMPT = """You are 'Saaraa AI', a helpful and polite concierge for the hotel.
-Your role is to assist prospective guests with information about the hotel, rooms, and availability.
+SYSTEM_PROMPT = """You are the virtual concierge for '{hotel_name}'. 
+Your goal is to provide a warm, human-like, and helpful experience for guests.
 
-BOOKING ASSISTANCE (NEW):
-1. You can now help guests PREPARE a booking.
-2. If a guest wants to book, first ask for their:
-   - Check-in & Check-out dates (if not provided)
-   - Number of Adults & Children
-   - Their Full Name, Email, and Phone Number (to pre-fill the form)
-3. Once you have these details, use the 'prepare_booking' tool. 
-4. CRITICAL: You MUST include the EXACT STRING returned by 'prepare_booking' in your message. This string contains the 'ACTION:BOOKING_LINK|' marker and is necessary for the guest to continue to payment.
-5. You CANNOT finalize a booking or take payment yourself.
+PERSONALITY & TONE:
+1. BE HUMAN: Use a natural, conversational tone. Avoid sounding like a rigid bot.
+2. HOTEL IDENTITY: You represent '{hotel_name}'. Always speak on behalf of the hotel.
+3. LEAD CAPTURING (CRITICAL): To "Prepare a Booking" or "Send a Booking Link", you MUST first collect the guest's Name and Mobile Number. If they don't provide a mobile number, you cannot prepare the booking.
+4. NO OVER-BOOKING: Do not push "Confirm and Book" or "Prepare Booking" repeatedly.
+4. EMPATHY: If a guest asks about amenities or features, describe them with enthusiasm (e.g., "You'll love our rooftop pool!" instead of "Pool is available.").
 
-SAFETY RULES (CRITICAL):
-1. You have READ-ONLY access to the database. You cannot create actual booking records.
-2. If a guest asks for something you can't do, stay polite.
-3. NEVER fake or hallucinate prices. Only use 'check_availability' or 'prepare_booking' to get real rates.
-4. If you don't know an answer, say "I am not sure, please contact the hotel reception."
+RESPONSE STYLE:
+1. CONCISE BUT WARM: Answer specifically but with a hospitable touch.
+2. FORMATTING: Use clean bullet points for amenities and simple tables for price comparisons.
+3. NO HALLUCINATION: Only use information provided by tools.
 
-DATE HANDLING (IMPORTANT):
-- Convert dates to 'YYYY-MM-DD' before calling tools.
+IMAGE FORMATTING (CRITICAL):
+1. When providing room details or photos, you MUST wrap image URLs in the exact format: [IMAGES: url1, url2].
+2. NEVER just list naked URLs. The frontend gallery depends on this [IMAGES: ...] tag.
+
+SAFETY:
+1. You have READ-ONLY access.
+2. If unsure, say "I'd recommend checking with our front desk for the most precise details on that."
 
 Current Date: {current_date}
 """
 
-def create_guest_agent_graph(session: AsyncSession, hotel_id: str, ai_provider: str = None, ai_api_key: str = None):
+def create_guest_agent_graph(
+    session: AsyncSession, 
+    hotel_id: str, 
+    ai_provider: str = None, 
+    ai_api_key: str = None,
+    ai_model: str = None,
+    ai_base_url: str = None,
+    hotel_name: str = "the hotel"
+):
     """
     Creates a Guest-Facing Agent Graph with dynamic LLM provider injection.
     """
@@ -131,16 +141,20 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str, ai_provider: 
         room_type_name: str, 
         adults: int, 
         children: int,
-        first_name: str = "",
-        last_name: str = "",
+        first_name: str,
+        last_name: str,
+        phone: str,
         email: str = "",
-        phone: str = ""
+        inquiry_summary: str = ""
     ) -> str:
         """
         PREPARES a booking for the guest. 
-        Call this when you have specific dates, room type, and guest details.
-        Returns a special action marker for the frontend.
+        You MUST provide the guest's Name and Phone number.
+        The inquiry_summary should be a 1-sentence summary of the guest's main request.
         """
+        # Validate Phone (Mandatory)
+        if not phone or len(phone.strip()) < 8:
+            return "I need a valid mobile number to prepare your booking link. Could you please provide it?"
         # 1. Resolve Room Type
         query = select(RoomType).where(
             RoomType.hotel_id == hotel_id,
@@ -179,6 +193,48 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str, ai_provider: 
                 "phone": phone
             }
         }
+
+        # 3. Save Lead to Database
+        from app.models.lead import Lead
+        lead = Lead(
+            hotel_id=hotel_id,
+            guest_name=f"{first_name} {last_name}".strip(),
+            guest_email=email,
+            guest_phone=phone,
+            room_type_preference=room.name,
+            check_in=check_in,
+            check_out=check_out,
+            num_adults=adults,
+            num_children=children,
+            ai_conversation_summary=inquiry_summary or f"Interested in {room.name}"
+        )
+        session.add(lead)
+        await session.commit()
+
+        # 4. Sync to Google Sheets (if configured)
+        from app.models.integration import IntegrationSettings
+        int_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
+        int_res = await session.execute(int_query)
+        int_settings = int_res.scalar_one_or_none()
+
+        if int_settings and int_settings.google_sheet_url:
+            from app.core.external_sync import sync_to_google_sheet
+            sync_data = {
+                "hotel_id": hotel_id,
+                "guest_name": lead.guest_name,
+                "guest_email": lead.guest_email,
+                "guest_phone": lead.guest_phone,
+                "room_type": lead.room_type_preference,
+                "check_in": lead.check_in,
+                "check_out": lead.check_out,
+                "adults": lead.num_adults,
+                "children": lead.num_children,
+                "status": lead.status,
+                "timestamp": lead.created_at.isoformat()
+            }
+            # Run async sync
+            import asyncio
+            asyncio.create_task(sync_to_google_sheet(int_settings.google_sheet_url, sync_data))
         
         import json
         return f"ACTION:BOOKING_LINK|{json.dumps(booking_data)}"
@@ -197,27 +253,58 @@ def create_guest_agent_graph(session: AsyncSession, hotel_id: str, ai_provider: 
         details = f"**{room.name}**\n- **Description**: {room.description}\n- **Base Price**: {room.base_price} INR"
         if hasattr(room, 'amenities') and room.amenities:
              details += f"\n- **Amenities**: {room.amenities}"
+        
+        # Add Images Tag
+        if hasattr(room, 'photos') and room.photos:
+            photo_urls = [p['url'] for p in room.photos if 'url' in p]
+            if photo_urls:
+                details += f"\n\n[IMAGES: {', '.join(photo_urls)}]"
+                
         return details
 
     tools = [get_hotel_info, get_hotel_amenities, check_availability, get_room_details, prepare_booking]
     
     try:
 
-        # Resolve dynamic provider/keys
-        target_api_key = ai_api_key or settings.GROQ_API_KEY
+        # Resolve dynamic provider/keys - NO FALLBACK to platform key to save costs
+        target_api_key = ai_api_key
         
-        if target_api_key:
-            from langchain_openai import ChatOpenAI
-            llm = ChatOpenAI(
-                model="openai/gpt-oss-120b",
-                temperature=1,
-                openai_api_key=target_api_key,
-                base_url="https://api.groq.com/openai/v1"
-            )
-        else:
-            raise ValueError("No valid GROQ_API_KEY available for this hotel.")
+        if not target_api_key:
+            # Return a "dummy" graph or None to signal that AI is disabled for this hotel
+            return None
+            
+        from langchain_openai import ChatOpenAI
+        
+        # Determine Base URL based on provider if not explicitly provided
+        # Auto-detect Groq if key starts with gsk_ but provider is missing
+        effective_provider = ai_provider
+        if not effective_provider and target_api_key.startswith("gsk_"):
+            effective_provider = "groq"
 
-        formatted_prompt = SYSTEM_PROMPT.format(current_date=date.today().isoformat())
+        default_base_url = None
+        if effective_provider == "groq":
+            default_base_url = "https://api.groq.com/openai/v1"
+        elif effective_provider == "openai":
+            default_base_url = None # Use default OpenAI URL
+        
+        # If no model is provided, we CANNOT initialize (Zero hardcoding)
+        if not ai_model:
+            return None
+
+        # Hotel name is now passed as parameter, so we just use it directly
+
+
+        llm = ChatOpenAI(
+            model=ai_model,
+            temperature=0.7,
+            openai_api_key=target_api_key,
+            base_url=ai_base_url or default_base_url
+        )
+
+        formatted_prompt = SYSTEM_PROMPT.format(
+            hotel_name=hotel_name,
+            current_date=date.today().isoformat()
+        )
 
         # Create Graph
         graph = create_react_agent(

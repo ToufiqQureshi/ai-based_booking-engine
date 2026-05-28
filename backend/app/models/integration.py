@@ -52,9 +52,11 @@ class IntegrationSettings(SQLModel, table=True):
     # Widget Configuration
     widget_enabled: bool = Field(default=True)
     widget_theme: str = Field(default="light")  # light, dark, auto
-    widget_primary_color: str = Field(default="#3B82F6")
+    widget_primary_color: str = Field(default="#7C3AED")
     widget_background_color: str = Field(default="#FFFFFF")
     widget_position: str = Field(default="bottom-right")  # bottom-right, bottom-left, etc.
+    widget_layout: str = Field(default="modern") # modern, classic, minimal
+    widget_logo_url: Optional[str] = None # Specific logo for widget if different from hotel logo
     
     # Security
     allowed_domains: str = Field(default="")  # Comma-separated list of allowed domains
@@ -72,6 +74,15 @@ class IntegrationSettings(SQLModel, table=True):
     # AI dynamic configurations
     ai_provider: Optional[str] = Field(default="groq")
     ai_api_key: Optional[str] = Field(default=None)
+    ai_model: Optional[str] = Field(default="llama-3.1-70b-versatile")
+    ai_base_url: Optional[str] = Field(default=None)
+    
+    # Sync Integrations
+    google_sheet_url: Optional[str] = None
+
+    # Custom styling and code overrides
+    widget_custom_css: Optional[str] = Field(default="")
+    widget_custom_js: Optional[str] = Field(default="")
 
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -108,7 +119,10 @@ class IntegrationSettingsRead(BaseModel):
     widget_enabled: bool
     widget_theme: str
     widget_primary_color: str
+    widget_background_color: str
     widget_position: str
+    widget_layout: Optional[str] = "modern"
+    widget_logo_url: Optional[str] = None
     allowed_domains: str
     cors_enabled: bool
     webhook_url: Optional[str]
@@ -117,13 +131,21 @@ class IntegrationSettingsRead(BaseModel):
     require_https: bool
     ai_provider: Optional[str] = "groq"
     ai_api_key: Optional[str] = None
+    ai_model: Optional[str] = "llama-3.1-70b-versatile"
+    ai_base_url: Optional[str] = None
+    google_sheet_url: Optional[str] = None
+    widget_custom_css: Optional[str] = ""
+    widget_custom_js: Optional[str] = ""
 
 
 class IntegrationSettingsUpdate(BaseModel):
     widget_enabled: Optional[bool] = None
     widget_theme: Optional[str] = None
     widget_primary_color: Optional[str] = None
+    widget_background_color: Optional[str] = None
     widget_position: Optional[str] = None
+    widget_layout: Optional[str] = None
+    widget_logo_url: Optional[str] = None
     allowed_domains: Optional[str] = None
     cors_enabled: Optional[bool] = None
     webhook_url: Optional[str] = None
@@ -132,6 +154,11 @@ class IntegrationSettingsUpdate(BaseModel):
     require_https: Optional[bool] = None
     ai_provider: Optional[str] = None
     ai_api_key: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_base_url: Optional[str] = None
+    google_sheet_url: Optional[str] = None
+    widget_custom_css: Optional[str] = None
+    widget_custom_js: Optional[str] = None
 
 
 class WidgetCodeResponse(BaseModel):

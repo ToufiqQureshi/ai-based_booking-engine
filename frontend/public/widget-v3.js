@@ -7,12 +7,14 @@
 
         var hotelSlug = config ? config.hotelSlug : null;
         var frontendUrl = config && config.frontendUrl ? config.frontendUrl : window.location.origin;
+        var widgetLayout = config && config.widgetLayout ? config.widgetLayout : 'modern';
 
         var container = document.getElementById('hotelier-booking-widget');
         if (container) {
             hotelSlug = hotelSlug || container.getAttribute('data-hotel-slug');
+            widgetLayout = widgetLayout || container.getAttribute('data-widget-layout') || 'modern';
             if (hotelSlug) {
-                renderWidget(container, hotelSlug, frontendUrl);
+                renderWidget(container, hotelSlug, frontendUrl, widgetLayout);
             }
         }
 
@@ -24,19 +26,26 @@
         renderChatWidget(hotelSlug, frontendUrl);
     }
 
-    function renderWidget(container, hotelSlug, frontendUrl) {
+    function renderWidget(container, hotelSlug, frontendUrl, widgetLayout) {
+        var defaultHeight = '100px';
+        if (widgetLayout === 'classic') {
+            defaultHeight = '360px';
+        } else if (widgetLayout === 'minimal') {
+            defaultHeight = '85px';
+        }
+
         // Set container relative for absolute positioning of iframe
         container.style.position = 'relative';
-        container.style.zIndex = '50';
+        container.style.zIndex = '999999'; // Highest z-index so overflowing card and shadow stay on top
         // Force height to never collapse but never expand beyond bar
-        container.style.height = '100px';
+        container.style.height = defaultHeight;
         container.style.display = 'block';
-        container.style.overflow = 'visible'; // Ensure content outside 100px is visible
+        container.style.overflow = 'visible'; // Ensure content outside is visible
 
         // 1. Create Spacer (Fixed Height - NEVER CHANGES)
         var spacer = document.createElement('div');
         spacer.style.width = '100%';
-        spacer.style.height = '100px';
+        spacer.style.height = defaultHeight;
         spacer.style.display = 'block';
 
         // 2. Create Iframe (Floats over content when expanded)
@@ -46,7 +55,7 @@
         iframe.style.top = '0';
         iframe.style.left = '0';
         iframe.style.width = '100%';
-        iframe.style.height = '100px'; // Initial height matching bar
+        iframe.style.height = defaultHeight; // Initial height matching bar
         iframe.style.border = 'none';
         iframe.style.overflow = 'visible';
         iframe.style.zIndex = '999999'; // Super High Z-Index

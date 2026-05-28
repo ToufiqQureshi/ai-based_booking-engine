@@ -1,0 +1,38 @@
+{
+  "Free": {
+    "feature_ai_agent": false,
+    "feature_guest_bot": false,
+    "feature_rate_shopper": false,
+    "feature_new_booking": true,
+    "feature_color_palette": false,
+    "feature_custom_logo": false,
+    "feature_custom_widget": false
+  },
+  "Basic": {
+    "feature_ai_agent": false,
+    "feature_guest_bot": false,
+    "feature_rate_shopper": false,
+    "feature_new_booking": true,
+    "feature_color_palette": false,
+    "feature_custom_logo": true,
+    "feature_custom_widget": false
+  },
+  "Premium": {
+    "feature_ai_agent": false,
+    "feature_guest_bot": true,
+    "feature_rate_shopper": true,
+    "feature_new_booking": true,
+    "feature_color_palette": true,
+    "feature_custom_logo": true,
+    "feature_custom_widget": true
+  },
+  "Enterprise": {
+    "feature_ai_agent": true,
+    "feature_guest_bot": true,
+    "feature_rate_shopper": true,
+    "feature_new_booking": true,
+    "feature_color_palette": true,
+    "feature_custom_logo": true,
+    "feature_custom_widget": true
+  }
+}

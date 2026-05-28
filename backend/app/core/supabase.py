@@ -57,18 +57,18 @@ async def verify_supabase_token(token: str) -> dict | None:
                 logger.warning(f"JWKS verification failed, trying fallback: {str(e)}")
 
         # 3. Fallback to Secret (Industry Standard for local dev or if JWKS is flaky)
-        if settings.SUPABASE_JWT_SECRET:
-            try:
-                # Supabase uses HS256 with the JWT Secret
-                payload = jwt.decode(
-                    token, 
-                    settings.SUPABASE_JWT_SECRET, 
-                    algorithms=["HS256"], 
-                    options={"verify_aud": False, "verify_signature": True}
-                )
-                return payload
-            except Exception as e:
-                logger.error(f"Secret-based verification failed: {str(e)}")
+        for secret in [settings.SUPABASE_JWT_SECRET, settings.SECRET_KEY]:
+            if secret:
+                try:
+                    payload = jwt.decode(
+                        token, 
+                        secret, 
+                        algorithms=["HS256"], 
+                        options={"verify_aud": False, "verify_signature": True}
+                    )
+                    return payload
+                except Exception as e:
+                    logger.debug(f"Secret verification failed for a key: {str(e)}")
         
         # 4. Emergency: Unverified payload (ONLY for debugging, remove in production!)
         if settings.DEBUG:

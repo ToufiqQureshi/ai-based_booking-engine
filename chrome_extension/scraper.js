@@ -4,7 +4,7 @@
 
 (function () {
     const HOST = window.location.hostname;
-    const DEBUG = false; // Set to false for production to hide banner & logs
+    const DEBUG = true; // Set to true to show visual banners during scraping
 
     if (DEBUG) console.log("[Extension] Scraper Injected on:", HOST);
 
@@ -88,7 +88,7 @@
     }
 
     // =========================================================================
-    // STRATEGY: MAKEMYTRIP
+    // STRATEGY: MAKEMYTRIP / GOIBIBO
     // =========================================================================
     function scrapeMMT() {
         let price = 0;
@@ -99,7 +99,8 @@
         const soldOutSelectors = [
             ".htlSoldOutNew.soldOut", ".soldOutTxt",
             "//h4[contains(text(),'You Just Missed It')]",
-            "//div[contains(@class,'hdrContainer__right--soldOut')]", ".soldOut"
+            "//div[contains(@class,'hdrContainer__right--soldOut')]", 
+            ".soldOut", ".sold-out-tag", ".not-available-msg"
         ];
         for (let sel of soldOutSelectors) {
             try {
@@ -112,7 +113,8 @@
             } catch (e) { }
         }
 
-        if (!isSoldOut && document.body.innerText.includes("You Just Missed It")) {
+        const bodyText = document.body.innerText;
+        if (!isSoldOut && (bodyText.includes("You Just Missed It") || bodyText.includes("Sold Out"))) {
             isSoldOut = true;
             roomName = "Sold Out";
         }
@@ -122,8 +124,9 @@
         // 2. Price Check
         const priceSelectors = [
             "#hlistpg_hotel_shown_price", "[id^='hlistpg_hotel_shown_price']",
-            ".latoBlack.font28", ".font22.latoBlack",
+            ".latoBlack.font28", ".font22.latoBlack", ".font26.latoBlack",
             "p[id*='hlistpg_hotel_shown_price']",
+            ".pd-price__price-value", // Goibibo style
             "//div[contains(@class,'priceDetails')]//p[contains(@class,'latoBlack')]"
         ];
 
@@ -131,7 +134,7 @@
         for (let sel of priceSelectors) {
             try {
                 let el = sel.startsWith("//") ? getElementByXpath(sel) : document.querySelector(sel);
-                if (el && el.innerText) {
+                if (el && el.innerText && el.innerText.trim()) {
                     priceText = el.innerText;
                     break;
                 }
@@ -142,8 +145,14 @@
         if (isNaN(price)) price = 0;
 
         // 3. Room Name
-        const roomEl = document.querySelector(".bkngOption__title");
-        if (roomEl) roomName = roomEl.innerText;
+        const roomSelectors = [".bkngOption__title", ".room-type-name", ".roomName"];
+        for (let sel of roomSelectors) {
+            const el = document.querySelector(sel);
+            if (el && el.innerText) {
+                roomName = el.innerText.trim();
+                break;
+            }
+        }
 
         return { is_sold_out: false, price: price, room_type: roomName };
     }
@@ -157,21 +166,27 @@
         let isSoldOut = false;
 
         // 1. Sold Out Check
-        if (document.body.innerText.includes("We're sorry, but there are no rooms available")) {
-            isSoldOut = true;
+        const soldOutTexts = ["Sold out on your dates!", "no rooms available", "sold out", "We're sorry"];
+        const agodaBody = document.body.innerText;
+        for (let txt of soldOutTexts) {
+            if (agodaBody.toLowerCase().includes(txt.toLowerCase())) {
+                isSoldOut = true;
+                break;
+            }
         }
 
         if (isSoldOut) return { is_sold_out: true, price: 0, room_type: "Sold Out" };
 
-        // 2. Price Check
+        // 2. Price Check (Using advanced selectors from agoda_scraper.js)
         const priceSelectors = [
             "[data-selenium='display-price']",
-            ".CrossTrack-Price",
+            ".StickyNavPrice__priceDetail",
+            "[data-selenium='hotel-price']",
+            ".PropertyCardPrice__Value",
+            ".CheapestPriceLabel",
             "[data-element-name='final-price']",
-            ".pd-price",
-            ".PriceContainer",
-            "//span[@data-selenium='display-price']", // Best Bet
-            "//div[@id='property-room-grid']//span[contains(@class,'PriceContainer')]",
+            ".pd-price__price-value",
+            "//span[@data-selenium='display-price']",
             "//span[contains(@class,'PriceContainer-value')]"
         ];
 
@@ -179,27 +194,29 @@
         for (let sel of priceSelectors) {
             try {
                 let el = sel.startsWith("//") ? getElementByXpath(sel) : document.querySelector(sel);
-                if (el && el.innerText) {
-                    priceText = el.innerText;
-                    console.log(`[Agoda] Found Price via Selector: ${sel}`);
+                if (el && el.innerText && el.offsetParent !== null) {
+                    priceText = el.innerText.trim();
+                    console.log(`[Agoda] Match via: ${sel}`);
                     break;
                 }
             } catch (e) { }
         }
 
-        // AGODA FALLBACK: Regex Search
-        if (!priceText) {
-            const agodaBody = document.body.innerText;
-            // Look for ₹ 1,234 pattern strictly
-            const match = agodaBody.match(/₹\s?([\d,]+)/);
+        // AGODA FALLBACK: Regex Search for INR/₹ pattern
+        if (!priceText || parseFloat(priceText.replace(/[^\d.]/g, '')) < 100) {
+            const match = agodaBody.match(/(₹|INR|Rs\.?)\s?([\d,]+)/i);
             if (match) {
-                priceText = match[1];
-                console.log("[Agoda] Found Price via Regex Fallback");
+                priceText = match[2];
+                console.log("[Agoda] Regex fallback success");
             }
         }
 
         if (priceText) price = parseFloat(priceText.replace(/[^\d.]/g, ''));
         if (isNaN(price)) price = 0;
+
+        // 3. Room Name
+        const roomTypeElement = document.querySelector('.room-type-name, .RoomRow-module__room-name, [data-selenium="room-name"]');
+        if (roomTypeElement) roomName = roomTypeElement.textContent.trim();
 
         return { is_sold_out: false, price: price, room_type: roomName };
     }

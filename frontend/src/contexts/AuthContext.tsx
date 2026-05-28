@@ -49,7 +49,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch {
             // Silently fail
           }
-        } catch (err) {
+        } catch (err: any) {
+          if (err && err.status === 403) {
+            console.error('User or Hotel is deactivated on backend:', err);
+            if (err.message === 'User is deactivated') {
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                role: 'OWNER' as any,
+                hotel_id: '',
+                is_active: false,
+                created_at: session.user.created_at,
+                updated_at: session.user.updated_at || session.user.created_at,
+              });
+              return;
+            } else if (err.message === 'Hotel is deactivated') {
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                role: 'OWNER' as any,
+                hotel_id: '',
+                is_active: true,
+                created_at: session.user.created_at,
+                updated_at: session.user.updated_at || session.user.created_at,
+              });
+              setHotel({
+                id: '',
+                name: session.user.user_metadata?.hotel_name || 'My Hotel',
+                slug: '',
+                is_active: false,
+                address: { city: '', country: '' },
+                contact: {},
+                settings: {
+                  currency: 'INR',
+                  timezone: 'UTC',
+                  check_in_time: '14:00',
+                  check_out_time: '12:00',
+                },
+                photos: [],
+                amenities: [],
+                created_at: session.user.created_at,
+                updated_at: session.user.created_at,
+              });
+              return;
+            }
+          }
           console.warn('Backend unreachable on init, using Supabase session fallback:', err);
           // Set minimal user from session — don't sign out
           setUser({
@@ -89,6 +135,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Listen for user or hotel deactivation events from API client
+  useEffect(() => {
+    const handleUserDeactivated = () => {
+      setUser((prev) => prev ? { ...prev, is_active: false } : null);
+    };
+    const handleHotelDeactivated = () => {
+      setHotel((prev) => prev ? { ...prev, is_active: false } : null);
+    };
+
+    window.addEventListener('user-deactivated', handleUserDeactivated);
+    window.addEventListener('hotel-deactivated', handleHotelDeactivated);
+    return () => {
+      window.removeEventListener('user-deactivated', handleUserDeactivated);
+      window.removeEventListener('hotel-deactivated', handleHotelDeactivated);
+    };
+  }, []);
+
   const login = useCallback(async (credentials: LoginRequest) => {
     setIsLoading(true);
     try {
@@ -115,11 +178,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (backendErr) {
         console.warn('Backend user fetch failed, using Supabase session data:', backendErr);
         // Set minimal user from Supabase session so app can proceed
+        const admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"];
+        const userEmail = data.user.email?.toLowerCase() || '';
+        const fallbackRole = admin_emails.includes(userEmail) ? 'SUPER_ADMIN' : 'OWNER';
+
         setUser({
           id: data.user.id,
           email: data.user.email || '',
           name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-          role: 'OWNER' as any,
+          role: fallbackRole as any,
           hotel_id: '',
           created_at: data.user.created_at,
           updated_at: data.user.updated_at || data.user.created_at,

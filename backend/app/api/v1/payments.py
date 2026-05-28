@@ -4,6 +4,7 @@ Payments Router
 from typing import List
 from fastapi import APIRouter, HTTPException, status
 from sqlmodel import select
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.payment import Payment, PaymentCreate, PaymentRead
@@ -14,8 +15,10 @@ router = APIRouter(prefix="/payments", tags=["Payments"])
 @router.get("", response_model=List[PaymentRead])
 async def get_payments(current_user: CurrentUser, session: DbSession):
     """Get all payments for the hotel"""
-    # Simple query - just get payments for this hotel
-    query = select(Payment).where(Payment.hotel_id == current_user.hotel_id)
+    # Optimised query - prefetch booking and guest in a single roundtrip to resolve N+1 issue
+    query = select(Payment).where(Payment.hotel_id == current_user.hotel_id).options(
+        selectinload(Payment.booking).selectinload(Booking.guest)
+    )
     result = await session.execute(query)
     payments = result.scalars().all()
     
@@ -23,22 +26,11 @@ async def get_payments(current_user: CurrentUser, session: DbSession):
     enriched_payments = []
     for payment in payments:
         p_dict = payment.model_dump()
-        
-        # Get booking info
-        booking_result = await session.execute(
-            select(Booking).where(Booking.id == payment.booking_id)
-        )
-        booking = booking_result.scalar_one_or_none()
+        booking = payment.booking
         
         if booking:
             p_dict["booking_number"] = booking.booking_number
-            
-            # Get guest info
-            guest_result = await session.execute(
-                select(Guest).where(Guest.id == booking.guest_id)
-            )
-            guest = guest_result.scalar_one_or_none()
-            
+            guest = booking.guest
             if guest:
                 p_dict["guest_name"] = f"{guest.first_name} {guest.last_name}"
             else:

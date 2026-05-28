@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowRight, User, Mail, Phone, Calendar, ShieldCheck, CreditCard, Sparkles, MapPin } from 'lucide-react';
+import { Loader2, ArrowRight, User, Mail, Phone, Calendar, ShieldCheck, CreditCard, Sparkles, MapPin, Zap, Info, Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,14 @@ import { AddOn } from '@/types/api';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { BookingStepper } from '@/components/public/BookingStepper';
+import { LoyaltyRewardPopup } from '@/components/public/LoyaltyRewardPopup';
+import { SocialProofWidget } from '@/components/public/SocialProofWidget';
+import { BookingCheckoutContext } from './BookingCheckoutContext';
+import { CheckoutGuestSection } from '@/components/public/checkout/CheckoutGuestSection';
+import { CheckoutEnhanceStay } from '@/components/public/checkout/CheckoutEnhanceStay';
+import { CheckoutPayment } from '@/components/public/checkout/CheckoutPayment';
+import { CheckoutSummary } from '@/components/public/checkout/CheckoutSummary';
+
 
 // Error Boundary to catch render crashes
 class CheckoutErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -64,10 +72,12 @@ function BookingCheckoutInner() {
     const location = useLocation();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<'online' | 'property'>('online');
 
-    const { register, setValue, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>();
+    const { register, setValue, watch, handleSubmit, formState } = useForm<CheckoutFormData>();
 
     const [state, setState] = useState<BookingState | null>(null);
+    const [hotel, setHotel] = useState<any>(null);
 
     // Promo state - MUST be before any early returns (React hooks rules)
     const [promoCode, setPromoCode] = useState('');
@@ -75,6 +85,66 @@ function BookingCheckoutInner() {
     const [discountAmount, setDiscountAmount] = useState(0);
     const [promoMessage, setPromoMessage] = useState('');
     const [isValidating, setIsValidating] = useState(false);
+
+    // Loyalty AI state
+    const [loyaltyData, setLoyaltyData] = useState<{
+        isOpen: boolean;
+        message: string;
+        couponCode: string;
+        discountText: string;
+    }>({
+        isOpen: false,
+        message: '',
+        couponCode: '',
+        discountText: ''
+    });
+    const [hasCheckedLoyalty, setHasCheckedLoyalty] = useState(false);
+    const [allAddons, setAllAddons] = useState<AddOn[]>([]);
+
+    useEffect(() => {
+        if (hotelSlug) {
+            apiClient.get<AddOn[]>(`/public/hotels/${hotelSlug}/addons`)
+                .then(res => setAllAddons(res.filter(a => a.is_active !== false)))
+                .catch(console.error);
+        }
+    }, [hotelSlug]);
+
+    const handleToggleAddon = (addon: AddOn) => {
+        setState(prev => {
+            if (!prev) return null;
+            const currentAddons = prev.addons || [];
+            const exists = currentAddons.some(a => a.id === addon.id);
+            let updatedAddons;
+            if (exists) {
+                updatedAddons = currentAddons.filter(a => a.id !== addon.id);
+            } else {
+                updatedAddons = [...currentAddons, addon];
+            }
+            return {
+                ...prev,
+                addons: updatedAddons
+            };
+        });
+    };
+
+    const emailValue = watch('email');
+
+    // Auto-set paymentMethod when hotel setting loads
+    useEffect(() => {
+        if (!hotel) return;
+        const mode = hotel?.settings?.payment_mode || 'both';
+        if (mode === 'online_only') setPaymentMethod('online');
+        else if (mode === 'property_only') setPaymentMethod('property');
+        // 'both' -> keep current state (default 'online')
+    }, [hotel]);
+
+    useEffect(() => {
+        if (hotelSlug) {
+            apiClient.get(`/public/hotels/${hotelSlug}`)
+                .then(res => setHotel(res))
+                .catch(console.error);
+        }
+    }, [hotelSlug]);
 
     useEffect(() => {
         if (location.state) {
@@ -100,9 +170,77 @@ function BookingCheckoutInner() {
                 } catch (e) {
                     console.error("Failed to parse pending booking state");
                 }
+            } else {
+                // Fallback: restore checkout state from sessionStorage (e.g. back-navigation from payment page)
+                const checkoutKey = `checkout_state:${hotelSlug}`;
+                const savedCheckout = sessionStorage.getItem(checkoutKey);
+                if (savedCheckout) {
+                    try {
+                        const parsed = JSON.parse(savedCheckout);
+                        const CACHE_TTL = 5 * 60 * 1000;
+                        if (parsed._savedAt && Date.now() - parsed._savedAt < CACHE_TTL) {
+                            setState(parsed.state);
+                        } else {
+                            sessionStorage.removeItem(checkoutKey);
+                        }
+                    } catch {
+                        sessionStorage.removeItem(`checkout_state:${hotelSlug}`);
+                    }
+                }
             }
         }
-    }, [location.state, setValue]);
+    }, [location.state, setValue, hotelSlug]);
+
+    // Persist checkout state to sessionStorage so back-navigation from payment page works
+    useEffect(() => {
+        if (state && hotelSlug) {
+            try {
+                sessionStorage.setItem(`checkout_state:${hotelSlug}`, JSON.stringify({
+                    state,
+                    _savedAt: Date.now()
+                }));
+            } catch {
+                // sessionStorage full — silently ignore
+            }
+        }
+    }, [state, hotelSlug]);
+
+    // Check loyalty when email is entered
+    const handleEmailBlur = async () => {
+        if (!emailValue || !state || hasCheckedLoyalty) return;
+        
+        try {
+            // Get hotel ID from first room
+            const hotelId = state.rooms[0]?.hotel_id || hotelSlug;
+            
+            const response = await apiClient.post<any>('/public/loyalty-check', {
+                email: emailValue,
+                hotel_id: hotelId
+            });
+
+            if (response.is_repeat_guest) {
+                setLoyaltyData({
+                    isOpen: true,
+                    message: response.message,
+                    couponCode: response.coupon_code,
+                    discountText: response.discount_text
+                });
+                setHasCheckedLoyalty(true);
+            }
+        } catch (error) {
+            console.error("Loyalty check failed", error);
+        }
+    };
+
+    const applyLoyaltyCoupon = async () => {
+        setPromoCode(loyaltyData.couponCode);
+        setLoyaltyData(prev => ({ ...prev, isOpen: false }));
+        
+        // Wait a bit then apply
+        setTimeout(() => {
+            handleApplyPromo(loyaltyData.couponCode);
+        }, 100);
+    };
 
     if (!state || !state.rooms || state.rooms.length === 0 || !state.checkInDate || !state.checkOutDate) {
         return (
@@ -154,11 +292,81 @@ function BookingCheckoutInner() {
                 special_requests: data.specialRequests
             };
 
-            const response = await apiClient.post('/public/bookings', bookingPayload);
+            // First create the booking
+            const response = await apiClient.post('/public/bookings', bookingPayload) as any;
+            const bookingId = response.id as string;
 
-            navigate(`/book/${hotelSlug}/confirmation`, {
-                state: { booking: response }
-            });
+            if (paymentMethod === 'online') {
+                // Load Razorpay Script
+                const loadRazorpayScript = (): Promise<boolean> => {
+                    return new Promise((resolve) => {
+                        if ((window as any).Razorpay) { resolve(true); return; } // Already loaded
+                        const script = document.createElement('script');
+                        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                        script.onload = () => resolve(true);
+                        script.onerror = () => resolve(false);
+                        document.body.appendChild(script);
+                    });
+                };
+
+                const sdkLoaded = await loadRazorpayScript();
+                if (!sdkLoaded) {
+                    toast({ variant: 'destructive', title: 'Connection Error', description: 'Failed to load Razorpay SDK. Please check your internet connection.' });
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                // Create Razorpay Order on backend
+                const orderData = await apiClient.post('/public/razorpay/create-order', {
+                    amount: finalTotal,
+                    receipt: bookingId
+                }) as any;
+
+                // Open Razorpay Checkout Popup
+                const options = {
+                    key: 'rzp_test_SuLAf6S8NNoGNT',
+                    amount: orderData.amount as number,
+                    currency: orderData.currency as string,
+                    name: hotel?.name || 'Hotel Booking',
+                    description: `Booking ${response.booking_number}`,
+                    order_id: orderData.id as string,
+                    handler: async function (paymentResponse: any) {
+                        try {
+                            setIsSubmitting(true);
+                            await apiClient.post('/public/razorpay/verify', {
+                                razorpay_order_id: paymentResponse.razorpay_order_id,
+                                razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                razorpay_signature: paymentResponse.razorpay_signature,
+                                booking_id: bookingId
+                            });
+                            try { sessionStorage.removeItem(`checkout_state:${hotelSlug}`); } catch { /* ignore */ }
+                            navigate(`/book/${hotelSlug}/confirmation`, { state: { booking: response } });
+                        } catch {
+                            setIsSubmitting(false);
+                            toast({ variant: 'destructive', title: 'Payment Verification Failed', description: 'Your payment was received but could not be verified. Please contact support with your payment ID.' });
+                        }
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            setIsSubmitting(false);
+                        }
+                    },
+                    prefill: {
+                        name: `${data.firstName} ${data.lastName}`,
+                        email: data.email,
+                        contact: data.phone
+                    },
+                    theme: { color: themeColor }
+                };
+
+                const paymentObject = new (window as any).Razorpay(options);
+                paymentObject.open();
+
+            } else {
+                // Pay at Property — booking already created, just confirm
+                try { sessionStorage.removeItem(`checkout_state:${hotelSlug}`); } catch { /* ignore */ }
+                navigate(`/book/${hotelSlug}/confirmation`, { state: { booking: response } });
+            }
 
         } catch (error) {
             console.error('Booking failed:', error);
@@ -177,31 +385,96 @@ function BookingCheckoutInner() {
         return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
     };
 
+    const settings = hotel?.settings;
+    const taxName = settings?.tax_name || 'GST';
+    const roomTaxRate = Number(settings?.room_tax_rate) || 0;
+    const roomTaxType = settings?.room_tax_type || 'exclusive';
+    const roomTaxCalculationMethod = settings?.room_tax_calculation_method || 'flat';
+    const roomTaxSlabs = settings?.room_tax_slabs || [];
 
+    // Payment mode from hotel settings: 'online_only' | 'property_only' | 'both'
+    const hotelPaymentMode: string = settings?.payment_mode || 'both';
+    const addonTaxRate = Number(settings?.addon_tax_rate) || 0;
+    const addonTaxType = settings?.addon_tax_type || 'exclusive';
 
     const addonsTotal = state.addons?.reduce((sum, a) => sum + a.price, 0) || 0;
     const grandTotal = state.totalRoomPrice + addonsTotal;
-    const finalTotal = grandTotal - discountAmount;
 
-    const handleApplyPromo = async () => {
-        if (!promoCode) return;
+    const getRoomTaxRate = (price: number) => {
+        if (roomTaxCalculationMethod === 'flat') {
+            return roomTaxRate;
+        }
+        const slab = roomTaxSlabs.find(s => 
+            price >= s.from && (s.to === 0 || s.to === null || price <= s.to)
+        );
+        if (slab) return slab.rate;
+        if (price < 1000) return 0;
+        if (price < 7500) return 12;
+        return 18;
+    };
+
+    // Calculate room subtotal & room tax room-by-room
+    let roomSubtotal = 0;
+    let roomTaxAmount = 0;
+    let appliedRoomTaxRate = 0;
+    if (state.rooms && state.rooms.length > 0) {
+        state.rooms.forEach((room: any) => {
+            const r_rate = getRoomTaxRate(room.price_per_night);
+            appliedRoomTaxRate = r_rate;
+            const r_total = room.total_price || 0;
+            if (roomTaxType === 'inclusive') {
+                const r_sub = r_total / (1 + (r_rate / 100));
+                roomSubtotal += r_sub;
+                roomTaxAmount += (r_total - r_sub);
+            } else {
+                roomSubtotal += r_total;
+                roomTaxAmount += r_total * (r_rate / 100);
+            }
+        });
+    } else {
+        if (roomTaxType === 'inclusive') {
+            roomSubtotal = state.totalRoomPrice / (1 + (roomTaxRate / 100));
+            roomTaxAmount = state.totalRoomPrice - roomSubtotal;
+        } else {
+            roomSubtotal = state.totalRoomPrice;
+            roomTaxAmount = state.totalRoomPrice * (roomTaxRate / 100);
+        }
+    }
+
+    // Addon subtotal & tax
+    let addonSubtotal = addonsTotal;
+    let addonTaxAmount = 0;
+    if (addonTaxType === 'inclusive') {
+        addonSubtotal = addonsTotal / (1 + (addonTaxRate / 100));
+        addonTaxAmount = addonsTotal - addonSubtotal;
+    } else {
+        addonTaxAmount = addonsTotal * (addonTaxRate / 100);
+    }
+
+    const subtotalAmount = roomSubtotal + addonSubtotal;
+    const taxAmount = roomTaxAmount + addonTaxAmount;
+    const totalBeforeDiscount = (roomTaxType === 'exclusive' ? state.totalRoomPrice + roomTaxAmount : state.totalRoomPrice) + 
+                                (addonTaxType === 'exclusive' ? addonsTotal + addonTaxAmount : addonsTotal);
+    const finalTotal = totalBeforeDiscount - discountAmount;
+
+    const handleApplyPromo = async (codeToApply?: string) => {
+        const code = codeToApply || promoCode;
+        if (!code) return;
+        
         setIsValidating(true);
         setPromoMessage('');
         try {
             const res = await apiClient.post<{ valid: boolean, discount: number, message: string }>('/promos/validate', {
-                code: promoCode,
-                hotel_id: room.hotel_id, // We need hotel_id from somewhere. It's usually in room object or params if we had it. room has hotel_id?
-                // room object comes from location state. Let's check BookingRoom interface in booking.py/ts.
-                // Assuming we can get hotel_id. Wait, `hotelSlug` is in params. We might need to resolve it or pass hotel_id in state.
-                // Let's assume room object has hotel_id for now as per BookingRoom definition
+                code: code,
+                hotel_id: room.hotel_id,
                 booking_amount: grandTotal
             });
 
             if (res.valid) {
-                setAppliedPromo(promoCode);
+                setAppliedPromo(code);
                 setDiscountAmount(res.discount);
                 setPromoMessage(res.message);
-                // Update form data so it gets submitted
+                if (codeToApply) setPromoCode(codeToApply);
             } else {
                 setPromoMessage(res.message);
                 setDiscountAmount(0);
@@ -214,280 +487,196 @@ function BookingCheckoutInner() {
         }
     };
 
+    const getNormalizedColor = (col?: string | null) => {
+        return col || '#7c3aed';
+    };
+    const themeColor = getNormalizedColor(hotel?.primary_color);
+
+    const ctx = {
+        hotelSlug: hotelSlug as string, hotel, room, state, setState, register, formState, getNormalizedColor, themeColor, handleEmailBlur, allAddons, currentAddons: state.addons || [], handleToggleAddon, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, paymentMethod, setPaymentMethod, handleCheckout: onSubmit, handleSubmit, nights, hotelPaymentMode, roomsTotal: subtotalAmount - (state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0), addonsTotal: state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0,
+        appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount, addonTaxRate, addonTaxAmount, appliedPromo, setAppliedPromo, setDiscountAmount
+    };
+
     return (
+        <BookingCheckoutContext.Provider value={ctx}>
         <div className="min-h-screen bg-slate-50 pb-20 selection:bg-primary/10">
             {/* Stepper Header */}
-            <BookingStepper currentStep={4} />
+            <BookingStepper currentStep={4} primaryColor={themeColor} />
 
             <div className="max-w-6xl mx-auto px-4 mt-8">
-                <div className="mb-10 text-center md:text-left">
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Secure Your Stay</h1>
-                    <p className="text-slate-500">Complete your reservation in just a few steps.</p>
+                <div className="mb-10 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider mb-3 border border-blue-100">
+                            <Zap className="w-3 h-3 fill-blue-600" /> AI-Powered Booking Engine
+                        </div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Secure Your Stay</h1>
+                        <p className="text-slate-500 font-medium">Complete your reservation in just a few steps.</p>
+                    </div>
+                    
+                    <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                        <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                            <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Guaranteed</p>
+                            <p className="text-sm font-bold text-slate-900">Secure Checkout</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid gap-12 lg:grid-cols-[1fr,420px]">
                     {/* Left Column: Form */}
                     <div className="space-y-8 animate-enter">
-                        {/* Guest Section */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
-                            <div className="flex items-center gap-4 mb-8">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                                    <User className="w-5 h-5" />
+                        
+                        <SocialProofWidget />
+
+                        <CheckoutGuestSection />
+                        <CheckoutEnhanceStay />
+                        {/* Payment Section */}
+                        <div className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/40">
+                            {/* Header */}
+                            <div className="px-8 md:px-10 pt-8 md:pt-10 pb-6 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                    <ShieldCheck className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-slate-900">Guest Information</h2>
-                                    <p className="text-sm text-slate-500">Who will be staying?</p>
+                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Payment</h2>
+                                    <p className="text-sm font-medium" style={{ color: themeColor }}>
+                                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse align-middle" />
+                                        Powered by Razorpay • 256-bit SSL Encrypted
+                                    </p>
                                 </div>
                             </div>
 
-                            <form id="booking-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="firstName" className="text-xs uppercase tracking-wider text-slate-500 font-bold">First Name</Label>
-                                        <Input
-                                            id="firstName"
-                                            placeholder="Eg. John"
-                                            className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                                            {...register('firstName', { required: 'First name is required' })}
-                                        />
-                                        {errors.firstName && <span className="text-xs text-red-500 font-medium">{errors.firstName.message}</span>}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="lastName" className="text-xs uppercase tracking-wider text-slate-500 font-bold">Last Name</Label>
-                                        <Input
-                                            id="lastName"
-                                            placeholder="Eg. Doe"
-                                            className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                                            {...register('lastName', { required: 'Last name is required' })}
-                                        />
-                                        {errors.lastName && <span className="text-xs text-red-500 font-medium">{errors.lastName.message}</span>}
-                                    </div>
-                                </div>
+                            {/* Payment Options */}
+                            <div className="px-8 md:px-10 pb-8 md:pb-10 space-y-3">
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email" className="text-xs uppercase tracking-wider text-slate-500 font-bold">Email Address</Label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-4 top-4 h-4 w-4 text-slate-400" />
-                                            <Input
-                                                id="email"
-                                                type="email"
-                                                className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                                                placeholder="john@example.com"
-                                                {...register('email', {
-                                                    required: 'Email is required',
-                                                    pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' }
-                                                })}
-                                            />
+                                {/* --- ONLINE ONLY: Just a clean info block, no choice --- */}
+                                {hotelPaymentMode === 'online_only' && (
+                                    <div className="flex items-start gap-4 p-5 rounded-2xl border-2 border-emerald-500 bg-emerald-50/40">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <CreditCard className="w-5 h-5 text-emerald-600" />
                                         </div>
-                                        {errors.email && <span className="text-xs text-red-500 font-medium">{errors.email.message}</span>}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="phone" className="text-xs uppercase tracking-wider text-slate-500 font-bold">Phone Number</Label>
-                                        <div className="relative">
-                                            <Phone className="absolute left-4 top-4 h-4 w-4 text-slate-400" />
-                                            <Input
-                                                id="phone"
-                                                type="tel"
-                                                className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                                                placeholder="+91 98765 43210"
-                                                {...register('phone', { required: 'Phone is required' })}
-                                            />
-                                        </div>
-                                        {errors.phone && <span className="text-xs text-red-500 font-medium">{errors.phone.message}</span>}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="requests" className="text-xs uppercase tracking-wider text-slate-500 font-bold">Special Requests</Label>
-                                    <Textarea
-                                        id="requests"
-                                        placeholder="Any specific preferences? (Optional)"
-                                        className="min-h-[100px] bg-slate-50 border-slate-200 focus:bg-white transition-all resize-none"
-                                        {...register('specialRequests')}
-                                    />
-                                </div>
-                            </form>
-                        </div>
-
-                        {/* Payment Section */}
-                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm relative overflow-hidden">
-                            <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-                                        <ShieldCheck className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-slate-900">Payment Details</h2>
-                                        <p className="text-sm text-green-600 font-medium">No prepayment needed today</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/50 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-                                <CreditCard className="w-8 h-8 text-slate-400" />
-                                <div className="flex-1">
-                                    <h3 className="font-bold text-slate-900">Pay at Property</h3>
-                                    <p className="text-sm text-slate-500">Your card is only needed to guarantee your booking. You'll pay when you arrive.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column: Summary */}
-                    <div className="lg:sticky lg:top-8 h-fit animate-enter" style={{ animationDelay: '0.1s' }}>
-                        <div className="bg-white rounded-3xl overflow-hidden shadow-xl shadow-slate-200/50 border border-slate-100">
-                            {/* Room Image Header */}
-                            <div className="h-48 relative bg-slate-200">
-                                {room.photos && room.photos.length > 0 ? (
-                                    <img src={room.photos[0].url} alt="Room" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-400">No Image</div>
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                <div className="absolute bottom-4 left-6 text-white">
-                                    <h3 className="font-bold text-xl mb-1">{room.name}</h3>
-                                    <Badge className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border-0">
-                                        {room.rate_plan_name || room.rate_options?.[0]?.name || 'Standard Rate'}
-                                    </Badge>
-                                </div>
-                            </div>
-
-                            <div className="p-6 space-y-6">
-                                {/* Date Timeline */}
-                                <div className="flexItems-center justify-between relative pl-4">
-                                    <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-slate-100"></div>
-                                    <div className="space-y-6">
-                                        <div className="relative pl-6">
-                                            <div className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-primary bg-white z-10" />
-                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Check-in</p>
-                                            <p className="font-semibold text-slate-900">{format(new Date(state.checkInDate), 'EEE, MMM dd')}</p>
-                                            <p className="text-xs text-slate-500">From 2:00 PM</p>
-                                        </div>
-                                        <div className="relative pl-6">
-                                            <div className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300 z-10" />
-                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Check-out</p>
-                                            <p className="font-semibold text-slate-900">{format(new Date(state.checkOutDate), 'EEE, MMM dd')}</p>
-                                            <p className="text-xs text-slate-500">Until 11:00 AM</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                {/* Price Breakdown */}
-                                <div className="space-y-3">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-600">{room.name} x {nights} nights</span>
-                                        <span className="font-medium text-slate-900">{formatCurrency(state.totalRoomPrice)}</span>
-                                    </div>
-
-                                    {state.addons && state.addons.length > 0 && (
-                                        <div className="space-y-2 pt-2">
-                                            {state.addons.map((addon, index) => (
-                                                <div key={index} className="flex justify-between text-sm text-slate-500">
-                                                    <span className="flex items-center"><Sparkles className="w-3 h-3 mr-1 text-primary" /> {addon.name}</span>
-                                                    <span>{formatCurrency(addon.price)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    <div className="flex justify-between text-sm text-green-600 pt-2">
-                                        <span>Taxes & Fees</span>
-                                        <span className="font-bold">Included</span>
-                                    </div>
-                                </div>
-
-
-                                {/* Coupon Section */}
-                                <div className="pt-4 border-t border-slate-100">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <Label htmlFor="promoCode" className="text-sm font-medium text-slate-700">Have a coupon?</Label>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            id="promoCode"
-                                            placeholder="Enter code"
-                                            value={promoCode}
-                                            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                                            disabled={!!appliedPromo}
-                                            className="h-9"
-                                        />
-                                        {appliedPromo ? (
-                                            <Button type="button" variant="outline" size="sm" onClick={() => {
-                                                setAppliedPromo(null);
-                                                setDiscountAmount(0);
-                                                setPromoCode('');
-                                            }}>
-                                                Remove
-                                            </Button>
-                                        ) : (
-                                            <Button type="button" size="sm" onClick={handleApplyPromo} disabled={isValidating || !promoCode}>
-                                                {isValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
-                                            </Button>
-                                        )}
-                                    </div>
-                                    {promoMessage && (
-                                        <p className={cn("text-xs mt-1", appliedPromo ? "text-green-600" : "text-red-500")}>
-                                            {promoMessage}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Total */}
-                                <div className="pt-4 border-t border-slate-100">
-                                    <div className="space-y-1 mb-2">
-                                        <div className="flex justify-between items-end">
-                                            <span className="text-sm text-slate-500">Subtotal</span>
-                                            <span className="text-sm font-medium text-slate-900">{formatCurrency(grandTotal)}</span>
-                                        </div>
-                                        {appliedPromo && (
-                                            <div className="flex justify-between items-end text-green-600">
-                                                <span className="text-sm">Discount ({appliedPromo})</span>
-                                                <span className="text-sm font-medium">-{formatCurrency(discountAmount)}</span>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-black text-slate-900">Secure Online Payment</h3>
+                                                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-widest">Required</span>
                                             </div>
-                                        )}
+                                            <p className="text-sm text-slate-500 font-medium">Complete your booking with a secure online payment via Credit/Debit Card, UPI, or Net Banking.</p>
+                                            <div className="flex items-center gap-2 mt-3">
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-4 opacity-50" />
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-50" />
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">+ UPI, NetBanking</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-end mb-1">
-                                        <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">Total Amount</span>
-                                        <span className="text-3xl font-bold text-slate-900 tracking-tight">{formatCurrency(finalTotal)}</span>
-                                    </div>
-                                    <p className="text-xs text-right text-slate-400">Includes all taxes and charges</p>
-                                </div>
+                                )}
 
-                                {/* Submit Button */}
-                                <Button
-                                    className="w-full h-14 text-lg font-bold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-                                    type="submit"
-                                    form="booking-form"
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Confirming...
-                                        </>
-                                    ) : (
-                                        <>
-                                            Complete Booking <ArrowRight className="ml-2 h-5 w-5" />
-                                        </>
-                                    )}
-                                </Button>
+                                {/* --- PROPERTY ONLY: Just a clean info block, no choice --- */}
+                                {hotelPaymentMode === 'property_only' && (
+                                    <div className="flex items-start gap-4 p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/50">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <CreditCard className="w-5 h-5 text-slate-500" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-black text-slate-900">Pay at Property</h3>
+                                                <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full uppercase tracking-widest">No Charge Today</span>
+                                            </div>
+                                            <p className="text-sm text-slate-500 font-medium">Your booking is guaranteed. Full payment is collected directly at the hotel during check-in or check-out.</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* --- BOTH: Guest chooses --- */}
+                                {hotelPaymentMode === 'both' && (
+                                    <>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Choose how you'd like to pay</p>
+
+                                        {/* Pay Now Option */}
+                                        <label
+                                            htmlFor="pay-online"
+                                            className={cn(
+                                                "flex items-start gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200",
+                                                paymentMethod === 'online'
+                                                    ? "border-emerald-500 bg-emerald-50/40 shadow-sm shadow-emerald-100"
+                                                    : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50/50"
+                                            )}
+                                        >
+                                            <div className="flex items-center pt-0.5">
+                                                <input
+                                                    id="pay-online"
+                                                    type="radio"
+                                                    name="paymentMethod"
+                                                    value="online"
+                                                    checked={paymentMethod === 'online'}
+                                                    onChange={() => setPaymentMethod('online')}
+                                                    className="w-4 h-4 accent-emerald-600"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="font-black text-slate-900">Pay Now (Online)</h3>
+                                                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-widest">Instant Confirm</span>
+                                                </div>
+                                                <p className="text-sm text-slate-500 font-medium">Pay securely via Credit/Debit Card, UPI, or Net Banking. Booking confirmed instantly.</p>
+                                                <div className="flex items-center gap-2 mt-2.5">
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className={cn("h-3.5 transition-opacity", paymentMethod === 'online' ? 'opacity-70' : 'opacity-30')} />
+                                                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className={cn("h-5 transition-opacity", paymentMethod === 'online' ? 'opacity-70' : 'opacity-30')} />
+                                                    <span className={cn("text-[10px] font-bold uppercase tracking-wider transition-colors", paymentMethod === 'online' ? 'text-slate-400' : 'text-slate-300')}>+ UPI, NetBanking</span>
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        {/* Pay at Property Option */}
+                                        <label
+                                            htmlFor="pay-property"
+                                            className={cn(
+                                                "flex items-start gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200",
+                                                paymentMethod === 'property'
+                                                    ? "border-slate-400 bg-slate-50/60 shadow-sm"
+                                                    : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50/50"
+                                            )}
+                                        >
+                                            <div className="flex items-center pt-0.5">
+                                                <input
+                                                    id="pay-property"
+                                                    type="radio"
+                                                    name="paymentMethod"
+                                                    value="property"
+                                                    checked={paymentMethod === 'property'}
+                                                    onChange={() => setPaymentMethod('property')}
+                                                    className="w-4 h-4 accent-slate-600"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="font-black text-slate-900">Pay at Property</h3>
+                                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full uppercase tracking-widest">No Charge Today</span>
+                                                </div>
+                                                <p className="text-sm text-slate-500 font-medium">No charges today. Your booking is guaranteed and payment is collected at the hotel.</p>
+                                            </div>
+                                        </label>
+                                    </>
+                                )}
                             </div>
                         </div>
-
-                        <div className="text-center mt-6">
-                            <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                                By proceeding, you agree to our <a href="#" className="underline hover:text-primary">Terms of Service</a> and <a href="#" className="underline hover:text-primary">Privacy Policy</a>.
-                            </p>
-                        </div>
                     </div>
+                    <CheckoutSummary />
                 </div>
             </div>
+
+            {/* AI Loyalty Reward Popup */}
+            <LoyaltyRewardPopup 
+                isOpen={loyaltyData.isOpen}
+                onClose={() => setLoyaltyData(prev => ({ ...prev, isOpen: false }))}
+                message={loyaltyData.message}
+                couponCode={loyaltyData.couponCode}
+                discountText={loyaltyData.discountText}
+                onApply={applyLoyaltyCoupon}
+            />
         </div>
+        </BookingCheckoutContext.Provider>
     );
 }
 

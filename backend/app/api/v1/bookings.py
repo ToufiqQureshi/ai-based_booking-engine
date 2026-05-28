@@ -18,6 +18,16 @@ from app.models.booking import (
 from app.models.room import RoomType
 from app.core.tasks import log_timeline_task
 from app.api.v1.availability import clear_availability_cache
+from app.services.email_service import get_email_service
+from app.core.redis_client import redis_client as _redis
+
+def _clear_dashboard_cache(hotel_id: str):
+    """Dashboard stats + recent bookings cache clear karta hai jab booking change ho."""
+    try:
+        _redis.delete_value(f"dashboard_stats:{hotel_id}")
+        _redis.delete_value(f"dashboard_recent_bookings:{hotel_id}")
+    except Exception:
+        pass
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -105,6 +115,12 @@ async def create_booking(
     
     # Create booking
     # --- CONCURRENCY SAFETY: Lock room inventory during transaction ---
+    rooms_list = []
+    from app.models.hotel import Hotel
+    from app.models.rates import RatePlan
+    hotel = await session.get(Hotel, current_user.hotel_id)
+    hotel_policy = hotel.settings.get("cancellation_policy") if hotel and hotel.settings else None
+
     for room_req in booking_data.rooms:
         rt_id = room_req.get("room_type_id")
         # Lock this room type for the duration of this transaction
@@ -115,8 +131,135 @@ async def create_booking(
         if not room_type:
              raise HTTPException(status_code=404, detail=f"Room type {rt_id} not found")
              
-        # TODO: Advanced date-range availability check goes here.
-        # For now, we ensure the room type exists and is locked.
+        # Resolve policy and freeze
+        cancellation_policy = room_type.cancellation_policy
+        is_refundable = True
+        cancellation_hours = 24
+        
+        rp_id = room_req.get("rate_plan_id")
+        
+        # Check for overrides on room type level
+        plan_override = {}
+        if room_type and rp_id:
+            overrides = getattr(room_type, "rate_plan_overrides", {}) or {}
+            plan_override = overrides.get(rp_id) or {} if isinstance(overrides, dict) else {}
+
+        if rp_id:
+            rp = await session.get(RatePlan, rp_id)
+            if rp:
+                is_refundable = plan_override.get("is_refundable", rp.is_refundable)
+                cancellation_hours = plan_override.get("cancellation_hours", rp.cancellation_hours)
+                
+        if not cancellation_policy:
+            if plan_override:
+                cancellation_policy = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
+            else:
+                cancellation_policy = hotel_policy
+                if not cancellation_policy:
+                    cancellation_policy = f"Free cancellation up to {cancellation_hours} hours before check-in" if is_refundable else "Non-refundable"
+                
+        room_dict = dict(room_req)
+        room_dict["cancellation_policy"] = cancellation_policy
+        room_dict["is_refundable"] = is_refundable
+        room_dict["cancellation_hours"] = cancellation_hours
+        rooms_list.append(room_dict)
+
+    # Get Hotel Settings for Tax rules
+    settings = hotel.settings if hotel and hotel.settings else {}
+    tax_name = settings.get("tax_name", "GST")
+    room_tax_rate = float(settings.get("room_tax_rate", 0.0))
+    room_tax_type = settings.get("room_tax_type", "exclusive")
+    room_tax_calculation_method = settings.get("room_tax_calculation_method", "flat")
+    room_tax_slabs = settings.get("room_tax_slabs", [])
+    addon_tax_rate = float(settings.get("addon_tax_rate", 0.0))
+    addon_tax_type = settings.get("addon_tax_type", "exclusive")
+
+    def resolve_room_rate_tax(nightly_price: float) -> float:
+        if room_tax_calculation_method == "flat":
+            return room_tax_rate
+        for slab in room_tax_slabs:
+            if float(slab.get("from", 0.0)) <= nightly_price <= float(slab.get("to", 999999.0)):
+                return float(slab.get("rate", 0.0))
+        if nightly_price < 1000:
+            return 0.0
+        elif nightly_price < 7500:
+            return 12.0
+        else:
+            return 18.0
+
+    # Calculate room subtotal & room tax
+    room_subtotal = 0.0
+    room_tax_amount = 0.0
+    for room in rooms_list:
+        price_per_night = room.get("price_per_night")
+        total_price = room.get("total_price", 0.0)
+        if price_per_night is None:
+            nights = (booking_data.check_out - booking_data.check_in).days
+            if nights < 1:
+                nights = 1
+            price_per_night = total_price / nights
+        
+        r_rate = resolve_room_rate_tax(float(price_per_night))
+        r_total = float(total_price)
+        if room_tax_type == "inclusive":
+            r_sub = r_total / (1 + (r_rate / 100))
+            r_tax = r_total - r_sub
+        else:
+            r_sub = r_total
+            r_tax = r_total * (r_rate / 100)
+        room_subtotal += r_sub
+        room_tax_amount += r_tax
+
+    addon_total = sum(addon.get("price", 0) for addon in booking_data.addons) if booking_data.addons else 0.0
+    
+    if addon_tax_type == "inclusive":
+        addon_subtotal = addon_total / (1 + (addon_tax_rate / 100))
+        addon_tax_amount = addon_total - addon_subtotal
+    else:
+        addon_subtotal = addon_total
+        addon_tax_amount = addon_total * (addon_tax_rate / 100)
+        
+    subtotal_amount = round(room_subtotal + addon_subtotal, 2)
+    tax_amount = round(room_tax_amount + addon_tax_amount, 2)
+    total_before_discount = subtotal_amount + tax_amount
+    
+    # Apply Promo Code if valid on backend
+    discount_amount = 0.0
+    from app.models.promo import PromoCode
+    if booking_data.promo_code:
+        promo_query = select(PromoCode).where(
+            PromoCode.code == booking_data.promo_code,
+            PromoCode.hotel_id == current_user.hotel_id,
+            PromoCode.is_active == True
+        )
+        promo_res = await session.execute(promo_query)
+        promo = promo_res.scalar_one_or_none()
+        if promo:
+            if promo.discount_type == "percentage":
+                discount_amount = (total_before_discount * promo.discount_value) / 100
+            else:
+                discount_amount = promo.discount_value
+            discount_amount = min(discount_amount, total_before_discount)
+            # Increment usage
+            promo.current_usage = (promo.current_usage or 0) + 1
+            session.add(promo)
+            
+    total_amount = round(total_before_discount - discount_amount, 2)
+    discount_amount = round(discount_amount, 2)
+    
+    tax_details = {
+        "tax_name": tax_name,
+        "room_tax_rate": room_tax_rate,
+        "room_tax_type": room_tax_type,
+        "room_base_amount": round(room_subtotal, 2),
+        "room_tax_amount": round(room_tax_amount, 2),
+        "addon_tax_rate": addon_tax_rate,
+        "addon_tax_type": addon_tax_type,
+        "addon_base_amount": round(addon_subtotal, 2),
+        "addon_tax_amount": round(addon_tax_amount, 2)
+    }
+
+    addons_list = [dict(addon) for addon in booking_data.addons] if booking_data.addons else []
 
     booking = Booking(
         hotel_id=current_user.hotel_id,
@@ -124,10 +267,15 @@ async def create_booking(
         booking_number=generate_booking_number(),
         check_in=booking_data.check_in,
         check_out=booking_data.check_out,
-        rooms=booking_data.rooms,
+        rooms=rooms_list,
+        addons=addons_list,
         special_requests=booking_data.special_requests,
         promo_code=booking_data.promo_code,
-        total_amount=sum(room.get("total_price", 0) for room in booking_data.rooms),
+        total_amount=total_amount,
+        subtotal_amount=subtotal_amount,
+        tax_amount=tax_amount,
+        discount_amount=discount_amount,
+        tax_details=tax_details,
         status=BookingStatus.PENDING
     )
     session.add(booking)
@@ -146,8 +294,47 @@ async def create_booking(
     
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
+    _clear_dashboard_cache(current_user.hotel_id)
     await session.refresh(booking)
     await session.refresh(guest)
+    
+    # Enqueue Email Notifications
+    email_service = await get_email_service()
+    
+    # Extract multi-tenant settings
+    h_settings = hotel.settings if hotel and hotel.settings else {}
+    sender_email = h_settings.get("email_sender_address")
+    sender_name = h_settings.get("email_sender_name")
+    cc_list = h_settings.get("email_cc_list")
+    signature = h_settings.get("email_signature")
+    
+    background_tasks.add_task(
+        email_service.send_guest_booking_confirmation,
+        guest_email=guest.email,
+        guest_name=f"{guest.first_name} {guest.last_name}",
+        booking_number=booking.booking_number,
+        check_in=str(booking.check_in),
+        check_out=str(booking.check_out),
+        total_amount=booking.total_amount,
+        sender_email=sender_email,
+        sender_name=sender_name,
+        signature=signature
+    )
+    
+    # Send to hotel (can get from hotel contact or settings, fallback to global)
+    hotel_emails = hotel.contact.get("email", "") if hotel and hotel.contact else ""
+    background_tasks.add_task(
+        email_service.send_hotel_booking_notification,
+        hotel_emails=hotel_emails, 
+        booking_number=booking.booking_number,
+        guest_name=f"{guest.first_name} {guest.last_name}",
+        check_in=str(booking.check_in),
+        check_out=str(booking.check_out),
+        total_amount=booking.total_amount,
+        cc_list=cc_list,
+        sender_email=sender_email,
+        sender_name=sender_name
+    )
     
     response = booking.model_dump()
     response["guest"] = guest.model_dump()
@@ -245,6 +432,22 @@ async def update_booking(
     
     new_status = booking.status
     
+    if new_status == BookingStatus.CANCELLED and old_status != BookingStatus.CANCELLED:
+        if old_status == BookingStatus.CANCEL_REQUESTED:
+            # Keep pre-calculated values from guest request time
+            pass
+        else:
+            from app.core.cancellation import calculate_cancellation_fee
+            fee, refund, ref_status = calculate_cancellation_fee(booking)
+            booking.cancellation_fee = fee
+            booking.refund_amount = refund
+            booking.refund_status = ref_status
+    elif old_status == BookingStatus.CANCEL_REQUESTED and new_status != BookingStatus.CANCEL_REQUESTED:
+        # Request was rejected, reset cancellation details
+        booking.cancellation_fee = 0.0
+        booking.refund_amount = 0.0
+        booking.refund_status = "none"
+
     # Log to timeline in background if status changed
     if old_status != new_status:
         background_tasks.add_task(
@@ -261,6 +464,7 @@ async def update_booking(
     session.add(booking)
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
+    _clear_dashboard_cache(current_user.hotel_id)
     await session.refresh(booking)
     
     guest_result = await session.execute(select(Guest).where(Guest.id == booking.guest_id))

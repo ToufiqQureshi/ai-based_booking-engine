@@ -46,3 +46,15 @@ window.addEventListener("INITIATE_SCRAPE", (event) => {
         }
     });
 });
+
+// 2. From Background Script (Results or Updates)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "SCRAPE_COMPLETE") {
+        console.log("[Content] Scrape complete notification. Relaying to page.");
+        window.dispatchEvent(new CustomEvent("SCRAPE_COMPLETE", { detail: request.data }));
+    }
+    if (request.action === "SCRAPE_PROGRESS") {
+         window.dispatchEvent(new CustomEvent("SCRAPE_PROGRESS", { detail: request.data }));
+    }
+    return true;
+});

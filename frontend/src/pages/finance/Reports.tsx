@@ -1,4 +1,4 @@
-// Reports Page - Real API Integration
+﻿// Reports Page - Real API Integration
 import { useState, useEffect } from 'react';
 import { Download, Calendar, TrendingUp, Users, Bed, IndianRupee, Loader2 } from 'lucide-react';
 import {
@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiClient, ApiClientError } from '@/api/client';
+import { PageShell } from '@/components/layout/PageShell';
 
 interface DashboardStats {
   summary: {
@@ -167,18 +168,13 @@ export function ReportsPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
-          <p className="text-muted-foreground">
-            Analytics and performance insights
-          </p>
-        </div>
+    <PageShell
+      title="Reports"
+      subtitle="Analytics and performance insights"
+      actions={
         <div className="flex items-center gap-2">
           <Select value={days} onValueChange={setDays}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[160px] h-9">
               <Calendar className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Date range" />
             </SelectTrigger>
@@ -189,12 +185,13 @@ export function ReportsPage() {
               <SelectItem value="365">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="gap-2" onClick={handleExport} disabled={isExporting || !stats}>
+          <Button variant="outline" className="gap-2 h-9 text-sm" onClick={handleExport} disabled={isExporting || !stats}>
             {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Export
           </Button>
         </div>
-      </div>
+      }
+    >
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -262,37 +259,37 @@ export function ReportsPage() {
         <CardContent>
           {stats && stats.summary.totalBookings > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm">
+                <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-500" /> Revenue Flow
                 </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Your total revenue for this period is {formatCurrency(stats.summary.totalRevenue)}. 
                   Average daily performance is steady.
                 </p>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm">
+                <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
                   <Users className="w-4 h-4 text-blue-500" /> Booking Volume
                 </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   With {stats.summary.totalBookings} confirmed bookings, your occupancy is at {stats.summary.occupancyRate}%.
                 </p>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
-                <h4 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm">
+                <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
                   <Bed className="w-4 h-4 text-purple-500" /> Profitability
                 </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Estimated net profit stands at {formatCurrency(stats.summary.netProfit)}. 
                   Your gross margins are healthy.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="py-12 text-center bg-white rounded-xl border border-dashed border-blue-200">
-              <p className="text-sm text-slate-500">Not enough data to generate performance insights yet.</p>
-              <p className="text-xs text-slate-400 mt-1">AI recommendations will appear after your first few bookings.</p>
+            <div className="py-12 text-center bg-muted/30 rounded-xl border border-dashed border-border">
+              <p className="text-sm text-muted-foreground">Not enough data to generate performance insights yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">AI recommendations will appear after your first few bookings.</p>
             </div>
           )}
           <div className="mt-6 flex justify-end">
@@ -420,7 +417,7 @@ export function ReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }
 

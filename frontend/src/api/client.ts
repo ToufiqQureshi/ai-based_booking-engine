@@ -5,15 +5,19 @@ import { ApiError, AuthTokens } from '@/types/api';
 
 // Dynamic API URL selection
 const getBaseUrl = () => {
+  const hostname = window.location.hostname;
+  if (hostname.includes('staybooker.ai')) {
+    return 'https://api.staybooker.ai/api/v1';
+  }
+  
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   
-  const hostname = window.location.hostname;
-  if (hostname === 'staybooker.ai' || hostname === 'www.staybooker.ai' || hostname.includes('railway.app')) {
+  if (hostname.includes('railway.app')) {
     return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
   }
   
   // Local development fallback
-  return 'http://localhost:8000/api/v1';
+  return '/api/v1';
 };
 
 const API_BASE_URL = getBaseUrl();
@@ -92,6 +96,15 @@ const handleResponse = async <T>(response: Response, retryRequest?: () => Promis
         tokenStorage.clearTokens();
         refreshAttempts = 0;
         window.location.href = '/login';
+      }
+    }
+
+    // Handle user or hotel deactivation instantly
+    if (response.status === 403) {
+      if (errorData.detail === 'User is deactivated') {
+        window.dispatchEvent(new CustomEvent('user-deactivated'));
+      } else if (errorData.detail === 'Hotel is deactivated') {
+        window.dispatchEvent(new CustomEvent('hotel-deactivated'));
       }
     }
 

@@ -24,6 +24,10 @@ class RatePlanBase(SQLModel):
     min_los: int = Field(default=1, description="Minimum Length of Stay")
     advance_purchase_days: int = Field(default=0, description="Book X days in advance for this rate")
     inclusions: list = Field(default_factory=list, sa_column=Column(JSON))  # e.g. ["Free WiFi", "Airport Pickup"]
+    is_package: bool = Field(default=False)
+    package_items: list = Field(default_factory=list, sa_column=Column(JSON)) # Specific bundle items for packages
+    market_price: Optional[float] = Field(default=None, description="Original price for strike-through display")
+    image_url: Optional[str] = None
 
 class RatePlan(RatePlanBase, table=True):
     __tablename__ = "rate_plans"

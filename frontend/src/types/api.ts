@@ -2,7 +2,7 @@
 // These types mirror the FastAPI backend contracts
 
 // ============== Auth Types ==============
-export type UserRole = 'OWNER' | 'MANAGER' | 'STAFF';
+export type UserRole = 'OWNER' | 'MANAGER' | 'STAFF' | 'SUPER_ADMIN';
 
 export interface User {
   id: string;
@@ -10,6 +10,8 @@ export interface User {
   name: string;
   role: UserRole;
   hotel_id: string;
+  is_active?: boolean;
+  avatar_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -50,6 +52,17 @@ export interface Hotel {
   address: Address;
   contact: ContactInfo;
   settings: HotelSettings;
+  photos: RoomPhoto[];
+  amenities: string[];
+  feature_rate_shopper?: boolean;
+  feature_ai_agent?: boolean;
+  feature_guest_bot?: boolean;
+  feature_new_booking?: boolean;
+  feature_color_palette?: boolean;
+  feature_custom_logo?: boolean;
+  feature_custom_widget?: boolean;
+  is_active?: boolean;
+  rate_plans?: RatePlan[];
   created_at: string;
   updated_at: string;
 }
@@ -84,9 +97,38 @@ export interface HotelSettings {
   payment_policy?: string;
   child_policy?: string;
   privacy_policy?: string;
+  terms_conditions?: string;
   important_info?: string;
+  gst_number?: string;
   notify_new_booking?: boolean;
   notify_cancellation?: boolean;
+  show_viewers_count?: boolean;
+  show_last_booked?: boolean;
+  show_popular_badge?: boolean;
+  popular_badge_text?: string;
+  multi_room_cart?: boolean;
+  featured_room_type_id?: string;
+  cancellation_mode?: 'instant' | 'request';
+  smtp_host?: string;
+  smtp_port?: string | number;
+  smtp_username?: string;
+  smtp_password?: string;
+  smtp_from_email?: string;
+  email_sender_name?: string;
+  email_sender_address?: string;
+  email_cc_list?: string;
+  email_signature?: string;
+  whatsapp_api_key?: string;
+  whatsapp_phone_number_id?: string;
+  whatsapp_business_account_id?: string;
+  tax_name?: string;
+  room_tax_rate?: number;
+  room_tax_type?: 'inclusive' | 'exclusive';
+  room_tax_calculation_method?: 'flat' | 'slab';
+  room_tax_slabs?: Array<{ from: number; to: number; rate: number }>;
+  addon_tax_rate?: number;
+  addon_tax_type?: 'inclusive' | 'exclusive';
+  payment_mode?: 'online_only' | 'property_only' | 'both';
 }
 
 // ============== Room Types ==============
@@ -106,8 +148,15 @@ export interface RoomType {
   extra_person_price?: number;
   extra_adult_price?: number;
   extra_child_price?: number;
+  view?: string;
+  floor?: string;
+  smoking_allowed?: boolean;
+  is_pet_friendly?: boolean;
+  market_price?: number;
   photos: RoomPhoto[];
-  amenities: Amenity[];
+  amenities: RoomAmenity[];
+  cancellation_policy?: string;
+  rate_plan_overrides?: Record<string, any>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -117,8 +166,17 @@ export interface RoomPhoto {
   id?: string;
   url: string;
   caption?: string;
-  is_primary: boolean;
-  order: number;
+  is_primary?: boolean;
+  order?: number;
+  sort_order?: number;
+}
+
+// Amenity as stored in room JSON column (subset of full Amenity)
+export interface RoomAmenity {
+  id: string;
+  name: string;
+  icon?: string;
+  category?: string;
 }
 
 export interface Amenity {
@@ -145,6 +203,10 @@ export interface RatePlan {
   min_los?: number;
   advance_purchase_days?: number;
   inclusions?: string[];
+  is_package?: boolean;
+  package_items?: string[];
+  market_price?: number;
+  image_url?: string;
   created_at: string;
 }
 
@@ -194,7 +256,7 @@ export interface AvailabilityUpdate {
 }
 
 // ============== Booking Types ==============
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'checked_in' | 'checked_out';
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'checked_in' | 'checked_out' | 'cancel_requested';
 
 export interface Booking {
   id: string;
@@ -212,6 +274,13 @@ export interface Booking {
   source: 'direct' | 'booking_engine' | 'manual';
   created_at: string;
   updated_at: string;
+  cancellation_fee?: number;
+  refund_amount?: number;
+  refund_status?: string;
+  subtotal_amount?: number;
+  tax_amount?: number;
+  discount_amount?: number;
+  tax_details?: any;
 }
 
 export interface BookingRoom {
@@ -224,6 +293,7 @@ export interface BookingRoom {
   children: number;
   price_per_night: number;
   total_price: number;
+  cancellation_policy?: string;
 }
 
 export interface Guest {
@@ -342,7 +412,12 @@ export interface RateOption {
   price_per_night: number;
   total_price: number;
   inclusions: string[];
+  is_refundable: boolean;
+  cancellation_policy?: string;
   savings_text?: string;
+  is_package?: boolean;
+  market_price?: number;
+  image_url?: string;
 }
 
 export interface PublicRoomSearchResult extends RoomType {

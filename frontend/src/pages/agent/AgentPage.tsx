@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { apiClient } from "@/api/client";
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/contexts/AuthContext';
+import { ShieldAlert } from 'lucide-react';
 
 // Types
 interface Message {
@@ -19,7 +21,9 @@ interface ChatResponse {
     response: string;
 }
 
+
 const AgentPage = () => {
+    const { hotel } = useAuth();
     const [messages, setMessages] = useState<Message[]>([
         { role: 'ai', content: 'Namaste! Main Staybooker AI hun. Main aapki hotel growth aur operations mein kaise madad kar sakta hun?' }
     ]);
@@ -99,6 +103,23 @@ const AgentPage = () => {
             handleSend();
         }
     };
+    if (hotel && !hotel.feature_ai_agent) {
+        return (
+            <div className="flex h-screen w-full flex-col items-center justify-center p-4 text-center">
+                <div className="p-6 bg-muted rounded-full mb-6">
+                    <ShieldAlert className="h-16 w-16 text-muted-foreground" />
+                </div>
+                <h2 className="text-2xl font-black text-foreground mb-2">Feature Locked</h2>
+                <p className="text-muted-foreground mb-8 max-w-md font-medium">
+                    AI Assistant is not included in your current plan. 
+                    Please contact support or your account manager to enable this feature.
+                </p>
+                <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 px-8 py-6 text-lg font-bold">
+                    Upgrade Now
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto p-4 h-[calc(100vh-4rem)] flex flex-col">
@@ -152,25 +173,25 @@ const AgentPage = () => {
                                 <div className="flex flex-wrap gap-2 mt-2 ml-11 max-w-[80%]">
                                     <button
                                         onClick={() => triggerQuickAsk("Show me last week's total revenue")}
-                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                        className="text-xs bg-muted/30 hover:bg-muted border border-border text-foreground px-3 py-1.5 rounded-full transition"
                                     >
                                         📊 Total Revenue
                                     </button>
                                     <button
                                         onClick={() => triggerQuickAsk("Tell me which rooms are most booked")}
-                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                        className="text-xs bg-muted/30 hover:bg-muted border border-border text-foreground px-3 py-1.5 rounded-full transition"
                                     >
                                         🛏️ Most Booked Rooms
                                     </button>
                                     <button
                                         onClick={() => triggerQuickAsk("Check our occupancy rate for this month")}
-                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                        className="text-xs bg-muted/30 hover:bg-muted border border-border text-foreground px-3 py-1.5 rounded-full transition"
                                     >
                                         📈 Occupancy Rate
                                     </button>
                                     <button
                                         onClick={() => triggerQuickAsk("What are the cancellation metrics?")}
-                                        className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition"
+                                        className="text-xs bg-muted/30 hover:bg-muted border border-border text-foreground px-3 py-1.5 rounded-full transition"
                                     >
                                         ❌ Cancellation Stats
                                     </button>

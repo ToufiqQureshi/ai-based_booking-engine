@@ -43,11 +43,17 @@ class RoomTypeBase(SQLModel):
     total_inventory: int = Field(default=1, ge=0)
     is_active: bool = Field(default=True)
     bed_type: Optional[str] = Field(default="Queen")
-    bed_type: Optional[str] = Field(default="Queen")
     room_size: Optional[int] = Field(default=None, description="Size in sq ft")
     extra_person_price: float = Field(default=0.0, ge=0)
     extra_adult_price: float = Field(default=0.0, ge=0)
     extra_child_price: float = Field(default=0.0, ge=0)
+    view: Optional[str] = Field(default=None, description="e.g. Garden View, Pool View")
+    floor: Optional[str] = Field(default=None, description="Floor level")
+    smoking_allowed: bool = Field(default=False)
+    is_pet_friendly: bool = Field(default=False)
+    market_price: Optional[float] = Field(default=None, description="Original price for strike-through display at room level")
+    cancellation_policy: Optional[str] = None
+    rate_plan_overrides: Optional[Dict[str, Any]] = Field(default_factory=dict, sa_column=Column(JSON, nullable=True))
 
 
 class RoomType(RoomTypeBase, table=True):
@@ -95,6 +101,7 @@ class RoomTypeUpdate(SQLModel):
     base_occupancy: Optional[int] = None
     max_occupancy: Optional[int] = None
     base_price: Optional[float] = None
+    market_price: Optional[float] = None
     total_inventory: Optional[int] = None
     is_active: Optional[bool] = None
     photos: Optional[List[Dict[str, Any]]] = None
@@ -103,11 +110,16 @@ class RoomTypeUpdate(SQLModel):
     max_children: Optional[int] = None
     extra_bed_allowed: Optional[bool] = None
     bed_type: Optional[str] = None
-    bed_type: Optional[str] = None
     room_size: Optional[int] = None
     extra_person_price: Optional[float] = None
     extra_adult_price: Optional[float] = None
     extra_child_price: Optional[float] = None
+    view: Optional[str] = None
+    floor: Optional[str] = None
+    smoking_allowed: Optional[bool] = None
+    is_pet_friendly: Optional[bool] = None
+    cancellation_policy: Optional[str] = None
+    rate_plan_overrides: Optional[Dict[str, Any]] = None
 
 
 class RoomBlockBase(SQLModel):

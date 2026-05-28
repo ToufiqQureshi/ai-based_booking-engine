@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,11 @@ import { Loader2, Plus, RefreshCw, Trash2, TrendingUp, TrendingDown, Minus, Spar
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { RateTable } from '@/components/dashboard/RateTable';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from '@/contexts/AuthContext';
+import { ShieldAlert } from 'lucide-react';
 
 export default function RatesShopper() {
+    const { hotel } = useAuth();
     const [competitors, setCompetitors] = useState<any[]>([]);
     const [chartData, setChartData] = useState<any[]>([]);
     const [tableData, setTableData] = useState<any[]>([]);
@@ -62,6 +64,15 @@ export default function RatesShopper() {
 
     useEffect(() => {
         fetchData();
+
+        // Real-time listener for extension updates
+        const onScrapeComplete = () => {
+            console.log("Scrape complete detected, refreshing UI...");
+            fetchData();
+        };
+
+        window.addEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
+        return () => window.removeEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
     }, [startDate]); // Refetch when date changes
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -296,6 +307,24 @@ export default function RatesShopper() {
     // Get today's analysis
     const todayAnalysis = marketAnalysis.length > 0 ? marketAnalysis[0] : null;
 
+    if (hotel && !hotel.feature_rate_shopper) {
+        return (
+            <div className="flex h-screen w-full flex-col items-center justify-center p-4 text-center">
+                <div className="p-6 bg-muted rounded-full mb-6">
+                    <ShieldAlert className="h-16 w-16 text-muted-foreground" />
+                </div>
+                <h2 className="text-2xl font-black text-foreground mb-2">Feature Locked</h2>
+                <p className="text-muted-foreground mb-8 max-w-md font-medium">
+                    Rate Shopper (v2.0 AI) is not included in your current plan. 
+                    Please contact support or your account manager to enable real-time competitor tracking.
+                </p>
+                <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 px-8 py-6 text-lg font-bold">
+                    Upgrade Now
+                </Button>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col gap-4 p-4 md:p-8">
             <div className="flex items-center justify-between">
@@ -345,12 +374,12 @@ export default function RatesShopper() {
                                         </Badge>
                                         {todayAnalysis.market_position === 'Premium' && <TrendingUp className="h-4 w-4 text-red-500" />}
                                         {todayAnalysis.market_position === 'Budget' && <TrendingDown className="h-4 w-4 text-green-500" />}
-                                        {todayAnalysis.market_position === 'Average' && <Minus className="h-4 w-4 text-gray-500" />}
+                                        {todayAnalysis.market_position === 'Average' && <Minus className="h-4 w-4 text-muted-foreground" />}
                                     </div>
                                 </div>
                                 <div className="md:col-span-1">
                                     <p className="text-sm text-blue-600 font-medium">Recommendation</p>
-                                    <p className="text-sm text-slate-700 italic mt-1">
+                                    <p className="text-sm text-foreground italic mt-1">
                                         "{todayAnalysis.suggestion}"
                                     </p>
                                 </div>

@@ -5,6 +5,7 @@ Receives tracking events from the widget and provides aggregated data to the das
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import select, func, case, or_
 from datetime import datetime, timedelta, timezone
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import DbSession, CurrentUser
 from app.models.analytics import AnalyticsSession, AnalyticsEvent, SessionStartRequest, SessionPingRequest, EventTrackRequest
@@ -144,200 +145,286 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         if not hotel_id:
             return {"error": "No hotel linked"}
 
-        start_date_naive = datetime.utcnow() - timedelta(days=days)
+        # 1. Date range setup
+        start_date = datetime.now(timezone.utc) - timedelta(days=days)
+        start_date_naive = start_date.replace(tzinfo=None)
+
+        # 2. Fetch Base Data (Sessions, Bookings, RoomTypes)
+        session_q = select(AnalyticsSession).where(
+            AnalyticsSession.hotel_id == hotel_id,
+            AnalyticsSession.started_at >= start_date_naive
+        ).options(joinedload(AnalyticsSession.events))
+        sessions = (await session.execute(session_q)).scalars().unique().all()
         
-        # Calculate revenue, ADR, RevPAR, Occupancy
-        bookings_q = select(Booking).where(
+        booking_q = select(Booking).where(
             Booking.hotel_id == hotel_id,
-            Booking.created_at >= start_date_naive,
-            Booking.status != BookingStatus.CANCELLED
+            Booking.created_at >= start_date_naive
         )
-        res_bookings = await session.execute(bookings_q)
-        bookings = res_bookings.scalars().all()
-
-        revenue_total = sum(b.total_amount for b in bookings)
-        total_rooms_booked = sum(len(b.rooms) for b in bookings)
-
-        room_types_q = select(RoomType).where(
-            RoomType.hotel_id == hotel_id,
-            RoomType.is_active == True
-        )
-        res_room_types = await session.execute(room_types_q)
-        room_types = res_room_types.scalars().all()
-        total_inventory = sum(r.total_inventory for r in room_types)
-
-        avg_daily_rate = round(revenue_total / total_rooms_booked, 2) if total_rooms_booked > 0 else 0
-        total_rooms_available = total_inventory * days
-        occupancy_rate = round((total_rooms_booked / total_rooms_available * 100), 2) if total_rooms_available > 0 else 0
-        rev_par = round(revenue_total / total_rooms_available, 2) if total_rooms_available > 0 else 0
-
+        bookings = (await session.execute(booking_q)).scalars().unique().all()
         
-        # 1. Main Stats
-        stats_q = select(
-            func.count(AnalyticsSession.id).label("visitors"),
-            func.avg(AnalyticsSession.time_spent_seconds).label("avg_time"),
-            func.sum(case((AnalyticsSession.has_booked == True, 1), else_=0)).label("conversions")
-        ).where(
-            AnalyticsSession.hotel_id == hotel_id,
-            AnalyticsSession.started_at >= start_date_naive
-        )
-        res_stats = await session.execute(stats_q)
-        row = res_stats.first()
+        room_types_q = select(RoomType).where(RoomType.hotel_id == hotel_id)
+        room_types = (await session.execute(room_types_q)).scalars().all()
+        total_inventory = sum(r.total_inventory for r in room_types) or 1
         
-        total_visitors = row.visitors or 0
-        avg_time = int(row.avg_time or 0)
-        total_conversions = row.conversions or 0
+        # 3. Basic Aggregations
+        total_visitors = len(sessions)
+        total_conversions = len([b for b in bookings if b.status != 'cancelled'])
         conversion_rate = round((total_conversions / total_visitors * 100), 2) if total_visitors > 0 else 0
-        
-        # 2. Device Breakdown
-        device_q = select(AnalyticsSession.device_type, func.count(AnalyticsSession.id)).where(
-            AnalyticsSession.hotel_id == hotel_id,
-            AnalyticsSession.started_at >= start_date_naive
-        ).group_by(AnalyticsSession.device_type)
-        res_device = await session.execute(device_q)
-        device_stats = [{"type": row[0], "count": row[1]} for row in res_device.all()]
-        
-        # 3. Top Viewed Rooms
-        # Join with RoomType to get names if possible, for now just IDs
-        rooms_q = select(AnalyticsEvent.room_type_id, func.count(AnalyticsEvent.id)).where(
-            AnalyticsEvent.event_type == "room_view",
-            AnalyticsEvent.room_type_id != None
-        ).join(AnalyticsSession).where(
-            AnalyticsSession.hotel_id == hotel_id,
-            AnalyticsSession.started_at >= start_date_naive
-        ).group_by(AnalyticsEvent.room_type_id).order_by(func.count(AnalyticsEvent.id).desc()).limit(5)
-        res_rooms = await session.execute(rooms_q)
-        top_rooms = [{"id": row[0], "views": row[1]} for row in res_rooms.all()]
-        
-        # 4. Traffic Chart
-        sessions_q = select(AnalyticsSession.started_at).where(
-            AnalyticsSession.hotel_id == hotel_id,
-            AnalyticsSession.started_at >= start_date_naive
-        )
-        res_sessions = await session.execute(sessions_q)
-        traffic_by_day = { (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d"): 0 for i in range(days) }
-        for row in res_sessions.all():
-            d = row[0].strftime("%Y-%m-%d")
-            if d in traffic_by_day: traffic_by_day[d] += 1
-        chart_data = [{"date": k, "visitors": v} for k, v in reversed(traffic_by_day.items())]
+        avg_time = int(sum(s.time_spent_seconds or 0 for s in sessions) / total_visitors) if total_visitors > 0 else 0
 
-        # 5. Funnel Data
-        # We'll count unique sessions that reached each stage
+        # Cancellation Metrics
+        cancellations_count = len([b for b in bookings if b.status == BookingStatus.CANCELLED])
+        cancellation_rate = round((cancellations_count / len(bookings) * 100), 2) if len(bookings) > 0 else 0
+        lost_revenue = sum(float(b.total_amount or 0) for b in bookings if b.status == BookingStatus.CANCELLED)
+        cancellation_fees_collected = sum(float(b.cancellation_fee or 0) for b in bookings if b.status == BookingStatus.CANCELLED)
+        
+        # 4. Device Stats
+        device_counts = {}
+        for s in sessions:
+            dt = s.device_type or "unknown"
+            device_counts[dt] = device_counts.get(dt, 0) + 1
+        device_stats = [{"type": k, "count": v} for k, v in device_counts.items()]
+
+        # 5. Chart Data (Grouped by date)
+        chart_map = { (datetime.utcnow() - timedelta(days=i)).strftime("%d %b"): {"visitors": 0, "revenue": 0} for i in range(days) }
+        for s in sessions:
+            ds = s.started_at.strftime("%d %b")
+            if ds in chart_map: chart_map[ds]["visitors"] += 1
+        for b in bookings:
+            if b.status != 'cancelled':
+                ds = b.created_at.strftime("%d %b")
+                if ds in chart_map: chart_map[ds]["revenue"] += float(b.total_amount or 0)
+        
+        chart_data = [{"date": k, **v} for k, v in reversed(chart_map.items())]
+
+        # 6. Funnel Data
         funnel_stages = ["page_view", "search", "room_view", "booking_complete"]
-        funnel_data = []
-        for stage in funnel_stages:
-            q = select(func.count(func.distinct(AnalyticsSession.id))).join(AnalyticsEvent).where(
-                AnalyticsSession.hotel_id == hotel_id,
-                AnalyticsSession.started_at >= start_date_naive,
-                AnalyticsEvent.event_type == stage
-            )
-            res = await session.execute(q)
-            funnel_data.append({"stage": stage, "count": res.scalar() or 0})
+        funnel_counts = {s: 0 for s in funnel_stages}
+        for s in sessions:
+            event_types = {e.event_type for e in s.events}
+            for stage in funnel_stages:
+                if stage in event_types:
+                    funnel_counts[stage] += 1
+        funnel_data = [{"stage": k, "count": v} for k, v in funnel_counts.items()]
 
-        # 6. Geo Stats
-        geo_q = select(AnalyticsSession.country, func.count(AnalyticsSession.id)).where(
-            AnalyticsSession.hotel_id == hotel_id,
-            AnalyticsSession.started_at >= start_date_naive
-        ).group_by(AnalyticsSession.country).order_by(func.count(AnalyticsSession.id).desc())
-        res_geo = await session.execute(geo_q)
+        # 7. Heatmap (Audited Timezone Logic)
+        from zoneinfo import ZoneInfo
+        from app.models.hotel import Hotel
+        hotel_obj = await session.get(Hotel, hotel_id)
+        tz_name = hotel_obj.settings.get("timezone", "Asia/Kolkata") if hotel_obj else "Asia/Kolkata"
+        target_tz = ZoneInfo(tz_name)
+        
+        heatmap_counts = {}
+        for s in sessions:
+            # sessions are UTC in DB. Convert to Hotel Local Time.
+            dt_utc = s.started_at.replace(tzinfo=timezone.utc)
+            dt_local = dt_utc.astimezone(target_tz)
+            
+            # Python weekday: 0=Mon, 6=Sun. Matches frontend ["Mon",...,"Sun"]
+            wd = dt_local.weekday()
+            hr = dt_local.hour
+            k = f"{wd}-{hr}"
+            heatmap_counts[k] = heatmap_counts.get(k, 0) + 1
+        
+        heatmap_list = []
+        for wd in range(7):
+            for hr in range(24):
+                k = f"{wd}-{hr}"
+                heatmap_list.append({"weekday": wd, "hour": hr, "visitors": heatmap_counts.get(k, 0)})
+
+        # 8. Financial Metrics
+        revenue_total = sum(float(b.total_amount or 0) for b in bookings if b.status != 'cancelled')
+        total_rooms_sold = sum(len(b.rooms or []) for b in bookings if b.status != 'cancelled')
+        total_rooms_available = total_inventory * days
+        
+        avg_daily_rate = round(revenue_total / total_rooms_sold, 2) if total_rooms_sold > 0 else 0
+        rev_par = round(revenue_total / total_rooms_available, 2) if total_rooms_available > 0 else 0
+        occupancy_rate = round((total_rooms_sold / total_rooms_available * 100), 2) if total_rooms_available > 0 else 0
+
+        # 9. AI Efficiency (Deep Integration with Lead table)
+        from app.models.lead import Lead
+        leads_q = select(Lead).where(Lead.hotel_id == hotel_id, Lead.created_at >= start_date_naive)
+        res_leads = await session.execute(leads_q)
+        leads = res_leads.scalars().all()
+        
+        total_leads_count = len(leads)
+        # Engagement: Sessions that had AI inquiry OR became a Lead
+        ai_engaged_sessions = [s for s in sessions if any(e.event_type == "ai_inquiry" for e in s.events)]
+        ai_engagement_count = len(ai_engaged_sessions)
+        
+        # AI Bookings: Source is ai_agent
+        ai_bookings_count = len([b for b in bookings if b.source == 'ai_agent'])
+        
+        # Resolution Rate: Conversions / Engagements
+        res_rate = round((ai_bookings_count / ai_engagement_count * 100), 2) if ai_engagement_count > 0 else 0
+        
+        # Popular Inquiries (Extract from Lead summaries if available)
+        keywords = {}
+        stop_words = {"the", "a", "is", "of", "to", "in", "and", "i", "how", "want", "book", "for", "with", "this", "that"}
+        
+        # Source 1: Analytics Events
+        for s in ai_engaged_sessions:
+            for e in s.events:
+                if e.event_type == "ai_inquiry" and e.metadata_json:
+                    words = e.metadata_json.lower().split()
+                    for w in words:
+                        w_c = ''.join(c for c in w if c.isalnum())
+                        if len(w_c) > 3 and w_c not in stop_words:
+                            keywords[w_c] = keywords.get(w_c, 0) + 1
+        
+        # Source 2: Lead Summaries
+        for l in leads:
+            if l.ai_conversation_summary:
+                words = l.ai_conversation_summary.lower().split()
+                for w in words:
+                    w_c = ''.join(c for c in w if c.isalnum())
+                    if len(w_c) > 3 and w_c not in stop_words:
+                        keywords[w_c] = keywords.get(w_c, 0) + 1
+                        
+        popular_questions = [{"text": k.capitalize(), "value": v} for k, v in sorted(keywords.items(), key=lambda x: x[1], reverse=True)[:10]]
+
+        # 10. Geo Stats
+        COUNTRY_CODES = {
+            "India": "IN", "United States": "US", "United Kingdom": "GB",
+            "Germany": "DE", "France": "FR", "Australia": "AU", "Canada": "CA",
+            "Singapore": "SG", "UAE": "AE", "United Arab Emirates": "AE",
+            "Japan": "JP", "China": "CN", "Russia": "RU", "Brazil": "BR",
+            "Italy": "IT", "Spain": "ES", "Netherlands": "NL", "Thailand": "TH",
+            "Malaysia": "MY", "Indonesia": "ID", "Philippines": "PH",
+            "Bangladesh": "BD", "Pakistan": "PK", "Nepal": "NP", "Sri Lanka": "LK",
+            "South Africa": "ZA", "Kenya": "KE", "Nigeria": "NG",
+            "Mexico": "MX", "Argentina": "AR", "Colombia": "CO",
+        }
+        geo_counts = {}
+        for s in sessions:
+            country = s.country or "Unknown"
+            geo_counts[country] = geo_counts.get(country, 0) + 1
         
         geo_stats = []
-        code_map = {
-            "India": "IN", "United States": "US", "United Kingdom": "GB", 
-            "United Arab Emirates": "AE", "Germany": "DE", "Australia": "AU",
-            "Canada": "CA", "France": "FR", "Japan": "JP", "China": "CN"
-        }
-        
-        for row in res_geo.all():
-            country = row[0] or "Unknown"
-            count = row[1]
-            pct = int(round((count / total_visitors * 100), 0)) if total_visitors > 0 else 0
+        for country, count in geo_counts.items():
+            pct = round((count / total_visitors * 100), 1) if total_visitors > 0 else 0
             geo_stats.append({
                 "country": country,
-                "code": code_map.get(country, "XX"),
+                "code": COUNTRY_CODES.get(country, country[:2].upper()),
                 "visitors": count,
                 "percentage": pct
             })
+        geo_stats.sort(key=lambda x: x["visitors"], reverse=True)
 
-        # --- ADVANCED HOTELIER METRICS ---
+        # 11. Room Popularity
+        room_stats = {r.id: {"id": r.id, "name": r.name, "views": 0, "bookings": 0, "revenue": 0} for r in room_types}
+        for s in sessions:
+            for e in s.events:
+                if e.event_type == "room_view" and e.room_type_id in room_stats:
+                    room_stats[e.room_type_id]["views"] += 1
         
-        # A. Most & Least Booked Rooms
-        room_booking_counts = {r.id: {"id": r.id, "name": r.name, "count": 0} for r in room_types}
         for b in bookings:
-            for rm in b.rooms:
-                rt_id = rm.get("room_type_id")
-                if rt_id in room_booking_counts:
-                    room_booking_counts[rt_id]["count"] += 1
-        most_booked_rooms = sorted(room_booking_counts.values(), key=lambda x: x["count"], reverse=True)
-        least_booked_rooms = sorted(room_booking_counts.values(), key=lambda x: x["count"])
+            if b.status != 'cancelled':
+                for rm in b.rooms:
+                    rt_id = rm.get("room_type_id")
+                    if rt_id in room_stats:
+                        room_stats[rt_id]["bookings"] += 1
+                        room_stats[rt_id]["revenue"] += rm.get("total_price", 0)
 
-        # B. Funnel Drop-offs
+        most_booked = sorted(room_stats.values(), key=lambda x: x["bookings"], reverse=True)
+        least_booked = sorted(room_stats.values(), key=lambda x: x["bookings"])
+        top_rooms = sorted(room_stats.values(), key=lambda x: x["views"], reverse=True)[:5]
+        revenue_mix = [{"name": r["name"], "value": r["revenue"]} for r in most_booked if r["revenue"] > 0]
+
+        # 12. Funnel Drop-offs
         funnel_dropoffs = []
         for i in range(len(funnel_data) - 1):
-            curr_c = funnel_data[i]["count"]
-            next_c = funnel_data[i+1]["count"]
-            drop_pct = round(((curr_c - next_c) / curr_c * 100), 2) if curr_c > 0 else 0
-            funnel_dropoffs.append({
-                "stage": funnel_data[i]["stage"],
-                "drop_percentage": drop_pct
-            })
+            curr_val = funnel_data[i]["count"]
+            next_val = funnel_data[i+1]["count"]
+            drop_pct = round(((curr_val - next_val) / curr_val * 100), 1) if curr_val > 0 else 0
+            funnel_dropoffs.append({"stage": funnel_data[i]["stage"], "drop_percentage": drop_pct})
 
-        # C. Promo Stats
+        # 13. Promo Stats
         promo_counts = {}
         for b in bookings:
             if b.promo_code:
                 promo_counts[b.promo_code] = promo_counts.get(b.promo_code, 0) + 1
         promo_stats = [{"code": k, "bookings": v} for k, v in promo_counts.items()]
 
-        # D. Time-Heatmap
-        heatmap_q = select(AnalyticsSession.started_at).where(
-            AnalyticsSession.hotel_id == hotel_id,
-            AnalyticsSession.started_at >= start_date_naive
-        )
-        res_heatmap = await session.execute(heatmap_q)
-        heatmap_data = {}
-        for row in res_heatmap.all():
-            dt = row[0]
-            wd = dt.weekday() # 0-6
-            hr = dt.hour # 0-23
-            k = f"{wd}-{hr}"
-            heatmap_data[k] = heatmap_data.get(k, 0) + 1
+        # 14. Booking Window Distribution
+        window_buckets = {"0-3 days": 0, "4-7 days": 0, "8-14 days": 0, "15-30 days": 0, "30+ days": 0}
+        for b in bookings:
+            days_diff = (b.check_in - b.created_at.date()).days
+            if days_diff <= 3: window_buckets["0-3 days"] += 1
+            elif days_diff <= 7: window_buckets["4-7 days"] += 1
+            elif days_diff <= 14: window_buckets["8-14 days"] += 1
+            elif days_diff <= 30: window_buckets["15-30 days"] += 1
+            else: window_buckets["30+ days"] += 1
+        booking_window_data = [{"window": k, "count": v} for k, v in window_buckets.items()]
 
-        heatmap_list = []
-        for wd in range(7):
-            for hr in range(24):
-                k = f"{wd}-{hr}"
-                heatmap_list.append({
-                    "weekday": wd,
-                    "hour": hr,
-                    "visitors": heatmap_data.get(k, 0)
-                })
+        # 15. Occupancy Forecast
+        future_q = select(Booking).where(Booking.hotel_id == hotel_id, Booking.check_out >= datetime.utcnow().date(), Booking.status != "cancelled")
+        future_bookings = (await session.execute(future_q)).scalars().all()
+        forecast = []
+        for i in range(7):
+            d = (datetime.utcnow() + timedelta(days=i)).date()
+            occupied = sum(len(b.rooms) for b in future_bookings if b.check_in <= d < b.check_out)
+            forecast.append({"date": d.strftime("%m/%d"), "occupancy": round((occupied / total_inventory * 100), 1)})
+
+        # 16. Pickup Stats
+        today = datetime.utcnow().date()
+        yesterday = today - timedelta(days=1)
+        pickup_today = len([b for b in bookings if b.created_at.date() == today])
+        pickup_yesterday = len([b for b in bookings if b.created_at.date() == yesterday])
+
+        # Compute ai_revenue (estimated revenue from AI-assisted bookings)
+        ai_revenue = round(sum(
+            float(b.total_amount or 0) for b in bookings
+            if b.status != 'cancelled' and b.source == 'ai_agent'
+        ), 2)
 
         return {
             "total_visitors": total_visitors,
             "avg_time_spent_seconds": avg_time,
             "total_conversions": total_conversions,
             "conversion_rate": conversion_rate,
-            "device_stats": device_stats,
-            "top_rooms": top_rooms,
+            "cancellations_count": cancellations_count,
+            "cancellation_rate": cancellation_rate,
+            "lost_revenue": lost_revenue,
+            "cancellation_fees_collected": cancellation_fees_collected,
             "chart_data": chart_data,
             "funnel_data": funnel_data,
-            "geo_stats": geo_stats,
             "revenue_total": revenue_total,
             "avg_daily_rate": avg_daily_rate,
             "rev_par": rev_par,
             "occupancy_rate": occupancy_rate,
-            "most_booked_rooms": most_booked_rooms,
-            "least_booked_rooms": least_booked_rooms,
+            "traffic_heatmap": heatmap_list,
+            "ai_resolution_rate": res_rate,
+            "ai_revenue": ai_revenue,
+            "popular_questions": popular_questions,
+            "total_leads": total_leads_count,
+            "ai_engaged": ai_engagement_count,
+            "ai_assisted_bookings": ai_bookings_count,
+            "device_stats": device_stats,
+            "geo_stats": geo_stats,
+            "most_booked_rooms": most_booked[:5],
+            "least_booked_rooms": least_booked[:5],
+            "top_rooms": top_rooms,
+            "revenue_by_room_type": revenue_mix,
             "funnel_dropoffs": funnel_dropoffs,
             "promo_stats": promo_stats,
-            "traffic_heatmap": heatmap_list,
+            "booking_window_data": booking_window_data,
+            "occupancy_forecast": forecast,
+            "pickup_stats": {
+                "today": pickup_today,
+                "yesterday": pickup_yesterday,
+                "trend": "up" if pickup_today >= pickup_yesterday else "down"
+            },
             "commission_saved": round(revenue_total * 0.15, 2)
         }
+
+
 
     except Exception as e:
         import logging
         logging.error(f"Analytics Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/live/active")
