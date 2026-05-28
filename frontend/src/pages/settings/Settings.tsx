@@ -290,7 +290,7 @@ export function SettingsPage() {
           </TabsContent>
 
           {/* Branding Settings */}
-          <BrandingTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} setIsSaving={setIsSaving} hotel={hotel} />
+          <BrandingTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} setIsSaving={setIsSaving} hotel={hotel} rooms={rooms} />
           <EmailTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
           <TabsContent value="whatsapp" className="space-y-6 mt-0">
             <Card>

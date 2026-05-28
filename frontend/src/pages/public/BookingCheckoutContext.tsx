@@ -29,8 +29,16 @@ export interface BookingCheckoutContextType {
     discountAmount: number;
     finalTotal: number;
     isSubmitting: boolean;
-    paymentMethod: string;
-    setPaymentMethod: (val: string) => void;
+    appliedRoomTaxRate: number;
+    roomTaxCalculationMethod: string;
+    roomTaxAmount: number;
+    addonTaxRate: number;
+    addonTaxAmount: number;
+    appliedPromo: string | null;
+    setAppliedPromo: (val: string | null) => void;
+    setDiscountAmount: (val: number) => void;
+    paymentMethod: 'online' | 'property';
+    setPaymentMethod: any;
     handleCheckout: (data: any) => void;
     handleSubmit: any;
     nights: number;

@@ -26,5 +26,9 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/components/superadmin",
+    "src/hooks/useSuperAdminState.tsx"
+  ]
 }

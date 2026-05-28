@@ -1,18 +1,18 @@
 import { useBookingCheckout } from '@/pages/public/BookingCheckoutContext';
-import { CreditCard, Building2, MapPin } from 'lucide-react';
+import { CreditCard, Building2, MapPin, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function CheckoutPayment() {
-    const { hotelPaymentMode, paymentMethod, setPaymentMethod } = useBookingCheckout();
+    const { hotelPaymentMode, paymentMethod, setPaymentMethod, themeColor } = useBookingCheckout();
     
+    // Payment Section
     return (
-                        {/* Payment Section */}
-                        <div className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/40">
-                            {/* Header */}
-                            <div className="px-8 md:px-10 pt-8 md:pt-10 pb-6 flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
-                                    <ShieldCheck className="w-6 h-6" />
-                                </div>
+        <div className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/40">
+            {/* Header */}
+            <div className="px-8 md:px-10 pt-8 md:pt-10 pb-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                    <ShieldCheck className="w-6 h-6" />
+                </div>
                                 <div>
                                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">Payment</h2>
                                     <p className="text-sm font-medium" style={{ color: themeColor }}>
@@ -134,5 +134,6 @@ export function CheckoutPayment() {
                                     </>
                                 )}
                             </div>
+        </div>
     );
 }

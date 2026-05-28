@@ -74,7 +74,7 @@ function BookingCheckoutInner() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'online' | 'property'>('online');
 
-    const { register, setValue, watch, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>();
+    const { register, setValue, watch, handleSubmit, formState } = useForm<CheckoutFormData>();
 
     const [state, setState] = useState<BookingState | null>(null);
     const [hotel, setHotel] = useState<any>(null);
@@ -493,7 +493,8 @@ function BookingCheckoutInner() {
     const themeColor = getNormalizedColor(hotel?.primary_color);
 
     const ctx = {
-        hotelSlug: hotelSlug as string, hotel, room, state, setState, register, formState, getNormalizedColor, themeColor, handleEmailBlur, allAddons, currentAddons: state.addons || [], handleToggleAddon, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, paymentMethod, setPaymentMethod, handleCheckout: onSubmit, handleSubmit, nights, hotelPaymentMode, roomsTotal: subtotalAmount - (state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0), addonsTotal: state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0
+        hotelSlug: hotelSlug as string, hotel, room, state, setState, register, formState, getNormalizedColor, themeColor, handleEmailBlur, allAddons, currentAddons: state.addons || [], handleToggleAddon, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, paymentMethod, setPaymentMethod, handleCheckout: onSubmit, handleSubmit, nights, hotelPaymentMode, roomsTotal: subtotalAmount - (state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0), addonsTotal: state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0,
+        appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount, addonTaxRate, addonTaxAmount, appliedPromo, setAppliedPromo, setDiscountAmount
     };
 
     return (

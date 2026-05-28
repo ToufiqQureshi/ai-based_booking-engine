@@ -2,8 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
 import { useTheme } from '@/contexts/ThemeContext';
+import { PopoverContent } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { X, Minus, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function useBookingWidgetState() {
+    const { hotelSlug } = useParams<{ hotelSlug: string }>();
+    const updateParentIframeHeight = () => {};
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [config, setConfig] = useState<any>(null); // Config state kept for future extensibility
     const [startingPrice, setStartingPrice] = useState<number>(4200);

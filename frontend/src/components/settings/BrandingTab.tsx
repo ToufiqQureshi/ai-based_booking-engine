@@ -1,4 +1,4 @@
-import { Save, Loader2, Globe, Palette, Upload, Image, Mail, MessageSquare, Shield, Lock } from 'lucide-react';
+import { Save, Loader2, Globe, Palette, Upload, Image, Mail, MessageSquare, Shield, Lock, ShoppingBag } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 
 
-export function BrandingTab({ formData, handleUpdate, handleSave, isSaving, setIsSaving, hotel }: any) {
+export function BrandingTab({ formData, handleUpdate, handleSave, isSaving, setIsSaving, hotel, rooms = [] }: any) {
   const { toast } = useToast();
   return (
     <>
