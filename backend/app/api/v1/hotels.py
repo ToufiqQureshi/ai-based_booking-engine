@@ -4,7 +4,7 @@ Hotel profile aur settings management.
 Multi-tenant - har user apni hotel hi dekh/edit kar sakta hai.
 """
 from app.services.email_service import get_email_service
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, DbSession
