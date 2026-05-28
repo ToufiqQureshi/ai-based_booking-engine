@@ -176,6 +176,13 @@ async def create_public_booking(
         # Get Hotel Settings for Tax rules
         hotel = await session.get(Hotel, hotel_id)
         settings = hotel.settings if hotel and hotel.settings else {}
+        
+        # --- Strict Payment Mode Validation ---
+        hotel_payment_mode = settings.get("payment_mode", "both")
+        if booking_data.payment_method == "pay_at_property" and hotel_payment_mode == "online":
+            raise HTTPException(status_code=400, detail="This property requires online payment.")
+        if booking_data.payment_method == "online" and hotel_payment_mode == "property":
+            raise HTTPException(status_code=400, detail="This property only accepts payment at property.")
         tax_name = settings.get("tax_name", "GST")
         room_tax_rate = float(settings.get("room_tax_rate", 0.0))
         room_tax_type = settings.get("room_tax_type", "exclusive")
@@ -358,9 +365,7 @@ async def create_public_booking(
                 check_in=str(booking.check_in),
                 check_out=str(booking.check_out),
                 total_amount=booking.total_amount,
-                sender_email=sender_email,
-                sender_name=sender_name,
-                signature=signature
+                hotel_settings=h_settings
             )
             
             # Send to hotel (can get from hotel contact or settings, fallback to global)
@@ -373,9 +378,7 @@ async def create_public_booking(
                 check_in=str(booking.check_in),
                 check_out=str(booking.check_out),
                 total_amount=booking.total_amount,
-                cc_list=cc_list,
-                sender_email=sender_email,
-                sender_name=sender_name
+                hotel_settings=h_settings
             )
         
         return PublicBookingResponse(

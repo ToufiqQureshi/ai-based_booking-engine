@@ -1,4 +1,6 @@
-import logging
+import os
+
+content = """import logging
 from brevo import AsyncBrevo
 from brevo.transactional_emails import (
     SendTransacEmailRequestSender,
@@ -139,7 +141,7 @@ class EmailService:
             })
         else:
             sig_html = f"<br><br>{hotel_settings.get('email_signature', '')}" if hotel_settings.get('email_signature') else "<br><br><p>We look forward to hosting you!</p>"
-            html_content = f"""
+            html_content = f\"\"\"
             <html>
                 <body>
                     <h2>Hi {guest_name},</h2>
@@ -151,7 +153,7 @@ class EmailService:
                     {sig_html}
                 </body>
             </html>
-            """
+            \"\"\"
             
         await self._dispatch_hotel_email(hotel_settings, [guest_email], subject, html_content)
 
@@ -165,7 +167,7 @@ class EmailService:
                 return
 
         subject = f"New Booking Received: {booking_number}"
-        html_content = f"""
+        html_content = f\"\"\"
         <html>
             <body>
                 <h2>New Booking Alert</h2>
@@ -177,7 +179,7 @@ class EmailService:
                 <p><strong>Total Revenue:</strong> INR {total_amount}</p>
             </body>
         </html>
-        """
+        \"\"\"
         
         emails = [e.strip() for e in hotel_emails.split(",") if e.strip()]
         cc_list = hotel_settings.get("email_cc_list")
@@ -189,3 +191,7 @@ class EmailService:
 # Dependency injection
 async def get_email_service() -> EmailService:
     return EmailService()
+"""
+
+with open('backend/app/services/email_service.py', 'w', encoding='utf-8') as f:
+    f.write(content)

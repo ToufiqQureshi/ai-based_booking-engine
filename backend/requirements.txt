@@ -33,3 +33,5 @@ langchain-community
 user-agents
 brevo-python
 razorpay
+
+aiosmtplib==3.0.1
