@@ -14,12 +14,15 @@ from app.models.amenity import Amenity, RoomAmenityLink
 from app.models.rates import RoomRate
 from sqlmodel import delete
 from app.api.v1.availability import clear_availability_cache
+from app.core.cache import cache_response, invalidate_cache
+from fastapi import Request
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
 
 @router.get("", response_model=List[RoomTypeRead])
-async def get_rooms(current_user: CurrentUser, session: DbSession):
+@cache_response(expire=300, key_prefix="rooms")
+async def get_rooms(request: Request, current_user: CurrentUser, session: DbSession):
     """
     Hotel ke saare room types get karo.
     Rooms page mein list display ke liye.
@@ -81,11 +84,13 @@ async def create_room(
         await session.refresh(room)
 
     clear_availability_cache(current_user.hotel_id)
+    invalidate_cache(f"rooms:{current_user.hotel_id}:*")
     return room
 
 
 @router.get("/{room_id}", response_model=RoomTypeRead)
-async def get_room(room_id: str, current_user: CurrentUser, session: DbSession):
+@cache_response(expire=300, key_prefix="room")
+async def get_room(room_id: str, request: Request, current_user: CurrentUser, session: DbSession):
     """Single room type get karo"""
     result = await session.execute(
         select(RoomType).where(
@@ -164,6 +169,8 @@ async def update_room(
     await session.refresh(room)
     
     clear_availability_cache(current_user.hotel_id)
+    invalidate_cache(f"rooms:{current_user.hotel_id}:*")
+    invalidate_cache(f"room:{current_user.hotel_id}:*/rooms/{room_id}*")
     return room
 
 
@@ -200,3 +207,5 @@ async def delete_room(room_id: str, current_user: CurrentUser, session: DbSessio
     await session.delete(room)
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
+    invalidate_cache(f"rooms:{current_user.hotel_id}:*")
+    invalidate_cache(f"room:{current_user.hotel_id}:*/rooms/{room_id}*")

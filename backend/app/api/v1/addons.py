@@ -1,16 +1,18 @@
 
 from typing import List
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.addon import AddOn, AddOnCreate, AddOnUpdate
+from app.core.cache import cache_response, invalidate_cache
 
 router = APIRouter(prefix="/addons", tags=["Addons"])
 
 @router.get("", response_model=List[AddOn])
-async def get_addons(current_user: CurrentUser, session: DbSession):
+@cache_response(expire=3600, key_prefix="addons")
+async def get_addons(request: Request, current_user: CurrentUser, session: DbSession):
     """
     Get all add-ons for the current hotel.
     """
@@ -34,6 +36,7 @@ async def create_addon(
     session.add(addon)
     await session.commit()
     await session.refresh(addon)
+    invalidate_cache(f"addons:{current_user.hotel_id}:*")
     return addon
 
 @router.patch("/{addon_id}", response_model=AddOn)
@@ -67,6 +70,7 @@ async def update_addon(
     session.add(addon)
     await session.commit()
     await session.refresh(addon)
+    invalidate_cache(f"addons:{current_user.hotel_id}:*")
     return addon
 
 @router.delete("/{addon_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -93,3 +97,4 @@ async def delete_addon(
         
     await session.delete(addon)
     await session.commit()
+    invalidate_cache(f"addons:{current_user.hotel_id}:*")

@@ -1,14 +1,16 @@
 from typing import List
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.amenity import Amenity, AmenityCreate, AmenityRead, RoomAmenityLink
+from app.core.cache import cache_response, invalidate_cache
 
 router = APIRouter(prefix="/amenities", tags=["Amenities"])
 
 @router.get("", response_model=List[AmenityRead])
-async def get_amenities(current_user: CurrentUser, session: DbSession):
+@cache_response(expire=3600, key_prefix="amenities")
+async def get_amenities(request: Request, current_user: CurrentUser, session: DbSession):
     """List all amenities for the hotel"""
     query = select(Amenity).where(Amenity.hotel_id == current_user.hotel_id)
     result = await session.execute(query)
@@ -28,6 +30,7 @@ async def create_amenity(
     session.add(amenity)
     await session.commit()
     await session.refresh(amenity)
+    invalidate_cache(f"amenities:{current_user.hotel_id}:*")
     return amenity
 
 @router.delete("/{amenity_id}")
@@ -43,6 +46,7 @@ async def delete_amenity(
         
     await session.delete(amenity)
     await session.commit()
+    invalidate_cache(f"amenities:{current_user.hotel_id}:*")
     return {"message": "Deleted successfully"}
 
 # Helper to Initialize Defaults (Optional)
@@ -75,4 +79,5 @@ async def seed_defaults(current_user: CurrentUser, session: DbSession):
         created.append(a)
     
     await session.commit()
+    invalidate_cache(f"amenities:{current_user.hotel_id}:*")
     return {"message": "Created default amenities", "count": len(created)}

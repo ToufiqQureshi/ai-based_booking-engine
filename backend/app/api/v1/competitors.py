@@ -357,6 +357,8 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
 
     return final_res
 
+from redis.exceptions import LockError
+
 @router.post("/rates/ingest", response_model=dict)
 async def ingest_competitor_rates(
     payload: RateIngestRequest,
@@ -389,42 +391,65 @@ async def ingest_competitor_rates(
 
     keys = [(r.competitor_id, r.check_in_date) for r in valid_rates_payload]
 
-    existing_rates_query = select(CompetitorRate).where(
-        tuple_(CompetitorRate.competitor_id, CompetitorRate.check_in_date).in_(keys)
-    )
-    existing_rates_result = await session.execute(existing_rates_query)
-    existing_rates = existing_rates_result.scalars().all()
+    # Acquire distributed lock to prevent race conditions during concurrent ingestion
+    lock_name = f"lock:rates_ingest:{current_user.hotel_id}"
+    r_client = redis_client.get_instance()
 
-    existing_map = {(r.competitor_id, r.check_in_date): r for r in existing_rates}
+    if r_client:
+        lock = r_client.lock(lock_name, timeout=10, blocking_timeout=3)
+        try:
+            acquired = lock.acquire()
+            if not acquired:
+                return {"message": "System busy ingesting rates, please retry later.", "status": "warning"}
+        except Exception as e:
+            logger.warning(f"Failed to acquire redis lock: {e}")
+            lock = None
+    else:
+        lock = None
 
-    count_new = 0
-    count_update = 0
+    try:
+        existing_rates_query = select(CompetitorRate).where(
+            tuple_(CompetitorRate.competitor_id, CompetitorRate.check_in_date).in_(keys)
+        )
+        existing_rates_result = await session.execute(existing_rates_query)
+        existing_rates = existing_rates_result.scalars().all()
 
-    for item in valid_rates_payload:
-        key = (item.competitor_id, item.check_in_date)
-        
-        if key in existing_map:
-            rate_obj = existing_map[key]
-            rate_obj.price = item.price
-            rate_obj.is_sold_out = item.is_sold_out
-            rate_obj.room_type = item.room_type
-            rate_obj.fetched_at = datetime.utcnow()
-            session.add(rate_obj)
-            count_update += 1
-        else:
-            new_rate = CompetitorRate(
-                competitor_id=item.competitor_id,
-                check_in_date=item.check_in_date,
-                price=item.price,
-                is_sold_out=item.is_sold_out,
-                room_type=item.room_type,
-                currency=item.currency,
-                fetched_at=datetime.utcnow()
-            )
-            session.add(new_rate)
-            count_new += 1
+        existing_map = {(r.competitor_id, r.check_in_date): r for r in existing_rates}
+
+        count_new = 0
+        count_update = 0
+
+        for item in valid_rates_payload:
+            key = (item.competitor_id, item.check_in_date)
             
-    await session.commit()
+            if key in existing_map:
+                rate_obj = existing_map[key]
+                rate_obj.price = item.price
+                rate_obj.is_sold_out = item.is_sold_out
+                rate_obj.room_type = item.room_type
+                rate_obj.fetched_at = datetime.utcnow()
+                session.add(rate_obj)
+                count_update += 1
+            else:
+                new_rate = CompetitorRate(
+                    competitor_id=item.competitor_id,
+                    check_in_date=item.check_in_date,
+                    price=item.price,
+                    is_sold_out=item.is_sold_out,
+                    room_type=item.room_type,
+                    currency=item.currency,
+                    fetched_at=datetime.utcnow()
+                )
+                session.add(new_rate)
+                count_new += 1
+
+        await session.commit()
+    finally:
+        if lock:
+            try:
+                lock.release()
+            except Exception:
+                pass
 
     # --- Redis Write-Through (Performance) ---
     try:

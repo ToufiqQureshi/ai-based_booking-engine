@@ -126,8 +126,13 @@ def generate_booking_number() -> str:
     return f"BK{timestamp}{unique_part}"
 
 
+from fastapi import Request
+from app.core.limiter import limiter
+
 @router.post("/bookings", response_model=PublicBookingResponse)
+@limiter.limit("5/minute")
 async def create_public_booking(
+    request: Request,
     booking_data: PublicBookingCreate,
     session: DbSession,
     background_tasks: BackgroundTasks

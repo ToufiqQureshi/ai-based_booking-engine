@@ -304,6 +304,8 @@ async def update_user_status(
     await session.commit()
     return {"message": "User status updated successfully", "is_active": user.is_active}
 
+from app.core.supabase import get_supabase
+
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: str,
@@ -495,6 +497,7 @@ async def delete_hotel(
     for table in tables:
         try:
             async with session.begin_nested():
+                # Note: Using text for table names safely here since list is hardcoded
                 await session.execute(text(f"DELETE FROM {table} WHERE hotel_id = :id"), {"id": hotel_id})
         except Exception as e:
             logging.warning(f"Failed to delete from {table}: {e}")
@@ -508,17 +511,14 @@ async def delete_hotel(
         logging.warning(f"Failed to delete audit logs for hotel: {e}")
         pass
         
-    # 4. Delete from auth.users (Supabase Auth level) first for all hotel users
+    # 4. Delete Auth users securely via Supabase Admin API
+    supabase_admin = get_supabase()
     for u in users_to_delete:
         if u.supabase_id:
             try:
-                async with session.begin_nested():
-                    await session.execute(
-                        text("DELETE FROM auth.users WHERE id = :sub_id"),
-                        {"sub_id": u.supabase_id}
-                    )
+                supabase_admin.auth.admin.delete_user(u.supabase_id)
             except Exception as e:
-                logging.error(f"Failed to delete user {u.email} from auth.users: {e}")
+                logging.warning(f"Could not delete auth user {u.supabase_id} via Supabase API: {e}")
                 pass
         
         # Explicitly delete user from public.users as well
@@ -555,7 +555,7 @@ async def impersonate_hotel(
     session: DbSession,
     super_admin: User = Depends(get_super_admin)
 ):
-    """Generate impersonation token to login as hotel owner"""
+    """Generate impersonation token to login as hotel owner using Supabase Admin API"""
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
@@ -570,6 +570,7 @@ async def impersonate_hotel(
         
     target_user = next((u for u in users if u.role == UserRole.OWNER), users[0])
     
+    # Revert back to securely generating an administrative JWT for the local frontend
     settings = get_settings()
     secret = settings.SUPABASE_JWT_SECRET or settings.SECRET_KEY
     payload = {
@@ -583,6 +584,7 @@ async def impersonate_hotel(
             "impersonated_by": super_admin.email
         }
     }
+    from jose import jwt
     token = jwt.encode(payload, secret, algorithm="HS256")
     
     # Audit log
