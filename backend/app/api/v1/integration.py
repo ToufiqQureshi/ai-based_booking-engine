@@ -6,6 +6,7 @@ from typing import List, Optional, Any, Dict, Tuple
 from datetime import datetime, timedelta
 import hmac
 from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi.responses import RedirectResponse
 from sqlmodel import select
 import secrets
 import hashlib
@@ -470,3 +471,95 @@ async def test_ai_connection(
         
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+@router.get("/google/connect")
+async def google_oauth_connect(
+    current_user: CurrentUser,
+):
+    """Initiates Google OAuth flow for Google Business Profile Reviews integration"""
+    from app.core.config import get_settings
+    settings = get_settings()
+    
+    client_id = settings.GOOGLE_CLIENT_ID
+    if not client_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google Client ID is not configured on the server."
+        )
+        
+    redirect_uri = f"{settings.API_URL}/api/v1/integration/google/callback"
+    scopes = "https://www.googleapis.com/auth/business.manage"
+    state = current_user.hotel_id
+    
+    google_auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={client_id}&"
+        f"redirect_uri={redirect_uri}&"
+        "response_type=code&"
+        f"scope={scopes}&"
+        f"state={state}&"
+        "access_type=offline&"
+        "prompt=consent"
+    )
+    return RedirectResponse(url=google_auth_url)
+
+
+@router.get("/google/callback")
+async def google_oauth_callback(
+    code: str,
+    state: str,
+    session: DbSession
+):
+    """Callback endpoint for Google OAuth authorization code exchange"""
+    from app.core.config import get_settings
+    settings = get_settings()
+    
+    # Determine frontend redirect base URL
+    if "localhost" in settings.API_URL or "127.0.0.1" in settings.API_URL:
+        frontend_url = "http://localhost:5173"
+    else:
+        frontend_url = "https://app.staybooker.ai"
+        
+    frontend_redirect = f"{frontend_url}/dashboard/settings?tab=integrations"
+    
+    async with httpx.AsyncClient() as client:
+        token_url = "https://oauth2.googleapis.com/token"
+        payload = {
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": f"{settings.API_URL}/api/v1/integration/google/callback"
+        }
+        
+        try:
+            response = await client.post(token_url, data=payload)
+            if response.status_code != 200:
+                error_msg = f"Failed to retrieve token from Google: {response.text}"
+                return RedirectResponse(url=f"{frontend_redirect}&google_status=error&message={error_msg}")
+                
+            token_data = response.json()
+            access_token = token_data.get("access_token")
+            refresh_token = token_data.get("refresh_token")
+            
+            # Save to database
+            hotel_id = state
+            query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
+            result = await session.execute(query)
+            integration_settings = result.scalar_one_or_none()
+            
+            if not integration_settings:
+                integration_settings = IntegrationSettings(hotel_id=hotel_id)
+                
+            integration_settings.google_business_access_token = access_token
+            if refresh_token:
+                integration_settings.google_business_refresh_token = refresh_token
+                
+            session.add(integration_settings)
+            await session.commit()
+            
+            return RedirectResponse(url=f"{frontend_redirect}&google_status=success")
+            
+        except Exception as e:
+            return RedirectResponse(url=f"{frontend_redirect}&google_status=error&message={str(e)}")
