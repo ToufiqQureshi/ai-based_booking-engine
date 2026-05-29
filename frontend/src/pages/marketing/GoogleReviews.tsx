@@ -574,20 +574,20 @@ export default function GoogleReviews() {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      // Derive the API base URL the same way apiClient does
-      const hostname = window.location.hostname;
-      let apiBase = '/api/v1';
-      if (hostname.includes('staybooker.ai')) {
-        apiBase = 'https://api.staybooker.ai/api/v1';
-      } else if (import.meta.env.VITE_API_URL) {
-        apiBase = import.meta.env.VITE_API_URL;
-      }
-      // Redirect — this navigates away to Google OAuth consent screen
-      window.location.href = `${apiBase}/integration/google/connect`;
-    } catch {
+      // Call via apiClient so JWT token is sent in Authorization header
+      const data = await apiClient.get<{ auth_url: string }>('/integration/google/connect');
+      // Now redirect browser to Google OAuth consent screen
+      window.location.href = data.auth_url;
+    } catch (err: any) {
+      toast({
+        title: 'Failed to start Google connection',
+        description: err?.message || 'Please try again.',
+        variant: 'destructive',
+      });
       setConnecting(false);
     }
   };
+
 
   const handleDisconnect = async () => {
     if (!confirm('Disconnect Google Business Profile? You can reconnect anytime.')) return;

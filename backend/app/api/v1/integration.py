@@ -502,7 +502,9 @@ async def google_oauth_connect(
         "access_type=offline&"
         "prompt=consent"
     )
-    return RedirectResponse(url=google_auth_url)
+    # Return URL as JSON — frontend will redirect the browser (JWT can't travel with window.location.href)
+    return {"auth_url": google_auth_url}
+
 
 
 @router.get("/google/callback")
