@@ -1,6 +1,6 @@
 // Settings Page - Real API Integration
 import { useState } from 'react';
-import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag, Lock, Mail, MessageSquare, Sparkles } from 'lucide-react';
+import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag, Lock, Mail, MessageSquare, Sparkles, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,8 @@ import { EmailTab } from '@/components/settings/EmailTab';
 import { PoliciesTab } from '@/components/settings/PoliciesTab';
 import { TeamList } from '@/components/settings/TeamList';
 import { PageShell } from '@/components/layout/PageShell';
+import { AIAgentTab } from '@/components/settings/AIAgentTab';
+
 export function SettingsPage() {
   const { hotel, user, setHotel } = useAuth();
   const { toast } = useToast();
@@ -210,6 +212,13 @@ export function SettingsPage() {
             <span className="font-medium">WhatsApp Settings</span>
           </TabsTrigger>
           <TabsTrigger 
+            value="ai_agent" 
+            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+          >
+            <Bot className="h-4 w-4" />
+            <span className="font-medium">AI Agent</span>
+          </TabsTrigger>
+          <TabsTrigger 
             value="policies" 
             className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
           >
@@ -376,6 +385,11 @@ export function SettingsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+          
+          <TabsContent value="ai_agent" className="space-y-6 mt-0">
+            <AIAgentTab hotel={hotel} setHotel={setHotel} />
+          </TabsContent>
+
           <PoliciesTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
           <TabsContent value="gallery" className="space-y-6 mt-0">
             <PropertyGallery 
