@@ -33,6 +33,7 @@ const AgentPage = lazy(() => import("@/pages/agent/AgentPage").then(m => ({ defa
 const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
 const SuperAdminDashboard = lazy(() => import("@/pages/superadmin/SuperAdminDashboard"));
+const GoogleReviewsPage = lazy(() => import("@/pages/marketing/GoogleReviews"));
 
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -111,6 +112,7 @@ const App = () => {
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/integration" element={<IntegrationPage />} />
                       <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/reviews" element={<GoogleReviewsPage />} />
                       <Route path="/agent" element={<AgentPage />} />
                       <Route path="/settings/profile" element={<ProfilePage />} />
                     

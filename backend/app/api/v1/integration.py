@@ -515,13 +515,13 @@ async def google_oauth_callback(
     from app.core.config import get_settings
     settings = get_settings()
     
-    # Determine frontend redirect base URL
+    # Determine frontend redirect base URL — always go to /reviews page
     if "localhost" in settings.API_URL or "127.0.0.1" in settings.API_URL:
         frontend_url = "http://localhost:5173"
     else:
         frontend_url = "https://app.staybooker.ai"
         
-    frontend_redirect = f"{frontend_url}/dashboard/settings?tab=integrations"
+    frontend_redirect = f"{frontend_url}/reviews"
     
     async with httpx.AsyncClient() as client:
         token_url = "https://oauth2.googleapis.com/token"
@@ -559,7 +559,324 @@ async def google_oauth_callback(
             session.add(integration_settings)
             await session.commit()
             
-            return RedirectResponse(url=f"{frontend_redirect}&google_status=success")
+            return RedirectResponse(url=f"{frontend_redirect}?google_status=success")
             
         except Exception as e:
-            return RedirectResponse(url=f"{frontend_redirect}&google_status=error&message={str(e)}")
+            return RedirectResponse(url=f"{frontend_redirect}?google_status=error&message={str(e)}")
+
+
+@router.get("/google/status")
+async def google_connection_status(
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Check if the hotel's Google Business Profile is connected and return account info"""
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    settings = result.scalar_one_or_none()
+
+    if not settings or not settings.google_business_access_token:
+        return {"connected": False, "account_id": None, "location_id": None, "email": None}
+
+    # Try to get Google user info to show which account is connected
+    email = None
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {settings.google_business_access_token}"}
+            )
+            if resp.status_code == 200:
+                email = resp.json().get("email")
+            elif resp.status_code == 401:
+                # Try refresh
+                new_token = await _refresh_google_token(settings)
+                if new_token:
+                    settings.google_business_access_token = new_token
+                    session.add(settings)
+                    await session.commit()
+                    resp2 = await client.get(
+                        "https://www.googleapis.com/oauth2/v2/userinfo",
+                        headers={"Authorization": f"Bearer {new_token}"}
+                    )
+                    if resp2.status_code == 200:
+                        email = resp2.json().get("email")
+    except Exception:
+        pass
+
+    return {
+        "connected": True,
+        "account_id": settings.google_business_account_id,
+        "location_id": settings.google_business_location_id,
+        "email": email,
+    }
+
+
+@router.delete("/google/disconnect")
+async def google_disconnect(
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Disconnect Google Business Profile for this hotel"""
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    settings = result.scalar_one_or_none()
+
+    if settings:
+        settings.google_business_access_token = None
+        settings.google_business_refresh_token = None
+        settings.google_business_account_id = None
+        settings.google_business_location_id = None
+        session.add(settings)
+        await session.commit()
+
+    return {"status": "success", "message": "Google Business Profile disconnected successfully."}
+
+
+
+
+async def _refresh_google_token(settings: IntegrationSettings) -> str | None:
+    """Refresh Google access token using the stored refresh token. Returns new access token or None."""
+    from app.core.config import get_settings
+    config = get_settings()
+    if not settings.google_business_refresh_token:
+        return None
+    async with httpx.AsyncClient() as client:
+        resp = await client.post("https://oauth2.googleapis.com/token", data={
+            "client_id": config.GOOGLE_CLIENT_ID,
+            "client_secret": config.GOOGLE_CLIENT_SECRET,
+            "refresh_token": settings.google_business_refresh_token,
+            "grant_type": "refresh_token"
+        })
+        if resp.status_code == 200:
+            return resp.json().get("access_token")
+    return None
+
+
+@router.get("/google/reviews")
+async def get_google_reviews(
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Fetch Google Business Profile reviews for the hotel"""
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    settings = result.scalar_one_or_none()
+
+    if not settings or not settings.google_business_access_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google Business Profile not connected. Please connect via /integration/google/connect"
+        )
+
+    access_token = settings.google_business_access_token
+    account_id = settings.google_business_account_id
+    location_id = settings.google_business_location_id
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    async with httpx.AsyncClient() as client:
+        # Step 1: Fetch accounts if not stored
+        if not account_id:
+            accounts_resp = await client.get(
+                "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+                headers=headers
+            )
+            if accounts_resp.status_code == 401:
+                # Token expired, try refresh
+                new_token = await _refresh_google_token(settings)
+                if not new_token:
+                    raise HTTPException(status_code=401, detail="Google token expired. Please reconnect.")
+                settings.google_business_access_token = new_token
+                session.add(settings)
+                await session.commit()
+                access_token = new_token
+                headers = {"Authorization": f"Bearer {access_token}"}
+                accounts_resp = await client.get(
+                    "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+                    headers=headers
+                )
+
+            accounts_data = accounts_resp.json()
+            accounts = accounts_data.get("accounts", [])
+            if not accounts:
+                raise HTTPException(status_code=404, detail="No Google Business accounts found for this user.")
+
+            account_name = accounts[0].get("name")  # e.g. "accounts/123456"
+            account_id = account_name.split("/")[-1]
+            settings.google_business_account_id = account_id
+            session.add(settings)
+            await session.commit()
+
+        # Step 2: Fetch locations if not stored
+        if not location_id:
+            locations_resp = await client.get(
+                f"https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{account_id}/locations",
+                headers=headers
+            )
+            locations_data = locations_resp.json()
+            locations = locations_data.get("locations", [])
+            if not locations:
+                raise HTTPException(status_code=404, detail="No Google Business locations found.")
+
+            location_name = locations[0].get("name")  # e.g. "locations/456789"
+            location_id = location_name.split("/")[-1]
+            settings.google_business_location_id = location_id
+            session.add(settings)
+            await session.commit()
+
+        # Step 3: Fetch reviews
+        reviews_resp = await client.get(
+            f"https://mybusiness.googleapis.com/v4/accounts/{account_id}/locations/{location_id}/reviews",
+            headers=headers,
+            params={"pageSize": 50, "orderBy": "updateTime desc"}
+        )
+
+        if reviews_resp.status_code != 200:
+            raise HTTPException(
+                status_code=reviews_resp.status_code,
+                detail=f"Failed to fetch reviews: {reviews_resp.text}"
+            )
+
+        return reviews_resp.json()
+
+
+@router.post("/google/reviews/{review_id}/ai-reply")
+async def generate_ai_reply(
+    review_id: str,
+    request: Request,
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Generate an AI reply for a Google review"""
+    body = await request.json()
+    reviewer_name = body.get("reviewer_name", "Guest")
+    review_text = body.get("review_text", "")
+    star_rating = body.get("star_rating", 5)
+
+    # Get integration settings for AI config
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    settings = result.scalar_one_or_none()
+
+    # Get hotel name
+    hotel = await session.get(Hotel, current_user.hotel_id)
+    hotel_name = hotel.name if hotel else "Our Hotel"
+
+    # Build AI prompt
+    stars_label = {1: "very negative", 2: "negative", 3: "neutral", 4: "positive", 5: "very positive"}.get(star_rating, "positive")
+    prompt = f"""You are the hotel manager of {hotel_name}. Write a professional, warm, and personalized reply to the following Google review.
+
+Reviewer: {reviewer_name}
+Star Rating: {star_rating}/5 ({stars_label} review)
+Review: {review_text}
+
+Guidelines:
+- Be warm, professional, and grateful
+- Address the reviewer by name
+- If the review is negative, acknowledge concerns and invite them to contact us directly
+- Keep it concise (2-4 sentences max)
+- End with an invitation to return
+- Do NOT use generic templates — make it feel personal
+
+Reply:"""
+
+    try:
+        from app.core.guest_agent import create_guest_agent_graph
+        from langchain_core.messages import HumanMessage
+
+        if settings and settings.ai_api_key:
+            agent = create_guest_agent_graph(
+                session, current_user.hotel_id,
+                settings.ai_provider, settings.ai_api_key,
+                settings.ai_model, settings.ai_base_url,
+                hotel_name
+            )
+            if agent:
+                response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+                reply_text = response["messages"][-1].content
+                return {"reply": reply_text.strip()}
+
+        # Fallback: use platform Groq key
+        from app.core.config import get_settings
+        config = get_settings()
+        if config.GROQ_API_KEY:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {config.GROQ_API_KEY}", "Content-Type": "application/json"},
+                    json={
+                        "model": "llama-3.1-70b-versatile",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 200
+                    }
+                )
+                if resp.status_code == 200:
+                    reply_text = resp.json()["choices"][0]["message"]["content"]
+                    return {"reply": reply_text.strip()}
+
+        raise HTTPException(status_code=500, detail="No AI provider configured. Please set up AI in Integration settings.")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
+
+
+@router.post("/google/reviews/{review_id}/reply")
+async def post_google_review_reply(
+    review_id: str,
+    request: Request,
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Post a reply to a Google Business Profile review"""
+    body = await request.json()
+    reply_text = body.get("comment", "")
+
+    if not reply_text.strip():
+        raise HTTPException(status_code=400, detail="Reply text cannot be empty.")
+
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    settings = result.scalar_one_or_none()
+
+    if not settings or not settings.google_business_access_token:
+        raise HTTPException(status_code=400, detail="Google Business Profile not connected.")
+
+    account_id = settings.google_business_account_id
+    location_id = settings.google_business_location_id
+
+    if not account_id or not location_id:
+        raise HTTPException(status_code=400, detail="Please fetch reviews first to initialize account/location IDs.")
+
+    headers = {
+        "Authorization": f"Bearer {settings.google_business_access_token}",
+        "Content-Type": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.put(
+            f"https://mybusiness.googleapis.com/v4/accounts/{account_id}/locations/{location_id}/reviews/{review_id}/reply",
+            headers=headers,
+            json={"comment": reply_text}
+        )
+
+        if resp.status_code == 401:
+            new_token = await _refresh_google_token(settings)
+            if new_token:
+                settings.google_business_access_token = new_token
+                session.add(settings)
+                await session.commit()
+                headers["Authorization"] = f"Bearer {new_token}"
+                resp = await client.put(
+                    f"https://mybusiness.googleapis.com/v4/accounts/{account_id}/locations/{location_id}/reviews/{review_id}/reply",
+                    headers=headers,
+                    json={"comment": reply_text}
+                )
+
+        if resp.status_code not in (200, 201):
+            raise HTTPException(status_code=resp.status_code, detail=f"Failed to post reply: {resp.text}")
+
+        return {"status": "success", "message": "Reply posted successfully to Google!", "data": resp.json()}
+
