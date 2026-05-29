@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -55,6 +56,13 @@ async def lifespan(app: FastAPI):
     # Shutdown: Cleanup if needed
     logger.info("Shutting down...")
 
+
+# Initialize Sentry SDK
+sentry_sdk.init(
+    dsn="https://89db698e190244dace0ef835b28f4c75@o4508572632219648.ingest.us.sentry.io/4508572634382336",
+    send_default_pii=True,
+    traces_sample_rate=1.0,
+)
 
 # FastAPI app create karo
 app = FastAPI(
@@ -100,6 +108,12 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 async def health_check():
     """Server health check"""
     return {"status": "healthy", "version": settings.APP_VERSION}
+
+
+@app.get("/sentry-debug")
+async def trigger_error():
+    division_by_zero = 1 / 0
+    return {"message": "Hello World"}
 
 
 # Cache-Control and Advanced Enterprise Security Headers middleware
