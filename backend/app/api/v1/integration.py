@@ -965,6 +965,16 @@ async def whatsapp_webhook_receive(
             if not target_hotel:
                 continue
                 
+            # Check Subscription and WhatsApp credits quota
+            from app.models.subscription import Subscription
+            sub_stmt = select(Subscription).where(Subscription.hotel_id == target_hotel.id, Subscription.status == "active")
+            sub_res = await session.execute(sub_stmt)
+            subscription = sub_res.scalar_one_or_none()
+
+            # If credits are exhausted, do not respond to save costs
+            if subscription and subscription.whatsapp_credits <= 0:
+                continue
+
             # Check if AI feature flag is active
             if not target_hotel.feature_ai_agent:
                 continue
@@ -1090,6 +1100,13 @@ async def whatsapp_webhook_receive(
                 async with httpx.AsyncClient() as client:
                     await client.post(send_url, headers=headers, json=payload)
                 
+                # Deduct WhatsApp Credit from subscription
+                if subscription:
+                    subscription.whatsapp_credits = max(0, subscription.whatsapp_credits - 1)
+                    session.add(subscription)
+                    await session.commit()
+                    await session.refresh(subscription)
+
                 # Save session history to Redis
                 history.append(["user", user_message])
                 history.append(["assistant", agent_reply])
