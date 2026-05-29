@@ -35,7 +35,9 @@ export function useBookingWidgetState() {
                 throw new Error("Failed to fetch config");
             })
             .then(data => setConfig(data))
-            .catch(() => { /* Defaults */ });
+            .catch(() => {
+                setConfig({}); // Fallback to empty object to allow default settings rendering
+            });
 
         // Fetch rooms to calculate live starting price
         const checkInStr = format(new Date(), 'yyyy-MM-dd');

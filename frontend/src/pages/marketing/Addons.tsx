@@ -237,324 +237,346 @@ export default function AddonsPage() {
         fetchAmenities();
     }, [fetchAddons, fetchAmenities]);
 
+  const getAddonCategoryBadge = (category: string) => {
+    const cat = category.toLowerCase();
+    let color = "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200/50";
+    if (cat.includes('transport')) color = "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/30";
+    else if (cat.includes('food') || cat.includes('dining')) color = "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/30";
+    else if (cat.includes('wellness') || cat.includes('spa')) color = "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-900/30";
+    else if (cat.includes('activity')) color = "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border border-indigo-100/50 dark:border-indigo-900/30";
+    
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Experiences & Activities</h1>
-                    <p className="text-muted-foreground">Manage extra guest services, experience packages, room rules, and property-wide amenities.</p>
-                </div>
-                {activeTab === 'services' && (
-                    <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-100 dark:shadow-none" onClick={handleCreateAddonOpen}>
-                        <Plus className="h-4 w-4" />
-                        Add Experience
-                    </Button>
-                )}
-                {activeTab === 'room_amenities' && (
-                    <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-100 dark:shadow-none" onClick={() => handleCreateAmenityOpen('room')}>
-                        <Plus className="h-4 w-4" />
-                        Add Room Amenity
-                    </Button>
-                )}
-                {activeTab === 'hotel_amenities' && (
-                    <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold shadow-lg shadow-emerald-100 dark:shadow-none" onClick={() => handleCreateAmenityOpen('hotel')}>
-                        <Plus className="h-4 w-4" />
-                        Add Property Amenity
-                    </Button>
-                )}
+      <Badge variant="secondary" className={cn("uppercase text-[10px] font-black tracking-widest rounded-lg px-2.5 py-1 border", color)}>
+        {category}
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-5">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            Experiences & Activities
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage extra guest services, experience packages, room rules, and property-wide amenities.</p>
+        </div>
+        {activeTab === 'services' && (
+          <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={handleCreateAddonOpen}>
+            <Plus className="h-4 w-4" />
+            Add Experience
+          </Button>
+        )}
+        {activeTab === 'room_amenities' && (
+          <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={() => handleCreateAmenityOpen('room')}>
+            <Plus className="h-4 w-4" />
+            Add Room Amenity
+          </Button>
+        )}
+        {activeTab === 'hotel_amenities' && (
+          <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={() => handleCreateAmenityOpen('hotel')}>
+            <Plus className="h-4 w-4" />
+            Add Property Amenity
+          </Button>
+        )}
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid grid-cols-3 max-w-xl h-11 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200/10">
+          <TabsTrigger value="services" className="rounded-lg text-xs font-black tracking-wide data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 mr-2" /> Experiences &amp; Activities
+          </TabsTrigger>
+          <TabsTrigger value="room_amenities" className="rounded-lg text-xs font-black tracking-wide data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
+            <BedDouble className="w-3.5 h-3.5 mr-2" /> Room Amenities
+          </TabsTrigger>
+          <TabsTrigger value="hotel_amenities" className="rounded-lg text-xs font-black tracking-wide data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm">
+            <Hotel className="w-3.5 h-3.5 mr-2" /> Property Amenities
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── TAB 1: ADD-ON SERVICES ── */}
+        <TabsContent value="services" className="space-y-5 outline-none">
+          <AddonDialog
+            open={isAddonDialogOpen}
+            onOpenChange={setIsAddonDialogOpen}
+            onSuccess={fetchAddons}
+            initialData={selectedAddon}
+          />
+
+          <div className="flex items-center justify-between">
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search experiences..."
+                className="pl-11 h-11 rounded-xl border-slate-200 focus-visible:ring-blue-500 font-medium"
+                value={addonsSearchQuery}
+                onChange={(e) => setAddonsSearchQuery(e.target.value)}
+              />
             </div>
+          </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid grid-cols-3 max-w-xl h-11 bg-muted/60 p-1 rounded-xl">
-                    <TabsTrigger value="services" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
-                        <Sparkles className="w-3.5 h-3.5 mr-2" /> Experiences & Activities
-                    </TabsTrigger>
-                    <TabsTrigger value="room_amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm">
-                        <BedDouble className="w-3.5 h-3.5 mr-2" /> Room Amenities
-                    </TabsTrigger>
-                    <TabsTrigger value="hotel_amenities" className="rounded-lg text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-emerald-600 data-[state=active]:shadow-sm">
-                        <Hotel className="w-3.5 h-3.5 mr-2" /> Property Amenities
-                    </TabsTrigger>
-                </TabsList>
-
-                {/* ── TAB 1: ADD-ON SERVICES ── */}
-                <TabsContent value="services" className="space-y-4 outline-none">
-                    <AddonDialog
-                        open={isAddonDialogOpen}
-                        onOpenChange={setIsAddonDialogOpen}
-                        onSuccess={fetchAddons}
-                        initialData={selectedAddon}
-                    />
-
-                    <div className="flex items-center justify-between">
-                        <div className="relative max-w-sm w-full">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                placeholder="Search services..."
-                                className="pl-10 h-10 rounded-xl"
-                                value={addonsSearchQuery}
-                                onChange={(e) => setAddonsSearchQuery(e.target.value)}
+          {isAddonsLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Services...</span>
+            </div>
+          ) : filteredAddons.length === 0 ? (
+            <Card className="border-dashed border-2 rounded-3xl bg-slate-50/20">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Sparkles className="h-14 w-14 text-slate-300 dark:text-slate-700 mb-4 opacity-70" />
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white">No Experiences Yet</h3>
+                <p className="text-muted-foreground text-center mt-1.5 max-w-xs text-sm leading-relaxed">
+                  Enhance guest experience by adding extra services like airport pick ups, candlelight dinners, or spa sessions.
+                </p>
+                <Button className="mt-5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md" onClick={handleCreateAddonOpen}>
+                  Add First Experience
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50/50 dark:bg-slate-900/20">
+                  <TableRow className="border-slate-100 dark:border-slate-800">
+                    <TableHead className="w-[120px] h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest pl-6">Image</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Experience / Activity</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Category</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Price</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Status</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest text-right pr-6">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAddons.map((addon) => (
+                    <TableRow key={addon.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 border-slate-100 dark:border-slate-800 transition-colors">
+                      <TableCell className="pl-6 py-4">
+                        <div className="h-12 w-20 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900 relative border border-slate-100 dark:border-slate-800 flex items-center justify-center">
+                          {addon.image_url ? (
+                            <img
+                              src={getImageUrl(addon.image_url)}
+                              alt={addon.name}
+                              className="w-full h-full object-cover"
                             />
+                          ) : (
+                            <div className="flex items-center justify-center h-full w-full text-slate-300">
+                              <ImageOff className="h-5 w-5" />
+                            </div>
+                          )}
                         </div>
-                    </div>
-
-                    {isAddonsLoading ? (
-                        <div className="flex flex-col items-center justify-center h-64 gap-2">
-                            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Services...</span>
+                      </TableCell>
+                      <TableCell className="font-extrabold text-sm text-slate-800 dark:text-slate-200">
+                        <div className="flex flex-col">
+                          <span>{addon.name}</span>
+                          <span className="text-xs text-slate-400 font-normal truncate max-w-[260px] mt-0.5">
+                            {addon.description || "No description provided."}
+                          </span>
                         </div>
-                    ) : filteredAddons.length === 0 ? (
-                        <Card className="border-dashed rounded-2xl">
-                            <CardContent className="flex flex-col items-center justify-center py-12">
-                                <Sparkles className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                                <h3 className="text-lg font-medium">No Experiences Yet</h3>
-                                <p className="text-muted-foreground text-center mt-1 max-w-xs text-sm">
-                                    Enhance guest experience by adding extra services like adventure park, candlelight dinner, or spa.
-                                </p>
-                                <Button className="mt-4 bg-blue-600 hover:bg-blue-700 rounded-xl" onClick={handleCreateAddonOpen}>
-                                    Add First Experience
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
-                            <Table>
-                                <TableHeader className="bg-muted/30">
-                                    <TableRow>
-                                        <TableHead className="w-[100px] h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider pl-6">Image</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Name</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Category</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Price</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Status</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider text-right pr-6">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredAddons.map((addon) => (
-                                        <TableRow key={addon.id} className="hover:bg-muted/10 border-border">
-                                            <TableCell className="pl-6 py-3.5">
-                                                <div className="h-10 w-16 rounded-xl overflow-hidden bg-muted relative border border-border">
-                                                    {addon.image_url ? (
-                                                        <img
-                                                            src={getImageUrl(addon.image_url)}
-                                                            alt={addon.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="flex items-center justify-center h-full w-full text-muted-foreground">
-                                                            <ImageOff className="h-4 w-4" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-semibold text-sm text-foreground">
-                                                <div>{addon.name}</div>
-                                                <div className="text-xs text-muted-foreground truncate max-w-[200px] font-normal mt-0.5">
-                                                    {addon.description}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="secondary" className="uppercase text-[9px] font-bold tracking-wider rounded-md border-none bg-muted/60">
-                                                    {addon.category}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="font-bold text-sm">₹{addon.price.toLocaleString()}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={addon.is_active ? 'default' : 'destructive'} className={addon.is_active ? "bg-green-500 hover:bg-green-600 rounded-md" : "rounded-md"}>
-                                                    {addon.is_active ? 'Active' : 'Inactive'}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right pr-6">
-                                                <div className="flex justify-end gap-1">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600" onClick={() => handleEditAddonOpen(addon)}>
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-rose-50 dark:hover:bg-rose-950/20" onClick={() => handleDeleteAddon(addon.id)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    )}
-                </TabsContent>
-
-                {/* ── TAB 2: ROOM AMENITIES ── */}
-                <TabsContent value="room_amenities" className="space-y-4 outline-none">
-                    <div className="relative max-w-sm">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            placeholder="Search room specific amenities..."
-                            className="pl-10 h-10 rounded-xl"
-                            value={amenitiesSearchQuery}
-                            onChange={(e) => setAmenitiesSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    {isAmenitiesLoading ? (
-                        <div className="flex flex-col items-center justify-center h-64 gap-2">
-                            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Room Amenities...</span>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        {getAddonCategoryBadge(addon.category)}
+                      </TableCell>
+                      <TableCell className="font-black text-slate-800 dark:text-slate-100 text-sm">₹{addon.price.toLocaleString()}</TableCell>
+                      <TableCell className="py-4">
+                        <Badge className={cn(
+                          "rounded-lg px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider border-none shadow-none",
+                          addon.is_active 
+                            ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400" 
+                            : "bg-rose-500/10 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400"
+                        )}>
+                          {addon.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right pr-6 py-4">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg" onClick={() => handleEditAddonOpen(addon)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg" onClick={() => handleDeleteAddon(addon.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                    ) : filteredRoomAmenities.length === 0 ? (
-                        <Card className="border-dashed rounded-2xl">
-                            <CardContent className="flex flex-col items-center justify-center py-12">
-                                <LayoutGrid className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                                <h3 className="text-lg font-medium">No Room Amenities</h3>
-                                <p className="text-muted-foreground text-center mt-1 max-w-xs text-sm">
-                                    Create room traits like "Pet Friendly", "Mini Bar", or "Balcony".
-                                </p>
-                                <Button className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl" onClick={() => handleCreateAmenityOpen('room')}>
-                                    Add First Room Amenity
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
-                            <Table>
-                                <TableHeader className="bg-muted/30">
-                                    <TableRow>
-                                        <TableHead className="w-[80px] h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider pl-6">Icon</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Name</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Category</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider text-right pr-6">Operations</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredRoomAmenities.map((amenity) => (
-                                        <TableRow key={amenity.id} className="hover:bg-muted/10 border-border group">
-                                            <TableCell className="pl-6 py-3.5">
-                                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/20 dark:to-slate-900/40 border border-indigo-100/50 dark:border-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm group-hover:scale-105 transition-transform">
-                                                    {getAmenityIcon(amenity.icon_slug, "w-4.5 h-4.5")}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-semibold text-sm text-foreground">
-                                                <div className="flex flex-col">
-                                                    <span>{amenity.name}</span>
-                                                    {amenity.is_featured && (
-                                                        <div className="flex items-center gap-0.5 mt-0.5 text-amber-500">
-                                                            <Star className="w-2.5 h-2.5 fill-current" />
-                                                            <span className="text-[9px] font-bold uppercase tracking-wider">Highlight</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge className={cn(
-                                                    "px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border-none shadow-none",
-                                                    AMENITY_CATEGORIES.find(c => c.value === amenity.category)?.color || 'bg-muted'
-                                                )}>
-                                                    {amenity.category}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right pr-6">
-                                                <Button 
-                                                    size="icon" 
-                                                    variant="ghost" 
-                                                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                                                    onClick={() => handleDeleteAmenity(amenity.id)}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    )}
-                </TabsContent>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </TabsContent>
 
-                {/* ── TAB 3: PROPERTY WIDE AMENITIES ── */}
-                <TabsContent value="hotel_amenities" className="space-y-4 outline-none">
-                    <div className="relative max-w-sm">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            placeholder="Search property wide amenities..."
-                            className="pl-10 h-10 rounded-xl"
-                            value={amenitiesSearchQuery}
-                            onChange={(e) => setAmenitiesSearchQuery(e.target.value)}
-                        />
-                    </div>
+        {/* ── TAB 2: ROOM AMENITIES ── */}
+        <TabsContent value="room_amenities" className="space-y-5 outline-none">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search room specific amenities..."
+              className="pl-11 h-11 rounded-xl border-slate-200 focus-visible:ring-indigo-500 font-medium"
+              value={amenitiesSearchQuery}
+              onChange={(e) => setAmenitiesSearchQuery(e.target.value)}
+            />
+          </div>
 
-                    {isAmenitiesLoading ? (
-                        <div className="flex flex-col items-center justify-center h-64 gap-2">
-                            <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Property Amenities...</span>
+          {isAmenitiesLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Room Amenities...</span>
+            </div>
+          ) : filteredRoomAmenities.length === 0 ? (
+            <Card className="border-dashed border-2 rounded-3xl bg-slate-50/20">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <LayoutGrid className="h-14 w-14 text-slate-300 dark:text-slate-700 mb-4 opacity-70" />
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white">No Room Amenities</h3>
+                <p className="text-muted-foreground text-center mt-1.5 max-w-xs text-sm leading-relaxed">
+                  Create room-specific traits like "Balcony View", "Mini Bar", or "Jacuzzi".
+                </p>
+                <Button className="mt-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md" onClick={() => handleCreateAmenityOpen('room')}>
+                  Add First Room Amenity
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50/50 dark:bg-slate-900/20">
+                  <TableRow className="border-slate-100 dark:border-slate-800">
+                    <TableHead className="w-[100px] h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest pl-6">Icon</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Amenity Name</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Category</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest text-right pr-6">Operations</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRoomAmenities.map((amenity) => (
+                    <TableRow key={amenity.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 border-slate-100 dark:border-slate-800 transition-colors group">
+                      <TableCell className="pl-6 py-4">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm group-hover:scale-105 transition-transform">
+                          {getAmenityIcon(amenity.icon_slug, "w-5 h-5")}
                         </div>
-                    ) : filteredHotelAmenities.length === 0 ? (
-                        <Card className="border-dashed rounded-2xl">
-                            <CardContent className="flex flex-col items-center justify-center py-12">
-                                <Hotel className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                                <h3 className="text-lg font-medium">No Property Amenities</h3>
-                                <p className="text-muted-foreground text-center mt-1 max-w-xs text-sm">
-                                    Create hotel features like "Swimming Pool", "Gym", "Restaurant", or "Free Parking".
-                                </p>
-                                <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl" onClick={() => handleCreateAmenityOpen('hotel')}>
-                                    Add First Property Amenity
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
-                            <Table>
-                                <TableHeader className="bg-muted/30">
-                                    <TableRow>
-                                        <TableHead className="w-[80px] h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider pl-6">Icon</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Name</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider">Category</TableHead>
-                                        <TableHead className="h-11 text-xs font-bold uppercase text-muted-foreground tracking-wider text-right pr-6">Operations</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredHotelAmenities.map((amenity) => (
-                                        <TableRow key={amenity.id} className="hover:bg-muted/10 border-border group">
-                                            <TableCell className="pl-6 py-3.5">
-                                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-slate-900/40 border border-emerald-100/50 dark:border-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm group-hover:scale-105 transition-transform">
-                                                    {getAmenityIcon(amenity.icon_slug, "w-4.5 h-4.5")}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-semibold text-sm text-foreground">
-                                                <div className="flex flex-col">
-                                                    <span>{amenity.name}</span>
-                                                    {amenity.is_featured && (
-                                                        <div className="flex items-center gap-0.5 mt-0.5 text-amber-500">
-                                                            <Star className="w-2.5 h-2.5 fill-current" />
-                                                            <span className="text-[9px] font-bold uppercase tracking-wider">Highlight</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge className={cn(
-                                                    "px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border-none shadow-none",
-                                                    AMENITY_CATEGORIES.find(c => c.value === amenity.category)?.color || 'bg-muted'
-                                                )}>
-                                                    {amenity.category}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right pr-6">
-                                                <Button 
-                                                    size="icon" 
-                                                    variant="ghost" 
-                                                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                                                    onClick={() => handleDeleteAmenity(amenity.id)}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    )}
-                </TabsContent>
-            </Tabs>
+                      </TableCell>
+                      <TableCell className="font-extrabold text-sm text-slate-800 dark:text-slate-200">
+                        <div className="flex flex-col">
+                          <span>{amenity.name}</span>
+                          {amenity.is_featured && (
+                            <div className="flex items-center gap-0.5 mt-0.5 text-amber-500 font-bold">
+                              <Star className="w-3 h-3 fill-current" />
+                              <span className="text-[9px] uppercase tracking-wider">Featured Priority</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <Badge className={cn(
+                          "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border-none shadow-none",
+                          AMENITY_CATEGORIES.find(c => c.value === amenity.category)?.color || 'bg-slate-100 text-slate-700'
+                        )}>
+                          {amenity.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right pr-6 py-4">
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+                          onClick={() => handleDeleteAmenity(amenity.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* ── TAB 3: PROPERTY WIDE AMENITIES ── */}
+        <TabsContent value="hotel_amenities" className="space-y-5 outline-none">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search property wide amenities..."
+              className="pl-11 h-11 rounded-xl border-slate-200 focus-visible:ring-emerald-500 font-medium"
+              value={amenitiesSearchQuery}
+              onChange={(e) => setAmenitiesSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {isAmenitiesLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Loading Property Amenities...</span>
+            </div>
+          ) : filteredHotelAmenities.length === 0 ? (
+            <Card className="border-dashed border-2 rounded-3xl bg-slate-50/20">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Hotel className="h-14 w-14 text-slate-300 dark:text-slate-700 mb-4 opacity-70" />
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white">No Property Amenities</h3>
+                <p className="text-muted-foreground text-center mt-1.5 max-w-xs text-sm leading-relaxed">
+                  Create hotel features like "Swimming Pool", "Gym", "Restaurant", or "Valet Parking".
+                </p>
+                <Button className="mt-5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md" onClick={() => handleCreateAmenityOpen('hotel')}>
+                  Add First Property Amenity
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50/50 dark:bg-slate-900/20">
+                  <TableRow className="border-slate-100 dark:border-slate-800">
+                    <TableHead className="w-[100px] h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest pl-6">Icon</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Amenity Name</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Category</TableHead>
+                    <TableHead className="h-12 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest text-right pr-6">Operations</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredHotelAmenities.map((amenity) => (
+                    <TableRow key={amenity.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 border-slate-100 dark:border-slate-800 transition-colors group">
+                      <TableCell className="pl-6 py-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm group-hover:scale-105 transition-transform">
+                          {getAmenityIcon(amenity.icon_slug, "w-5 h-5")}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-extrabold text-sm text-slate-800 dark:text-slate-200">
+                        <div className="flex flex-col">
+                          <span>{amenity.name}</span>
+                          {amenity.is_featured && (
+                            <div className="flex items-center gap-0.5 mt-0.5 text-amber-500 font-bold">
+                              <Star className="w-3 h-3 fill-current" />
+                              <span className="text-[9px] uppercase tracking-wider">Featured Priority</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <Badge className={cn(
+                          "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border-none shadow-none",
+                          AMENITY_CATEGORIES.find(c => c.value === amenity.category)?.color || 'bg-slate-100 text-slate-700'
+                        )}>
+                          {amenity.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right pr-6 py-4">
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+                          onClick={() => handleDeleteAmenity(amenity.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
             {/* Dialog for Custom Rule/Amenity */}
             <Dialog open={isAmenityDialogOpen} onOpenChange={setIsAmenityDialogOpen}>

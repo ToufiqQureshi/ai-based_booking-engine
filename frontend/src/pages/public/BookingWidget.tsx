@@ -20,6 +20,7 @@ import { PremiumCapsuleLayout } from '@/components/public/PremiumCapsuleLayout';
 
 export default function BookingWidget() {
     const stateBag = useBookingWidgetState();
+    if (!stateBag) return null;
     const {
         config, setConfig, startingPrice, setStartingPrice, checkInDate, setCheckInDate,
         checkOutDate, setCheckOutDate, roomsCount, setRoomsCount, adults, setAdults,
