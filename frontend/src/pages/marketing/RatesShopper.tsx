@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -329,11 +329,11 @@ export default function RatesShopper() {
         <div className="flex flex-col gap-4 p-4 md:p-8">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Competitor Rate Shopper <span className="text-xs font-normal text-muted-foreground ml-2">(v2.0 AI)</span></h1>
-                    <p className="text-muted-foreground">AI-Powered Market Analysis & Rate Intelligence.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Rate Parity Tracker <span className="text-xs font-normal text-muted-foreground ml-2">(v2.0 AI)</span></h1>
+                    <p className="text-muted-foreground">AI-Powered Rate Parity & Channel Intelligence.</p>
                 </div>
                 <Button onClick={() => setIsAddOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" /> Add Competitor
+                    <Plus className="mr-2 h-4 w-4" /> Add OTA Channel
                 </Button>
             </div>
 
@@ -346,9 +346,9 @@ export default function RatesShopper() {
 
                 {/* AI INSIGHTS CARD */}
                 {todayAnalysis && (
-                    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-950 border-blue-200 dark:border-slate-800">
                         <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center gap-2 text-blue-800">
+                            <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-400">
                                 <Sparkles className="h-5 w-5 text-yellow-500 fill-yellow-500" />
                                 AI Market Insight (Today)
                             </CardTitle>
@@ -356,15 +356,15 @@ export default function RatesShopper() {
                         <CardContent>
                             <div className="grid md:grid-cols-4 gap-4">
                                 <div>
-                                    <p className="text-sm text-blue-600 font-medium">My Rate</p>
+                                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">My Rate</p>
                                     <p className="text-2xl font-bold">₹{todayAnalysis.my_price}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-blue-600 font-medium">Market Average</p>
+                                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Market Average</p>
                                     <p className="text-2xl font-bold">₹{todayAnalysis.average_market_price}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-blue-600 font-medium">Position</p>
+                                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Position</p>
                                     <div className="flex items-center gap-2">
                                         <Badge variant={
                                             todayAnalysis.market_position === 'Premium' ? 'default' :
@@ -378,7 +378,7 @@ export default function RatesShopper() {
                                     </div>
                                 </div>
                                 <div className="md:col-span-1">
-                                    <p className="text-sm text-blue-600 font-medium">Recommendation</p>
+                                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Recommendation</p>
                                     <p className="text-sm text-foreground italic mt-1">
                                         "{todayAnalysis.suggestion}"
                                     </p>
@@ -447,7 +447,7 @@ export default function RatesShopper() {
                                 </ResponsiveContainer>
                             ) : (
                                 <div className="flex h-full items-center justify-center text-muted-foreground">
-                                    No rate data available. Add a competitor to start tracking.
+                                    No rate data available. Add an OTA channel to start tracking.
                                 </div>
                             )}
                         </div>
@@ -504,23 +504,23 @@ export default function RatesShopper() {
                 </div>
             </Tabs>
 
-            {/* Add Competitor Dialog */}
+            {/* Add Channel Dialog */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Track New Competitor</DialogTitle>
+                        <DialogTitle>Track New OTA Channel</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="c-name">Competitor Name</Label>
+                            <Label htmlFor="c-name">Hotel Name on OTA</Label>
                             <Input id="c-name" value={newCompName} onChange={e => setNewCompName(e.target.value)} placeholder="e.g. Hotel Taj" />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="c-url">Booking URL</Label>
-                            <Input id="c-url" value={newCompUrl} onChange={e => setNewCompUrl(e.target.value)} placeholder="https://booking.com/..." />
+                            <Label htmlFor="c-url">OTA Booking URL</Label>
+                            <Input id="c-url" value={newCompUrl} onChange={e => setNewCompUrl(e.target.value)} placeholder="https://makemytrip.com/..." />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Source</Label>
+                            <Label>Source Platform</Label>
                             <Select value={newCompSource} onValueChange={setNewCompSource}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select source" />
@@ -536,7 +536,7 @@ export default function RatesShopper() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                        <Button onClick={handleAddCompetitor}>Add Competitor</Button>
+                        <Button onClick={handleAddCompetitor}>Start Tracking</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
