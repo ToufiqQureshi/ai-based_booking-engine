@@ -1,58 +1,59 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import Session, select
+from sqlmodel import select
 from typing import List, Optional
 from datetime import datetime, date
 
-from app.core.database import get_session
+from app.api.deps import DbSession, CurrentUser
 from app.models.promo import PromoCode
-from app.api.deps import get_current_user
 
 router = APIRouter()
 
 @router.get("/", response_model=List[PromoCode])
 async def list_promos(
-    hotel_id: Optional[str] = None,
-    session: Session = Depends(get_session),
-    # current_user = Depends(get_current_user) # Optional security
+    current_user: CurrentUser,
+    session: DbSession
 ):
     """List all promo codes for a hotel"""
-    query = select(PromoCode)
-    if hotel_id:
-        query = query.where(PromoCode.hotel_id == hotel_id)
-    return session.exec(query).all()
+    query = select(PromoCode).where(PromoCode.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    return result.scalars().all()
 
 @router.post("/", response_model=PromoCode)
 async def create_promo(
     promo: PromoCode,
-    session: Session = Depends(get_session)
+    current_user: CurrentUser,
+    session: DbSession
 ):
     """Create a new promo code"""
+    promo.hotel_id = current_user.hotel_id # Ensure tenant isolation
+
     # Check if code exists
-    existing = session.exec(select(PromoCode).where(
+    existing_query = select(PromoCode).where(
         PromoCode.code == promo.code,
-        PromoCode.hotel_id == promo.hotel_id
-    )).first()
-    
-    if existing:
+        PromoCode.hotel_id == current_user.hotel_id
+    )
+    result = await session.execute(existing_query)
+    if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Promo code already exists")
         
     session.add(promo)
-    session.commit()
-    session.refresh(promo)
+    await session.commit()
+    await session.refresh(promo)
     return promo
 
 @router.delete("/{promo_id}")
 async def delete_promo(
     promo_id: str,
-    session: Session = Depends(get_session)
+    current_user: CurrentUser,
+    session: DbSession
 ):
     """Delete a promo code"""
-    promo = session.get(PromoCode, promo_id)
-    if not promo:
+    promo = await session.get(PromoCode, promo_id)
+    if not promo or promo.hotel_id != current_user.hotel_id:
         raise HTTPException(status_code=404, detail="Promo not found")
         
-    session.delete(promo)
-    session.commit()
+    await session.delete(promo)
+    await session.commit()
     return {"ok": True}
 
 from pydantic import BaseModel
@@ -62,23 +63,31 @@ class ValidatePromoRequest(BaseModel):
     hotel_id: str
     booking_amount: float
 
+from app.core.limiter import limiter
+from fastapi import Request
+
 @router.post("/validate")
+@limiter.limit("10/minute")
 async def validate_promo(
-    request: ValidatePromoRequest,
-    session: Session = Depends(get_session)
+    request: Request,
+    payload: ValidatePromoRequest,
+    session: DbSession
 ):
     """
     Validate a promo code and calculate discount.
     Returns: { "valid": bool, "discount": float, "final_amount": float, "message": str }
     """
-    code = request.code
-    hotel_id = request.hotel_id
-    booking_amount = request.booking_amount
-    promo = session.exec(select(PromoCode).where(
+    code = payload.code
+    hotel_id = payload.hotel_id
+    booking_amount = payload.booking_amount
+
+    query = select(PromoCode).where(
         PromoCode.code == code,
         PromoCode.hotel_id == hotel_id,
         PromoCode.is_active == True
-    )).first()
+    )
+    result = await session.execute(query)
+    promo = result.scalar_one_or_none()
     
     if not promo:
         return {"valid": False, "message": "Invalid coupon code", "discount": 0}
