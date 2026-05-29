@@ -19,6 +19,7 @@ import { getImageUrl, cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { PageShell } from '@/components/layout/PageShell';
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -252,36 +253,35 @@ export default function AddonsPage() {
     );
   };
 
-  return (
-    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-5">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            Experiences & Activities
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage extra guest services, experience packages, room rules, and property-wide amenities.</p>
-        </div>
-        {activeTab === 'services' && (
-          <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={handleCreateAddonOpen}>
-            <Plus className="h-4 w-4" />
-            Add Experience
-          </Button>
-        )}
-        {activeTab === 'room_amenities' && (
-          <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={() => handleCreateAmenityOpen('room')}>
-            <Plus className="h-4 w-4" />
-            Add Room Amenity
-          </Button>
-        )}
-        {activeTab === 'hotel_amenities' && (
-          <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={() => handleCreateAmenityOpen('hotel')}>
-            <Plus className="h-4 w-4" />
-            Add Property Amenity
-          </Button>
-        )}
-      </div>
+  const pageActions = (
+    <div className="flex items-center gap-2">
+      {activeTab === 'services' && (
+        <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={handleCreateAddonOpen}>
+          <Plus className="h-4 w-4" />
+          Add Experience
+        </Button>
+      )}
+      {activeTab === 'room_amenities' && (
+        <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={() => handleCreateAmenityOpen('room')}>
+          <Plus className="h-4 w-4" />
+          Add Room Amenity
+        </Button>
+      )}
+      {activeTab === 'hotel_amenities' && (
+        <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-100 dark:shadow-none h-11 px-5 transition-all active:scale-95" onClick={() => handleCreateAmenityOpen('hotel')}>
+          <Plus className="h-4 w-4" />
+          Add Property Amenity
+        </Button>
+      )}
+    </div>
+  );
 
+  return (
+    <PageShell
+      title="Experiences & Activities"
+      subtitle="Manage extra guest services, experience packages, room rules, and property-wide amenities."
+      actions={pageActions}
+    >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-3 max-w-xl h-11 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200/10">
           <TabsTrigger value="services" className="rounded-lg text-xs font-black tracking-wide data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
@@ -675,6 +675,6 @@ export default function AddonsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </PageShell>
     );
 }

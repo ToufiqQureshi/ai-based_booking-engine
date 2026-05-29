@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { Hotel } from '@/types/api';
+import { PageShell } from '@/components/layout/PageShell';
 
 export default function Taxes() {
   const { hotel, setHotel } = useAuth();
@@ -158,32 +159,27 @@ export default function Taxes() {
     }).format(amt);
   };
 
+  const pageActions = (
+    <Button 
+      onClick={handleSave} 
+      disabled={isSaving} 
+      className="gap-2 shrink-0 h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 dark:shadow-none transition-all active:scale-95"
+    >
+      {isSaving ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Save className="h-4 w-4" />
+      )}
+      Save Settings
+    </Button>
+  );
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-            <Percent className="h-8 w-8 text-indigo-600 animate-pulse" />
-            Taxes Management
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Configure room bookings & experiences / activities tax rules to build trust with guests.
-          </p>
-        </div>
-        <Button 
-          onClick={handleSave} 
-          disabled={isSaving} 
-          className="gap-2 shrink-0 h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 dark:shadow-none transition-all active:scale-95"
-        >
-          {isSaving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          Save Settings
-        </Button>
-      </div>
+    <PageShell
+      title="Taxes Management"
+      subtitle="Configure room bookings & experiences / activities tax rules to build trust with guests."
+      actions={pageActions}
+    >
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Side: Tax Config Inputs */}
@@ -563,6 +559,6 @@ export default function Taxes() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

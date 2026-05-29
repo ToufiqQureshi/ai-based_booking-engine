@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, AlertCircle, RefreshCw, Link2, ArrowRightLeft, Activity } from 'lucide-react';
 import apiClient from '@/api/client';
 import { useToast } from "@/components/ui/use-toast";
+import { PageShell } from '@/components/layout/PageShell';
 
 // Types
 interface ChannelSettings {
@@ -152,20 +153,19 @@ export default function ChannelSettings() {
 
     const isConnected = settings?.is_connected;
 
+    const pageActions = isConnected ? (
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-3 py-1">
+            <CheckCircle2 className="w-4 h-4 mr-2" />
+            System Online
+        </Badge>
+    ) : null;
+
     return (
-        <div className="p-6 space-y-6 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Channel Manager</h1>
-                    <p className="text-muted-foreground mt-2">Connect and sync your inventory with OTAs (Booking.com, Airbnb, etc.)</p>
-                </div>
-                {isConnected && (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-3 py-1">
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        System Online
-                    </Badge>
-                )}
-            </div>
+        <PageShell
+            title="Channel Manager"
+            subtitle="Connect and sync your inventory with OTAs (Booking.com, Airbnb, etc.)"
+            actions={pageActions}
+        >
 
             {/* Connection Status Card */}
             <Card className="border-l-4 border-l-primary">
@@ -439,6 +439,6 @@ export default function ChannelSettings() {
                     </Card>
                 </TabsContent>
             </Tabs>
-        </div >
+        </PageShell>
     );
 }

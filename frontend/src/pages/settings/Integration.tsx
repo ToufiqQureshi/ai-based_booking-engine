@@ -49,6 +49,7 @@ interface CreatedKey {
 
 import { useAuth } from '@/contexts/AuthContext';
 import { ChatWidget } from '@/components/public/ChatWidget';
+import { PageShell } from '@/components/layout/PageShell';
 
 const IntegrationPage = () => {
     const { hotel } = useAuth();
@@ -231,11 +232,10 @@ const IntegrationPage = () => {
     }
 
     return (
-        <div className="p-6 space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold">Integration</h1>
-                <p className="text-muted-foreground">Connect your hotel website and manage API access</p>
-            </div>
+        <PageShell
+            title="Integration"
+            subtitle="Connect your hotel website and manage API access"
+        >
 
             <Tabs defaultValue="widget" className="space-y-6">
                 <TabsList>
@@ -984,7 +984,7 @@ Make sure you've set up your AI Provider and API Key in the Settings tab to let 
                     </Card>
                 </TabsContent>
             </Tabs>
-        </div>
+        </PageShell>
     );
 };
 

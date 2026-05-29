@@ -31,6 +31,7 @@ import { BrandingTab } from '@/components/settings/BrandingTab';
 import { EmailTab } from '@/components/settings/EmailTab';
 import { PoliciesTab } from '@/components/settings/PoliciesTab';
 import { TeamList } from '@/components/settings/TeamList';
+import { PageShell } from '@/components/layout/PageShell';
 export function SettingsPage() {
   const { hotel, user, setHotel } = useAuth();
   const { toast } = useToast();
@@ -152,14 +153,10 @@ export function SettingsPage() {
   if (!hotel) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your hotel profile and preferences
-        </p>
-      </div>
+    <PageShell
+      title="Settings"
+      subtitle="Manage your hotel profile and preferences"
+    >
 
       <Tabs defaultValue="hotel" orientation="vertical" className="flex flex-col md:flex-row gap-6">
         <TabsList className="flex flex-row md:flex-col h-auto md:w-64 justify-start items-stretch gap-1 bg-muted/30 p-2 rounded-xl border">
@@ -373,7 +370,7 @@ export function SettingsPage() {
           </TabsContent>
         </div>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }
 
