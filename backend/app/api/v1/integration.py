@@ -20,6 +20,7 @@ from app.models.integration import (
 )
 from app.models.hotel import Hotel
 from app.core.redis_client import redis_client
+from app.core.cache import cache_response, invalidate_cache
 
 router = APIRouter(prefix="/integration", tags=["Integration"])
 
@@ -48,7 +49,9 @@ def generate_api_key() -> tuple[str, str, str]:
 
 
 @router.get("/settings", response_model=IntegrationSettingsRead)
+@cache_response(expire=3600, key_prefix="integration")
 async def get_integration_settings(
+    request: Request,
     current_user: CurrentUser,
     session: DbSession
 ):
@@ -117,7 +120,8 @@ async def update_integration_settings(
     await session.commit()
     await session.refresh(settings)
     
-    # Invalidate public widget-config cache for this hotel
+    # Invalidate caches
+    invalidate_cache(f"integration:{current_user.hotel_id}:*")
     try:
         cache_key = f"public:widget-config:{current_user.hotel_id}"
         redis_client.delete_key(cache_key)

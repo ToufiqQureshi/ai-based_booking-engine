@@ -307,16 +307,21 @@ export default function SuperAdminDashboard() {
     const createUserMutation = useMutation({
         mutationFn: ({ hotelId, data }: { hotelId: string, data: any }) =>
             apiClient.post(`/superadmin/hotels/${hotelId}/users`, data),
+        onMutate: () => {
+            // Optimistic UI close
+            setIsAddUserOpen(false);
+            toast({ title: 'Processing', description: 'Creating user securely...' });
+        },
         onSuccess: () => {
             toast({ title: 'User Created', description: 'Employee account registered successfully.' });
             queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
-            setIsAddUserOpen(false);
             setAddUserEmail('');
             setAddUserName('');
             setAddUserPassword('');
             setAddUserRole('STAFF');
         },
         onError: (err: any) => {
+            setIsAddUserOpen(true); // Re-open on failure
             toast({ title: 'Registration Failed', description: err.message || 'Failed to create employee user account.', variant: 'destructive' });
         }
     });
