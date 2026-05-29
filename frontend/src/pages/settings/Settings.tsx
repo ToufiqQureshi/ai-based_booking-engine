@@ -1,6 +1,6 @@
 // Settings Page - Real API Integration
 import { useState } from 'react';
-import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag, Lock, Mail, MessageSquare } from 'lucide-react';
+import { Building2, Users, Bell, Key, Palette, Globe, Save, Loader2, Tag, Upload, Image, ShoppingBag, Lock, Mail, MessageSquare, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -339,6 +339,40 @@ export function SettingsPage() {
                     Save WhatsApp Settings
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-indigo-100 dark:border-indigo-950/40 bg-gradient-to-tr from-indigo-50/10 to-transparent">
+              <CardHeader>
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  Enable WhatsApp AI Booking Agent
+                </CardTitle>
+                <CardDescription>
+                  Setup WhatsApp webhooks to let the AI agent answer availability questions and share booking links directly with guests.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                <p>
+                  To let guests talk with the AI agent and book rooms, log in to your <strong>Meta for Developers Console</strong>, go to your WhatsApp app setup, and configure Webhooks with the following fields:
+                </p>
+                <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg border space-y-2 font-mono text-[11px] text-slate-800 dark:text-slate-200">
+                  <div>
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400">Callback URL:</span>{" "}
+                    {`${window.location.origin}/api/v1/integration/whatsapp/webhook`}
+                  </div>
+                  <div>
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400">Verify Token:</span>{" "}
+                    whatsapp_agent_verify_token
+                  </div>
+                  <div>
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400">Subscription Field:</span>{" "}
+                    messages
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  💡 Make sure you also configure the AI Provider credentials under the <strong>Integrations &gt; Settings</strong> tab to activate the chatbot brain.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
