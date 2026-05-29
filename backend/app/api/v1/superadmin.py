@@ -372,11 +372,13 @@ async def create_hotel_user(
     if res_existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="A user with this email address already exists")
         
-    # 3. Create user in Supabase Auth first
+    # 3. Create user in Supabase Auth safely in background thread (avoid blocking event loop)
+    import asyncio
     from app.core.supabase import get_supabase
     supabase_client = get_supabase()
-    try:
-        sb_user = supabase_client.auth.admin.create_user({
+
+    def _create_sb_user():
+        return supabase_client.auth.admin.create_user({
             "email": data.email.lower().strip(),
             "password": data.password,
             "email_confirm": True,
@@ -385,6 +387,9 @@ async def create_hotel_user(
                 "hotel_name": hotel.name
             }
         })
+
+    try:
+        sb_user = await asyncio.to_thread(_create_sb_user)
         supabase_id = sb_user.user.id
     except Exception as e:
         raise HTTPException(
