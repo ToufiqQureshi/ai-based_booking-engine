@@ -5,7 +5,7 @@ Manage API keys, widget code, and integration settings
 from typing import List, Optional, Any, Dict, Tuple
 from datetime import datetime, timedelta
 import hmac
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlmodel import select
 import secrets
 import hashlib
