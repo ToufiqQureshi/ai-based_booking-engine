@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     # Sentry Error Monitoring
     SENTRY_DSN: Optional[str] = None
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+
     class Config:
         env_file = ".env"
         extra = "ignore"

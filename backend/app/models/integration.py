@@ -80,6 +80,12 @@ class IntegrationSettings(SQLModel, table=True):
     # Sync Integrations
     google_sheet_url: Optional[str] = None
 
+    # Google Business Profile Integrations
+    google_business_access_token: Optional[str] = Field(default=None)
+    google_business_refresh_token: Optional[str] = Field(default=None)
+    google_business_location_id: Optional[str] = Field(default=None)
+    google_business_account_id: Optional[str] = Field(default=None)
+
     # Custom styling and code overrides
     widget_custom_css: Optional[str] = Field(default="")
     widget_custom_js: Optional[str] = Field(default="")
@@ -134,6 +140,10 @@ class IntegrationSettingsRead(BaseModel):
     ai_model: Optional[str] = "llama-3.1-70b-versatile"
     ai_base_url: Optional[str] = None
     google_sheet_url: Optional[str] = None
+    google_business_access_token: Optional[str] = None
+    google_business_refresh_token: Optional[str] = None
+    google_business_location_id: Optional[str] = None
+    google_business_account_id: Optional[str] = None
     widget_custom_css: Optional[str] = ""
     widget_custom_js: Optional[str] = ""
 
@@ -157,6 +167,10 @@ class IntegrationSettingsUpdate(BaseModel):
     ai_model: Optional[str] = None
     ai_base_url: Optional[str] = None
     google_sheet_url: Optional[str] = None
+    google_business_access_token: Optional[str] = None
+    google_business_refresh_token: Optional[str] = None
+    google_business_location_id: Optional[str] = None
+    google_business_account_id: Optional[str] = None
     widget_custom_css: Optional[str] = None
     widget_custom_js: Optional[str] = None
 
