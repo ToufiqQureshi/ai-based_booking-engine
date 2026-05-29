@@ -57,12 +57,13 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
 
 
-# Initialize Sentry SDK
-sentry_sdk.init(
-    dsn="https://89db698e190244dace0ef835b28f4c75@o4508572632219648.ingest.us.sentry.io/4508572634382336",
-    send_default_pii=True,
-    traces_sample_rate=1.0,
-)
+# Initialize Sentry SDK if DSN is provided
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        send_default_pii=True,
+        traces_sample_rate=1.0,
+    )
 
 # FastAPI app create karo
 app = FastAPI(

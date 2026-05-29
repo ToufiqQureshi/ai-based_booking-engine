@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
 
+    # Sentry Error Monitoring
+    SENTRY_DSN: Optional[str] = None
+
     class Config:
         env_file = ".env"
         extra = "ignore"
