@@ -699,10 +699,25 @@ async def get_google_reviews(
                     headers=headers
                 )
 
+            if accounts_resp.status_code != 200:
+                raise HTTPException(
+                    status_code=accounts_resp.status_code,
+                    detail=f"Google API error: {accounts_resp.text}"
+                )
+
             accounts_data = accounts_resp.json()
+            if "error" in accounts_data:
+                raise HTTPException(
+                    status_code=accounts_resp.status_code,
+                    detail=f"Google API returned error: {accounts_data['error']}"
+                )
+
             accounts = accounts_data.get("accounts", [])
             if not accounts:
-                raise HTTPException(status_code=404, detail="No Google Business accounts found for this user.")
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No Google Business accounts found for this user. Response: {accounts_data}"
+                )
 
             account_name = accounts[0].get("name")  # e.g. "accounts/123456"
             account_id = account_name.split("/")[-1]
