@@ -137,9 +137,14 @@ class GuestChatRequest(BaseModel):
 class GuestChatResponse(BaseModel):
     response: str
 
+from fastapi import Request
+from app.core.limiter import limiter
+
 @router.post("/chat/guest", response_model=GuestChatResponse)
+@limiter.limit("5/minute")
 async def chat_with_guest_ai(
-    request: GuestChatRequest,
+    request: Request,
+    payload: GuestChatRequest,
     session: DbSession
 ):
     """
@@ -150,15 +155,15 @@ async def chat_with_guest_ai(
         import uuid
         is_uuid = False
         try:
-            uuid.UUID(request.hotel_slug)
+            uuid.UUID(payload.hotel_slug)
             is_uuid = True
         except ValueError:
             pass
             
         if is_uuid:
-            query = select(Hotel).where(or_(Hotel.slug == request.hotel_slug, Hotel.id == request.hotel_slug))
+            query = select(Hotel).where(or_(Hotel.slug == payload.hotel_slug, Hotel.id == payload.hotel_slug))
         else:
-            query = select(Hotel).where(Hotel.slug == request.hotel_slug)
+            query = select(Hotel).where(Hotel.slug == payload.hotel_slug)
             
         result = await session.execute(query)
         hotel = result.scalar_one_or_none()
@@ -183,14 +188,14 @@ async def chat_with_guest_ai(
 
         # 2. Prepare History
         messages = []
-        for msg in request.history:
+        for msg in payload.history:
             if msg["role"] == "user":
                 messages.append(HumanMessage(content=msg["content"]))
             elif msg["role"] == "assistant":
                 messages.append(AIMessage(content=msg["content"]))
         
         # Add current message
-        messages.append(HumanMessage(content=request.message))
+        messages.append(HumanMessage(content=payload.message))
 
         # 3. Initialize Agent
         from app.core.guest_agent import create_guest_agent_graph

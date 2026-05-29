@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlmodel import select, and_, SQLModel
 import uuid
 
@@ -7,6 +7,7 @@ from app.api.deps import CurrentUser, DbSession
 from app.models.hotel import Hotel, HotelRead
 from app.models.links import UserHotelLink
 from app.models.user import User
+from app.core.cache import cache_response, invalidate_cache
 
 router = APIRouter(prefix="/properties", tags=["Properties"])
 
@@ -21,7 +22,8 @@ class PropertyCreate(SQLModel):
     email: Optional[str] = None
 
 @router.get("", response_model=List[PropertyRead])
-async def list_properties(current_user: CurrentUser, session: DbSession):
+@cache_response(expire=300, key_prefix="properties")
+async def list_properties(request: Request, current_user: CurrentUser, session: DbSession):
     """
     List all properties accessible by the current user.
     Auto-migrates existing single-hotel users to the new link system.

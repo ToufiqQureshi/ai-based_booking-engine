@@ -18,9 +18,14 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
+from fastapi import Request
+from app.core.limiter import limiter
+
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit("15/minute")
 async def chat_with_agent(
-    request: ChatRequest,
+    request: Request,
+    payload: ChatRequest,
     current_user: CurrentUser,
     session: DbSession
 ):
@@ -37,7 +42,7 @@ async def chat_with_agent(
 
         # 2. Format History
         chat_history = []
-        for item in request.history:
+        for item in payload.history:
             if len(item) == 2:
                 role, content = item
                 if role.lower() in ["human", "user"]:
@@ -47,7 +52,7 @@ async def chat_with_agent(
 
         # 3. Invoke Agent
         # Prepare input messages
-        input_messages = chat_history + [HumanMessage(content=request.message)]
+        input_messages = chat_history + [HumanMessage(content=payload.message)]
 
         # Invoke graph
         result = await graph.ainvoke({
