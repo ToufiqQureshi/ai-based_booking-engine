@@ -55,7 +55,7 @@ async def get_current_user(
             except Exception as e:
                 logger.warning(f"Redis cache write failed during auth token cache: {e}")
     if payload is None:
-        logger.error("Token verification failed in get_current_user")
+        logger.warning("Token verification failed in get_current_user (likely expired/invalid token)")
         raise credentials_exception
     
     supabase_id = payload.get("sub")
