@@ -35,3 +35,4 @@ brevo-python
 razorpay
 
 aiosmtplib==3.0.1
+sentry-sdk[fastapi]
