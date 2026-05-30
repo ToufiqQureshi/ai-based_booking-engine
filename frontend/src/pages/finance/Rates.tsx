@@ -37,6 +37,7 @@ export function RatesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<RatePlan | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const fetchRatePlans = async () => {
@@ -71,7 +72,8 @@ export function RatesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this rate plan?')) return;
+    if (isDeleting || !confirm('Are you sure you want to delete this rate plan?')) return;
+    setIsDeleting(true);
     try {
       await apiClient.delete(`/rates/plans/${id}`);
       toast({
@@ -85,6 +87,8 @@ export function RatesPage() {
         title: 'Error',
         description: 'Failed to delete rate plan.',
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
