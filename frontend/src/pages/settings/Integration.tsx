@@ -61,6 +61,8 @@ const IntegrationPage = () => {
     });
     const [isSavingWhatsapp, setIsSavingWhatsapp] = useState(false);
     const [isWhatsappDirty, setIsWhatsappDirty] = useState(false);
+    const [isAIEnabled, setIsAIEnabled] = useState(hotel?.feature_ai_agent || false);
+    const [isSavingAI, setIsSavingAI] = useState(false);
     const [activeHotelSlug, setActiveHotelSlug] = useState<string>('');
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
     const [widgetCode, setWidgetCode] = useState<WidgetCode | null>(null);
@@ -193,6 +195,23 @@ const IntegrationPage = () => {
             toast.error('Failed to save WhatsApp settings');
         } finally {
             setIsSavingWhatsapp(false);
+        }
+    };
+
+    const handleToggleAI = async (enabled: boolean) => {
+        setIsAIEnabled(enabled);
+        try {
+            setIsSavingAI(true);
+            const updatedHotel = await apiClient.patch<any>('/hotels/me', {
+                feature_ai_agent: enabled
+            });
+            setHotel(updatedHotel);
+            toast.success(enabled ? 'WhatsApp AI Agent is now active!' : 'WhatsApp AI Agent disabled.');
+        } catch (error) {
+            setIsAIEnabled(!enabled);
+            toast.error('Failed to change AI Agent status.');
+        } finally {
+            setIsSavingAI(false);
         }
     };
 
@@ -1028,13 +1047,25 @@ Make sure you've set up your AI Provider and API Key in the Settings tab to let 
                 <TabsContent value="whatsapp" className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <MessageCircle className="h-5 w-5 text-primary" />
-                                WhatsApp Business API Configuration
-                            </CardTitle>
-                            <CardDescription>
-                                Provide Meta WhatsApp Cloud API credentials to dispatch instant guest confirmations and reservation followups.
-                            </CardDescription>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <MessageCircle className="h-5 w-5 text-primary" />
+                                        WhatsApp Business API Configuration
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Provide Meta WhatsApp Cloud API credentials to dispatch instant guest confirmations and reservation followups.
+                                    </CardDescription>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label className="font-semibold">{isAIEnabled ? "AI Agent Active" : "AI Agent Disabled"}</Label>
+                                    <Switch
+                                        checked={isAIEnabled}
+                                        onCheckedChange={handleToggleAI}
+                                        disabled={isSavingAI}
+                                    />
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-4 md:grid-cols-1">
