@@ -1,0 +1,165 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Lock, CheckCircle2, Loader2, Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+interface IntegrationSettings {
+    widget_enabled: boolean;
+    widget_primary_color: string;
+    widget_background_color: string;
+    widget_layout?: string;
+    widget_theme?: string;
+}
+
+interface SearchWidgetTabProps {
+    settings: IntegrationSettings | null;
+    hotel: any;
+    activeHotelSlug: string;
+    isDirty: boolean;
+    isSavingSettings: boolean;
+    onUpdateSettings: (updates: Partial<IntegrationSettings>) => void;
+    onSaveSettings: () => Promise<void>;
+}
+
+export const SearchWidgetTab = ({
+    settings,
+    hotel,
+    activeHotelSlug,
+    isDirty,
+    isSavingSettings,
+    onUpdateSettings,
+    onSaveSettings
+}: SearchWidgetTabProps) => {
+    const [previewHeight, setPreviewHeight] = useState(160);
+
+    useEffect(() => {
+        const handleResize = (event: MessageEvent) => {
+            if (event.data && event.data.type === 'RESIZE_SEARCH_WIDGET') {
+                if (event.data.height) setPreviewHeight(event.data.height);
+            }
+        };
+        window.addEventListener('message', handleResize);
+        return () => window.removeEventListener('message', handleResize);
+    }, []);
+
+    if (!settings) return null;
+
+    const layouts = [
+        { id: 'modern', name: 'Modern Row', desc: 'Side-by-side inputs' },
+        { id: 'classic', name: 'Classic Stacked', desc: 'Vertical form' },
+        { id: 'minimal', name: 'Minimal Bar', desc: 'Clean underline' },
+        { id: 'premium', name: 'Premium Capsule', desc: 'Rounded floating' },
+    ];
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Widget Appearance</CardTitle>
+                <CardDescription>Customize your booking widget settings and colors</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Label>Enable Widget</Label>
+                        <p className="text-sm text-muted-foreground">Allow bookings through embedded widget</p>
+                    </div>
+                    <Switch
+                        checked={settings.widget_enabled}
+                        onCheckedChange={(checked) => onUpdateSettings({ widget_enabled: checked })}
+                    />
+                </div>
+
+                <div className="relative">
+                    {!hotel?.feature_color_palette && (
+                        <div className="absolute inset-0 z-10 backdrop-blur-sm bg-white/40 rounded-xl flex flex-col items-center justify-center border border-dashed border-indigo-200 p-6 text-center">
+                            <Lock className="w-6 h-6 text-indigo-600 mb-2" />
+                            <span className="text-sm font-black">Styles Locked</span>
+                            <span className="text-xs text-slate-500 mt-1">Upgrade your plan to customize colors and layouts.</span>
+                        </div>
+                    )}
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label>Primary Color</Label>
+                                <Input
+                                    type="color"
+                                    value={settings.widget_primary_color}
+                                    onChange={(e) => onUpdateSettings({ widget_primary_color: e.target.value })}
+                                    className="h-10 p-1"
+                                    disabled={!hotel?.feature_color_palette}
+                                />
+                            </div>
+                            <div>
+                                <Label>Background Color</Label>
+                                <Input
+                                    type="color"
+                                    value={settings.widget_background_color || '#ffffff'}
+                                    onChange={(e) => onUpdateSettings({ widget_background_color: e.target.value })}
+                                    className="h-10 p-1"
+                                    disabled={!hotel?.feature_color_palette}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label>Calendar Theme</Label>
+                            <select
+                                className="w-full mt-1 border border-input bg-background px-3 py-2 text-sm rounded-md"
+                                value={settings.widget_theme || 'light'}
+                                onChange={(e) => onUpdateSettings({ widget_theme: e.target.value })}
+                                disabled={!hotel?.feature_color_palette}
+                            >
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="theme">Matching Background</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-3">
+                            <Label className="text-sm font-semibold">Select Design</Label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {layouts.map((layout) => (
+                                    <div
+                                        key={layout.id}
+                                        className={`relative border-2 rounded-xl p-4 cursor-pointer hover:border-primary/50 transition-all ${settings.widget_layout === layout.id ? 'border-primary bg-primary/5' : 'border-border'}`}
+                                        onClick={() => hotel?.feature_color_palette && onUpdateSettings({ widget_layout: layout.id })}
+                                    >
+                                        {settings.widget_layout === layout.id && <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-primary" />}
+                                        <div className="h-8 bg-muted rounded mb-2" />
+                                        <div className="text-center">
+                                            <span className="font-semibold text-xs block">{layout.name}</span>
+                                            <span className="text-[10px] text-muted-foreground">{layout.desc}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="pt-6 border-t">
+                            <Label className="text-sm font-semibold mb-4 block">Live Preview</Label>
+                            <div className="p-4 bg-slate-900 rounded-xl flex items-center justify-center overflow-hidden min-h-[200px]">
+                                <iframe
+                                    src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget?preview_layout=${settings.widget_layout || ''}&preview_primary_color=${encodeURIComponent(settings.widget_primary_color || '')}&preview_bg_color=${encodeURIComponent(settings.widget_background_color || '')}&preview_theme=${settings.widget_theme || 'light'}`}
+                                    className="w-full max-w-4xl border-0"
+                                    style={{ height: `${previewHeight}px` }}
+                                    title="Widget Preview"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-4">
+                            {isDirty && <span className="text-xs text-amber-500 flex items-center mr-2 font-medium">⚠️ Unsaved changes</span>}
+                            <Button onClick={onSaveSettings} disabled={isSavingSettings || !isDirty} className="gap-2">
+                                {isSavingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Save Widget Settings
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};

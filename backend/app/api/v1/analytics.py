@@ -10,6 +10,7 @@ from sqlalchemy.orm import joinedload
 from app.api.deps import DbSession, CurrentUser
 from app.models.analytics import AnalyticsSession, AnalyticsEvent, SessionStartRequest, SessionPingRequest, EventTrackRequest
 from app.models.booking import Booking, BookingStatus
+from app.core.cache import cache_response
 from app.models.room import RoomType
 
 
@@ -138,6 +139,7 @@ async def track_event(request: EventTrackRequest, session: DbSession):
 # --- Dashboard API for Hoteliers ---
 
 @router.get("/dashboard")
+@cache_response(expire=600, key_prefix="analytics_dashboard")
 async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession, days: int = 7):
     """Fetch aggregated analytics for the hotelier dashboard"""
     try:
