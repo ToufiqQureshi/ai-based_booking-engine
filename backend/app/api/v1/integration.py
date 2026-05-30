@@ -472,6 +472,45 @@ async def test_ai_connection(
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@router.post("/test-whatsapp")
+async def test_whatsapp_connection(
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Test WhatsApp credentials by fetching the phone number profile"""
+    query = select(Hotel).where(Hotel.id == current_user.hotel_id)
+    res = await session.execute(query)
+    hotel = res.scalar_one_or_none()
+    
+    if not hotel or not hotel.settings:
+        return {"status": "error", "message": "Hotel settings not found."}
+        
+    wa_token = hotel.settings.get("whatsapp_api_key")
+    wa_phone_id = hotel.settings.get("whatsapp_phone_number_id")
+    
+    if not wa_token or not wa_phone_id:
+        return {"status": "error", "message": "WhatsApp API Key or Phone ID is missing. Please save settings first."}
+        
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://graph.facebook.com/v21.0/{wa_phone_id}",
+                headers={"Authorization": f"Bearer {wa_token}"}
+            )
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                display_phone_number = data.get("display_phone_number", "Verified")
+                return {"status": "success", "message": f"Connection Successful! Validated Phone Number."}
+            else:
+                try:
+                    err = resp.json().get("error", {}).get("message", resp.text)
+                except:
+                    err = resp.text
+                return {"status": "error", "message": f"Meta Error: {err}"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 
 @router.get("/google/connect")
 async def google_oauth_connect(
@@ -1098,7 +1137,8 @@ async def whatsapp_webhook_receive(
                 }
                 
                 async with httpx.AsyncClient() as client:
-                    await client.post(send_url, headers=headers, json=payload)
+                    wa_response = await client.post(send_url, headers=headers, json=payload)
+                    print(f"DEBUG: WhatsApp send status = {wa_response.status_code}, response = {wa_response.text}")
                 
                 # Deduct WhatsApp Credit from subscription
                 if subscription:

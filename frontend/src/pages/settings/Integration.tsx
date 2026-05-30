@@ -52,8 +52,15 @@ import { ChatWidget } from '@/components/public/ChatWidget';
 import { PageShell } from '@/components/layout/PageShell';
 
 const IntegrationPage = () => {
-    const { hotel } = useAuth();
+    const { hotel, setHotel } = useAuth();
     const [settings, setSettings] = useState<IntegrationSettings | null>(null);
+    const [whatsappConfig, setWhatsappConfig] = useState({
+        whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
+        whatsapp_phone_number_id: hotel?.settings?.whatsapp_phone_number_id || '',
+        whatsapp_business_account_id: hotel?.settings?.whatsapp_business_account_id || '',
+    });
+    const [isSavingWhatsapp, setIsSavingWhatsapp] = useState(false);
+    const [isWhatsappDirty, setIsWhatsappDirty] = useState(false);
     const [activeHotelSlug, setActiveHotelSlug] = useState<string>('');
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
     const [widgetCode, setWidgetCode] = useState<WidgetCode | null>(null);
@@ -62,6 +69,7 @@ const IntegrationPage = () => {
     const [newKeyName, setNewKeyName] = useState('');
     const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
     const [testingAI, setTestingAI] = useState(false);
+    const [testingWhatsapp, setTestingWhatsapp] = useState(false);
     const [previewHeight, setPreviewHeight] = useState(160);
 
     // Custom CSS/JS local state (save only on button click)
@@ -131,14 +139,6 @@ const IntegrationPage = () => {
                 widgetData.javascript_code = widgetData.javascript_code.replace(urlRegex, currentOrigin);
                 widgetData.instructions = widgetData.instructions.replace(urlRegex, currentOrigin);
 
-                // Replace placeholder slug with actual if available
-                const finalSlug = slug || hotel?.slug;
-                if (finalSlug) {
-                    const slugRegex = /my-grand-hotel/g;
-                    widgetData.html_code = widgetData.html_code.replace(slugRegex, finalSlug);
-                    widgetData.javascript_code = widgetData.javascript_code.replace(slugRegex, finalSlug);
-                    widgetData.instructions = widgetData.instructions.replace(slugRegex, finalSlug);
-                }
             }
 
             setWidgetCode(widgetData);
@@ -175,6 +175,27 @@ const IntegrationPage = () => {
         }
     };
 
+    const updateWhatsappSettings = (updates: Partial<typeof whatsappConfig>) => {
+        setWhatsappConfig(prev => ({ ...prev, ...updates }));
+        setIsWhatsappDirty(true);
+    };
+
+    const handleSaveWhatsappSettings = async () => {
+        setIsSavingWhatsapp(true);
+        try {
+            const updatedHotel = await apiClient.patch<any>('/hotels/me', {
+                settings: whatsappConfig
+            });
+            setHotel(updatedHotel);
+            setIsWhatsappDirty(false);
+            toast.success('WhatsApp settings saved successfully');
+        } catch (error) {
+            toast.error('Failed to save WhatsApp settings');
+        } finally {
+            setIsSavingWhatsapp(false);
+        }
+    };
+
     const testAI = async () => {
         setTestingAI(true);
         try {
@@ -188,6 +209,22 @@ const IntegrationPage = () => {
             toast.error('Test failed. Check your API key and network.');
         } finally {
             setTestingAI(false);
+        }
+    };
+
+    const testWhatsapp = async () => {
+        setTestingWhatsapp(true);
+        try {
+            const res = await apiClient.post<any>('/integration/test-whatsapp');
+            if (res.status === 'success') {
+                toast.success(res.message);
+            } else {
+                toast.error(res.message);
+            }
+        } catch (error) {
+            toast.error('Test failed. Please check your credentials or save before testing.');
+        } finally {
+            setTestingWhatsapp(false);
         }
     };
 
@@ -257,7 +294,11 @@ const IntegrationPage = () => {
                     </TabsTrigger>
                     <TabsTrigger value="settings" className="flex items-center gap-2">
                         <Globe className="w-4 h-4" />
-                        Settings
+                        External Services
+                    </TabsTrigger>
+                    <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+                        <MessageCircle className="w-4 h-4" />
+                        WhatsApp
                     </TabsTrigger>
                 </TabsList>
 
@@ -698,7 +739,7 @@ const IntegrationPage = () => {
                                                 size="sm"
                                                 disabled={!hotel?.feature_guest_bot}
                                                 onClick={() => copyToClipboard(
-                                                    `<div id="hotelier-chat-widget" data-hotel-slug="${activeHotelSlug || hotel?.slug || 'my-grand-hotel'}"></div>`
+                                                    `<div id="hotelier-chat-widget" data-hotel-slug="${activeHotelSlug || hotel?.slug || 'your-hotel-slug'}"></div>`
                                                 )}
                                             >
                                                 <Copy className="w-4 h-4 mr-2" />
@@ -706,7 +747,7 @@ const IntegrationPage = () => {
                                             </Button>
                                         </div>
                                         <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-sm">
-                                            {`<div id="hotelier-chat-widget" data-hotel-slug="${activeHotelSlug || hotel?.slug || 'my-grand-hotel'}"></div>`}
+                                            {`<div id="hotelier-chat-widget" data-hotel-slug="${activeHotelSlug || hotel?.slug || 'your-hotel-slug'}"></div>`}
                                         </pre>
                                     </div>
 
@@ -725,7 +766,7 @@ const IntegrationPage = () => {
     script.async = true;
     script.onload = function() {
       HotelierChat.init({
-        hotelSlug: '${activeHotelSlug || hotel?.slug || 'my-grand-hotel'}',
+        hotelSlug: '${activeHotelSlug || hotel?.slug || 'your-hotel-slug'}',
         frontendUrl: '${window.location.origin}'
       });
     };
@@ -746,7 +787,7 @@ const IntegrationPage = () => {
     script.async = true;
     script.onload = function() {
       HotelierChat.init({
-        hotelSlug: '${activeHotelSlug || hotel?.slug || 'my-grand-hotel'}',
+        hotelSlug: '${activeHotelSlug || hotel?.slug || 'your-hotel-slug'}',
         frontendUrl: '${window.location.origin}'
       });
     };
@@ -980,6 +1021,109 @@ Make sure you've set up your AI Provider and API Key in the Settings tab to let 
                                     </div>
                                 </>
                             )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                {/* WhatsApp Tab */}
+                <TabsContent value="whatsapp" className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <MessageCircle className="h-5 w-5 text-primary" />
+                                WhatsApp Business API Configuration
+                            </CardTitle>
+                            <CardDescription>
+                                Provide Meta WhatsApp Cloud API credentials to dispatch instant guest confirmations and reservation followups.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-4 md:grid-cols-1">
+                                <div className="space-y-2">
+                                    <Label htmlFor="whatsappApiKey">WhatsApp API Key / Access Token</Label>
+                                    <Input
+                                        id="whatsappApiKey"
+                                        type="password"
+                                        placeholder="EAAGz..."
+                                        value={whatsappConfig.whatsapp_api_key}
+                                        onChange={(e) => updateWhatsappSettings({ whatsapp_api_key: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
+                                        <Input
+                                            id="whatsappPhoneNumberId"
+                                            placeholder="1098485747..."
+                                            value={whatsappConfig.whatsapp_phone_number_id}
+                                            onChange={(e) => updateWhatsappSettings({ whatsapp_phone_number_id: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>
+                                        <Input
+                                            id="whatsappBusinessAccountId"
+                                            placeholder="948475839..."
+                                            value={whatsappConfig.whatsapp_business_account_id}
+                                            onChange={(e) => updateWhatsappSettings({ whatsapp_business_account_id: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex justify-end pt-4 border-t border-border/50 gap-2">
+                                <Button 
+                                    variant="secondary"
+                                    onClick={testWhatsapp}
+                                    disabled={testingWhatsapp || !hotel?.settings?.whatsapp_api_key}
+                                    className="gap-2"
+                                >
+                                    {testingWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                    Test Connection
+                                </Button>
+                                <div className="flex-1"></div>
+                                {isWhatsappDirty && (
+                                    <span className="text-xs text-amber-500 flex items-center mr-2 font-medium">
+                                        ⚠️ Unsaved changes
+                                    </span>
+                                )}
+                                <Button onClick={handleSaveWhatsappSettings} disabled={isSavingWhatsapp || !isWhatsappDirty} className="gap-2">
+                                    {isSavingWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    Save WhatsApp Settings
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-indigo-100 dark:border-indigo-950/40 bg-gradient-to-tr from-indigo-50/10 to-transparent">
+                        <CardHeader>
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                Enable WhatsApp AI Booking Agent
+                            </CardTitle>
+                            <CardDescription>
+                                Setup WhatsApp webhooks to let the AI agent answer availability questions and share booking links directly with guests.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                            <p>
+                                To let guests talk with the AI agent and book rooms, log in to your <strong>Meta for Developers Console</strong>, go to your WhatsApp app setup, and configure Webhooks with the following fields:
+                            </p>
+                            <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg border space-y-2 font-mono text-[11px] text-slate-800 dark:text-slate-200">
+                                <div>
+                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">Callback URL:</span>{" "}
+                                    {`${window.location.origin}/api/v1/integration/whatsapp/webhook`}
+                                </div>
+                                <div>
+                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">Verify Token:</span>{" "}
+                                    whatsapp_agent_verify_token
+                                </div>
+                                <div>
+                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">Subscription Field:</span>{" "}
+                                    messages
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                                💡 Make sure you also configure the AI Provider credentials under the <strong>External Services</strong> tab to activate the chatbot brain.
+                            </p>
                         </CardContent>
                     </Card>
                 </TabsContent>

@@ -122,62 +122,25 @@ export function AIAgentTab({ hotel, setHotel }: AIAgentTabProps) {
             <div className="bg-indigo-50 dark:bg-indigo-950/30 p-4 rounded-lg flex items-start gap-3 mt-4 text-sm text-indigo-800 dark:text-indigo-300">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium mb-1">How this works</p>
-                <p>The AI Agent uses an LLM (Large Language Model) to understand guest intent. You must provide an API key for your chosen provider. <strong>We recommend Groq for instant responses.</strong></p>
+                <p className="font-medium mb-1">Configuration Required</p>
+                <p>
+                  To make the AI Agent work, you must configure your AI Provider (like Groq or OpenAI) and provide an API key. 
+                </p>
+                <div className="mt-3">
+                  <a 
+                    href="/integration" 
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+                  >
+                    Go to External Services &gt;
+                  </a>
+                </div>
               </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>AI Provider</Label>
-                <Select value={aiSettings.ai_provider} onValueChange={(v) => handleUpdate('ai_provider', v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Provider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="groq">Groq (Recommended - Extremely Fast)</SelectItem>
-                    <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
-                    <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>AI Model</Label>
-                <Input
-                  placeholder={aiSettings.ai_provider === 'groq' ? "llama-3.1-70b-versatile" : "gpt-4o-mini"}
-                  value={aiSettings.ai_model}
-                  onChange={(e) => handleUpdate('ai_model', e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Example: llama-3.1-70b-versatile, gpt-4o-mini</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>API Key</Label>
-              <Input
-                type="password"
-                placeholder="sk-..."
-                value={aiSettings.ai_api_key}
-                onChange={(e) => handleUpdate('ai_api_key', e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Your secret API key from the provider dashboard.</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Base URL (Optional)</Label>
-              <Input
-                placeholder="https://api.openai.com/v1"
-                value={aiSettings.ai_base_url}
-                onChange={(e) => handleUpdate('ai_base_url', e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Only required if you are using a custom proxy or Azure OpenAI.</p>
             </div>
             
             <div className="flex justify-end pt-4">
               <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save AI Configuration
+                Save Status
               </Button>
             </div>
           </CardContent>
