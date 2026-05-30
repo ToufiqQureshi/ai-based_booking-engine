@@ -218,7 +218,7 @@ export const AnalyticsDashboard: React.FC = () => {
     };
 
     fetchLiveStats();
-    const interval = setInterval(fetchLiveStats, 12000);
+    const interval = setInterval(fetchLiveStats, 30000); // Poll every 30s instead of 12s
     return () => clearInterval(interval);
   }, [days]);
 

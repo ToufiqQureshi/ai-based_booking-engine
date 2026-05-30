@@ -67,7 +67,6 @@ export default function RatesShopper() {
 
         // Real-time listener for extension updates
         const onScrapeComplete = () => {
-            console.log("Scrape complete detected, refreshing UI...");
             fetchData();
         };
 
@@ -79,11 +78,13 @@ export default function RatesShopper() {
         setStartDate(e.target.value);
     };
 
+    const [isAdding, setIsAdding] = useState(false);
     const handleAddCompetitor = async () => {
-        if (!newCompName || !newCompUrl) {
+        if (isAdding || !newCompName || !newCompUrl) {
             toast.warning("Please enter both Name and URL");
             return;
         }
+        setIsAdding(true);
         try {
             await apiClient.post('/competitors', {
                 name: newCompName,
@@ -99,6 +100,8 @@ export default function RatesShopper() {
         } catch (error: any) {
             console.error(error);
             toast.error(error.message || "Failed to add competitor");
+        } finally {
+            setIsAdding(false);
         }
     };
 
@@ -536,7 +539,10 @@ export default function RatesShopper() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                        <Button onClick={handleAddCompetitor}>Start Tracking</Button>
+                        <Button onClick={handleAddCompetitor} disabled={isAdding}>
+                            {isAdding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Start Tracking
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
