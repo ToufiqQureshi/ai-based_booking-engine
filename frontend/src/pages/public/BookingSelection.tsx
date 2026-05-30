@@ -142,11 +142,12 @@ export default function BookingSelection() {
     };
 
     // Extract params and init state
-    const checkIn = searchParams.get('check_in') || format(today, 'yyyy-MM-dd');
-    const checkOut = searchParams.get('check_out') || format(tomorrow, 'yyyy-MM-dd');
+    // Support both standard and Google Hotel Ads parameters
+    const checkIn = searchParams.get('check_in') || searchParams.get('checkin') || format(today, 'yyyy-MM-dd');
+    const checkOut = searchParams.get('check_out') || searchParams.get('checkout') || format(tomorrow, 'yyyy-MM-dd');
     const paramGuests = searchParams.get('guests');
-    const paramAdults = searchParams.get('adults');
-    const paramChildren = searchParams.get('children');
+    const paramAdults = searchParams.get('adults') || searchParams.get('ad');
+    const paramChildren = searchParams.get('children') || searchParams.get('ch');
     const paramRooms = searchParams.get('rooms');
     const urlPromo = searchParams.get('promo_code');
 
