@@ -111,7 +111,7 @@ def create_guest_agent_graph(
         return ", ".join(names)
 
     @tool
-    async def check_availability(check_in_date: str, check_out_date: str, guests: int = 2) -> str:
+    async def check_availability(check_in_date: str, check_out_date: str, guests: str = "2") -> str:
         """
         Check room availability and prices for specific dates.
         Dates must be in YYYY-MM-DD format.
@@ -139,8 +139,8 @@ def create_guest_agent_graph(
         check_in: str, 
         check_out: str, 
         room_type_name: str, 
-        adults: int, 
-        children: int,
+        adults: str, 
+        children: str,
         first_name: str,
         last_name: str,
         phone: str,
@@ -152,6 +152,16 @@ def create_guest_agent_graph(
         You MUST provide the guest's Name and Phone number.
         The inquiry_summary should be a 1-sentence summary of the guest's main request.
         """
+        # Safely cast adults/children to int (Groq LLMs sometimes send strings)
+        try:
+            adults = int(adults)
+        except (ValueError, TypeError):
+            adults = 1
+        try:
+            children = int(children)
+        except (ValueError, TypeError):
+            children = 0
+        
         # Validate Phone (Mandatory)
         if not phone or len(phone.strip()) < 8:
             return "I need a valid mobile number to prepare your booking link. Could you please provide it?"

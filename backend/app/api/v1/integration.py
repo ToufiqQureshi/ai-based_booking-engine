@@ -967,6 +967,11 @@ async def whatsapp_webhook_receive(
     """
     Meta calls this POST endpoint when a guest sends a WhatsApp message.
     """
+    import logging
+    logger = logging.getLogger("whatsapp_webhook")
+    
+    debug_log = []  # Collect debug info to return in response
+    
     try:
         body = await request.json()
     except Exception:
@@ -981,12 +986,15 @@ async def whatsapp_webhook_receive(
         for change in changes:
             value = change.get("value", {})
             if "messages" not in value:
+                debug_log.append("SKIP: no messages in value")
                 continue
                 
             metadata = value.get("metadata", {})
-            phone_number_id = metadata.get("phone_number_id") # The hotel's WhatsApp Phone number ID
+            phone_number_id = str(metadata.get("phone_number_id", ""))
+            debug_log.append(f"phone_number_id from webhook: '{phone_number_id}' (type: {type(metadata.get('phone_number_id')).__name__})")
             
             if not phone_number_id:
+                debug_log.append("SKIP: empty phone_number_id")
                 continue
                 
             # Search for the hotel with this phone number ID in their settings
@@ -997,12 +1005,18 @@ async def whatsapp_webhook_receive(
             target_hotel = None
             for h in hotels:
                 h_settings = h.settings or {}
-                if h_settings.get("whatsapp_phone_number_id") == phone_number_id:
+                stored_id = h_settings.get("whatsapp_phone_number_id")
+                if stored_id is not None:
+                    debug_log.append(f"Hotel '{h.name}' has whatsapp_phone_number_id: '{stored_id}' (type: {type(stored_id).__name__})")
+                if str(stored_id) == phone_number_id:
                     target_hotel = h
                     break
                     
             if not target_hotel:
+                debug_log.append(f"SKIP: No hotel found matching phone_number_id '{phone_number_id}'")
                 continue
+            
+            debug_log.append(f"MATCH: Hotel '{target_hotel.name}' (ID: {target_hotel.id})")
                 
             # Check Subscription and WhatsApp credits quota
             from app.models.subscription import Subscription
@@ -1012,11 +1026,17 @@ async def whatsapp_webhook_receive(
 
             # If credits are exhausted, do not respond to save costs
             if subscription and subscription.whatsapp_credits <= 0:
+                debug_log.append("SKIP: WhatsApp credits exhausted")
                 continue
+            
+            debug_log.append(f"Subscription: {'active' if subscription else 'none (OK, no limit)'}")
 
             # Check if AI feature flag is active
             if not target_hotel.feature_ai_agent:
+                debug_log.append("SKIP: feature_ai_agent is False")
                 continue
+            
+            debug_log.append(f"feature_ai_agent: {target_hotel.feature_ai_agent}")
 
             # Load integration settings to get AI credentials
             int_stmt = select(IntegrationSettings).where(IntegrationSettings.hotel_id == target_hotel.id)
@@ -1024,7 +1044,10 @@ async def whatsapp_webhook_receive(
             int_settings = int_res.scalar_one_or_none()
             
             if not int_settings or not int_settings.ai_api_key:
+                debug_log.append(f"SKIP: int_settings={bool(int_settings)}, ai_api_key={bool(int_settings.ai_api_key) if int_settings else False}")
                 continue
+            
+            debug_log.append(f"AI Config: provider={int_settings.ai_provider}, model={int_settings.ai_model}")
 
             messages = value.get("messages", [])
             contacts = value.get("contacts", [])
@@ -1037,11 +1060,15 @@ async def whatsapp_webhook_receive(
                 msg_type = msg.get("type")
                 
                 if msg_type != "text" or not sender_phone:
+                    debug_log.append(f"SKIP msg: type={msg_type}, from={sender_phone}")
                     continue
                     
                 user_message = msg.get("text", {}).get("body", "").strip()
                 if not user_message:
+                    debug_log.append("SKIP msg: empty body")
                     continue
+                
+                debug_log.append(f"Processing message from {sender_phone}: '{user_message[:50]}'")
                     
                 # Load chat history from Redis
                 redis_key = f"whatsapp:session:{target_hotel.id}:{sender_phone}"
@@ -1064,23 +1091,33 @@ async def whatsapp_webhook_receive(
                         chat_history.append(AIMessage(content=content))
                 
                 # Create guest agent graph
-                from app.core.guest_agent import create_guest_agent_graph
-                agent = create_guest_agent_graph(
-                    session,
-                    target_hotel.id,
-                    int_settings.ai_provider,
-                    int_settings.ai_api_key,
-                    int_settings.ai_model,
-                    int_settings.ai_base_url,
-                    target_hotel.name
-                )
-                
-                if not agent:
-                    continue
+                try:
+                    from app.core.guest_agent import create_guest_agent_graph
+                    agent = create_guest_agent_graph(
+                        session,
+                        target_hotel.id,
+                        int_settings.ai_provider,
+                        int_settings.ai_api_key,
+                        int_settings.ai_model,
+                        int_settings.ai_base_url,
+                        target_hotel.name
+                    )
                     
-                input_messages = chat_history + [HumanMessage(content=user_message)]
-                result = await agent.ainvoke({"messages": input_messages})
-                agent_reply = result["messages"][-1].content
+                    if not agent:
+                        debug_log.append("SKIP: agent graph returned None")
+                        continue
+                    
+                    debug_log.append("Agent graph created successfully")
+                        
+                    input_messages = chat_history + [HumanMessage(content=user_message)]
+                    result = await agent.ainvoke({"messages": input_messages})
+                    agent_reply = result["messages"][-1].content
+                    debug_log.append(f"AI replied: '{agent_reply[:100]}'")
+                    
+                except Exception as ai_err:
+                    debug_log.append(f"AI ERROR: {str(ai_err)[:200]}")
+                    logger.error(f"WhatsApp AI agent error: {ai_err}", exc_info=True)
+                    continue
                 
                 # Check for booking action
                 if "ACTION:BOOKING_LINK|" in agent_reply:
@@ -1119,7 +1156,10 @@ async def whatsapp_webhook_receive(
                 # Send reply to guest via WhatsApp API
                 whatsapp_token = target_hotel.settings.get("whatsapp_api_key")
                 if not whatsapp_token:
+                    debug_log.append("SKIP: no whatsapp_api_key in hotel settings")
                     continue
+                
+                debug_log.append(f"WhatsApp token: {whatsapp_token[:15]}...")
                     
                 send_url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
                 headers = {
@@ -1136,9 +1176,15 @@ async def whatsapp_webhook_receive(
                     }
                 }
                 
-                async with httpx.AsyncClient() as client:
-                    wa_response = await client.post(send_url, headers=headers, json=payload)
-                    print(f"DEBUG: WhatsApp send status = {wa_response.status_code}, response = {wa_response.text}")
+                try:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        wa_response = await client.post(send_url, headers=headers, json=payload)
+                        debug_log.append(f"WhatsApp API: status={wa_response.status_code}, body={wa_response.text[:200]}")
+                        logger.info(f"WhatsApp send status={wa_response.status_code}, response={wa_response.text}")
+                except Exception as wa_err:
+                    debug_log.append(f"WhatsApp SEND ERROR: {str(wa_err)[:200]}")
+                    logger.error(f"WhatsApp send error: {wa_err}", exc_info=True)
+                    continue
                 
                 # Deduct WhatsApp Credit from subscription
                 if subscription:
@@ -1152,7 +1198,8 @@ async def whatsapp_webhook_receive(
                 history.append(["assistant", agent_reply])
                 history = history[-30:] # Limit history size
                 redis_client.set_value(redis_key, json.dumps(history), expire=86400)
-                
-    return {"status": "success"}
+    
+    logger.info(f"WhatsApp webhook debug: {debug_log}")
+    return {"status": "success", "debug": debug_log}
 
 
