@@ -47,6 +47,11 @@ const BookingWidget = lazy(() => import("@/pages/public/BookingWidget"));
 const ChatEmbed = lazy(() => import("@/pages/public/ChatEmbed"));
 const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
 
+// Public Legal Pages
+const PrivacyPolicy = lazy(() => import("@/pages/public/legal/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("@/pages/public/legal/TermsOfService"));
+const DataDeletion = lazy(() => import("@/pages/public/legal/DataDeletion"));
+
 // Slim top progress bar — does NOT block the whole screen
 const PageLoader = () => <div className="page-progress" />;
 
@@ -131,6 +136,11 @@ const App = () => {
                     {/* Standalone Widget Route */}
                     <Route path="/book/:hotelSlug/widget" element={<BookingWidget />} />
                     <Route path="/book/:hotelSlug/chat" element={<ChatEmbed />} />
+
+                    {/* Public Legal Routes */}
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/data-deletion" element={<DataDeletion />} />
 
                     {/* Redirects */}
                     <Route 
