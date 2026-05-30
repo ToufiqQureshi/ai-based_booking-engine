@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str | None = None
     JULES_API_KEY: str | None = None
 
+    # Central WhatsApp Config
+    CENTRAL_WHATSAPP_PHONE_ID: Optional[str] = None
+    CENTRAL_WHATSAPP_TOKEN: Optional[str] = None
+
     # Email Service (Brevo)
     BREVO_API_KEY: str | None = None
     BREVO_SENDER_EMAIL: str = "noreply@staybooker.ai"

@@ -195,13 +195,13 @@ export function SignupPage() {
                   'Create Account'
                 )}
               </Button>
-              <p className="text-center text-xs text-muted-foreground">
+              <p className="text-center text-xs text-muted-foreground mt-2">
                 By signing up, you agree to our{' '}
-                <Link to="/terms" className="text-primary hover:underline">
+                <Link to="/terms-of-service" className="text-primary hover:underline">
                   Terms of Service
                 </Link>{' '}
                 and{' '}
-                <Link to="/privacy" className="text-primary hover:underline">
+                <Link to="/privacy-policy" className="text-primary hover:underline">
                   Privacy Policy
                 </Link>
               </p>

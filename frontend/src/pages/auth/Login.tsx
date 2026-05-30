@@ -1,4 +1,4 @@
-﻿// Login Page
+// Login Page
 // ==========================================
 // 🔗 CONNECTION REPORT (Impact Analysis)
 // ==========================================
@@ -183,12 +183,24 @@ export function LoginPage() {
               </Button>
               
               {!isSuperAdmin && (
-                <p className="text-center text-sm text-muted-foreground">
-                  Don&apos;t have an account?{' '}
-                  <Link to="/signup" className="font-medium text-primary hover:underline">
-                    Create account
-                  </Link>
-                </p>
+                <div className="space-y-4">
+                  <p className="text-center text-sm text-muted-foreground">
+                    Don&apos;t have an account?{' '}
+                    <Link to="/signup" className="font-medium text-primary hover:underline">
+                      Create account
+                    </Link>
+                  </p>
+                  <p className="text-center text-xs text-muted-foreground">
+                    By signing in, you agree to our{' '}
+                    <Link to="/terms-of-service" className="text-primary hover:underline">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/privacy-policy" className="text-primary hover:underline">
+                      Privacy Policy
+                    </Link>
+                  </p>
+                </div>
               )}
 
               {isSuperAdmin && (

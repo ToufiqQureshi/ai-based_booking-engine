@@ -997,20 +997,36 @@ async def whatsapp_webhook_receive(
                 debug_log.append("SKIP: empty phone_number_id")
                 continue
                 
-            # Search for the hotel with this phone number ID in their settings
-            hotel_stmt = select(Hotel)
-            hotel_res = await session.execute(hotel_stmt)
-            hotels = hotel_res.scalars().all()
+            from app.core.config import get_settings
+            config = get_settings()
             
+            # Identify if this is the Central Number or a Specific Hotel's Number
+            is_central_number = (config.CENTRAL_WHATSAPP_PHONE_ID and phone_number_id == config.CENTRAL_WHATSAPP_PHONE_ID)
+            
+            # Define these variables to be populated
             target_hotel = None
-            for h in hotels:
-                h_settings = h.settings or {}
-                stored_id = h_settings.get("whatsapp_phone_number_id")
-                if stored_id is not None:
-                    debug_log.append(f"Hotel '{h.name}' has whatsapp_phone_number_id: '{stored_id}' (type: {type(stored_id).__name__})")
-                if str(stored_id) == phone_number_id:
-                    target_hotel = h
-                    break
+            whatsapp_token_to_use = None
+            
+            if not is_central_number:
+                # OLD BEHAVIOR: Specific Hotel Number Match
+                hotel_stmt = select(Hotel)
+                hotel_res = await session.execute(hotel_stmt)
+                hotels = hotel_res.scalars().all()
+                for h in hotels:
+                    h_settings = h.settings or {}
+                    stored_id = h_settings.get("whatsapp_phone_number_id")
+                    if str(stored_id) == phone_number_id:
+                        target_hotel = h
+                        whatsapp_token_to_use = h_settings.get("whatsapp_api_key")
+                        break
+                
+                if not target_hotel:
+                    debug_log.append(f"SKIP: No hotel found for specific phone_number_id '{phone_number_id}'")
+                    continue
+            else:
+                # NEW BEHAVIOR: Central Number Handling
+                whatsapp_token_to_use = config.CENTRAL_WHATSAPP_TOKEN
+                # We don't know the hotel yet. We will resolve it per message.
                     
             if not target_hotel:
                 debug_log.append(f"SKIP: No hotel found matching phone_number_id '{phone_number_id}'")
@@ -1056,148 +1072,212 @@ async def whatsapp_webhook_receive(
                 contact_name = contacts[0].get("profile", {}).get("name", "Guest")
                 
             for msg in messages:
-                sender_phone = msg.get("from") # The guest's phone number
+                sender_phone = msg.get("from")
                 msg_type = msg.get("type")
                 
                 if msg_type != "text" or not sender_phone:
-                    debug_log.append(f"SKIP msg: type={msg_type}, from={sender_phone}")
                     continue
                     
                 user_message = msg.get("text", {}).get("body", "").strip()
                 if not user_message:
-                    debug_log.append("SKIP msg: empty body")
                     continue
                 
                 debug_log.append(f"Processing message from {sender_phone}: '{user_message[:50]}'")
-                    
-                # Load chat history from Redis
-                redis_key = f"whatsapp:session:{target_hotel.id}:{sender_phone}"
+                
                 from app.core.redis_client import redis_client
-                history_raw = redis_client.get_value(redis_key)
-                history = []
-                if history_raw:
-                    try:
-                        history = json.loads(history_raw) # List of [role, content]
-                    except Exception:
-                        history = []
                 
-                # Format history for LangChain
-                from langchain_core.messages import HumanMessage, AIMessage
-                chat_history = []
-                for role, content in history:
-                    if role in ("human", "user"):
-                        chat_history.append(HumanMessage(content=content))
-                    elif role in ("ai", "assistant", "model"):
-                        chat_history.append(AIMessage(content=content))
+                # --- RESOLVE TARGET HOTEL IF CENTRAL NUMBER ---
+                agent_reply = ""
+                resolved_hotel = target_hotel
                 
-                # Create guest agent graph
-                try:
-                    from app.core.guest_agent import create_guest_agent_graph
-                    agent = create_guest_agent_graph(
-                        session,
-                        target_hotel.id,
-                        int_settings.ai_provider,
-                        int_settings.ai_api_key,
-                        int_settings.ai_model,
-                        int_settings.ai_base_url,
-                        target_hotel.name
-                    )
+                if is_central_number:
+                    # Check if session is already mapped to a hotel
+                    session_key = f"whatsapp:global_session:{sender_phone}:hotel_id"
+                    stored_hotel_id = redis_client.get_value(session_key)
                     
-                    if not agent:
-                        debug_log.append("SKIP: agent graph returned None")
-                        continue
+                    if stored_hotel_id:
+                        # Load the hotel
+                        h_stmt = select(Hotel).where(Hotel.id == stored_hotel_id)
+                        h_res = await session.execute(h_stmt)
+                        resolved_hotel = h_res.scalar_one_or_none()
                     
-                    debug_log.append("Agent graph created successfully")
-                        
-                    input_messages = chat_history + [HumanMessage(content=user_message)]
-                    result = await agent.ainvoke({"messages": input_messages})
-                    agent_reply = result["messages"][-1].content
-                    debug_log.append(f"AI replied: '{agent_reply[:100]}'")
-                    
-                except Exception as ai_err:
-                    debug_log.append(f"AI ERROR: {str(ai_err)[:200]}")
-                    logger.error(f"WhatsApp AI agent error: {ai_err}", exc_info=True)
-                    continue
-                
-                # Check for booking action
-                if "ACTION:BOOKING_LINK|" in agent_reply:
-                    try:
-                        parts = agent_reply.split("ACTION:BOOKING_LINK|")
-                        action_data_str = parts[1].strip()
-                        action_data = json.loads(action_data_str)
-                        
-                        from app.core.config import get_settings
-                        config = get_settings()
-                        frontend_url = config.FRONTEND_URL
-                        if "localhost" in frontend_url or "127.0.0.1" in frontend_url:
-                            frontend_url = "https://app.gadget4me.in"
-                        
-                        check_in = action_data.get("checkInDate", "")
-                        check_out = action_data.get("checkOutDate", "")
-                        adults = action_data.get("adults", 1)
-                        children = action_data.get("children", 0)
-                        guest_info = action_data.get("guest_info", {})
-                        first_name = guest_info.get("firstName", "")
-                        last_name = guest_info.get("lastName", "")
-                        email = guest_info.get("email", "")
-                        phone = guest_info.get("phone", sender_phone)
-                        
-                        room_id = ""
-                        rooms_list = action_data.get("rooms", [])
-                        if rooms_list:
-                            room_id = rooms_list[0].get("id", "")
-                        
-                        booking_url = f"{frontend_url}/book/{target_hotel.slug}/rooms?checkIn={check_in}&checkOut={check_out}&adults={adults}&children={children}&roomTypeId={room_id}&firstName={first_name}&lastName={last_name}&email={email}&phone={phone}"
-                        
-                        agent_reply = f"I have prepared your booking details for {target_hotel.name}. Please click the link below to complete your booking:\n\n👉 {booking_url}"
-                    except Exception:
-                        pass
-                
-                # Send reply to guest via WhatsApp API
-                whatsapp_token = target_hotel.settings.get("whatsapp_api_key")
-                if not whatsapp_token:
-                    debug_log.append("SKIP: no whatsapp_api_key in hotel settings")
-                    continue
-                
-                debug_log.append(f"WhatsApp token: {whatsapp_token[:15]}...")
-                    
-                send_url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
-                headers = {
-                    "Authorization": f"Bearer {whatsapp_token}",
-                    "Content-Type": "application/json"
-                }
-                payload = {
-                    "messaging_product": "whatsapp",
-                    "recipient_type": "individual",
-                    "to": sender_phone,
-                    "type": "text",
-                    "text": {
-                        "body": agent_reply
-                    }
-                }
-                
-                try:
-                    async with httpx.AsyncClient(timeout=30.0) as client:
-                        wa_response = await client.post(send_url, headers=headers, json=payload)
-                        debug_log.append(f"WhatsApp API: status={wa_response.status_code}, body={wa_response.text[:200]}")
-                        logger.info(f"WhatsApp send status={wa_response.status_code}, response={wa_response.text}")
-                except Exception as wa_err:
-                    debug_log.append(f"WhatsApp SEND ERROR: {str(wa_err)[:200]}")
-                    logger.error(f"WhatsApp send error: {wa_err}", exc_info=True)
-                    continue
-                
-                # Deduct WhatsApp Credit from subscription
-                if subscription:
-                    subscription.whatsapp_credits = max(0, subscription.whatsapp_credits - 1)
-                    session.add(subscription)
-                    await session.commit()
-                    await session.refresh(subscription)
+                    if not resolved_hotel:
+                        # We don't know the hotel. Trigger the Global Concierge Agent
+                        try:
+                            from app.core.global_agent import create_global_concierge_graph
+                            global_agent = create_global_concierge_graph(
+                                session,
+                                ai_provider="groq", # Defaulting to Groq for Staybooker central
+                                ai_api_key=config.GROQ_API_KEY,
+                                ai_model="llama-3.1-8b-instant"
+                            )
+                            
+                            if not global_agent:
+                                debug_log.append("Global agent disabled or missing GROQ key.")
+                                continue
+                                
+                            history_key = f"whatsapp:global_chat:{sender_phone}"
+                            history_raw = redis_client.get_value(history_key)
+                            history = json.loads(history_raw) if history_raw else []
+                            
+                            from langchain_core.messages import HumanMessage, AIMessage
+                            chat_history = []
+                            for role, content in history:
+                                if role in ("human", "user"):
+                                    chat_history.append(HumanMessage(content=content))
+                                elif role in ("ai", "assistant", "model"):
+                                    chat_history.append(AIMessage(content=content))
+                                    
+                            input_messages = chat_history + [HumanMessage(content=user_message)]
+                            result = await global_agent.ainvoke({"messages": input_messages})
+                            agent_reply = result["messages"][-1].content
+                            
+                            # Check if the global agent routed to a hotel
+                            if "ACTION:ROUTE_TO_HOTEL|" in agent_reply:
+                                parts = agent_reply.split("ACTION:ROUTE_TO_HOTEL|")
+                                action_data = json.loads(parts[1].strip())
+                                selected_hotel_id = action_data.get("hotel_id")
+                                selected_hotel_name = action_data.get("hotel_name")
+                                
+                                # Save to Redis to lock session
+                                redis_client.set_value(session_key, selected_hotel_id, expire=86400) # 24h
+                                
+                                agent_reply = f"Connecting you to {selected_hotel_name}... \n\nHi! I'm the virtual assistant for {selected_hotel_name}. How can I help you today?"
+                                
+                                # Clear global history so hotel agent starts fresh
+                                redis_client.delete_value(history_key)
+                            else:
+                                # Save global history
+                                history.append(["user", user_message])
+                                history.append(["assistant", agent_reply])
+                                redis_client.set_value(history_key, json.dumps(history[-10:]), expire=86400)
+                                
+                        except Exception as e:
+                            logger.error(f"Global Agent error: {e}")
+                            continue
 
-                # Save session history to Redis
-                history.append(["user", user_message])
-                history.append(["assistant", agent_reply])
-                history = history[-30:] # Limit history size
-                redis_client.set_value(redis_key, json.dumps(history), expire=86400)
+                # --- ROUTE TO SPECIFIC HOTEL AGENT ---
+                if resolved_hotel:
+                    # Proceed with guest_agent
+                    # Check Subscription
+                    from app.models.subscription import Subscription
+                    sub_stmt = select(Subscription).where(Subscription.hotel_id == resolved_hotel.id, Subscription.status == "active")
+                    sub_res = await session.execute(sub_stmt)
+                    subscription = sub_res.scalar_one_or_none()
+                    if subscription and subscription.whatsapp_credits <= 0:
+                        continue
+                        
+                    if not resolved_hotel.feature_ai_agent:
+                        continue
+                        
+                    int_stmt = select(IntegrationSettings).where(IntegrationSettings.hotel_id == resolved_hotel.id)
+                    int_res = await session.execute(int_stmt)
+                    int_settings = int_res.scalar_one_or_none()
+                    if not int_settings or not int_settings.ai_api_key:
+                        continue
+
+                    # Load chat history
+                    redis_key = f"whatsapp:session:{resolved_hotel.id}:{sender_phone}"
+                    history_raw = redis_client.get_value(redis_key)
+                    history = json.loads(history_raw) if history_raw else []
+                    
+                    from langchain_core.messages import HumanMessage, AIMessage
+                    chat_history = []
+                    for role, content in history:
+                        if role in ("human", "user"):
+                            chat_history.append(HumanMessage(content=content))
+                        elif role in ("ai", "assistant", "model"):
+                            chat_history.append(AIMessage(content=content))
+                            
+                    try:
+                        from app.core.guest_agent import create_guest_agent_graph
+                        agent = create_guest_agent_graph(
+                            session,
+                            resolved_hotel.id,
+                            int_settings.ai_provider,
+                            int_settings.ai_api_key,
+                            int_settings.ai_model,
+                            int_settings.ai_base_url,
+                            resolved_hotel.name
+                        )
+                        
+                        if agent:
+                            # Use initial agent_reply (if it was "Connecting you...") or invoke agent
+                            if not agent_reply:
+                                input_messages = chat_history + [HumanMessage(content=user_message)]
+                                result = await agent.ainvoke({"messages": input_messages})
+                                agent_reply = result["messages"][-1].content
+                                
+                            # Check for booking action
+                            if "ACTION:BOOKING_LINK|" in agent_reply:
+                                try:
+                                    parts = agent_reply.split("ACTION:BOOKING_LINK|")
+                                    action_data_str = parts[1].strip()
+                                    action_data = json.loads(action_data_str)
+                                    
+                                    from app.core.config import get_settings
+                                    config = get_settings()
+                                    frontend_url = config.FRONTEND_URL
+                                    if "localhost" in frontend_url or "127.0.0.1" in frontend_url:
+                                        frontend_url = "https://app.gadget4me.in"
+                                    
+                                    check_in = action_data.get("checkInDate", "")
+                                    check_out = action_data.get("checkOutDate", "")
+                                    adults = action_data.get("adults", 1)
+                                    children = action_data.get("children", 0)
+                                    guest_info = action_data.get("guest_info", {})
+                                    first_name = guest_info.get("firstName", "")
+                                    last_name = guest_info.get("lastName", "")
+                                    email = guest_info.get("email", "")
+                                    phone = guest_info.get("phone", sender_phone)
+                                    
+                                    room_id = ""
+                                    rooms_list = action_data.get("rooms", [])
+                                    if rooms_list:
+                                        room_id = rooms_list[0].get("id", "")
+                                    
+                                    booking_url = f"{frontend_url}/book/{resolved_hotel.slug}/rooms?checkIn={check_in}&checkOut={check_out}&adults={adults}&children={children}&roomTypeId={room_id}&firstName={first_name}&lastName={last_name}&email={email}&phone={phone}"
+                                    
+                                    agent_reply = f"I have prepared your booking details for {resolved_hotel.name}. Please click the link below to complete your booking:\n\n👉 {booking_url}"
+                                except Exception:
+                                    pass
+                                    
+                            # Update History
+                            history.append(["user", user_message])
+                            history.append(["assistant", agent_reply])
+                            redis_client.set_value(redis_key, json.dumps(history[-30:]), expire=86400)
+                            
+                            if subscription:
+                                subscription.whatsapp_credits = max(0, subscription.whatsapp_credits - 1)
+                                session.add(subscription)
+                                await session.commit()
+                                await session.refresh(subscription)
+
+                    except Exception as e:
+                        logger.error(f"Guest Agent error: {e}", exc_info=True)
+                        continue
+
+                # --- SEND WHATSAPP REPLY ---
+                if agent_reply and whatsapp_token_to_use:
+                    send_url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
+                    headers = {
+                        "Authorization": f"Bearer {whatsapp_token_to_use}",
+                        "Content-Type": "application/json"
+                    }
+                    payload = {
+                        "messaging_product": "whatsapp",
+                        "recipient_type": "individual",
+                        "to": sender_phone,
+                        "type": "text",
+                        "text": {"body": agent_reply}
+                    }
+                    
+                    try:
+                        async with httpx.AsyncClient(timeout=30.0) as client:
+                            wa_response = await client.post(send_url, headers=headers, json=payload)
+                            logger.info(f"WhatsApp send status={wa_response.status_code}")
+                    except Exception as e:
+                        logger.error(f"WhatsApp send error: {e}")
     
     logger.info(f"WhatsApp webhook debug: {debug_log}")
     return {"status": "success", "debug": debug_log}
