@@ -1141,7 +1141,7 @@ Make sure you've set up your AI Provider and API Key in the Settings tab to let 
                             <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg border space-y-2 font-mono text-[11px] text-slate-800 dark:text-slate-200">
                                 <div>
                                     <span className="font-bold text-indigo-600 dark:text-indigo-400">Callback URL:</span>{" "}
-                                    {`${window.location.origin}/api/v1/integration/whatsapp/webhook`}
+                                    {`${(import.meta.env.VITE_API_URL as string || '').replace('/api/v1', '') || window.location.origin}/api/v1/integration/whatsapp/webhook`}
                                 </div>
                                 <div>
                                     <span className="font-bold text-indigo-600 dark:text-indigo-400">Verify Token:</span>{" "}
