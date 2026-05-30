@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Response, Header, HTTPException
 from sqlmodel import select
 from app.api.deps import DbSession
 from app.models.hotel import Hotel
-from app.services.google_hotel_ads.xml_generator import generate_hotel_list_xml
+from app.services.google_hotel_ads.xml_generator import generate_hotel_list_xml, generate_pos_xml
+from app.core.config import get_settings
 import logging
 
 router = APIRouter(prefix="/google", tags=["Google Hotel Ads"])
@@ -22,6 +23,24 @@ async def get_hotel_list_feed(
     hotels = result.scalars().all()
 
     xml_content = generate_hotel_list_xml(hotels)
+
+    return Response(
+        content=xml_content,
+        media_type="application/xml"
+    )
+
+@router.get("/feed/pos.xml")
+async def get_pos_feed():
+    """
+    Publicly accessible endpoint for Google to fetch the Landing Pages (POS) Feed.
+    """
+    settings = get_settings()
+    # Use production frontend URL
+    base_url = settings.FRONTEND_URL
+    if "localhost" in base_url or "127.0.0.1" in base_url:
+        base_url = "https://app.staybooker.ai"
+
+    xml_content = generate_pos_xml(base_url)
 
     return Response(
         content=xml_content,

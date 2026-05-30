@@ -51,6 +51,30 @@ def generate_hotel_list_xml(hotels: List[Hotel]) -> str:
     # Generate XML string with declaration
     return ET.tostring(listings, xml_declaration=True, encoding='utf-8', method='xml').decode('utf-8')
 
+def generate_pos_xml(base_url: str) -> str:
+    """
+    Generates Landing Pages (Points of Sale) XML.
+    Reference: https://developers.google.com/hotels/hotel-prices/dev-guide/pos-syntax
+    """
+    pos_root = ET.Element("PointsOfSale")
+
+    # We define one main Point of Sale for the entire platform
+    pos = ET.SubElement(pos_root, "PointOfSale", id="staybooker_default")
+
+    # Display name (can be hotel name or platform name)
+    ET.SubElement(pos, "DisplayNames", display_text="Staybooker Direct", display_language="en")
+
+    # Match criteria (allow for all)
+    ET.SubElement(pos, "Match", status="yes")
+
+    # The dynamic landing page URL with Google variables
+    # Reference: https://developers.google.com/hotels/hotel-prices/dev-guide/pos-urls
+    # URL structure: https://app.staybooker.ai/book/(SLUG)/rooms?check_in=(CHECKIN)&check_out=(CHECKOUT)...
+    landing_url = f"{base_url}/book/{{{{HOTEL_ID}}}}/rooms?check_in={{{{CHECKIN}}}}&check_out={{{{CHECKOUT}}}}&adults={{{{ADULTS}}}}&children={{{{CHILDREN}}}}"
+    ET.SubElement(pos, "URL").text = landing_url
+
+    return ET.tostring(pos_root, xml_declaration=True, encoding='utf-8', method='xml').decode('utf-8')
+
 def generate_ari_xml(hotel: Hotel, room_types: List) -> str:
     """
     Generates Availability, Rates, and Inventory (ARI) XML.

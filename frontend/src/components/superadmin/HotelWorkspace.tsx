@@ -234,6 +234,12 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                                 </div>
                             </div>
                             <div className="space-y-2">
+                                <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Landing Pages (POS) XML</Label>
+                                <div className="p-2 bg-muted/50 rounded-lg text-[10px] font-mono break-all border">
+                                    /api/v1/google/feed/pos.xml
+                                </div>
+                            </div>
+                            <div className="space-y-2">
                                 <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">ARI Pull Endpoint</Label>
                                 <div className="p-2 bg-muted/50 rounded-lg text-[10px] font-mono break-all border">
                                     /api/v1/google/feed/ari.xml?hotel_id={hotel.id}
