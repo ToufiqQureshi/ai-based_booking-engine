@@ -25,7 +25,9 @@ class RedisClient:
                     cls._instance = redis.Redis.from_url(
                         settings.REDIS_URL,
                         decode_responses=True,
-                        socket_timeout=1
+                        socket_timeout=2,
+                        socket_connect_timeout=2,
+                        retry_on_timeout=True
                     )
                 else:
                     # Fallback to discrete parameters
@@ -35,13 +37,15 @@ class RedisClient:
                         password=settings.REDIS_PASSWORD,
                         db=0,
                         decode_responses=True,
-                        socket_timeout=1,
-                        socket_connect_timeout=1
+                        socket_timeout=2,
+                        socket_connect_timeout=2,
+                        retry_on_timeout=True
                     )
                 # Ping test to verify connection
                 cls._instance.ping()
             except Exception as e:
-                print(f"Redis Connection Failed. Disabling Redis for this worker. Using Local Memory. Error: {e}")
+                import logging
+                logging.error(f"Redis Connection Failed. Disabling Redis for this worker. Using Local Memory. Error: {e}")
                 cls._instance = None
                 cls._is_disabled = True
                 
@@ -87,13 +91,19 @@ class RedisClient:
         return None
 
     @classmethod
+    def delete_key(cls, key: str):
+        """Utility to delete a specific key"""
+        cls.delete_value(key)
+
+    @classmethod
     def delete_value(cls, key: str):
         r = cls.get_instance()
         if r:
             try:
                 r.delete(key)
             except Exception as e:
-                print(f"Redis delete failed: {e}")
+                import logging
+                logging.error(f"Redis delete failed for key {key}: {e}")
         if key in cls._local_memory_cache:
             try:
                 del cls._local_memory_cache[key]

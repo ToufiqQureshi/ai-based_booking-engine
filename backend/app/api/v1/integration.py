@@ -14,6 +14,7 @@ import json
 import httpx
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.limiter import limiter
 from app.models.integration import (
     APIKey, APIKeyCreate, APIKeyRead, APIKeyWithSecret,
     IntegrationSettings, IntegrationSettingsRead, IntegrationSettingsUpdate,
@@ -695,7 +696,9 @@ async def _refresh_google_token(settings: IntegrationSettings) -> str | None:
 
 
 @router.get("/google/reviews")
+@limiter.limit("10/minute")
 async def get_google_reviews(
+    request: Request,
     current_user: CurrentUser,
     session: DbSession
 ):
@@ -739,6 +742,7 @@ async def get_google_reviews(
                 )
 
             if accounts_resp.status_code != 200:
+                logger.error(f"Google API error fetching accounts: {accounts_resp.text}")
                 raise HTTPException(
                     status_code=accounts_resp.status_code,
                     detail=f"Google API error: {accounts_resp.text}"
@@ -753,9 +757,10 @@ async def get_google_reviews(
 
             accounts = accounts_data.get("accounts", [])
             if not accounts:
+                logger.warning(f"No Google Business accounts found for hotel_id {current_user.hotel_id}")
                 raise HTTPException(
                     status_code=404,
-                    detail=f"No Google Business accounts found for this user. Response: {accounts_data}"
+                    detail=f"No Google Business accounts found for this user. Ensure you have a Business Profile set up."
                 )
 
             account_name = accounts[0].get("name")  # e.g. "accounts/123456"
@@ -798,6 +803,7 @@ async def get_google_reviews(
 
 
 @router.post("/google/reviews/{review_id}/ai-reply")
+@limiter.limit("5/minute")
 async def generate_ai_reply(
     review_id: str,
     request: Request,
@@ -960,6 +966,7 @@ async def whatsapp_webhook_verification(
 
 
 @router.post("/whatsapp/webhook")
+@limiter.limit("60/minute")
 async def whatsapp_webhook_receive(
     request: Request,
     session: DbSession

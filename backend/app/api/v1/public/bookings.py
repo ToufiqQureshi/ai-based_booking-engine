@@ -141,6 +141,29 @@ async def create_public_booking(
     Create a public booking without authentication.
     Used by the public booking widget/page.
     """
+    # --- Idempotency Check ---
+    # Create a unique key based on guest email, hotel_id (from first room), check_in, and room_id
+    if not booking_data.rooms:
+        raise HTTPException(status_code=400, detail="At least one room is required")
+
+    room_type_id = booking_data.rooms[0].room_type_id
+    # We use a 30s lock in Redis to prevent rapid duplicate submissions
+    idempotency_key = f"booking_lock:{booking_data.guest.email}:{room_type_id}:{booking_data.check_in}"
+
+    try:
+        is_locked = redis_client.get_value(idempotency_key)
+        if is_locked:
+            logger.warning(f"Duplicate booking attempt blocked: {idempotency_key}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A booking attempt is already in progress. Please wait a moment."
+            )
+        redis_client.set_value(idempotency_key, "locked", expire=30)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Redis idempotency check failed: {e}")
+
     try:
         # First, we need to find the hotel from the room_type_id
         if not booking_data.rooms:

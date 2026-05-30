@@ -141,6 +141,16 @@ async def search_public_rooms(
     Search available rooms for a hotel with multiple rate plans.
     """
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
+
+    # Short-lived cache for public searches to prevent DB hammering
+    # Keys include all search parameters
+    cache_key = f"public:rooms:{hotel_id}:{check_in}:{check_out}:{guests}:{adults}:{children}:{promo_code}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception as e:
+        logger.error(f"Failed to get rooms cache: {e}")
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
@@ -473,7 +483,11 @@ async def search_public_rooms(
                 )
                 available_rooms_list.append(room_res)
 
-
+    # Cache results for 30 seconds
+    try:
+        redis_client.set_value(cache_key, json.dumps([r.model_dump(mode='json') for r in available_rooms_list]), expire=30)
+    except Exception as e:
+        logger.error(f"Failed to set rooms cache: {e}")
 
     return available_rooms_list
 
@@ -486,7 +500,14 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
     Get active add-ons for a hotel by slug or ID.
     """
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
-    # Cache removed to allow instant updates
+
+    cache_key = f"public:addons:{hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
 
     # Validate hotel exists
     hotel = await session.get(Hotel, hotel_id)
@@ -497,7 +518,10 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
     addon_res = await session.execute(addon_query)
     addons = addon_res.scalars().all()
     
-
+    try:
+        redis_client.set_value(cache_key, json.dumps([a.model_dump(mode='json') for a in addons]), expire=3600)
+    except Exception:
+        pass
         
     return addons
 
