@@ -86,6 +86,13 @@ class IntegrationSettings(SQLModel, table=True):
     google_business_location_id: Optional[str] = Field(default=None)
     google_business_account_id: Optional[str] = Field(default=None)
 
+    # Google Hotel Ads Integration
+    google_hotel_ads_enabled: bool = Field(default=False)
+    google_hotel_center_id: Optional[str] = Field(default=None)
+    google_ads_account_id: Optional[str] = Field(default=None)
+    google_ads_last_ari_sync: Optional[datetime] = Field(default=None)
+    google_ads_status: str = Field(default="inactive") # inactive, pending, active, error
+
     # Custom styling and code overrides
     widget_custom_css: Optional[str] = Field(default="")
     widget_custom_js: Optional[str] = Field(default="")
@@ -144,6 +151,11 @@ class IntegrationSettingsRead(BaseModel):
     google_business_refresh_token: Optional[str] = None
     google_business_location_id: Optional[str] = None
     google_business_account_id: Optional[str] = None
+    google_hotel_ads_enabled: bool = False
+    google_hotel_center_id: Optional[str] = None
+    google_ads_account_id: Optional[str] = None
+    google_ads_last_ari_sync: Optional[datetime] = None
+    google_ads_status: str = "inactive"
     widget_custom_css: Optional[str] = ""
     widget_custom_js: Optional[str] = ""
 
@@ -171,6 +183,11 @@ class IntegrationSettingsUpdate(BaseModel):
     google_business_refresh_token: Optional[str] = None
     google_business_location_id: Optional[str] = None
     google_business_account_id: Optional[str] = None
+    google_hotel_ads_enabled: Optional[bool] = None
+    google_hotel_center_id: Optional[str] = None
+    google_ads_account_id: Optional[str] = None
+    google_ads_last_ari_sync: Optional[datetime] = None
+    google_ads_status: Optional[str] = None
     widget_custom_css: Optional[str] = None
     widget_custom_js: Optional[str] = None
 

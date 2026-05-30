@@ -114,6 +114,7 @@ class HotelBase(SQLModel):
     feature_color_palette: bool = Field(default=False)
     feature_custom_logo: bool = Field(default=False)
     feature_custom_widget: bool = Field(default=False)
+    feature_google_ads: bool = Field(default=False)
 
 
 class Hotel(HotelBase, table=True):
@@ -202,4 +203,5 @@ class HotelUpdate(SQLModel):
     feature_color_palette: Optional[bool] = None
     feature_custom_logo: Optional[bool] = None
     feature_custom_widget: Optional[bool] = None
+    feature_google_ads: Optional[bool] = None
     is_active: Optional[bool] = None

@@ -19,12 +19,16 @@ interface HotelWorkspaceProps {
 }
 
 export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) => {
-    const [tab, setTab] = useState<'overview' | 'users' | 'permissions' | 'features'>('overview');
+    const [tab, setTab] = useState<'overview' | 'users' | 'permissions' | 'features' | 'google_ads'>('overview');
     const queryClient = useQueryClient();
 
     // Quota states
     const [waCredits, setWaCredits] = useState(hotel.subscription?.whatsapp_credits?.toString() || '1000');
     const [aiLimit, setAiLimit] = useState(hotel.subscription?.ai_usage_limit?.toString() || '50000');
+
+    // Google Ads states
+    const [hcId, setHcId] = useState(hotel.integration_settings?.google_hotel_center_id || '');
+    const [adsId, setAdsId] = useState(hotel.integration_settings?.google_ads_account_id || '');
 
     // Sub states
     const [plan, setPlan] = useState(hotel.subscription?.plan || 'Basic');
@@ -73,9 +77,9 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
             </div>
 
             <div className="flex border-b gap-2 overflow-x-auto">
-                {['overview', 'users', 'permissions', 'features'].map(t => (
+                {['overview', 'users', 'permissions', 'features', 'google_ads'].map(t => (
                     <button key={t} onClick={() => setTab(t as any)} className={`px-6 py-3 border-b-2 font-bold text-sm capitalize transition-all ${tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                        {t}
+                        {t.replace('_', ' ')}
                     </button>
                 ))}
             </div>
@@ -125,6 +129,126 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                                 <Input type="number" value={aiLimit} onChange={e => setAiLimit(e.target.value)} />
                             </div>
                             <Button className="w-full" variant="outline" onClick={() => updateQuotasMutation.mutate({ whatsapp_credits: parseInt(waCredits), ai_usage_limit: parseInt(aiLimit) })} disabled={updateQuotasMutation.isPending}>Update Limits</Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {tab === 'google_ads' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <Card className="lg:col-span-2">
+                        <CardHeader>
+                            <CardTitle>Google Hotel Ads Integration</CardTitle>
+                            <CardDescription>Manage the property's connection to Google Hotel Center and Ads.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="flex items-center justify-between p-4 bg-muted/20 border rounded-2xl">
+                                <div className="space-y-0.5">
+                                    <Label className="text-base font-bold">Enable GHA Feature</Label>
+                                    <p className="text-xs text-muted-foreground">Allows the hotel to configure Google Ads in their settings.</p>
+                                </div>
+                                <Switch
+                                    checked={hotel.feature_google_ads}
+                                    onCheckedChange={(checked) => {
+                                        apiClient.patch(`/superadmin/hotels/${hotel.id}`, { feature_google_ads: checked })
+                                            .then(() => {
+                                                toast.success(`Google Ads feature ${checked ? 'enabled' : 'disabled'}`);
+                                                queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+                                            });
+                                    }}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label>Google Hotel Center ID</Label>
+                                    <Input
+                                        placeholder="e.g. 123456"
+                                        value={hcId}
+                                        onChange={(e) => setHcId(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Google Ads Account ID</Label>
+                                    <Input
+                                        placeholder="e.g. 987-654-3210"
+                                        value={adsId}
+                                        onChange={(e) => setAdsId(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <Button
+                                className="w-full"
+                                variant="outline"
+                                onClick={() => {
+                                    apiClient.put('/integration/settings', {
+                                        google_hotel_center_id: hcId,
+                                        google_ads_account_id: adsId
+                                    }, { headers: { 'X-Impersonate-Hotel-ID': hotel.id } }) // This assumes superadmin can update via impersonation or specific endpoint
+                                    .then(() => toast.success("Google IDs updated"))
+                                    .catch(() => {
+                                        // Fallback to superadmin specific update if needed
+                                        apiClient.patch(`/superadmin/hotels/${hotel.id}`, {
+                                            integration_settings: {
+                                                ...hotel.integration_settings,
+                                                google_hotel_center_id: hcId,
+                                                google_ads_account_id: adsId
+                                            }
+                                        }).then(() => toast.success("Google IDs updated via SuperAdmin"));
+                                    });
+                                }}
+                            >
+                                Save Google Integration IDs
+                            </Button>
+
+                            <div className="p-4 border rounded-2xl space-y-3">
+                                <h4 className="text-sm font-bold">Sync Status</h4>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Last ARI Sync:</span>
+                                    <span className="font-mono">
+                                        {hotel.integration_settings?.google_ads_last_ari_sync
+                                            ? format(new Date(hotel.integration_settings.google_ads_last_ari_sync), 'MMM d, yyyy HH:mm')
+                                            : 'Never'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Integration Health:</span>
+                                    <Badge variant={hotel.integration_settings?.google_ads_status === 'active' ? 'default' : 'secondary'}>
+                                        {hotel.integration_settings?.google_ads_status || 'inactive'}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Technical Links</CardTitle>
+                            <CardDescription>Endpoints for Google verification.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Hotel List XML</Label>
+                                <div className="p-2 bg-muted/50 rounded-lg text-[10px] font-mono break-all border">
+                                    /api/v1/google/feed/hotels.xml
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">ARI Pull Endpoint</Label>
+                                <div className="p-2 bg-muted/50 rounded-lg text-[10px] font-mono break-all border">
+                                    /api/v1/google/feed/ari.xml?hotel_id={hotel.id}
+                                </div>
+                            </div>
+                            <Button
+                                variant="outline"
+                                className="w-full text-xs font-bold"
+                                onClick={() => {
+                                    apiClient.post(`/google/sync/push?hotel_id=${hotel.id}`)
+                                        .then(() => toast.success("Push notification sent to Google"));
+                                }}
+                            >
+                                <Zap className="w-3.5 h-3.5 mr-2" /> Force Push Sync
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>
