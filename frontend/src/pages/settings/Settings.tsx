@@ -204,14 +204,6 @@ export function SettingsPage() {
             <Mail className="h-4 w-4" />
             <span className="font-medium">Email Settings</span>
           </TabsTrigger>
-
-          <TabsTrigger 
-            value="ai_agent" 
-            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
-          >
-            <Bot className="h-4 w-4" />
-            <span className="font-medium">AI Agent</span>
-          </TabsTrigger>
           <TabsTrigger 
             value="policies" 
             className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
@@ -293,10 +285,7 @@ export function SettingsPage() {
           <BrandingTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} setIsSaving={setIsSaving} hotel={hotel} rooms={rooms} />
           <EmailTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
 
-          
-          <TabsContent value="ai_agent" className="space-y-6 mt-0">
-            <AIAgentTab hotel={hotel} setHotel={setHotel} />
-          </TabsContent>
+
 
           <PoliciesTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
           <TabsContent value="gallery" className="space-y-6 mt-0">

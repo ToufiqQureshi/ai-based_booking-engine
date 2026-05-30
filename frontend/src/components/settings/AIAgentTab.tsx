@@ -50,31 +50,24 @@ export function AIAgentTab({ hotel, setHotel }: AIAgentTabProps) {
       });
   }, []);
 
-  const handleUpdate = (field: string, value: string) => {
-    setAiSettings(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async () => {
+  const handleToggle = async (enabled: boolean) => {
+    setIsAIEnabled(enabled);
     try {
       setIsSaving(true);
       
-      // 1. Update Integration Settings
-      await apiClient.put('/integration/settings', {
-        ...aiSettings
-      });
-      
-      // 2. Update Hotel Feature Flag
       const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
-        feature_ai_agent: isAIEnabled
+        feature_ai_agent: enabled
       });
       
       setHotel(updatedHotel);
       
       toast({
-        title: 'AI Settings Saved',
-        description: 'Your chatbot brain has been configured successfully!',
+        title: enabled ? 'AI Agent Enabled' : 'AI Agent Disabled',
+        description: enabled ? 'Your AI Agent is now active.' : 'Your AI Agent has been turned off.',
       });
     } catch (error: any) {
+      // Revert on failure
+      setIsAIEnabled(!enabled);
       toast({
         variant: 'destructive',
         title: 'Error saving settings',
@@ -110,9 +103,13 @@ export function AIAgentTab({ hotel, setHotel }: AIAgentTabProps) {
             <div className="flex items-center space-x-2">
               <Switch
                 checked={isAIEnabled}
-                onCheckedChange={setIsAIEnabled}
+                onCheckedChange={handleToggle}
+                disabled={isSaving}
               />
-              <Label className="font-semibold">{isAIEnabled ? "Active" : "Disabled"}</Label>
+              <Label className="font-semibold flex items-center gap-2">
+                {isAIEnabled ? "Active" : "Disabled"}
+                {isSaving && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+              </Label>
             </div>
           </div>
         </CardHeader>
@@ -135,13 +132,6 @@ export function AIAgentTab({ hotel, setHotel }: AIAgentTabProps) {
                   </a>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex justify-end pt-4">
-              <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save Status
-              </Button>
             </div>
           </CardContent>
         )}
