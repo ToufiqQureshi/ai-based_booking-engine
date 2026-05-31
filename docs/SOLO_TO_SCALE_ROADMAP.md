@@ -29,3 +29,9 @@ Hire a **Full-time Senior Fullstack Engineer**.
 - [ ] Explicit ownership checks on every API endpoint (`hotel_id` validation).
 - [ ] Periodic Security Audits of Supabase policies and JWT handling.
 - [ ] Automated backup verification for PostgreSQL.
+
+## "Deep Test" Culture for Solo Founders
+Kyunki aap AI se code likhwa rahe hain, aapko ye **Testing Rules** follow karne honge:
+1. **Always Add a Test:** Jab bhi mujhse naya page ya logic banwayein, hamesha kahein: *"Bhai iska logic test (backend) aur health test (frontend) bhi add kar dena."*
+2. **Run Before Deploy:** Kisi bhi change ko live karne se pehle `pytest` aur `npx playwright test` run karein. Agar ek bhi "Red" aata hai, toh use live na karein.
+3. **Analyze Every Page:** Hamara `deep_analyzer.spec.ts` har page ki stability check karta hai. Naya page banne par use is list mein add zaroori hai.

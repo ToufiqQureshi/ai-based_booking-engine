@@ -17,3 +17,34 @@ test('public search page loads', async ({ page }) => {
   // Check if dates or search button are visible
   await expect(page.getByText(/check-in/i)).toBeVisible();
 });
+
+test('analytics dashboard requires auth', async ({ page }) => {
+  await page.goto('/analytics');
+  // Should redirect to login if not authenticated
+  await expect(page).toHaveURL(/.*login.*/);
+});
+
+test('rooms management requires auth', async ({ page }) => {
+  await page.goto('/rooms');
+  await expect(page).toHaveURL(/.*login.*/);
+});
+
+test('rates management requires auth', async ({ page }) => {
+  await page.goto('/finance/rates');
+  await expect(page).toHaveURL(/.*login.*/);
+});
+
+test('bookings list requires auth', async ({ page }) => {
+  await page.goto('/bookings');
+  await expect(page).toHaveURL(/.*login.*/);
+});
+
+test('payments page requires auth', async ({ page }) => {
+  await page.goto('/finance/payments');
+  await expect(page).toHaveURL(/.*login.*/);
+});
+
+test('settings page requires auth', async ({ page }) => {
+  await page.goto('/settings');
+  await expect(page).toHaveURL(/.*login.*/);
+});

@@ -23,9 +23,9 @@ npx playwright test
 *Ye Landing page, Login, aur Search page ko auto-verify karega.*
 
 ## 3. Page-by-Page Strategy
-Humne har category ke liye alag files banayi hain:
-- `backend/tests/api/v1/`: Endpoints aur Security.
-- `frontend/tests/e2e/`: User flows aur Page visibility.
+Maine saare major pages ke liye tests setup kar diye hain:
+- **Backend:** `Analytics`, `Rooms`, `Rates`, `Bookings`, aur `Payments` ke security aur critical logic tests ready hain.
+- **Frontend:** Har major page (Analytics, Rooms, Rates, Settings, etc.) ke liye "Auth-Guard" smoke tests ready hain.
 
 **Rule for AI:**
-Jab bhi mujhse naya page ya feature banwayein, hamesha ye bolein: *"Bhai iska test bhi likh dena."* Main automatic `tests/` folder mein uski file add kar dunga.
+Jab bhi mujhse naya page ya feature banwayein, hamesha ye bolein: *"Bhai iska test bhi likh dena."* Main automatic `tests/` folder mein uski logic aur visibility file add kar dunga.
