@@ -2,7 +2,8 @@ import os
 import sys
 import asyncio
 import pytest
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Any
+from httpx import AsyncClient
 
 # Set env vars BEFORE importing any app modules
 os.environ["SECRET_KEY"] = "TEST_SECRET_KEY_FOR_SMOKE_TESTING"
@@ -43,3 +44,25 @@ async def client() -> AsyncGenerator[any, None]:
     from httpx import AsyncClient, ASGITransport
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
+
+@pytest_asyncio.fixture
+async def auth_client(client: AsyncClient) -> AsyncClient:
+    """
+    Authenticated test client fixture.
+    Mocks a logged-in hotelier user.
+    """
+    from jose import jwt
+    from app.core.config import get_settings
+    settings = get_settings()
+
+    from app.models.user import UserRole
+    # Mock payload that would normally come from Supabase
+    payload = {
+        "sub": "00000000-0000-0000-0000-000000000000",
+        "email": "test@staybooker.ai",
+        "role": UserRole.OWNER,
+        "type": "access"
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    client.headers.update({"Authorization": f"Bearer {token}"})
+    return client

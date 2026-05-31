@@ -35,3 +35,4 @@ Kyunki aap AI se code likhwa rahe hain, aapko ye **Testing Rules** follow karne 
 1. **Always Add a Test:** Jab bhi mujhse naya page ya logic banwayein, hamesha kahein: *"Bhai iska logic test (backend) aur health test (frontend) bhi add kar dena."*
 2. **Run Before Deploy:** Kisi bhi change ko live karne se pehle `pytest` aur `npx playwright test` run karein. Agar ek bhi "Red" aata hai, toh use live na karein.
 3. **Analyze Every Page:** Hamara `deep_analyzer.spec.ts` har page ki stability check karta hai. Naya page banne par use is list mein add zaroori hai.
+4. **Zero Tolerance for Broken UI:** Humne `integrity_scanner.spec.ts` setup kiya hai jo pure software mein "undefined" ya "[object Object]" jaise errors ko scan karta hai. Har feature launch se pehle iska "Green" hona mandatory hai.
