@@ -1,0 +1,31 @@
+# Staybooker Strategy: Solo to Scale Roadmap
+
+## Current State Analysis
+- **Architecture:** Solid (FastAPI + React + Supabase).
+- **Code Origin:** 100% AI-generated based on founder logic.
+- **Risk Level:** High for production scaling due to lack of automated tests and 24/7 human coverage.
+
+## Strategic Recommendations
+
+### 1. The "Solo" Period (0 - 10 Hotels)
+You can remain solo with AI, but you must shift from "Feature Speed" to "Stability":
+- **Automated Testing:** Implement tests for core flows (Booking Creation, Tax Calculation, Payment Verification).
+- **AI Guardrails:** Use AI to write "edge-case" tests for every new feature.
+- **Monitoring:** Leverage Sentry for real-time error tracking.
+
+### 2. The "On-Call" Hire (10 - 20 Hotels)
+Hire a **Part-time Technical Lead (Freelancer)**.
+- **Role:** Code reviews, architecture sanity checks, and emergency "on-call" support.
+- **Commitment:** 5-10 hours/week.
+- **Goal:** Ensure that AI-generated code doesn't have hidden "logic bombs."
+
+### 3. The "Scale" Hire (20+ Hotels or Channel Manager Launch)
+Hire a **Full-time Senior Fullstack Engineer**.
+- **Role:** Ownership of the Channel Manager sync engine and security.
+- **Goal:** 99.9% uptime and immediate response to booking/sync failures.
+
+## Security & Reliability Checklist
+- [ ] Implement `with_for_update()` on all inventory-touching routes (Prevent double booking).
+- [ ] Explicit ownership checks on every API endpoint (`hotel_id` validation).
+- [ ] Periodic Security Audits of Supabase policies and JWT handling.
+- [ ] Automated backup verification for PostgreSQL.
