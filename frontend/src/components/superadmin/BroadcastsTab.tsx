@@ -27,7 +27,10 @@ export function BroadcastsTab() {
 
     const { data: broadcasts = [], isLoading: isLoadingBroadcasts, refetch: refetchBroadcasts } = useQuery<any[]>({
         queryKey: ['broadcasts'],
-        queryFn: () => apiClient.get('/broadcasts'),
+        // Backend mounts this router under /superadmin (see app/api/v1/superadmin.py).
+        // The previous /broadcasts here 404'd silently because the route is
+        // /superadmin/broadcasts. (P3.5)
+        queryFn: () => apiClient.get('/superadmin/broadcasts'),
     });
 
     const createBroadcastMutation = useMutation({

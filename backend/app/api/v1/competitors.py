@@ -134,7 +134,8 @@ async def get_market_analysis(
         cached = r.get(cache_key)
         if cached:
             return json.loads(cached)
-    except: pass
+    except Exception as cache_err:
+        logger.warning("Redis cache read failed for %s: %s", cache_key, cache_err)
 
     end_date = today + timedelta(days=days)
 
@@ -239,7 +240,8 @@ async def get_market_analysis(
     # Cache for 1 Hour
     try:
         r.setex(cache_key, 3600, json.dumps(results))
-    except: pass
+    except Exception as cache_err:
+        logger.warning("Redis cache write failed for %s: %s", cache_key, cache_err)
 
     return results
 
@@ -260,7 +262,8 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
         cached = r.get(cache_key)
         if cached:
             return json.loads(cached)
-    except: pass
+    except Exception as cache_err:
+        logger.warning("Redis cache read failed for %s: %s", cache_key, cache_err)
 
     # 1. Fetch My Rates
     rt_query = select(RoomType).where(RoomType.hotel_id == current_user.hotel_id)
@@ -353,7 +356,8 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
     # Cache for 1 Hour
     try:
         r.setex(cache_key, 3600, json.dumps(final_res))
-    except: pass
+    except Exception as cache_err:
+        logger.warning("Redis cache write failed for %s: %s", cache_key, cache_err)
 
     return final_res
 
@@ -533,7 +537,8 @@ async def check_scrape_freshness(jobs: List[ScrapeJobItem], session: DbSession):
                 key = f"rate:{cid}:{cdate.isoformat()}"
                 pipe.setex(key, 86400, "1")
             pipe.execute()
-        except: pass
+        except Exception as cache_err:
+            logger.warning("Redis pipeline mark-existing failed: %s", cache_err)
 
     for job in redis_misses:
         if (job.competitor_id, job.check_in_date) in existing:

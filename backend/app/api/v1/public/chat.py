@@ -16,6 +16,7 @@ from app.models.promo import PromoCode
 from app.core.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
+from app.core.time import utcnow
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -121,7 +122,7 @@ class PublicBookingResponse(BaseModel):
 
 def generate_booking_number() -> str:
     """Unique booking number generate karta hai"""
-    timestamp = datetime.utcnow().strftime("%Y%m%d")
+    timestamp = utcnow().strftime("%Y%m%d")
     unique_part = str(uuid.uuid4())[:6].upper()
     return f"BK{timestamp}{unique_part}"
 

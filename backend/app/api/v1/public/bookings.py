@@ -13,6 +13,7 @@ from app.models.room import RoomType, RoomTypeRead, RoomBlock
 from app.models.booking import Booking, BookingStatus, Guest
 from app.models.rates import RatePlan, RoomRate
 from app.models.promo import PromoCode
+from app.core.time import utcnow
 from app.core.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
@@ -121,7 +122,7 @@ class PublicBookingResponse(BaseModel):
 
 def generate_booking_number() -> str:
     """Unique booking number generate karta hai"""
-    timestamp = datetime.utcnow().strftime("%Y%m%d")
+    timestamp = utcnow().strftime("%Y%m%d")
     unique_part = str(uuid.uuid4())[:6].upper()
     return f"BK{timestamp}{unique_part}"
 
@@ -623,7 +624,7 @@ async def public_cancel_confirm(data: GuestCancelRequest, session: DbSession):
         booking.cancellation_fee = fee
         booking.refund_amount = refund
         booking.refund_status = ref_status
-        booking.updated_at = datetime.utcnow()
+        booking.updated_at = utcnow()
         session.add(booking)
         await session.commit()
         return {
@@ -639,7 +640,7 @@ async def public_cancel_confirm(data: GuestCancelRequest, session: DbSession):
     booking.cancellation_fee = fee
     booking.refund_amount = refund
     booking.refund_status = ref_status
-    booking.updated_at = datetime.utcnow()
+    booking.updated_at = utcnow()
     
     session.add(booking)
     await session.commit()

@@ -114,11 +114,21 @@ function executeRateScrapeJob(comp, isFirst = false) {
     return new Promise((resolve) => {
         let tabId = null;
         let isResolved = false;
+        let timeoutId = null;
+        let tabsUpdateListener = null;
 
         console.log(`[Job] Starting Execution for ${comp.id}. URL: ${comp.url}`);
 
         const cleanup = () => {
             chrome.runtime.onMessage.removeListener(onMsg);
+            if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            if (tabsUpdateListener) {
+                chrome.tabs.onUpdated.removeListener(tabsUpdateListener);
+                tabsUpdateListener = null;
+            }
             if (tabId) {
                 chrome.tabs.remove(tabId).catch(() => { });
                 tabId = null;
@@ -126,16 +136,19 @@ function executeRateScrapeJob(comp, isFirst = false) {
         };
 
         const finish = (result) => {
-            if (isFinished) return;
-            isFinished = true;
+            // Guard against double-resolve. NOTE: was previously using
+            // undeclared `isFinished` which threw ReferenceError on every
+            // call — meaning the promise never resolved and the queue stalled.
+            if (isResolved) return;
+            isResolved = true;
             cleanup();
             resolve(result);
-            
+
             // Notify all tabs that this specific job is done
             chrome.tabs.query({}, (tabs) => {
                 tabs.forEach(tab => {
-                    chrome.tabs.sendMessage(tab.id, { 
-                        action: "SCRAPE_COMPLETE", 
+                    chrome.tabs.sendMessage(tab.id, {
+                        action: "SCRAPE_COMPLETE",
                         data: { competitor_id: comp.id, status: result.error ? "FAILED" : "SUCCESS" }
                     }).catch(() => {}); // Ignore errors for inactive tabs
                 });
@@ -150,7 +163,7 @@ function executeRateScrapeJob(comp, isFirst = false) {
         };
 
         // Timeout fallback (extended to 60s)
-        const timeout = setTimeout(() => {
+        timeoutId = setTimeout(() => {
             console.warn(`[Job] Timeout for ${comp.id}`);
             showNotification(`Timeout: ${comp.name}`, "Taking too long to load.");
             finish({ error: "TIMEOUT" });
@@ -173,13 +186,13 @@ function executeRateScrapeJob(comp, isFirst = false) {
         try {
             // SILENT MODE: Open in background (active: false)
             chrome.tabs.create({ url: targetUrl, active: false }, (tab) => {
-                if (chrome.runtime.lastError || !tab) {
+                if (chrome.runtime.lastError || !tab || typeof tab.id === "undefined") {
                     console.error("[Job] Tab creation failed:", chrome.runtime.lastError);
                     showNotification("Error", "Failed to open browser tab.");
                     finish({ error: "TAB_CREATION_FAILED" });
                     return;
                 }
-                
+
                 tabId = tab.id;
                 console.log(`[Job] Tab created: ${tabId}.`);
 
@@ -189,7 +202,7 @@ function executeRateScrapeJob(comp, isFirst = false) {
                     if (injected) return;
                     injected = true;
                     console.log(`[Job] Injecting script into tab ${tid}...`);
-                    
+
                     chrome.scripting.executeScript({
                         target: { tabId: tid },
                         files: ["scraper.js"]
@@ -199,18 +212,22 @@ function executeRateScrapeJob(comp, isFirst = false) {
                     });
                 };
 
-                const listener = (tid, info) => {
+                tabsUpdateListener = (tid, info) => {
                     if (tid === tabId && info.status === 'complete') {
-                        chrome.tabs.onUpdated.removeListener(listener);
+                        chrome.tabs.onUpdated.removeListener(tabsUpdateListener);
+                        tabsUpdateListener = null;
                         setTimeout(() => doInject(tid), 2000);
                     }
                 };
-                chrome.tabs.onUpdated.addListener(listener);
+                chrome.tabs.onUpdated.addListener(tabsUpdateListener);
 
                 // Safety fallback: If listener doesn't fire in 10s, try injecting anyway
                 setTimeout(() => {
                     if (!injected && tabId) {
-                        chrome.tabs.onUpdated.removeListener(listener);
+                        if (tabsUpdateListener) {
+                            chrome.tabs.onUpdated.removeListener(tabsUpdateListener);
+                            tabsUpdateListener = null;
+                        }
                         doInject(tabId);
                     }
                 }, 10000);

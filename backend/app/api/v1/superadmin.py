@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 from typing import List, Optional
+import logging
 from app.api.deps import CurrentUser, DbSession
 from app.models.user import User, UserRole
 from app.models.hotel import Hotel, HotelUpdate
@@ -8,7 +9,10 @@ from app.models.subscription import Subscription
 from app.models.audit import AuditLog, SystemBroadcast
 from app.core.config import get_settings
 from datetime import datetime
-from jose import jwt
+
+logger = logging.getLogger(__name__)
+# PyJWT replaces python-jose (P4.7) — same .encode API.
+import jwt
 import json
 import os
 
@@ -403,8 +407,11 @@ async def create_hotel_user(
         # Clean up Supabase auth user
         try:
             supabase_client.auth.admin.delete_user(supabase_id)
-        except:
-            pass
+        except Exception as cleanup_err:
+            logger.warning(
+                "Supabase auth user %s could not be deleted during rollback (invalid role): %s",
+                supabase_id, cleanup_err,
+            )
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {[r.value for r in UserRole]}")
         
     from app.core import security
@@ -439,8 +446,11 @@ async def create_hotel_user(
         # Clean up Supabase auth user
         try:
             supabase_client.auth.admin.delete_user(supabase_id)
-        except:
-            pass
+        except Exception as cleanup_err:
+            logger.warning(
+                "Supabase auth user %s could not be deleted during rollback: %s",
+                supabase_id, cleanup_err,
+            )
         raise HTTPException(status_code=500, detail=f"Failed to save user: {str(e)}")
         
     return {
@@ -589,7 +599,7 @@ async def impersonate_hotel(
             "impersonated_by": super_admin.email
         }
     }
-    from jose import jwt
+    # jwt already imported at module top (PyJWT in P4.7).
     token = jwt.encode(payload, secret, algorithm="HS256")
     
     # Audit log
@@ -757,5 +767,296 @@ async def update_plan_features(
     )
     session.add(audit)
     await session.commit()
-    
+
     return {"message": "Plan features updated and hotels synced successfully", "plan_features": current_mapping}
+
+
+# --------------------------------------------------------------------------
+# Integrations management — super-admin only
+# --------------------------------------------------------------------------
+# Hoteliers MUST NOT see or modify AI / WhatsApp / SMTP / Brevo credentials.
+# All these are platform-level concerns. This endpoint lets super-admin
+# read & write per-hotel integration secrets with audit logging.
+from pydantic import BaseModel
+from typing import Optional, List
+
+
+class HotelIntegrationsRead(BaseModel):
+    """Full integrations view for super-admin. Secrets are returned
+    with a small preview (last 4 chars) so the admin can verify the
+    right key is configured, without exposing the full value in the
+    admin's own browser if they share their screen."""
+    hotel_id: str
+    hotel_name: str
+    # AI
+    ai_provider: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_base_url: Optional[str] = None
+    ai_api_key_preview: Optional[str] = None
+    has_ai_api_key: bool = False
+    # WhatsApp
+    has_whatsapp_api_key: bool = False
+    whatsapp_api_key_preview: Optional[str] = None
+    has_whatsapp_phone_id: bool = False
+    has_whatsapp_business_id: bool = False
+    # Email
+    has_brevo_key: bool = False
+    brevo_key_preview: Optional[str] = None
+    has_smtp_password: bool = False
+    has_smtp_config: bool = False
+    smtp_host: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+    # Quotas
+    ai_whatsapp_credits: int = 0
+    total_messages_sent: int = 0
+    # Pause
+    is_paused: bool = False
+    pause_reason: Optional[str] = None
+    paused_at: Optional[datetime] = None
+
+
+class HotelIntegrationsUpdate(BaseModel):
+    """Super-admin write schema. ALL fields optional — partial updates."""
+    # AI
+    ai_provider: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_base_url: Optional[str] = None
+    ai_api_key: Optional[str] = None
+    # WhatsApp
+    whatsapp_api_key: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
+    # Email
+    brevo_api_key: Optional[str] = None
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+    # Quotas
+    ai_whatsapp_credits: Optional[int] = None
+    # Pause
+    is_paused: Optional[bool] = None
+    pause_reason: Optional[str] = None
+
+
+def _preview_secret(value: Optional[str]) -> Optional[str]:
+    """Return a non-reversible 4-char preview like '…a3F2' so admins
+    can verify a key is set without exposing it."""
+    if not value or not isinstance(value, str):
+        return None
+    if len(value) <= 4:
+        return "•" * len(value)
+    return f"…{value[-4:]}"
+
+
+@router.get("/hotels/{hotel_id}/integrations", response_model=HotelIntegrationsRead)
+async def get_hotel_integrations(
+    hotel_id: str,
+    super_admin: User = Depends(get_super_admin),
+    session: DbSession = None,
+):
+    """Super-admin reads all integration credentials for a hotel.
+    Secrets are masked with a 4-char preview."""
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Hotel not found",
+        )
+
+    # IntegrationSettings is a separate table (per-hotel AI override)
+    from app.models.integration import IntegrationSettings
+    int_stmt = select(IntegrationSettings).where(
+        IntegrationSettings.hotel_id == hotel_id
+    )
+    int_res = await session.execute(int_stmt)
+    int_settings = int_res.scalar_one_or_none()
+
+    s = hotel.settings if isinstance(hotel.settings, dict) else {}
+    return HotelIntegrationsRead(
+        hotel_id=hotel.id,
+        hotel_name=hotel.name,
+        # AI — top-level columns on Hotel OR IntegrationSettings (override)
+        ai_provider=int_settings.ai_provider if int_settings else hotel.ai_provider,
+        ai_model=int_settings.ai_model if int_settings else hotel.ai_model,
+        ai_base_url=int_settings.ai_base_url if int_settings else hotel.ai_base_url,
+        ai_api_key_preview=_preview_secret(
+            int_settings.ai_api_key if int_settings else hotel.ai_api_key
+        ),
+        has_ai_api_key=bool(
+            (int_settings.ai_api_key if int_settings else hotel.ai_api_key)
+        ),
+        # WhatsApp
+        has_whatsapp_api_key=bool(s.get("whatsapp_api_key")),
+        whatsapp_api_key_preview=_preview_secret(s.get("whatsapp_api_key")),
+        has_whatsapp_phone_id=bool(s.get("whatsapp_phone_number_id")),
+        has_whatsapp_business_id=bool(s.get("whatsapp_business_account_id")),
+        # Email
+        has_brevo_key=bool(s.get("brevo_api_key")),
+        brevo_key_preview=_preview_secret(s.get("brevo_api_key")),
+        has_smtp_password=bool(s.get("smtp_password")),
+        has_smtp_config=bool(s.get("smtp_host") and s.get("smtp_username")),
+        smtp_host=s.get("smtp_host"),
+        smtp_from_email=s.get("smtp_from_email"),
+        # Quotas
+        ai_whatsapp_credits=int(s.get("ai_whatsapp_credits", 0) or 0),
+        total_messages_sent=int(s.get("total_messages_sent", 0) or 0),
+        # Pause
+        is_paused=hotel.is_paused,
+        pause_reason=hotel.pause_reason,
+        paused_at=hotel.paused_at,
+    )
+
+
+@router.put("/hotels/{hotel_id}/integrations")
+async def update_hotel_integrations(
+    hotel_id: str,
+    payload: HotelIntegrationsUpdate,
+    super_admin: User = Depends(get_super_admin),
+    session: DbSession = None,
+):
+    """Super-admin updates a hotel's integration credentials.
+
+    Empty strings are treated as "clear this field" so the admin can
+    revoke a key. None means "don't touch this field".
+    """
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Hotel not found",
+        )
+
+    updates_applied: List[str] = []
+
+    # 1. Top-level Hotel columns
+    if payload.ai_provider is not None:
+        hotel.ai_provider = payload.ai_provider
+        updates_applied.append("ai_provider")
+    if payload.ai_model is not None:
+        hotel.ai_model = payload.ai_model
+        updates_applied.append("ai_model")
+    if payload.ai_base_url is not None:
+        hotel.ai_base_url = payload.ai_base_url or None
+        updates_applied.append("ai_base_url")
+    if payload.ai_api_key is not None:
+        # Empty string = clear
+        hotel.ai_api_key = payload.ai_api_key or None
+        updates_applied.append("ai_api_key")
+    if payload.is_paused is not None:
+        from app.core.feature_flags import set_pause
+        set_pause(hotel, payload.is_paused, payload.pause_reason)
+        updates_applied.append("is_paused")
+    elif payload.pause_reason is not None:
+        hotel.pause_reason = payload.pause_reason or None
+        updates_applied.append("pause_reason")
+
+    # 2. HotelSettings JSON column
+    settings = dict(hotel.settings) if isinstance(hotel.settings, dict) else {}
+    changed = False
+    for json_field in (
+        "whatsapp_api_key",
+        "whatsapp_phone_number_id",
+        "whatsapp_business_account_id",
+        "brevo_api_key",
+        "smtp_host",
+        "smtp_username",
+        "smtp_password",
+        "smtp_from_email",
+        "ai_whatsapp_credits",
+    ):
+        val = getattr(payload, json_field, None)
+        if val is None:
+            continue
+        settings[json_field] = val or None
+        changed = True
+        updates_applied.append(json_field)
+    if payload.smtp_port is not None:
+        settings["smtp_port"] = payload.smtp_port
+        changed = True
+        updates_applied.append("smtp_port")
+    if changed:
+        hotel.settings = settings
+
+    from app.core.time import utcnow
+    hotel.updated_at = utcnow()
+    session.add(hotel)
+    await session.commit()
+    await session.refresh(hotel)
+
+    # Bust any cached widget config / public hotel data
+    try:
+        from app.core.redis_client import redis_client
+        redis_client.delete_key(f"public:hotel-details:{hotel.id}")
+        redis_client.delete_key(f"public:widget-config:{hotel.id}")
+        redis_client.delete_key(f"public:slug-to-id:{hotel.slug}")
+        redis_client.delete_key(f"public:social-proof:{hotel.slug}")
+    except Exception:
+        pass
+
+    # Audit log
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="UPDATE_HOTEL_INTEGRATIONS",
+        description=f"Updated {len(updates_applied)} integration field(s) for hotel {hotel.name}: {', '.join(updates_applied)}",
+        ip_address="127.0.0.1",
+    )
+    session.add(audit)
+    await session.commit()
+
+    return {
+        "status": "success",
+        "message": f"Updated {len(updates_applied)} field(s) for {hotel.name}",
+        "fields_updated": updates_applied,
+    }
+
+
+@router.post("/social-proof/refresh")
+async def refresh_social_proof_stats(
+    hotel_id: Optional[str] = None,
+    super_admin: User = Depends(get_super_admin),
+    session: DbSession = None,
+):
+    """Recompute the social proof cache.
+
+    - With `hotel_id` query param: refreshes just that hotel.
+    - Without: refreshes every active hotel. Use after a config change
+      that should propagate immediately to the public booking page.
+    """
+    from app.core.social_proof_refresh import (
+        refresh_all_social_proof_stats,
+        refresh_one_hotel_now,
+    )
+
+    if hotel_id:
+        ok = await refresh_one_hotel_now(session, hotel_id)
+        if not ok:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Hotel not found",
+            )
+        # Audit
+        audit = AuditLog(
+            user_id=super_admin.id,
+            user_email=super_admin.email,
+            action="REFRESH_SOCIAL_PROOF",
+            description=f"Refreshed social proof cache for hotel {hotel_id}",
+            ip_address="127.0.0.1",
+        )
+        session.add(audit)
+        await session.commit()
+        return {"status": "success", "hotel_id": hotel_id}
+
+    summary = await refresh_all_social_proof_stats(session)
+    audit = AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="REFRESH_SOCIAL_PROOF_ALL",
+        description=f"Refreshed social proof cache for {summary['hotels_total']} hotels",
+        ip_address="127.0.0.1",
+    )
+    session.add(audit)
+    await session.commit()
+    return {"status": "success", **summary}

@@ -1,6 +1,6 @@
 from typing import List, Optional, Any, Dict
 from datetime import date, datetime
-from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks, Request
 from sqlmodel import select, and_, or_
 from pydantic import BaseModel, EmailStr
 import uuid
@@ -16,6 +16,8 @@ from app.models.promo import PromoCode
 from app.core.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
+from app.core.time import utcnow
+from app.core.limiter import limiter
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -121,23 +123,36 @@ class PublicBookingResponse(BaseModel):
 
 def generate_booking_number() -> str:
     """Unique booking number generate karta hai"""
-    timestamp = datetime.utcnow().strftime("%Y%m%d")
+    timestamp = utcnow().strftime("%Y%m%d")
     unique_part = str(uuid.uuid4())[:6].upper()
     return f"BK{timestamp}{unique_part}"
 
 
-@router.get("/hotels/slug/{hotel_slug}", response_model=HotelRead)
-async def get_public_hotel_by_slug(hotel_slug: str, session: DbSession):
+@router.get("/hotels/slug/{hotel_slug}")
+@limiter.limit("120/minute")
+async def get_public_hotel_by_slug(request: Request, hotel_slug: str, session: DbSession):
     """
     Get hotel details by slug for public booking page.
     No authentication required.
+
+    SENSITIVE FIELDS ARE STRIPPED. The previous version of this endpoint
+    returned the full settings JSON which includes the hotel's SMTP
+    password, WhatsApp API key, and Brevo API key. That's a credential
+    leak. We now run the same `mask_hotel_for_hotelier` filter that the
+    /hotels/me endpoint uses, so the public never sees platform
+    credentials.
     """
+    from app.core.sensitive_fields import mask_hotel_for_hotelier
+
     hotel_id = await resolve_hotel_id(hotel_slug, session)
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
-        
-    return hotel
+
+    if not hotel.is_active:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    return mask_hotel_for_hotelier(hotel)
 
 
 @router.get("/hotels/slug/{hotel_slug}/widget-config", response_model=dict)
@@ -185,26 +200,34 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
 
     return res_dict
 
-@router.get("/hotels/{hotel_identifier}", response_model=HotelRead)
-async def get_public_hotel(hotel_identifier: str, session: DbSession):
+@router.get("/hotels/{hotel_identifier}")
+@limiter.limit("120/minute")
+async def get_public_hotel(request: Request, hotel_identifier: str, session: DbSession):
     """
     Get hotel details for public booking page.
     Supports both ID (UUID) and Slug.
+
+    SENSITIVE FIELDS ARE STRIPPED — see /hotels/slug/{slug} above.
     """
+    from app.core.sensitive_fields import mask_hotel_for_hotelier
+
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
-    hotel_id = await resolve_hotel_id(hotel_identifier, session)
-    # Get Hotel by ID since we resolved it
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
-        
+
+    if not hotel.is_active:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
     from app.models.integration import IntegrationSettings
     settings_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
     settings_res = await session.execute(settings_query)
-    settings = settings_res.scalar_one_or_none()
-    if settings and getattr(settings, 'widget_primary_color', None):
-        hotel.primary_color = settings.widget_primary_color
-        
-        
-    return hotel
+    int_settings = settings_res.scalar_one_or_none()
+    if int_settings and getattr(int_settings, 'widget_primary_color', None):
+        # Override the primary color on a copy-style dict
+        masked = mask_hotel_for_hotelier(hotel)
+        masked["primary_color"] = int_settings.widget_primary_color
+        return masked
+
+    return mask_hotel_for_hotelier(hotel)
 

@@ -119,6 +119,19 @@ class HotelBase(SQLModel):
     feature_custom_logo: bool = Field(default=False)
     feature_custom_widget: bool = Field(default=False)
     feature_google_ads: bool = Field(default=False)
+    # Operational state (P4.1):
+    #   is_active=False  → "soft-disabled" — owner can't log in, no public
+    #                       pages, no API access. Used for billing failure.
+    #   is_paused=True   → "soft-paused"  — public booking page shows a
+    #                       "temporarily unavailable" notice, but the owner
+    #                       can still log in to fix things (e.g. update a
+    #                       rate plan, respond to existing guests). Used for
+    #                       maintenance, TOS investigation, etc.
+    # These are independent so the super-admin can keep access while
+    # blocking new bookings, or fully cut off a delinquent tenant.
+    is_paused: bool = Field(default=False)
+    pause_reason: Optional[str] = Field(default=None)
+    paused_at: Optional[datetime] = Field(default=None)
 
 
 class Hotel(HotelBase, table=True):
@@ -209,3 +222,8 @@ class HotelUpdate(SQLModel):
     feature_custom_widget: Optional[bool] = None
     feature_google_ads: Optional[bool] = None
     is_active: Optional[bool] = None
+    # P4.1 — soft-pause state. Allows super-admin to block new bookings
+    # without cutting off the hotelier.
+    is_paused: Optional[bool] = None
+    pause_reason: Optional[str] = None
+    paused_at: Optional[datetime] = None

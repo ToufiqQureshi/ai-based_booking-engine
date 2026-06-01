@@ -9,37 +9,53 @@ from sqlmodel import select
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.hotel import Hotel, HotelRead, HotelUpdate
+from app.core.sensitive_fields import (
+    mask_hotel_for_hotelier,
+    strip_sensitive_from_update,
+)
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/hotels", tags=["Hotels"])
 
 
-@router.get("/me", response_model=HotelRead)
+@router.get("/me")
 async def get_my_hotel(current_user: CurrentUser, session: DbSession):
     """
     Current user ki hotel get karo.
     Dashboard aur settings page ke liye.
+
+    Sensitive fields (AI keys, WhatsApp tokens, SMTP creds, Brevo key,
+    internal quotas) are masked before the response is sent — see
+    app.core.sensitive_fields for the policy. Hoteliers see `has_*`
+    flags and counters, never the secrets themselves.
     """
     if not current_user.hotel_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No hotel associated with this user"
         )
-    
+
     result = await session.execute(
         select(Hotel).where(Hotel.id == current_user.hotel_id)
     )
     hotel = result.scalar_one_or_none()
-    
+
     if not hotel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Hotel not found"
         )
-    
-    return hotel
+
+    # Return a dict (not HotelRead instance) because we have extra
+    # `has_*` fields and a masked settings object that the strict
+    # HotelRead schema doesn't model. FastAPI + Pydantic v2 accepts
+    # the dict for response_model purposes (extra="allow" default).
+    return mask_hotel_for_hotelier(hotel)
 
 
-@router.patch("/me", response_model=HotelRead)
+@router.patch("/me")
 async def update_my_hotel(
     hotel_update: HotelUpdate,
     current_user: CurrentUser,
@@ -48,26 +64,45 @@ async def update_my_hotel(
     """
     Current user ki hotel update karo.
     Settings page se hotel details change karne ke liye.
+
+    SECURITY: any attempt to PATCH sensitive fields (AI keys, WhatsApp
+    tokens, SMTP/Brevo creds, internal counters, pause state) is
+    silently stripped AND logged so we can detect a tampered client.
     """
     if not current_user.hotel_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No hotel associated"
         )
-    
+
     result = await session.execute(
         select(Hotel).where(Hotel.id == current_user.hotel_id)
     )
     hotel = result.scalar_one_or_none()
-    
+
     if not hotel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Hotel not found"
         )
-    
+
     # Update only provided fields
-    update_data = hotel_update.model_dump(exclude_unset=True)
+    raw_update_data = hotel_update.model_dump(exclude_unset=True)
+
+    # Strip sensitive fields. Raises ValueError for read-only fields.
+    try:
+        update_data, stripped = strip_sensitive_from_update(raw_update_data)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        )
+
+    if stripped:
+        logger.warning(
+            "Hotelier %s attempted to PATCH sensitive fields on hotel %s: %s",
+            current_user.email, current_user.hotel_id, sorted(stripped),
+        )
 
     if "slug" in update_data and update_data["slug"]:
         new_slug = update_data["slug"].lower().strip()
@@ -83,14 +118,14 @@ async def update_my_hotel(
 
     for field, value in update_data.items():
         setattr(hotel, field, value)
-    
+
     from datetime import datetime
     hotel.updated_at = datetime.utcnow()
-    
+
     session.add(hotel)
     await session.commit()
     await session.refresh(hotel)
-    
+
     # Invalidate public caches on settings change (e.g. tax settings update)
     try:
         from app.core.redis_client import redis_client
@@ -98,13 +133,15 @@ async def update_my_hotel(
         redis_client.delete_key(f"public:widget-config:{hotel.id}")
         redis_client.delete_key(f"public:slug-to-id:{hotel.slug}")
         redis_client.delete_key(f"public:slug-to-id:{hotel.id}")
+        redis_client.delete_key(f"public:social-proof:{hotel.slug}")
+        redis_client.delete_key(f"public:social-proof:{hotel.id}")
         # Clear rooms and availability cache
         from app.api.v1.availability import clear_availability_cache
         clear_availability_cache(hotel.id)
     except Exception as e:
         pass
-    
-    return hotel
+
+    return mask_hotel_for_hotelier(hotel)
 
 
 

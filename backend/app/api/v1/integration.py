@@ -5,7 +5,7 @@ Manage API keys, widget code, and integration settings
 from typing import List, Optional, Any, Dict, Tuple
 from datetime import datetime, timedelta
 import hmac
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Header
 from fastapi.responses import RedirectResponse
 from sqlmodel import select
 import secrets
@@ -15,6 +15,7 @@ import httpx
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.limiter import limiter
+from app.core.config import get_settings
 from app.models.integration import (
     APIKey, APIKeyCreate, APIKeyRead, APIKeyWithSecret,
     IntegrationSettings, IntegrationSettingsRead, IntegrationSettingsUpdate,
@@ -51,15 +52,90 @@ def generate_api_key() -> tuple[str, str, str]:
 
 
 @router.get("/settings", response_model=IntegrationSettingsRead)
-@cache_response(expire=3600, key_prefix="integration")
 async def get_integration_settings(
-    request: Request,
     current_user: CurrentUser,
     session: DbSession
 ):
-    """Get integration settings for current hotel"""
-    query = select(IntegrationSettings).where(
-        IntegrationSettings.hotel_id == current_user.hotel_id
+    """
+    Get integration settings for current hotel.
+
+    SECURITY: For non-super-admin callers, sensitive fields
+    (ai_api_key, google_business_access_token, google_business_refresh_token,
+    whatsapp_token, webhook_secret) are stripped from the response and
+    replaced with `has_*` boolean flags. The actual secrets are
+    managed by the super-admin in their dashboard.
+    """
+    from app.models.user import UserRole
+
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    settings = result.scalar_one_or_none()
+
+    is_super_admin = current_user.role == UserRole.SUPER_ADMIN
+
+    if not settings:
+        # Return default empty settings
+        empty = IntegrationSettingsRead(
+            hotel_id=current_user.hotel_id,
+            webhook_url="",
+            webhook_secret="",
+            whatsapp_phone_number_id="",
+            whatsapp_business_account_id="",
+            whatsapp_token="",
+            google_place_id=""
+        )
+        if not is_super_admin:
+            empty.ai_api_key = None
+            empty.google_business_access_token = None
+            empty.google_business_refresh_token = None
+        return empty
+
+    # Build the read response
+    response = IntegrationSettingsRead.model_validate(settings)
+
+    if not is_super_admin:
+        # Strip all secrets for hotelier callers. Hoteliers see
+        # the *config* (provider name, model, allowed domains)
+        # but never the *credential*.
+        response.ai_api_key = None
+        response.google_business_access_token = None
+        response.google_business_refresh_token = None
+        # Surface presence flags so the UI can show "configured"
+        # without exposing the value
+        response_dict = response.model_dump()
+        response_dict["has_ai_api_key"] = bool(settings.ai_api_key)
+        response_dict["has_google_business_token"] = bool(
+            settings.google_business_access_token or settings.google_business_refresh_token
+        )
+        # Pydantic will ignore extras on dump
+        return response
+
+    return response
+
+
+@router.get("/widget-code", response_model=WidgetCodeResponse)
+async def get_widget_code(
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """
+    Get the embeddable widget code for the current hotel.
+    """
+    hotel = await session.get(Hotel, current_user.hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    # Construct widget URL using hotel slug
+    settings = get_settings()
+    base_url = settings.FRONTEND_URL or "https://staybooker.ai"
+    widget_url = f"{base_url}/widget/{hotel.slug}"
+
+    embed_code = f'''<script src="{base_url}/widget.js"></script>
+<div id="staybooker-widget" data-hotel-slug="{hotel.slug}"></div>'''
+
+    return WidgetCodeResponse(
+        widget_url=widget_url,
+        embed_code=embed_code
     )
     result = await session.execute(query)
     settings = result.scalar_one_or_none()
@@ -381,57 +457,10 @@ async def _send_webhook_event(
         return False, f"Unexpected error: {str(e)}", None
 
 
-@router.get("/webhook-test")
-async def test_webhook(
-    current_user: CurrentUser,
-    session: DbSession
-):
-    """
-    Test webhook configuration by sending a test event.
-    """
-    settings_query = select(IntegrationSettings).where(
-        IntegrationSettings.hotel_id == current_user.hotel_id
-    )
-    result = await session.execute(settings_query)
-    settings = result.scalar_one_or_none()
-    
-    if not settings or not settings.webhook_url:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Webhook URL not configured"
-        )
-    
-    # Prepare test payload
-    payload = {
-        "event": "webhook.test",
-        "hotel_id": current_user.hotel_id,
-        "timestamp": datetime.utcnow().isoformat(),
-        "message": "This is a test webhook event from Staybooker",
-        "note": "If you are seeing this, your webhook integration is working correctly!"
-    }
-
-    # Send actual webhook
-    success, message, status_code = await _send_webhook_event(
-        url=settings.webhook_url,
-        payload=payload,
-        secret=settings.webhook_secret
-    )
-
-    if not success:
-        return {
-            "status": "error",
-            "message": message,
-            "webhook_url": settings.webhook_url,
-            "http_status": status_code
-        }
-
-    return {
-        "status": "success",
-        "message": "Webhook test delivered successfully",
-        "webhook_url": settings.webhook_url,
-        "http_status": status_code,
-        "note": "Check your webhook endpoint for the test event"
-    }
+# NOTE: /webhook-test endpoint was removed in P3.2 — it was dead code
+# (no frontend caller, only reachable via direct URL, not used by any
+# internal flow). The functionality can be reintroduced later as
+# POST /integration/webhook/test when a UI button is added.
 
 @router.post("/test-ai")
 async def test_ai_connection(
@@ -506,7 +535,8 @@ async def test_whatsapp_connection(
             else:
                 try:
                     err = resp.json().get("error", {}).get("message", resp.text)
-                except:
+                except (ValueError, AttributeError, TypeError) as parse_err:
+                    logger.debug("Meta error response was not JSON: %s", parse_err)
                     err = resp.text
                 return {"status": "error", "message": f"Meta Error: {err}"}
     except Exception as e:
@@ -943,26 +973,111 @@ async def post_google_review_reply(
         return {"status": "success", "message": "Reply posted successfully to Google!", "data": resp.json()}
 
 
+def _verify_meta_signature(raw_body: bytes, signature_header: Optional[str], app_secret: str) -> bool:
+    """
+    Verify the X-Hub-Signature-256 header sent by Meta on every POST to our webhook.
+
+    Meta signs the body as: "sha256=" + hex(hmac_sha256(app_secret, body))
+
+    Returns True if the signature is valid, False otherwise. Uses constant-time
+    compare to avoid timing side channels. An empty/missing header always fails.
+    """
+    if not signature_header or not app_secret:
+        return False
+    if not signature_header.startswith("sha256="):
+        return False
+    provided = signature_header.split("=", 1)[1].strip()
+    if not provided:
+        return False
+    expected = hmac.new(
+        app_secret.encode("utf-8"),
+        raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(provided, expected)
+
+
 @router.get("/whatsapp/webhook")
 async def whatsapp_webhook_verification(
     request: Request
 ):
     """
     Meta calls this GET endpoint to verify the webhook.
+    The verify_token is read from WHATSAPP_VERIFY_TOKEN env var (was previously
+    hardcoded "whatsapp_agent_verify_token" — anyone who read the source code
+    could spoof a Meta verification request and start receiving all our guests'
+    WhatsApp messages).
     """
+    settings = get_settings()
+    expected_token = settings.WHATSAPP_VERIFY_TOKEN
+    if not expected_token:
+        # Refuse to verify rather than fall back to a hardcoded default.
+        raise HTTPException(status_code=500, detail="WhatsApp webhook is not configured on this server")
+
     params = request.query_params
     mode = params.get("hub.mode")
     challenge = params.get("hub.challenge")
     verify_token = params.get("hub.verify_token")
 
     if mode == "subscribe" and challenge:
-        # Check against a default webhook verify token
-        if verify_token == "whatsapp_agent_verify_token":
+        # Constant-time compare; treat empty/short challenge as invalid.
+        if not challenge or len(challenge) > 1024:
+            raise HTTPException(status_code=400, detail="Invalid challenge")
+        if hmac.compare_digest(verify_token or "", expected_token):
             from fastapi.responses import PlainTextResponse
             return PlainTextResponse(content=challenge)
-        else:
-            raise HTTPException(status_code=403, detail="Invalid verification token")
+        raise HTTPException(status_code=403, detail="Invalid verification token")
     raise HTTPException(status_code=400, detail="Missing challenge or invalid mode")
+
+
+@router.post("/whatsapp/webhook")
+@limiter.limit("60/minute")
+async def whatsapp_webhook_receive(
+    request: Request,
+    session: DbSession,
+    x_hub_signature_256: Optional[str] = Header(None, alias="X-Hub-Signature-256"),
+):
+    """
+    Meta calls this POST endpoint when a guest sends a WhatsApp message.
+
+    Every POST must carry a valid X-Hub-Signature-256 header computed using
+    HMAC-SHA256 over the raw body with WHATSAPP_APP_SECRET as the key. We
+    verify this BEFORE doing any DB work or hitting the AI agent — without
+    it, any internet attacker who discovers the URL could:
+      - Spam us with fake "guest messages", wasting LLM tokens.
+      - Potentially trigger outbound WhatsApp replies to arbitrary phone
+        numbers via the AI agent flow below.
+    """
+    import logging
+    logger = logging.getLogger("whatsapp_webhook")
+
+    settings = get_settings()
+    app_secret = settings.WHATSAPP_APP_SECRET
+    if not app_secret:
+        logger.error("WhatsApp webhook POST received but WHATSAPP_APP_SECRET is not configured")
+        raise HTTPException(status_code=500, detail="WhatsApp webhook is not configured on this server")
+
+    # Read the raw body BEFORE parsing JSON so the signature check covers the
+    # exact bytes Meta signed. request.body() can only be consumed once.
+    raw_body = await request.body()
+    if not _verify_meta_signature(raw_body, x_hub_signature_256, app_secret):
+        logger.warning(
+            "WhatsApp webhook signature verification failed "
+            "(header_present=%s, body_len=%d)",
+            bool(x_hub_signature_256), len(raw_body),
+        )
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    debug_log = []  # Collect debug info to return in response
+
+    try:
+        body = json.loads(raw_body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    entry = body.get("entry", [])
+    if not entry:
+        return {"status": "ignored", "reason": "no entries"}
 
 
 @router.post("/whatsapp/webhook")

@@ -15,8 +15,12 @@ import {
     ServerCrash, Activity
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/api/client';
+import { apiClient, tokenStorage } from '@/api/client';
 import { toast } from 'sonner';
+import { HotelIntegrationsTab } from './HotelIntegrationsTab';
+
+// Storage key for the super-admin's own token (saved while impersonating a hotel admin).
+const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
 
 interface HotelWorkspaceProps {
     hotel: any;
@@ -72,10 +76,43 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
     const impersonateMutation = useMutation({
         mutationFn: () => apiClient.post(`/superadmin/impersonate/${hotel.id}`, {}),
         onSuccess: (data: any) => {
-            localStorage.setItem('superadmin_original_token', localStorage.getItem('token') || '');
-            localStorage.setItem('token', data.access_token);
-            window.location.href = '/';
-        }
+            if (!data?.access_token) {
+                toast.error("Impersonation failed: no access token returned by server");
+                return;
+            }
+            try {
+                // Save the super-admin's CURRENT tokens before swapping. We must use the
+                // canonical token-storage keys (hotel_access_token / hotel_refresh_token)
+                // because the rest of the app reads from those — using 'token' silently broke
+                // every authenticated request.
+                const originalAccess = tokenStorage.getAccessToken();
+                const originalRefresh = tokenStorage.getRefreshToken();
+                if (!originalAccess) {
+                    toast.error("Cannot impersonate: super-admin session is missing");
+                    return;
+                }
+                localStorage.setItem(
+                    SUPERADMIN_ORIGINAL_TOKENS_KEY,
+                    JSON.stringify({ access_token: originalAccess, refresh_token: originalRefresh ?? '' })
+                );
+                tokenStorage.setTokens({
+                    access_token: data.access_token,
+                    refresh_token: data.refresh_token ?? '',
+                    token_type: 'Bearer',
+                    expires_in: data.expires_in ?? 3600,
+                });
+                window.location.href = '/';
+            } catch (err) {
+                // If anything goes wrong, do NOT leave the user stranded with mixed tokens.
+                localStorage.removeItem(SUPERADMIN_ORIGINAL_TOKENS_KEY);
+                tokenStorage.clearTokens();
+                toast.error("Impersonation flow failed — please log in again");
+                console.error('Impersonation token swap failed:', err);
+            }
+        },
+        onError: (err: any) => {
+            toast.error(err?.message || 'Failed to impersonate hotel admin');
+        },
     });
 
     const wipeDataMutation = useMutation({
@@ -186,27 +223,7 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
 
                             {/* INTEGRATIONS TAB */}
                             <TabsContent value="integrations" className="space-y-6 mt-0">
-                                <div className="p-6 border border-white/10 rounded-3xl bg-slate-900/40 backdrop-blur-sm space-y-6 shadow-lg">
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold text-slate-300 flex items-center gap-2"><Key className="w-4 h-4 text-violet-400"/> OpenAI API Key</Label>
-                                        <Input type="password" value={openAiKey} onChange={e => setOpenAiKey(e.target.value)} placeholder="sk-..." className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 focus-visible:ring-violet-500" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold text-slate-300 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-teal-400"/> WA Admin Phone</Label>
-                                        <Input value={waAdminPhone} onChange={e => setWaAdminPhone(e.target.value)} placeholder="+1234567890" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 focus-visible:ring-teal-500" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-bold text-slate-300 flex items-center gap-2"><Webhook className="w-4 h-4 text-indigo-400"/> Custom Webhook URL</Label>
-                                        <Input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://..." className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 focus-visible:ring-indigo-500" />
-                                    </div>
-                                    <Button className="w-full font-bold h-12 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-500/25 transition-all" onClick={() => saveKeysMutation.mutate({ 
-                                        openai_api_key: openAiKey, 
-                                        whatsapp_admin_phone: waAdminPhone,
-                                        webhook_url: webhookUrl 
-                                    })}>
-                                        Save Integration Keys
-                                    </Button>
-                                </div>
+                                <HotelIntegrationsTab hotel={hotel} />
                             </TabsContent>
 
                             {/* DANGER ZONE TAB */}

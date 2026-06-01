@@ -20,14 +20,21 @@ const onboardingSchema = z.object({
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
 
 export function OnboardingPage() {
-  const { setUser, setHotel } = useAuth();
+  const { setUser, setHotel, user, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // If a user lands here but already has a hotel attached, they don't belong on this
+  // page — bounce them to the dashboard. Crucially we DON'T redirect when the user
+  // is still loading (avoid flashing to /dashboard and back) or when they have no
+  // hotel_id yet (that's the whole point of onboarding — they need to fill the form).
   useEffect(() => {
-    navigate('/dashboard');
-  }, [navigate]);
+    if (authLoading) return;
+    if (user?.hotel_id) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user?.hotel_id, authLoading, navigate]);
 
   const {
     register,

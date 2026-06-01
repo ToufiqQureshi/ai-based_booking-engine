@@ -1,5 +1,15 @@
 // API Client for Hotel Dashboard
-// Centralized HTTP client with JWT token management
+// Centralized HTTP client with JWT token management.
+//
+// SECURITY NOTE: Tokens are currently stored in localStorage which is
+// readable by any JavaScript running in the page (i.e. any successful
+// XSS attack can steal them). The long-term fix is to switch to
+// httpOnly + Secure + SameSite=Strict cookies set by the backend, so
+// JavaScript can never read the token. To make that migration easier
+// we already pass `credentials: 'include'` on every request — when the
+// backend is updated to issue httpOnly cookies (and CORS is tightened
+// accordingly), no client change is required. Until then, the localStorage
+// token continues to be sent as a Bearer header as a fallback.
 
 import { ApiError, AuthTokens } from '@/types/api';
 
@@ -187,6 +197,7 @@ export const apiClient = {
     const makeRequest = () => fetch(url.toString(), {
       method: 'GET',
       headers: getHeaders(),
+      credentials: 'include',
       signal: controller.signal,
     });
 
@@ -220,6 +231,7 @@ export const apiClient = {
       method: 'POST',
       headers,
       body,
+      credentials: 'include',
       signal: controller.signal,
       ...restConfig,
     });
@@ -244,6 +256,7 @@ export const apiClient = {
       method: 'PUT',
       headers,
       body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include',
       signal: controller.signal,
       ...restConfig,
     });
@@ -268,6 +281,7 @@ export const apiClient = {
       method: 'PATCH',
       headers,
       body: data ? JSON.stringify(data) : undefined,
+      credentials: 'include',
       signal: controller.signal,
       ...restConfig,
     });
@@ -289,6 +303,7 @@ export const apiClient = {
     const makeRequest = () => fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: getHeaders(),
+      credentials: 'include',
       signal: controller.signal,
     });
 

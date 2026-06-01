@@ -2,6 +2,7 @@ import redis
 import os
 import json
 import time
+import asyncio
 import fnmatch
 from typing import Optional, Any
 
@@ -9,6 +10,8 @@ class RedisClient:
     _instance: Optional[redis.Redis] = None
     _is_disabled: bool = False
     _local_memory_cache = {} # Format: {key: (value, expire_at)}
+    _local_nx_locks: dict[str, asyncio.Lock] = {}
+    _local_nx_locks_guard: Optional[asyncio.Lock] = None
 
     @classmethod
     def get_instance(cls) -> Optional[redis.Redis]:
@@ -122,7 +125,7 @@ class RedisClient:
                     r.delete(*keys)
             except Exception as e:
                 print(f"Redis delete pattern failed: {e}")
-        
+
         # Local Memory Pattern Delete
         keys_to_del = [k for k in cls._local_memory_cache.keys() if fnmatch.fnmatch(k, pattern)]
         for k in keys_to_del:
@@ -130,6 +133,53 @@ class RedisClient:
                 del cls._local_memory_cache[k]
             except KeyError:
                 pass
+
+    @classmethod
+    def _get_local_nx_lock(cls, key: str) -> asyncio.Lock:
+        """Return a per-key asyncio.Lock for serializing SET-NX in the in-memory fallback.
+
+        We need this because Python's GIL does NOT make dict reads/writes atomic across
+        coroutines when they await between get + set. A shared global lock would
+        serialize all NX calls, so we use one lock per key instead.
+        """
+        if cls._local_nx_locks_guard is None:
+            cls._local_nx_locks_guard = asyncio.Lock()
+        # NOTE: get_instance_of_event_loop matters — locks are tied to a running loop.
+        # We lazily create per-key locks inside the caller's coroutine to avoid
+        # "attached to a different loop" errors.
+        return cls._local_nx_locks.setdefault(key, asyncio.Lock())
+
+    @classmethod
+    async def set_nx_ex(cls, key: str, value: str, expire: int = 60) -> bool:
+        """Atomic SET NX EX. Returns True if the key was set, False if it already existed.
+
+        This is the only safe primitive for distributed locks / idempotency keys.
+        Using the old get-then-set pattern races: two concurrent requests can both
+        read "no key", both write, and both proceed — which is the bug we are fixing
+        in the payment endpoints.
+        """
+        r = cls.get_instance()
+        if r:
+            try:
+                # redis-py exposes set with nx + ex flags; returns True/None.
+                result = r.set(key, value, nx=True, ex=expire)
+                return bool(result)
+            except Exception as e:
+                print(f"Redis SET NX EX failed, falling back to local memory: {e}")
+
+        # In-memory fallback: use a per-key asyncio.Lock to make the check-then-set
+        # atomic across coroutines on this worker. Across workers / instances, the
+        # caller must understand that in-memory mode is not distributed — which is
+        # already the case for the rest of the cache.
+        lock = cls._get_local_nx_lock(key)
+        async with lock:
+            existing = cls._local_memory_cache.get(key)
+            if existing is not None:
+                _, expire_at = existing
+                if time.time() < expire_at:
+                    return False
+            cls._local_memory_cache[key] = (value, time.time() + expire)
+            return True
 
     @classmethod
     def _clean_local_memory(cls):

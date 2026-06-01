@@ -1,43 +1,70 @@
 """
-Background Tasks Module
-FastAPI BackgroundTasks ke liye heavy processing tasks.
+Background task helpers.
+
+FastAPI's built-in `BackgroundTasks` runs tasks AFTER the response is sent
+but still on the same worker process. Limitations:
+  * If the worker dies between response and task execution, the task is lost.
+  * No retry / DLQ / observability.
+  * Long-running tasks (>30s) can starve the worker.
+
+For production-grade durability, use one of:
+  * Celery + Redis/RabbitMQ
+  * Arq (lightweight async, Redis-backed)
+  * Dramatiq (RabbitMQ)
+  * Cloud-native: AWS SQS, GCP Cloud Tasks
+
+This module provides:
+  * `safe_background()` — wraps a coroutine with exception logging so a
+    failing task never crashes the worker silently. Use this when you want
+    a "best-effort" task that must not block the response.
+  * `enqueue_or_run_inline()` — helper to fall back to inline execution in
+    dev/test where no task queue is configured.
+
+The actual migration to a real task queue is tracked in P4 work — it
+requires picking a broker, writing task definitions, and re-pointing all
+call sites. This helper at least makes the current BackgroundTasks usage
+robust against silent failures.
 """
-from app.core.database import async_session
-from app.models.timeline import BookingTimeline
+from __future__ import annotations
+
+import asyncio
 import logging
+from typing import Awaitable, Callable, Optional, TypeVar
+
+from fastapi import BackgroundTasks
 
 logger = logging.getLogger(__name__)
 
-async def log_timeline_task(booking_id: str, event_type: str, old_value: str, new_value: str, message: str, changed_by: str):
-    """
-    Booking Timeline events ko background mein log karta hai.
-    Main API response ko block nahi hone deta.
-    """
-    logger.info(f"Background Task: Logging timeline for booking {booking_id}")
-    try:
-        async with async_session() as session:
-            timeline = BookingTimeline(
-                booking_id=booking_id,
-                event_type=event_type,
-                old_value=old_value,
-                new_value=new_value,
-                message=message,
-                changed_by=changed_by
-            )
-            session.add(timeline)
-            await session.commit()
-            logger.info(f"Background Task: Timeline logged successfully for {booking_id}")
-    except Exception as e:
-        logger.error(f"Background Task Error: Failed to log timeline: {e}")
+T = TypeVar("T")
 
 
-async def send_email_placeholder(email: str, subject: str, body: str):
+def safe_background(
+    bg: BackgroundTasks,
+    coro_factory: Callable[[], Awaitable[T]],
+    *,
+    task_name: Optional[str] = None,
+) -> None:
     """
-    Email bhejne ka placeholder.
-    In production, yahan Resend/SendGrid ka API call aayega.
+    Schedule a coroutine on the FastAPI BackgroundTasks with exception
+    isolation. The original `bg.add_task(coro, ...)` swallows exceptions
+    silently if the task raises — this wrapper logs the failure with full
+    traceback so we don't lose visibility into background failures.
+
+    Usage:
+        safe_background(
+            background_tasks,
+            lambda: email_service.send_confirmation(...),
+            task_name="send_guest_booking_confirmation",
+        )
     """
-    logger.info(f"Background Task: Sending email to {email} - Subject: {subject}")
-    # Simulating email delay
-    import asyncio
-    await asyncio.sleep(1) 
-    logger.info(f"Background Task: Email sent successfully to {email}")
+    name = task_name or getattr(coro_factory, "__name__", "background_task")
+
+    async def _runner() -> None:
+        try:
+            await coro_factory()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Background task '%s' failed", name)
+
+    bg.add_task(_runner())

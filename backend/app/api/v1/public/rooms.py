@@ -1,6 +1,6 @@
 from typing import List, Optional, Any, Dict
 from datetime import date, datetime
-from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks, Request
 from sqlmodel import select, and_, or_
 from pydantic import BaseModel, EmailStr
 import uuid
@@ -13,9 +13,11 @@ from app.models.room import RoomType, RoomTypeRead, RoomBlock
 from app.models.booking import Booking, BookingStatus, Guest
 from app.models.rates import RatePlan, RoomRate
 from app.models.promo import PromoCode
+from app.core.time import utcnow
 from app.core.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
+from app.core.limiter import limiter
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -121,13 +123,15 @@ class PublicBookingResponse(BaseModel):
 
 def generate_booking_number() -> str:
     """Unique booking number generate karta hai"""
-    timestamp = datetime.utcnow().strftime("%Y%m%d")
+    timestamp = utcnow().strftime("%Y%m%d")
     unique_part = str(uuid.uuid4())[:6].upper()
     return f"BK{timestamp}{unique_part}"
 
 
 @router.get("/hotels/{hotel_identifier}/rooms", response_model=List[PublicRoomSearchResult])
+@limiter.limit("60/minute")
 async def search_public_rooms(
+    request: Request,
     hotel_identifier: str,
     session: DbSession,
     check_in: date = Query(...),

@@ -1,9 +1,11 @@
 from typing import List, Optional, Any, Dict
 from datetime import date, datetime
-from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks, Request, Header
 from sqlmodel import select, and_, or_
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 import uuid
+import hmac
+import hashlib
 import logging
 
 from app.core.database import get_session
@@ -16,6 +18,10 @@ from app.models.promo import PromoCode
 from app.core.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
+from app.core.config import get_settings
+from app.core.time import utcnow
+from app.core.limiter import limiter
+from app.core.tasks import safe_background
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -121,7 +127,7 @@ class PublicBookingResponse(BaseModel):
 
 def generate_booking_number() -> str:
     """Unique booking number generate karta hai"""
-    timestamp = datetime.utcnow().strftime("%Y%m%d")
+    timestamp = utcnow().strftime("%Y%m%d")
     unique_part = str(uuid.uuid4())[:6].upper()
     return f"BK{timestamp}{unique_part}"
 
@@ -143,29 +149,39 @@ razorpay.Client._update_user_agent_header = patched_update_user_agent_header
 
 
 class RazorpayOrderRequest(BaseModel):
-    amount: float
-    currency: str = "INR"
-    receipt: str
+    amount: float = Field(gt=0, le=10_000_000, description="Amount in INR (will be converted to paise)")
+    currency: str = Field(default="INR", min_length=3, max_length=3)
+    receipt: str = Field(min_length=1, max_length=64)
 
 @router.post("/razorpay/create-order")
-async def create_razorpay_order(data: RazorpayOrderRequest, session: DbSession):
+@limiter.limit("10/minute")
+async def create_razorpay_order(
+    request: Request,
+    data: RazorpayOrderRequest,
+    session: DbSession,
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key", max_length=128),
+):
     """
     Creates a Razorpay order and returns the order details.
     Amount should be in INR (not paise, we convert it here).
     """
-    # --- Idempotency Check ---
-    # One order per receipt (booking_id) within a short window
+    # --- Idempotency Check (atomic) ---
+    # Previously this used get-then-set which is racy: two concurrent requests for
+    # the same receipt can both read "no key", both set it, and both create a Razorpay
+    # order — leading to duplicate payments being reconciled. Replaced with Redis
+    # SET NX EX (atomic) and an in-process asyncio.Lock for the in-memory fallback.
     lock_key = f"razorpay_order_lock:{data.receipt}"
-    try:
-        if redis_client.get_value(lock_key):
-            raise HTTPException(status_code=409, detail="Order creation already in progress.")
-        redis_client.set_value(lock_key, "locked", expire=60)
-    except HTTPException: raise
-    except: pass
+    if idempotency_key:
+        lock_key = f"razorpay_order_lock:{idempotency_key}:{data.receipt}"
+    acquired = await redis_client.set_nx_ex(lock_key, "locked", expire=60)
+    if not acquired:
+        raise HTTPException(status_code=409, detail="Order creation already in progress for this receipt.")
 
     # Fetch hotel to get its specific Razorpay keys if available
     booking = await session.get(Booking, data.receipt)
     if not booking:
+        # Release the lock so the user can retry after fixing the receipt.
+        redis_client.delete_value(lock_key)
         raise HTTPException(status_code=404, detail="Booking not found for order creation")
 
     hotel = await session.get(Hotel, booking.hotel_id)
@@ -180,50 +196,61 @@ async def create_razorpay_order(data: RazorpayOrderRequest, session: DbSession):
     key_secret = hotel_key_secret or settings.RAZORPAY_KEY_SECRET
 
     if not key_id or not key_secret:
+        redis_client.delete_value(lock_key)
         raise HTTPException(status_code=500, detail="Razorpay is not configured for this property")
-        
+
     client = razorpay.Client(auth=(key_id, key_secret))
-    
+
     try:
         # Razorpay expects amount in smallest currency unit (paise for INR)
         amount_in_paise = int(data.amount * 100)
-        
+
         order_data = {
             "amount": amount_in_paise,
             "currency": data.currency,
             "receipt": data.receipt,
             "payment_capture": 1 # Auto capture
         }
-        
+
         order = client.order.create(data=order_data)
         return order
     except Exception as e:
         logger.error(f"Failed to create razorpay order: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Release the lock so legitimate retries can succeed.
+        redis_client.delete_value(lock_key)
+        raise HTTPException(status_code=500, detail="Failed to create payment order")
+
 
 class RazorpayVerifyRequest(BaseModel):
-    razorpay_order_id: str
-    razorpay_payment_id: str
-    razorpay_signature: str
+    razorpay_order_id: str = Field(min_length=8, max_length=64)
+    razorpay_payment_id: str = Field(min_length=8, max_length=64)
+    razorpay_signature: str = Field(min_length=32, max_length=256)
     booking_id: str
 
 @router.post("/razorpay/verify")
-async def verify_razorpay_payment(data: RazorpayVerifyRequest, session: DbSession):
+@limiter.limit("20/minute")
+async def verify_razorpay_payment(
+    request: Request,
+    data: RazorpayVerifyRequest,
+    session: DbSession,
+    background_tasks: BackgroundTasks,
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key", max_length=128),
+):
     """
     Verifies the Razorpay signature and updates the booking status to CONFIRMED.
     """
-    # --- Idempotency Check ---
+    # --- Idempotency Check (atomic) ---
     lock_key = f"payment_verify_lock:{data.booking_id}"
-    try:
-        if redis_client.get_value(lock_key):
-            raise HTTPException(status_code=409, detail="Verification already in progress.")
-        redis_client.set_value(lock_key, "locked", expire=60)
-    except HTTPException: raise
-    except: pass
+    if idempotency_key:
+        lock_key = f"payment_verify_lock:{idempotency_key}:{data.booking_id}"
+    acquired = await redis_client.set_nx_ex(lock_key, "locked", expire=120)
+    if not acquired:
+        raise HTTPException(status_code=409, detail="Payment verification already in progress for this booking.")
 
     # Fetch hotel to get its specific Razorpay keys if available
     booking = await session.get(Booking, data.booking_id)
     if not booking:
+        redis_client.delete_value(lock_key)
         raise HTTPException(status_code=404, detail="Booking not found")
 
     hotel = await session.get(Hotel, booking.hotel_id)
@@ -236,86 +263,233 @@ async def verify_razorpay_payment(data: RazorpayVerifyRequest, session: DbSessio
     key_secret = hotel_key_secret or settings.RAZORPAY_KEY_SECRET
 
     if not key_id or not key_secret:
+        redis_client.delete_value(lock_key)
         raise HTTPException(status_code=500, detail="Razorpay is not configured for this property")
-        
+
     client = razorpay.Client(auth=(key_id, key_secret))
-    
+
     try:
-        # Verify Signature
+        # Verify Signature — this raises SignatureVerificationError on mismatch.
         client.utility.verify_payment_signature({
             'razorpay_order_id': data.razorpay_order_id,
             'razorpay_payment_id': data.razorpay_payment_id,
             'razorpay_signature': data.razorpay_signature
         })
-        
-        # If verification is successful, update booking status
-        booking.status = BookingStatus.CONFIRMED
-        booking.paid_amount = booking.total_amount # Assuming full payment was made online
-        booking.updated_at = datetime.utcnow()
-        
-        # Record the payment in DB if payment model exists
-        from app.models.payment import Payment
-        payment = Payment(
-            hotel_id=booking.hotel_id,
-            booking_id=booking.id,
-            amount=booking.total_amount,
-            payment_method="razorpay",
-            transaction_id=data.razorpay_payment_id,
-            status="completed",
-            reference_number=data.razorpay_order_id
-        )
-        session.add(payment)
-        
-        session.add(booking)
-        await session.commit()
-        
-        # Send confirmation email
-        guest = await session.get(Guest, booking.guest_id)
-        
-        if hotel and guest:
-            from fastapi import BackgroundTasks
-            background_tasks = BackgroundTasks()
-            
-            email_service = await get_email_service()
-            h_settings = hotel.settings if hotel and hotel.settings else {}
-            sender_email = h_settings.get("email_sender_address")
-            sender_name = h_settings.get("email_sender_name")
-            cc_list = h_settings.get("email_cc_list")
-            signature = h_settings.get("email_signature")
-            
-            background_tasks.add_task(
-                email_service.send_guest_booking_confirmation,
-                guest_email=guest.email,
-                guest_name=f"{guest.first_name} {guest.last_name}",
-                booking_number=booking.booking_number,
-                check_in=str(booking.check_in),
-                check_out=str(booking.check_out),
-                total_amount=booking.total_amount,
-                sender_email=sender_email,
-                sender_name=sender_name,
-                signature=signature
+
+        # If verification is successful, update booking status.
+        # Guard against double-confirm: if booking is already in a terminal state,
+        # we still respond 200 (idempotent) but skip the side effects.
+        already_confirmed = booking.status == BookingStatus.CONFIRMED
+        if not already_confirmed:
+            booking.status = BookingStatus.CONFIRMED
+            booking.paid_amount = booking.total_amount  # Assuming full payment was made online
+            booking.updated_at = utcnow()
+
+            # Record the payment in DB if payment model exists
+            from app.models.payment import Payment
+            payment = Payment(
+                hotel_id=booking.hotel_id,
+                booking_id=booking.id,
+                amount=booking.total_amount,
+                payment_method="razorpay",
+                transaction_id=data.razorpay_payment_id,
+                status="completed",
+                reference_number=data.razorpay_order_id
             )
-            
-            hotel_emails = hotel.contact.get("email", "") if hotel.contact else ""
-            background_tasks.add_task(
-                email_service.send_hotel_booking_notification,
-                hotel_emails=hotel_emails, 
-                booking_number=booking.booking_number,
-                guest_name=f"{guest.first_name} {guest.last_name}",
-                check_in=str(booking.check_in),
-                check_out=str(booking.check_out),
-                total_amount=booking.total_amount,
-                cc_list=cc_list,
-                sender_email=sender_email,
-                sender_name=sender_name
-            )
-            # Execute background tasks immediately for this route
-            await background_tasks()
-        
-        return {"status": "success", "message": "Payment verified and booking confirmed"}
-        
+            session.add(payment)
+            session.add(booking)
+            await session.commit()
+
+            # Send confirmation emails using FastAPI's BackgroundTasks — the
+            # previous code constructed a new BackgroundTasks() and called
+            # await on it, which only ran those tasks inline (and would block
+            # the response). Using the injected instance schedules the work
+            # to run after the response is sent, so the user sees the
+            # confirmation immediately while the emails are processed.
+            # safe_background() wraps each task with exception logging so a
+            # failure in one email doesn't crash the worker silently.
+            guest = await session.get(Guest, booking.guest_id)
+            if hotel and guest:
+                email_service = await get_email_service()
+                sender_email = h_settings.get("email_sender_address")
+                sender_name = h_settings.get("email_sender_name")
+                cc_list = h_settings.get("email_cc_list")
+                signature_str = h_settings.get("email_signature")
+
+                safe_background(
+                    background_tasks,
+                    lambda svc=email_service, ge=guest.email, gn=f"{guest.first_name} {guest.last_name}", bn=booking.booking_number, ci=str(booking.check_in), co=str(booking.check_out), ta=booking.total_amount, se=sender_email, sn=sender_name, sig=signature_str: svc.send_guest_booking_confirmation(
+                        guest_email=ge,
+                        guest_name=gn,
+                        booking_number=bn,
+                        check_in=ci,
+                        check_out=co,
+                        total_amount=ta,
+                        sender_email=se,
+                        sender_name=sn,
+                        signature=sig,
+                    ),
+                    task_name="send_guest_booking_confirmation",
+                )
+
+                hotel_emails = hotel.contact.get("email", "") if hotel.contact else ""
+                safe_background(
+                    background_tasks,
+                    lambda svc=email_service, he=hotel_emails, bn=booking.booking_number, gn=f"{guest.first_name} {guest.last_name}", ci=str(booking.check_in), co=str(booking.check_out), ta=booking.total_amount, cc=cc_list, se=sender_email, sn=sender_name: svc.send_hotel_booking_notification(
+                        hotel_emails=he,
+                        booking_number=bn,
+                        guest_name=gn,
+                        check_in=ci,
+                        check_out=co,
+                        total_amount=ta,
+                        cc_list=cc,
+                        sender_email=se,
+                        sender_name=sn,
+                    ),
+                    task_name="send_hotel_booking_notification",
+                )
+
+        return {"status": "success", "message": "Payment verified and booking confirmed", "already_confirmed": already_confirmed}
+
     except razorpay.errors.SignatureVerificationError:
+        # Don't leak whether the signature failed for this booking or generally.
+        # Always 400 with a generic message + log details server-side.
+        logger.warning(
+            "Razorpay signature verification failed for booking %s (order=%s payment=%s)",
+            data.booking_id, data.razorpay_order_id, data.razorpay_payment_id,
+        )
         raise HTTPException(status_code=400, detail="Invalid payment signature")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Payment verification failed: {e}")
+        logger.exception(f"Payment verification failed for booking {data.booking_id}: {e}")
+        # Release lock so user can retry, but only if it's a transient error.
+        redis_client.delete_value(lock_key)
         raise HTTPException(status_code=500, detail="Internal Server Error during verification")
+
+
+def _verify_razorpay_webhook_signature(raw_body: bytes, signature: str, secret: str) -> bool:
+    """
+    Verify the X-Razorpay-Signature header against the raw request body.
+    Razorpay signs the body with HMAC-SHA256(secret, body) and hex-encodes it.
+    Returns True if valid, False otherwise.
+    """
+    if not signature or not secret:
+        return False
+    expected = hmac.new(
+        secret.encode("utf-8"),
+        raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+    # Constant-time compare to avoid timing side channels.
+    return hmac.compare_digest(expected, signature)
+
+
+class RazorpayWebhookPayload(BaseModel):
+    """Loose schema — Razorpay sends many event types; we only need a few fields.
+
+    We keep this permissive (extra='allow') because Razorpay regularly adds new
+    fields and we don't want to reject real webhooks over schema drift.
+    """
+    entity: Optional[str] = None
+    account_id: Optional[str] = None
+    event: Optional[str] = None
+    created_at: Optional[int] = None
+    payload: Optional[Dict[str, Any]] = None
+
+    class Config:
+        extra = "allow"
+
+
+@router.post("/razorpay/webhook")
+@limiter.limit("300/minute")
+async def razorpay_webhook(
+    request: Request,
+    session: DbSession,
+    x_razorpay_signature: Optional[str] = Header(None, alias="X-Razorpay-Signature"),
+):
+    """
+    Server-side webhook handler called by Razorpay when payment state changes.
+    This is the AUTHORITATIVE source of payment confirmation — the /verify endpoint
+    is best-effort. Even if the user closes the browser mid-checkout, this endpoint
+    will still flip the booking to CONFIRMED.
+
+    Signature verification: HMAC-SHA256(RAZORPAY_WEBHOOK_SECRET, raw_body) compared
+    against the X-Razorpay-Signature header (constant-time compare). This prevents
+    forged webhooks from malicious actors.
+    """
+    settings = get_settings()
+    webhook_secret = settings.RAZORPAY_WEBHOOK_SECRET
+    if not webhook_secret:
+        logger.error("Razorpay webhook received but RAZORPAY_WEBHOOK_SECRET is not configured")
+        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+
+    raw_body = await request.body()
+    if not _verify_razorpay_webhook_signature(raw_body, x_razorpay_signature or "", webhook_secret):
+        logger.warning("Razorpay webhook signature verification failed (signature header missing or invalid)")
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
+    try:
+        event = json.loads(raw_body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        logger.error(f"Razorpay webhook sent unparseable body: {e}")
+        raise HTTPException(status_code=400, detail="Invalid webhook payload")
+
+    event_type = event.get("event", "")
+    payload = event.get("payload", {}) or {}
+    payment_entity = (payload.get("payment") or {}).get("entity") or {}
+    order_entity = (payload.get("order") or {}).get("entity") or {}
+
+    razorpay_order_id = payment_entity.get("order_id") or order_entity.get("id")
+    razorpay_payment_id = payment_entity.get("id")
+    if not razorpay_order_id:
+        # We can't do anything useful without an order id; ack to stop Razorpay retrying.
+        logger.info(f"Razorpay webhook '{event_type}' missing order_id — acking")
+        return {"status": "ignored", "reason": "no order_id"}
+
+    # Resolve the booking via the receipt (we use the order receipt = booking id).
+    receipt = order_entity.get("receipt")
+    booking = None
+    if receipt:
+        booking = await session.get(Booking, receipt)
+    if not booking and razorpay_order_id:
+        # Fallback: look up via the Payment record we wrote from /verify (if any).
+        from app.models.payment import Payment
+        stmt = select(Payment).where(Payment.reference_number == razorpay_order_id)
+        result = await session.execute(stmt)
+        existing_payment = result.scalar_one_or_none()
+        if existing_payment:
+            booking = await session.get(Booking, existing_payment.booking_id)
+
+    if not booking:
+        logger.warning(f"Razorpay webhook '{event_type}' for unknown order {razorpay_order_id} — acking")
+        return {"status": "ignored", "reason": "unknown order"}
+
+    if event_type in ("payment.captured", "order.paid"):
+        if booking.status != BookingStatus.CONFIRMED:
+            booking.status = BookingStatus.CONFIRMED
+            booking.paid_amount = booking.total_amount
+            booking.updated_at = utcnow()
+            from app.models.payment import Payment
+            payment = Payment(
+                hotel_id=booking.hotel_id,
+                booking_id=booking.id,
+                amount=booking.total_amount,
+                payment_method="razorpay",
+                transaction_id=razorpay_payment_id or razorpay_order_id,
+                status="completed",
+                reference_number=razorpay_order_id,
+            )
+            session.add(payment)
+            session.add(booking)
+            await session.commit()
+            logger.info(f"Webhook CONFIRMED booking {booking.id} via {event_type}")
+        return {"status": "ok", "booking_id": booking.id, "event": event_type}
+
+    if event_type in ("payment.failed", "order.payment_failed"):
+        logger.info(f"Webhook {event_type} for booking {booking.id} (no DB change — status remains PENDING)")
+        return {"status": "ok", "event": event_type}
+
+    # Other events (refund.processed, dispute.created, etc.) are acknowledged but
+    # not handled here. Add handlers as needed.
+    return {"status": "ok", "event": event_type, "handled": False}

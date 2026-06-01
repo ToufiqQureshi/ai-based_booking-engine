@@ -1,4 +1,4 @@
-import { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import { useState, useEffect, useRef, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
@@ -73,6 +73,15 @@ function BookingCheckoutInner() {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'online' | 'property'>('online');
+    // Synchronous guard to prevent React batched-setState race when user double-clicks Pay.
+    const submitInFlightRef = useRef(false);
+    // Stable idempotency key for this checkout attempt. Regenerated only after a successful or
+    // permanently-failed submission. Backend uses this to dedupe duplicate POSTs.
+    const idempotencyKeyRef = useRef<string>(
+        (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+            ? crypto.randomUUID()
+            : `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    );
 
     const { register, setValue, watch, handleSubmit, formState } = useForm<CheckoutFormData>();
 
@@ -259,6 +268,22 @@ function BookingCheckoutInner() {
     const nights = (new Date(state.checkOutDate).getTime() - new Date(state.checkInDate).getTime()) / (1000 * 60 * 60 * 24);
 
     const onSubmit = async (data: CheckoutFormData) => {
+        // Synchronous guard: prevents double-submit even before React re-renders the disabled button.
+        if (submitInFlightRef.current) return;
+        submitInFlightRef.current = true;
+
+        // Validate Razorpay configuration BEFORE creating any booking.
+        // Previously fell back to a test key which silently routed prod payments to the dev account.
+        if (paymentMethod === 'online' && !hotel?.settings?.razorpay_key_id) {
+            submitInFlightRef.current = false;
+            toast({
+                variant: 'destructive',
+                title: 'Payment Not Configured',
+                description: 'Online payment is not set up for this property. Please choose "Pay at Property" or contact the hotel.',
+            });
+            return;
+        }
+
         try {
             setIsSubmitting(true);
 
@@ -289,11 +314,14 @@ function BookingCheckoutInner() {
                     price: a.price
                 })) : [],
                 promo_code: appliedPromo || undefined,
-                special_requests: data.specialRequests
+                special_requests: data.specialRequests,
+                idempotency_key: idempotencyKeyRef.current,
             };
 
             // First create the booking
-            const response = await apiClient.post('/public/bookings', bookingPayload) as any;
+            const response = await apiClient.post('/public/bookings', bookingPayload, {
+                headers: { 'Idempotency-Key': idempotencyKeyRef.current },
+            }) as any;
             const bookingId = response.id as string;
 
             if (paymentMethod === 'online') {
@@ -313,18 +341,23 @@ function BookingCheckoutInner() {
                 if (!sdkLoaded) {
                     toast({ variant: 'destructive', title: 'Connection Error', description: 'Failed to load Razorpay SDK. Please check your internet connection.' });
                     setIsSubmitting(false);
+                    submitInFlightRef.current = false;
                     return;
                 }
 
-                // Create Razorpay Order on backend
+                // Create Razorpay Order on backend (idempotent on receipt = bookingId)
                 const orderData = await apiClient.post('/public/razorpay/create-order', {
                     amount: finalTotal,
-                    receipt: bookingId
+                    receipt: bookingId,
+                    idempotency_key: `order_${bookingId}`,
+                }, {
+                    headers: { 'Idempotency-Key': `order_${bookingId}` },
                 }) as any;
 
                 // Open Razorpay Checkout Popup
                 const options = {
-                    key: hotel?.settings?.razorpay_key_id || 'rzp_test_SuLAf6S8NNoGNT',
+                    // No fallback test key — validated above.
+                    key: hotel!.settings.razorpay_key_id as string,
                     amount: orderData.amount as number,
                     currency: orderData.currency as string,
                     name: hotel?.name || 'Hotel Booking',
@@ -332,7 +365,6 @@ function BookingCheckoutInner() {
                     order_id: orderData.id as string,
                     handler: async function (paymentResponse: any) {
                         try {
-                            setIsSubmitting(true);
                             await apiClient.post('/public/razorpay/verify', {
                                 razorpay_order_id: paymentResponse.razorpay_order_id,
                                 razorpay_payment_id: paymentResponse.razorpay_payment_id,
@@ -340,15 +372,33 @@ function BookingCheckoutInner() {
                                 booking_id: bookingId
                             });
                             try { sessionStorage.removeItem(`checkout_state:${hotelSlug}`); } catch { /* ignore */ }
-                            navigate(`/book/${hotelSlug}/confirmation`, { state: { booking: response } });
-                        } catch {
+                            // Reset idempotency key for any future booking from same browser session.
+                            idempotencyKeyRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+                                ? crypto.randomUUID()
+                                : `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+                            navigate(`/book/${hotelSlug}/confirmation`, { state: { booking: response, paymentId: paymentResponse.razorpay_payment_id } });
+                        } catch (verifyErr) {
+                            console.error('Payment verify failed:', verifyErr);
+                            // NOTE: Backend webhook (razorpay/webhook) will also reconcile this.
+                            // Show user that payment was captured but verification is pending.
+                            toast({
+                                variant: 'destructive',
+                                title: 'Payment Verification Pending',
+                                description: `Payment ID ${paymentResponse.razorpay_payment_id}. Your booking will be confirmed automatically; you'll receive a confirmation email shortly.`,
+                            });
+                            // Still navigate to confirmation - server-side webhook will finalize.
+                            navigate(`/book/${hotelSlug}/confirmation`, {
+                                state: { booking: response, paymentId: paymentResponse.razorpay_payment_id, pendingVerification: true },
+                            });
+                        } finally {
                             setIsSubmitting(false);
-                            toast({ variant: 'destructive', title: 'Payment Verification Failed', description: 'Your payment was received but could not be verified. Please contact support with your payment ID.' });
+                            submitInFlightRef.current = false;
                         }
                     },
                     modal: {
                         ondismiss: function () {
                             setIsSubmitting(false);
+                            submitInFlightRef.current = false;
                         }
                     },
                     prefill: {
@@ -365,6 +415,9 @@ function BookingCheckoutInner() {
             } else {
                 // Pay at Property — booking already created, just confirm
                 try { sessionStorage.removeItem(`checkout_state:${hotelSlug}`); } catch { /* ignore */ }
+                idempotencyKeyRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+                    ? crypto.randomUUID()
+                    : `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`;
                 navigate(`/book/${hotelSlug}/confirmation`, { state: { booking: response } });
             }
 
@@ -375,8 +428,13 @@ function BookingCheckoutInner() {
                 title: "Booking Failed",
                 description: "Something went wrong. Please try again.",
             });
+            submitInFlightRef.current = false;
         } finally {
-            setIsSubmitting(false);
+            // Only reset isSubmitting here for the non-Razorpay path or error path.
+            // The Razorpay handler/ondismiss reset it themselves.
+            if (paymentMethod !== 'online') {
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -492,10 +550,17 @@ function BookingCheckoutInner() {
     };
     const themeColor = getNormalizedColor(hotel?.primary_color);
 
-    const ctx = {
+    const ctx = useMemo(() => ({
         hotelSlug: hotelSlug as string, hotel, room, state, setState, register, formState, getNormalizedColor, themeColor, handleEmailBlur, allAddons, currentAddons: state.addons || [], handleToggleAddon, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, paymentMethod, setPaymentMethod, handleCheckout: onSubmit, handleSubmit, nights, hotelPaymentMode, roomsTotal: subtotalAmount - (state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0), addonsTotal: state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0,
         appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount, addonTaxRate, addonTaxAmount, appliedPromo, setAppliedPromo, setDiscountAmount
-    };
+    }), [
+        hotelSlug, hotel, room, state, register, formState, themeColor, allAddons,
+        roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName,
+        promoCode, promoMessage, isValidating, discountAmount, finalTotal,
+        isSubmitting, paymentMethod, nights, hotelPaymentMode,
+        appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount,
+        addonTaxRate, addonTaxAmount, appliedPromo
+    ]);
 
     return (
         <BookingCheckoutContext.Provider value={ctx}>

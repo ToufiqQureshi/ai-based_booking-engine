@@ -3,11 +3,14 @@ Users Router
 Current user profile aur management.
 """
 from fastapi import APIRouter
+import logging
 
 from app.api.deps import CurrentUser, DbSession, get_current_user
 from app.models.user import UserRead, User
 from typing import Annotated
 from fastapi import Depends
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -94,15 +97,21 @@ async def create_team_member(
     if data.role not in [r.value for r in UserRole]:
         try:
             supabase_client.auth.admin.delete_user(supabase_id)
-        except:
-            pass
+        except Exception as cleanup_err:
+            logger.warning(
+                "Supabase auth user %s could not be deleted during rollback (invalid role): %s",
+                supabase_id, cleanup_err,
+            )
         raise HTTPException(status_code=400, detail="Invalid role")
-        
+
     if current_user.role == UserRole.MANAGER and data.role == UserRole.OWNER.value:
         try:
             supabase_client.auth.admin.delete_user(supabase_id)
-        except:
-            pass
+        except Exception as cleanup_err:
+            logger.warning(
+                "Supabase auth user %s could not be deleted during rollback (forbidden role escalation): %s",
+                supabase_id, cleanup_err,
+            )
         raise HTTPException(status_code=403, detail="Managers cannot create owners")
         
     new_user = User(

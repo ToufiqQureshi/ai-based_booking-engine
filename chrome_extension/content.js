@@ -20,21 +20,54 @@ window.addEventListener("EXTENSION_PING", () => {
 window.addEventListener("INITIATE_SCRAPE", (event) => {
     console.log("[Content] INITIATE_SCRAPE received from origin:", window.location.origin);
 
-    // Security: Only allow trusted origins to trigger scraping (RELAXED FOR DEBUGGING)
+    // Security: Only allow trusted origins to trigger scraping. Previously this
+    // check was disabled "for debugging" — leaving the page-wide `INITIATE_SCRAPE`
+    // event unfiltered, so ANY webpage the user visits could exfiltrate auth
+    // tokens and trigger competitor-rate scrapes against arbitrary URLs.
     if (!ALLOWED_ORIGINS.includes(window.location.origin)) {
-        console.warn(`[Content] DEBUG: Allowing origin ${window.location.origin} even though not in list.`);
+        console.warn(`[Content] Blocked INITIATE_SCRAPE from untrusted origin ${window.location.origin}`);
+        window.dispatchEvent(new CustomEvent("SCRAPE_ERROR", {
+            detail: { error: "UNTRUSTED_ORIGIN", origin: window.location.origin }
+        }));
+        return;
     }
 
     if (!event.detail || !event.detail.token) {
         console.warn("[Content] Missing authentication token. Aborting.");
+        window.dispatchEvent(new CustomEvent("SCRAPE_ERROR", {
+            detail: { error: "MISSING_TOKEN" }
+        }));
         return;
     }
 
-    console.log("[Content] Dispatching to background jobs:", event.detail.jobs?.length || 0);
+    // Sanity-check the jobs payload before forwarding it to the background worker.
+    // Without this, a malicious page could pass arbitrary URLs (including internal
+    // network targets like http://localhost:8080) and have the extension scrape them.
+    const jobs = Array.isArray(event.detail.jobs) ? event.detail.jobs : [];
+    const safeJobs = jobs.filter((j) => {
+        if (!j || typeof j.url !== "string") return false;
+        try {
+            const u = new URL(j.url.startsWith("http") ? j.url : `https://${j.url}`);
+            return u.protocol === "https:" || u.protocol === "http:";
+        } catch {
+            return false;
+        }
+    });
+    if (safeJobs.length === 0) {
+        window.dispatchEvent(new CustomEvent("SCRAPE_ERROR", {
+            detail: { error: "NO_VALID_JOBS" }
+        }));
+        return;
+    }
+    if (safeJobs.length !== jobs.length) {
+        console.warn(`[Content] Dropped ${jobs.length - safeJobs.length} invalid job(s) before forwarding`);
+    }
+
+    console.log("[Content] Dispatching to background jobs:", safeJobs.length);
 
     chrome.runtime.sendMessage({
         action: "START_SCRAPE",
-        data: event.detail.jobs,
+        data: safeJobs,
         token: event.detail.token
     }, (response) => {
         if (chrome.runtime.lastError) {

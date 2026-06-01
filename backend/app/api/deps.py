@@ -161,11 +161,13 @@ async def get_current_user(
 
 
     
-    # 4. Master Admin Auto-Promotion (Final Robust Version)
-    admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"]
+    # 4. Master Admin Auto-Promotion - configured via MASTER_ADMIN_EMAILS env var
+    from app.core.config import get_settings
+    settings = get_settings()
+    admin_emails = settings.master_admin_email_set
     effective_email = (email or user.email or "").lower().strip()
-    
-    if effective_email in admin_emails and user.role != "SUPER_ADMIN":
+
+    if admin_emails and effective_email in admin_emails and user.role != "SUPER_ADMIN":
         from app.models.user import UserRole
         user.role = UserRole.SUPER_ADMIN
         session.add(user)

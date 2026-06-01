@@ -5,7 +5,12 @@ Password hashing bhi yahan handle hota hai.
 """
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from jose import jwt, JWTError
+# Migrated from python-jose to PyJWT in P4.7 — jose has known CVEs
+# (CVE-2024-33663 algorithm confusion, CVE-2024-33664 DoS) and is
+# unmaintained. PyJWT is the actively-maintained alternative with
+# the same algorithm support (HS256/RS256/ES256).
+import jwt
+from jwt import InvalidTokenError as JWTError
 from passlib.context import CryptContext
 
 from app.core.config import get_settings

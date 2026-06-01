@@ -14,6 +14,12 @@ from app.models.subscription import Subscription
 from app.models.timeline import BookingTimeline
 from app.models.lead import Lead
 from app.models.audit import AuditLog, SystemBroadcast
+from app.models.social_proof import (
+    HotelSocialProofSettings,
+    HotelSocialProofSettingsRead,
+    HotelSocialProofSettingsUpdate,
+    PublicSocialProofResponse,
+)
 
 __all__ = [
     "User", "UserRole",
@@ -29,5 +35,9 @@ __all__ = [
     "Subscription",
     "BookingTimeline",
     "Lead",
-    "AuditLog", "SystemBroadcast"
+    "AuditLog", "SystemBroadcast",
+    "HotelSocialProofSettings",
+    "HotelSocialProofSettingsRead",
+    "HotelSocialProofSettingsUpdate",
+    "PublicSocialProofResponse",
 ]

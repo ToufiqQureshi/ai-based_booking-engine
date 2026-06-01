@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LogOut, RefreshCw, Sun, Moon, ShieldCheck, BarChart3, Radio } from 'lucide-react';
-import { apiClient } from '@/api/client';
+import { apiClient, tokenStorage } from '@/api/client';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +13,10 @@ import { AnalyticsTab } from '@/components/superadmin/AnalyticsTab';
 import { BroadcastsTab } from '@/components/superadmin/BroadcastsTab';
 import { UsersTab } from '@/components/superadmin/UsersTab';
 import { PlanFeaturesTab } from '@/components/superadmin/PlanFeaturesTab';
+import { toast } from 'sonner';
+
+// Storage key for the super-admin's own token (saved while impersonating a hotel admin).
+const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
 
 export default function SuperAdminDashboard() {
     const { user, logout, isLoading: authLoading } = useAuth();
@@ -36,11 +40,43 @@ export default function SuperAdminDashboard() {
     const impersonateMutation = useMutation({
         mutationFn: (hotelId: string) => apiClient.post(`/superadmin/impersonate/${hotelId}`, {}),
         onSuccess: (data: any) => {
-            const currentToken = localStorage.getItem('token');
-            if (currentToken) localStorage.setItem('superadmin_original_token', currentToken);
-            localStorage.setItem('token', data.access_token);
-            window.location.href = '/';
-        }
+            if (!data?.access_token) {
+                toast.error("Impersonation failed: no access token returned by server");
+                return;
+            }
+            try {
+                // Save the super-admin's CURRENT tokens before swapping. We must use the
+                // canonical token-storage keys (hotel_access_token / hotel_refresh_token)
+                // because the rest of the app reads from those — using 'token' silently broke
+                // every authenticated request.
+                const originalAccess = tokenStorage.getAccessToken();
+                const originalRefresh = tokenStorage.getRefreshToken();
+                if (!originalAccess) {
+                    toast.error("Cannot impersonate: super-admin session is missing");
+                    return;
+                }
+                localStorage.setItem(
+                    SUPERADMIN_ORIGINAL_TOKENS_KEY,
+                    JSON.stringify({ access_token: originalAccess, refresh_token: originalRefresh ?? '' })
+                );
+                tokenStorage.setTokens({
+                    access_token: data.access_token,
+                    refresh_token: data.refresh_token ?? '',
+                    token_type: 'Bearer',
+                    expires_in: data.expires_in ?? 3600,
+                });
+                window.location.href = '/';
+            } catch (err) {
+                // If anything goes wrong, do NOT leave the user stranded with mixed tokens.
+                localStorage.removeItem(SUPERADMIN_ORIGINAL_TOKENS_KEY);
+                tokenStorage.clearTokens();
+                toast.error("Impersonation flow failed — please log in again");
+                console.error('Impersonation token swap failed:', err);
+            }
+        },
+        onError: (err: any) => {
+            toast.error(err?.message || 'Failed to impersonate hotel admin');
+        },
     });
 
     if (authLoading) return <div className="min-h-screen flex items-center justify-center">Loading Admin...</div>;

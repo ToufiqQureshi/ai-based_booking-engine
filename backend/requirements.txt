@@ -23,9 +23,10 @@ openmeteo-requests
 pandas
 passlib[bcrypt]
 pydantic-settings
-pyjwt
+# PyJWT is the actively-maintained replacement for python-jose
+# (jose has CVE-2024-33663 / CVE-2024-33664 and is unmaintained).
+pyjwt>=2.8.0
 pytest-asyncio
-python-jose[cryptography]
 python-multipart
 razorpay
 redis

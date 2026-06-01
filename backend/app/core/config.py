@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     # Razorpay Payment Gateway
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
+    # Webhook secret for verifying X-Razorpay-Signature on incoming webhooks.
+    # Configure this in the Razorpay Dashboard → Webhooks → "Secret" field.
+    # NEVER reuse RAZORPAY_KEY_SECRET for this — it is a separate signing key.
+    RAZORPAY_WEBHOOK_SECRET: Optional[str] = None
 
     # Sentry Error Monitoring
     SENTRY_DSN: Optional[str] = None
@@ -104,6 +108,33 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
+
+    # Master Admin Emails - comma separated list. These get auto-promoted to SUPER_ADMIN.
+    # Empty by default; must be set explicitly via env (MASTER_ADMIN_EMAILS=a@x.com,b@y.com).
+    MASTER_ADMIN_EMAILS: str = ""
+
+    # WhatsApp Meta webhook verification
+    WHATSAPP_VERIFY_TOKEN: Optional[str] = None
+    WHATSAPP_APP_SECRET: Optional[str] = None  # For HMAC signature verification
+
+    @field_validator("MASTER_ADMIN_EMAILS", mode="before")
+    @classmethod
+    def normalize_admin_emails(cls, v) -> str:
+        if v is None:
+            return ""
+        if isinstance(v, list):
+            return ",".join(v)
+        return str(v)
+
+    @property
+    def master_admin_email_set(self) -> set[str]:
+        if not self.MASTER_ADMIN_EMAILS:
+            return set()
+        return {
+            e.strip().lower()
+            for e in self.MASTER_ADMIN_EMAILS.split(",")
+            if e.strip()
+        }
 
     class Config:
         env_file = ".env"

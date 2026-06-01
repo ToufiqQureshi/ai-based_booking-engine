@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
-import { Loader2, Save, Sparkles, AlertCircle } from 'lucide-react';
+import { Loader2, Sparkles, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Hotel } from '@/types/api';
 
 interface AIAgentTabProps {
@@ -15,58 +12,47 @@ interface AIAgentTabProps {
   setHotel: (hotel: Hotel) => void;
 }
 
+/**
+ * AI Agent tab — HOTELIER-FACING.
+ *
+ * Multi-tenant security: this tab is intentionally limited to the
+ * feature on/off toggle. The actual AI provider credentials
+ * (api_key, base_url, model) are configured by the super-admin in
+ * their dashboard and never appear here. Hoteliers see a single
+ * "configured by platform admin" status indicator.
+ */
 export function AIAgentTab({ hotel, setHotel }: AIAgentTabProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
-  // AI Feature Flag (from Hotel model)
+
   const [isAIEnabled, setIsAIEnabled] = useState(hotel.feature_ai_agent || false);
-  
-  // AI Integration Settings
-  const [aiSettings, setAiSettings] = useState({
-    ai_provider: 'groq',
-    ai_api_key: '',
-    ai_model: 'llama-3.1-70b-versatile',
-    ai_base_url: ''
-  });
+  const [hasAIKey, setHasAIKey] = useState(!!(hotel as any).has_ai_key);
+  const [aiProvider, setAiProvider] = useState((hotel as any).ai_provider || '');
+  const [aiModel, setAiModel] = useState((hotel as any).ai_model || '');
 
   useEffect(() => {
-    // Fetch IntegrationSettings
-    apiClient.get('/integration/settings')
-      .then((res: any) => {
-        setAiSettings({
-          ai_provider: res.ai_provider || 'groq',
-          ai_api_key: res.ai_api_key || '',
-          ai_model: res.ai_model || 'llama-3.1-70b-versatile',
-          ai_base_url: res.ai_base_url || ''
-        });
-      })
-      .catch((err) => {
-        console.error("Failed to fetch integration settings", err);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, []);
+    // Re-sync from latest hotel prop
+    setIsAIEnabled(hotel.feature_ai_agent || false);
+    setHasAIKey(!!(hotel as any).has_ai_key);
+    setAiProvider((hotel as any).ai_provider || '');
+    setAiModel((hotel as any).ai_model || '');
+    setIsLoading(false);
+  }, [hotel]);
 
   const handleToggle = async (enabled: boolean) => {
     setIsAIEnabled(enabled);
     try {
       setIsSaving(true);
-      
       const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
         feature_ai_agent: enabled
       });
-      
       setHotel(updatedHotel);
-      
       toast({
         title: enabled ? 'AI Agent Enabled' : 'AI Agent Disabled',
         description: enabled ? 'Your AI Agent is now active.' : 'Your AI Agent has been turned off.',
       });
     } catch (error: any) {
-      // Revert on failure
       setIsAIEnabled(!enabled);
       toast({
         variant: 'destructive',
@@ -113,24 +99,44 @@ export function AIAgentTab({ hotel, setHotel }: AIAgentTabProps) {
             </div>
           </div>
         </CardHeader>
-        
+
         {isAIEnabled && (
           <CardContent className="space-y-6 pt-0 mt-4 border-t">
-            <div className="bg-indigo-50 dark:bg-indigo-950/30 p-4 rounded-lg flex items-start gap-3 mt-4 text-sm text-indigo-800 dark:text-indigo-300">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium mb-1">Configuration Required</p>
-                <p>
-                  To make the AI Agent work, you must configure your AI Provider (like Groq or OpenAI) and provide an API key. 
-                </p>
-                <div className="mt-3">
-                  <a 
-                    href="/integration" 
-                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
-                  >
-                    Go to External Services &gt;
-                  </a>
+            {hasAIKey ? (
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 p-4 rounded-lg flex items-start gap-3 mt-4 text-sm text-emerald-800 dark:text-emerald-300">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium mb-1">AI Provider Configured</p>
+                  <p>
+                    Your AI agent is connected to <strong>{aiProvider || 'the platform default provider'}</strong>
+                    {aiModel ? <> using <code className="bg-emerald-100 dark:bg-emerald-900/50 px-1 rounded">{aiModel}</code></> : null}.
+                    Provider credentials are securely managed by your platform admin.
+                  </p>
                 </div>
+              </div>
+            ) : (
+              <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg flex items-start gap-3 mt-4 text-sm text-amber-800 dark:text-amber-300">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium mb-1">Provider not configured yet</p>
+                  <p>
+                    You've enabled the AI Agent, but no AI provider credentials have been
+                    configured for this property. Your platform admin can set this up — once
+                    configured, this widget will go live.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+              <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium mb-1">Why you don't see API keys here</p>
+                <p>
+                  AI provider credentials are shared across all hotels on your platform
+                  subscription and are managed centrally for security. To request a change,
+                  contact your platform admin.
+                </p>
               </div>
             </div>
           </CardContent>

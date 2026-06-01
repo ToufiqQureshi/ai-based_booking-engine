@@ -1,5 +1,6 @@
-from jose import jwt, jwk
-from jose.utils import base64url_decode
+# Migrated from python-jose to PyJWT in P4.7 — jose has known CVEs and is
+# unmaintained. PyJWT provides equivalent functionality with a similar API.
+import jwt
 import logging
 import httpx
 import json
@@ -16,7 +17,7 @@ async def get_jwks():
     global _jwks_cache
     if _jwks_cache:
         return _jwks_cache
-    
+
     jwks_url = f"{settings.SUPABASE_URL}/auth/v1/.well-known/jwks.json"
     async with httpx.AsyncClient() as client:
         resp = await client.get(jwks_url)
@@ -29,7 +30,7 @@ def get_supabase() -> Client:
 
 async def verify_supabase_token(token: str) -> dict | None:
     """
-    Verifies a Supabase JWT locally. 
+    Verifies a Supabase JWT locally.
     Tries JWKS (ES256) first, then falls back to Secret (HS256).
     """
     try:
@@ -38,17 +39,21 @@ async def verify_supabase_token(token: str) -> dict | None:
         kid = unverified_header.get("kid")
         alg = unverified_header.get("alg")
         logger.info(f"Token Header: alg={alg}, kid={kid}")
-        
+
         # 2. Try JWKS if kid is present and alg is ES256
         if kid and alg == "ES256":
             try:
                 jwks = await get_jwks()
-                rsa_key = next((key for key in jwks["keys"] if key["kid"] == kid), None)
-                
-                if rsa_key:
+                jwk_dict = next((key for key in jwks["keys"] if key["kid"] == kid), None)
+
+                if jwk_dict:
+                    # PyJWT 2.4+ exposes a PyJWK helper that knows how to
+                    # turn a JWK dict into a cryptography key. This is the
+                    # supported way to verify ES256 tokens against a JWKS.
+                    py_jwk = jwt.PyJWK(jwk_dict)
                     payload = jwt.decode(
                         token,
-                        rsa_key,
+                        py_jwk.key,
                         algorithms=["ES256"],
                         options={"verify_aud": False, "verify_signature": True}
                     )
@@ -61,15 +66,15 @@ async def verify_supabase_token(token: str) -> dict | None:
             if secret:
                 try:
                     payload = jwt.decode(
-                        token, 
-                        secret, 
-                        algorithms=["HS256"], 
+                        token,
+                        secret,
+                        algorithms=["HS256"],
                         options={"verify_aud": False, "verify_signature": True}
                     )
                     return payload
                 except Exception as e:
                     logger.debug(f"Secret verification failed for a key: {str(e)}")
-        
+
         # 4. Emergency: Unverified payload (ONLY for debugging, remove in production!)
         if settings.DEBUG:
             logger.warning("Returning UNVERIFIED payload for debugging!")
@@ -78,8 +83,5 @@ async def verify_supabase_token(token: str) -> dict | None:
     except Exception as e:
         logger.error(f"Complete Token Verification failure: {str(e)}")
         return None
-    
-    return None
 
-    
     return None

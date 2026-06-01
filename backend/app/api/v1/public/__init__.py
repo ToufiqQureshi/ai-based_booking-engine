@@ -5,6 +5,7 @@ from .rooms import router as rooms_router
 from .bookings import router as bookings_router
 from .chat import router as chat_router
 from .payments import router as payments_router
+from app.api.v1.social_proof import public_router as social_proof_public_router
 
 router = APIRouter()
 router.include_router(hotels_router)
@@ -12,3 +13,4 @@ router.include_router(rooms_router)
 router.include_router(bookings_router)
 router.include_router(chat_router)
 router.include_router(payments_router)
+router.include_router(social_proof_public_router)

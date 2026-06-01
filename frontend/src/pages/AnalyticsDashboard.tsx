@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useVisibilityInterval } from '@/hooks/useVisibilityInterval';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend, LineChart, Line
@@ -194,33 +195,38 @@ export const AnalyticsDashboard: React.FC = () => {
     [7, 30, 90].filter(d => d !== days).forEach(d => {
       if (!cachedData[d]) fetchAnalytics(d, true);
     });
-
-    const fetchLiveStats = async () => {
-      try {
-        const [activeRes, feedRes] = await Promise.all([
-          api.get<{ active_visitors: number }>('/analytics/live/active'),
-          api.get<any[]>('/analytics/live/feed')
-        ]);
-        setActiveUsers(activeRes.active_visitors);
-        const mappedEvents: LiveEvent[] = feedRes.map(e => ({
-          id: Math.random().toString(),
-          type: (e.event === 'booking_complete' ? 'booking' : e.event === 'search' ? 'search' : 'view') as LiveEvent['type'],
-          message: e.event === 'booking_complete' ? '🎉 New Booking Confirmed' :
-                   e.event === 'search' ? '🔍 Searching availability' :
-                   e.event === 'room_view' ? '👁 Viewing room details' : '📄 New page visit',
-          timestamp: new Date(e.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-          amount: e.metadata?.total_amount
-        }));
-        setLiveEvents(mappedEvents);
-      } catch (err) {
-        console.error('Live feed poll failed', err);
-      }
-    };
-
-    fetchLiveStats();
-    const interval = setInterval(fetchLiveStats, 30000); // Poll every 30s instead of 12s
-    return () => clearInterval(interval);
   }, [days]);
+
+  // Live stats polling: extracted from the useEffect above so we can drive
+  // it with the visibility-aware hook (P2.9) and so it isn't recreated on
+  // every render.
+  const fetchLiveStats = useCallback(async () => {
+    try {
+      const [activeRes, feedRes] = await Promise.all([
+        api.get<{ active_visitors: number }>('/analytics/live/active'),
+        api.get<any[]>('/analytics/live/feed')
+      ]);
+      setActiveUsers(activeRes.active_visitors);
+      const mappedEvents: LiveEvent[] = feedRes.map(e => ({
+        id: Math.random().toString(),
+        type: (e.event === 'booking_complete' ? 'booking' : e.event === 'search' ? 'search' : 'view') as LiveEvent['type'],
+        message: e.event === 'booking_complete' ? '🎉 New Booking Confirmed' :
+                 e.event === 'search' ? '🔍 Searching availability' :
+                 e.event === 'room_view' ? '👁 Viewing room details' : '📄 New page visit',
+        timestamp: new Date(e.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        amount: e.metadata?.total_amount
+      }));
+      setLiveEvents(mappedEvents);
+    } catch (err) {
+      console.error('Live feed poll failed', err);
+    }
+  }, []);
+
+  // Initial fetch on mount / days change.
+  useEffect(() => { fetchLiveStats(); }, [fetchLiveStats, days]);
+
+  // Visibility-aware polling — pauses when the tab is hidden.
+  useVisibilityInterval(fetchLiveStats, 30000);
 
   const handleExport = () => {
     if (!data) return;

@@ -8,6 +8,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Suspense } from 'react';
 import { cn } from '@/lib/utils';
+import { tokenStorage } from '@/api/client';
+import { toast } from 'sonner';
+
+// Storage key for the super-admin's own tokens (saved while impersonating a hotel admin).
+// Mirrors the key written by HotelWorkspace.tsx / SuperAdminDashboard.tsx.
+const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
 
 const DEFAULT_ROLE_PERMISSIONS = {
   OWNER: [
@@ -155,14 +161,38 @@ export function DashboardLayout() {
     );
   }
 
-  const isImpersonating = !!localStorage.getItem('superadmin_original_token');
+  const isImpersonating = !!localStorage.getItem(SUPERADMIN_ORIGINAL_TOKENS_KEY);
 
   const handleExitImpersonation = () => {
-    const originalToken = localStorage.getItem('superadmin_original_token');
-    if (originalToken) {
-      localStorage.setItem('token', originalToken);
-      localStorage.removeItem('superadmin_original_token');
+    const raw = localStorage.getItem(SUPERADMIN_ORIGINAL_TOKENS_KEY);
+    if (!raw) {
+      toast.error("No original session found — please log in again");
+      tokenStorage.clearTokens();
+      window.location.href = '/login';
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as { access_token?: string; refresh_token?: string };
+      if (!parsed.access_token) {
+        throw new Error("Stored original session is missing access_token");
+      }
+      // Restore the super-admin's own tokens via the canonical tokenStorage helper,
+      // then clear the backup slot and bounce back to the superadmin console.
+      tokenStorage.setTokens({
+        access_token: parsed.access_token,
+        refresh_token: parsed.refresh_token ?? '',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+      localStorage.removeItem(SUPERADMIN_ORIGINAL_TOKENS_KEY);
       window.location.href = '/superadmin';
+    } catch (err) {
+      console.error('Failed to exit impersonation cleanly:', err);
+      // Best-effort cleanup so the user is never stuck mid-impersonation.
+      localStorage.removeItem(SUPERADMIN_ORIGINAL_TOKENS_KEY);
+      tokenStorage.clearTokens();
+      toast.error("Could not restore original session — please log in again");
+      window.location.href = '/login';
     }
   };
 
