@@ -2,7 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Globe, MessageCircle, Sparkles, Loader2, Save } from 'lucide-react';
+import { Globe, MessageCircle, Sparkles, Loader2, Save, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { User } from '@/types/api';
 
 interface IntegrationSettings {
     widget_enabled: boolean;
@@ -24,6 +25,7 @@ interface ExternalServicesTabProps {
     onUpdateSettings: (updates: Partial<IntegrationSettings>) => void;
     onSaveSettings: () => Promise<void>;
     onTestAI: () => Promise<void>;
+    user?: User | null;
 }
 
 export const ExternalServicesTab = ({
@@ -33,9 +35,12 @@ export const ExternalServicesTab = ({
     testingAI,
     onUpdateSettings,
     onSaveSettings,
-    onTestAI
+    onTestAI,
+    user
 }: ExternalServicesTabProps) => {
     if (!settings) return null;
+
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
     return (
         <Card>
@@ -77,80 +82,108 @@ export const ExternalServicesTab = ({
                     </h4>
 
                     <div className="grid gap-4">
-                        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-xl mb-2">
-                            <h4 className="text-sm font-bold text-blue-800 dark:text-blue-400 flex items-center gap-2 mb-1">
-                                <Sparkles className="h-4 w-4" /> Recommended Setup
-                            </h4>
-                            <p className="text-[11px] text-blue-700/80 dark:text-blue-400/80 leading-relaxed">
-                                Use <strong>Meta Llama 3.3 70B</strong> on Groq for best performance.
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 text-[10px] bg-background"
-                                    onClick={() => onUpdateSettings({
-                                        ai_provider: 'groq',
-                                        ai_model: 'llama-3.3-70b-versatile',
-                                        ai_base_url: 'https://api.groq.com/openai/v1'
-                                    })}
-                                >
-                                    Auto-Config Groq
-                                </Button>
+                        {!isSuperAdmin ? (
+                            <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 p-6 rounded-xl text-center">
+                                {settings.ai_api_key ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-2">
+                                            <CheckCircle2 className="w-6 h-6" />
+                                        </div>
+                                        <h4 className="font-semibold text-slate-900 dark:text-slate-100">AI Integration Active</h4>
+                                        <p className="text-sm text-muted-foreground max-w-sm">
+                                            Your AI Agent is fully configured and ready to assist your guests. 
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-2">
+                                            <ShieldAlert className="w-6 h-6" />
+                                        </div>
+                                        <h4 className="font-semibold text-slate-900 dark:text-slate-100">AI Not Configured</h4>
+                                        <p className="text-sm text-muted-foreground max-w-sm">
+                                            Please contact Staybooker support to configure your AI Brain and API credentials.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        ) : (
+                            <>
+                                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-4 rounded-xl mb-2">
+                                    <h4 className="text-sm font-bold text-blue-800 dark:text-blue-400 flex items-center gap-2 mb-1">
+                                        <Sparkles className="h-4 w-4" /> Recommended Setup (Super Admin)
+                                    </h4>
+                                    <p className="text-[11px] text-blue-700/80 dark:text-blue-400/80 leading-relaxed">
+                                        Use <strong>Meta Llama 3.3 70B</strong> on Groq for best performance.
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-[10px] bg-background"
+                                            onClick={() => onUpdateSettings({
+                                                ai_provider: 'groq',
+                                                ai_model: 'llama-3.3-70b-versatile',
+                                                ai_base_url: 'https://api.groq.com/openai/v1'
+                                            })}
+                                        >
+                                            Auto-Config Groq
+                                        </Button>
+                                    </div>
+                                </div>
 
-                        <div>
-                            <Label>AI Provider</Label>
-                            <select
-                                className="w-full mt-1 border border-input bg-background px-3 py-2 text-sm rounded-md"
-                                value={settings.ai_provider || 'groq'}
-                                onChange={(e) => onUpdateSettings({ ai_provider: e.target.value })}
-                            >
-                                <option value="groq">Groq Cloud (Fastest)</option>
-                                <option value="openai">OpenAI (Premium)</option>
-                                <option value="deepseek">DeepSeek (Cost Effective)</option>
-                            </select>
-                        </div>
+                                <div>
+                                    <Label>AI Provider</Label>
+                                    <select
+                                        className="w-full mt-1 border border-input bg-background px-3 py-2 text-sm rounded-md"
+                                        value={settings.ai_provider || 'groq'}
+                                        onChange={(e) => onUpdateSettings({ ai_provider: e.target.value })}
+                                    >
+                                        <option value="groq">Groq Cloud (Fastest)</option>
+                                        <option value="openai">OpenAI (Premium)</option>
+                                        <option value="deepseek">DeepSeek (Cost Effective)</option>
+                                    </select>
+                                </div>
 
-                        <div>
-                            <Label>Custom API Key</Label>
-                            <Input
-                                type="password"
-                                placeholder="Paste your key here"
-                                value={settings.ai_api_key || ''}
-                                onChange={(e) => onUpdateSettings({ ai_api_key: e.target.value })}
-                            />
-                        </div>
+                                <div>
+                                    <Label>Custom API Key</Label>
+                                    <Input
+                                        type="password"
+                                        placeholder="Paste your key here"
+                                        value={settings.ai_api_key || ''}
+                                        onChange={(e) => onUpdateSettings({ ai_api_key: e.target.value })}
+                                    />
+                                </div>
 
-                        <div>
-                            <Label>AI Model ID</Label>
-                            <Input
-                                placeholder="e.g. llama-3.3-70b-versatile"
-                                value={settings.ai_model || ''}
-                                onChange={(e) => onUpdateSettings({ ai_model: e.target.value })}
-                            />
-                        </div>
+                                <div>
+                                    <Label>AI Model ID</Label>
+                                    <Input
+                                        placeholder="e.g. llama-3.3-70b-versatile"
+                                        value={settings.ai_model || ''}
+                                        onChange={(e) => onUpdateSettings({ ai_model: e.target.value })}
+                                    />
+                                </div>
 
-                        <div className="pt-2">
-                            <Button
-                                className="w-full gap-2"
-                                variant="secondary"
-                                onClick={onTestAI}
-                                disabled={testingAI || !settings.ai_api_key}
-                            >
-                                {testingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                {testingAI ? 'Testing...' : 'Test AI Connection'}
-                            </Button>
-                        </div>
+                                <div className="pt-2">
+                                    <Button
+                                        className="w-full gap-2"
+                                        variant="secondary"
+                                        onClick={onTestAI}
+                                        disabled={testingAI || !settings.ai_api_key}
+                                    >
+                                        {testingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                        {testingAI ? 'Testing...' : 'Test AI Connection'}
+                                    </Button>
+                                </div>
 
-                        <div className="flex justify-end gap-2 pt-6 border-t border-border/50 mt-4">
-                            {isDirty && <span className="text-xs text-amber-500 flex items-center mr-2 font-medium">⚠️ Unsaved changes</span>}
-                            <Button onClick={onSaveSettings} disabled={isSavingSettings || !isDirty} className="gap-2">
-                                {isSavingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                Save System Settings
-                            </Button>
-                        </div>
+                                <div className="flex justify-end gap-2 pt-6 border-t border-border/50 mt-4">
+                                    {isDirty && <span className="text-xs text-amber-500 flex items-center mr-2 font-medium">⚠️ Unsaved changes</span>}
+                                    <Button onClick={onSaveSettings} disabled={isSavingSettings || !isDirty} className="gap-2">
+                                        {isSavingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                        Save System Settings
+                                    </Button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </CardContent>

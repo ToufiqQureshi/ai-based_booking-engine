@@ -81,6 +81,10 @@ class HotelSettings(SQLModel):
     whatsapp_phone_number_id: Optional[str] = None
     whatsapp_business_account_id: Optional[str] = None
 
+    # Credits & Stats
+    ai_whatsapp_credits: int = 100
+    total_messages_sent: int = 0
+
     # Tax Configurations
     tax_name: str = "GST"
     room_tax_rate: float = 0.0

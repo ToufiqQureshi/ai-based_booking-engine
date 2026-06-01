@@ -50,7 +50,7 @@ interface WidgetCode {
 }
 
 const IntegrationPage = () => {
-    const { hotel, setHotel } = useAuth();
+    const { hotel, setHotel, user } = useAuth();
     const [settings, setSettings] = useState<IntegrationSettings | null>(null);
     const [whatsappConfig, setWhatsappConfig] = useState({
         whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
@@ -278,11 +278,11 @@ const IntegrationPage = () => {
                 </TabsContent>
 
                 <TabsContent value="settings">
-                    <ExternalServicesTab settings={settings} isDirty={isDirty} isSavingSettings={isSavingSettings} testingAI={testingAI} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} onTestAI={testAI} />
+                    <ExternalServicesTab settings={settings} user={user} isDirty={isDirty} isSavingSettings={isSavingSettings} testingAI={testingAI} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} onTestAI={testAI} />
                 </TabsContent>
 
                 <TabsContent value="whatsapp">
-                    <WhatsappTab config={whatsappConfig} isAIEnabled={isAIEnabled} isSavingAI={isSavingAI} isSavingWhatsapp={isSavingWhatsapp} isWhatsappDirty={isWhatsappDirty} onUpdateConfig={updateWhatsappSettings} onSaveWhatsapp={handleSaveWhatsappSettings} onToggleAI={handleToggleAI} onTestWhatsapp={testWhatsapp} testingWhatsapp={testingWhatsapp} hotelHasKey={!!hotel?.settings?.whatsapp_api_key} />
+                    <WhatsappTab config={whatsappConfig} user={user} isAIEnabled={isAIEnabled} isSavingAI={isSavingAI} isSavingWhatsapp={isSavingWhatsapp} isWhatsappDirty={isWhatsappDirty} onUpdateConfig={updateWhatsappSettings} onSaveWhatsapp={handleSaveWhatsappSettings} onToggleAI={handleToggleAI} onTestWhatsapp={testWhatsapp} testingWhatsapp={testingWhatsapp} hotelHasKey={!!hotel?.settings?.whatsapp_api_key} hotel={hotel} />
                 </TabsContent>
             </Tabs>
         </PageShell>

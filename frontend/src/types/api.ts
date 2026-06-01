@@ -121,6 +121,8 @@ export interface HotelSettings {
   whatsapp_api_key?: string;
   whatsapp_phone_number_id?: string;
   whatsapp_business_account_id?: string;
+  ai_whatsapp_credits?: number;
+  total_messages_sent?: number;
   tax_name?: string;
   room_tax_rate?: number;
   room_tax_type?: 'inclusive' | 'exclusive';

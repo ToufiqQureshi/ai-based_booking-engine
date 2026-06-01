@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { MessageCircle, Sparkles, Loader2, Save } from 'lucide-react';
+import { MessageCircle, Sparkles, Loader2, Save, CreditCard, Activity } from 'lucide-react';
+import { User, Hotel } from '@/types/api';
 
 interface WhatsappConfig {
     whatsapp_api_key: string;
@@ -23,6 +24,8 @@ interface WhatsappTabProps {
     onTestWhatsapp: () => Promise<void>;
     testingWhatsapp: boolean;
     hotelHasKey: boolean;
+    user?: User | null;
+    hotel?: Hotel | null;
 }
 
 export const WhatsappTab = ({
@@ -36,8 +39,12 @@ export const WhatsappTab = ({
     onToggleAI,
     onTestWhatsapp,
     testingWhatsapp,
-    hotelHasKey
+    hotelHasKey,
+    user,
+    hotel
 }: WhatsappTabProps) => {
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
     return (
         <div className="space-y-6">
             <Card>
@@ -62,60 +69,104 @@ export const WhatsappTab = ({
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-1">
-                        <div className="space-y-2">
-                            <Label htmlFor="whatsappApiKey">WhatsApp API Key / Access Token</Label>
-                            <Input
-                                id="whatsappApiKey"
-                                type="password"
-                                placeholder="EAAGz..."
-                                value={config.whatsapp_api_key}
-                                onChange={(e) => onUpdateConfig({ whatsapp_api_key: e.target.value })}
-                            />
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
-                                <Input
-                                    id="whatsappPhoneNumberId"
-                                    placeholder="1098485747..."
-                                    value={config.whatsapp_phone_number_id}
-                                    onChange={(e) => onUpdateConfig({ whatsapp_phone_number_id: e.target.value })}
-                                />
+                <CardContent className="space-y-6">
+                    {/* Stats Section for Everyone */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="bg-indigo-50 dark:bg-indigo-950/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/30 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                <Activity className="w-5 h-5" />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>
-                                <Input
-                                    id="whatsappBusinessAccountId"
-                                    placeholder="948475839..."
-                                    value={config.whatsapp_business_account_id}
-                                    onChange={(e) => onUpdateConfig({ whatsapp_business_account_id: e.target.value })}
-                                />
+                            <div>
+                                <p className="text-sm font-medium text-indigo-900 dark:text-indigo-300">Messages Sent</p>
+                                <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">
+                                    {hotel?.settings?.total_messages_sent || 0}
+                                </p>
                             </div>
                         </div>
+                        <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                    <Sparkles className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-emerald-900 dark:text-emerald-300">Available Credits</p>
+                                    <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                                        {hotel?.settings?.ai_whatsapp_credits ?? 0}
+                                    </p>
+                                </div>
+                            </div>
+                            <Button 
+                                variant="default" 
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                                onClick={() => window.location.href = 'mailto:billing@staybooker.ai?subject=Add%20Staybooker%20Credits'}
+                            >
+                                <CreditCard className="w-4 h-4" />
+                                Add Credit
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex justify-end pt-4 border-t border-border/50 gap-2">
-                        <Button
-                            variant="secondary"
-                            onClick={onTestWhatsapp}
-                            disabled={testingWhatsapp || !hotelHasKey}
-                            className="gap-2"
-                        >
-                            {testingWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                            Test Connection
-                        </Button>
-                        <div className="flex-1"></div>
-                        {isWhatsappDirty && (
-                            <span className="text-xs text-amber-500 flex items-center mr-2 font-medium">
-                                ⚠️ Unsaved changes
-                            </span>
-                        )}
-                        <Button onClick={onSaveWhatsapp} disabled={isSavingWhatsapp || !isWhatsappDirty} className="gap-2">
-                            {isSavingWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            Save WhatsApp Settings
-                        </Button>
-                    </div>
+
+                    {/* API Configuration - Super Admin Only */}
+                    {isSuperAdmin && (
+                        <div className="border-t border-border/50 pt-6 mt-4">
+                            <h4 className="text-sm font-semibold mb-4 text-amber-600 dark:text-amber-500 flex items-center gap-2">
+                                🛡️ Super Admin Controls
+                            </h4>
+                            <div className="grid gap-4 md:grid-cols-1">
+                                <div className="space-y-2">
+                                    <Label htmlFor="whatsappApiKey">WhatsApp API Key / Access Token</Label>
+                                    <Input
+                                        id="whatsappApiKey"
+                                        type="password"
+                                        placeholder="EAAGz..."
+                                        value={config.whatsapp_api_key}
+                                        onChange={(e) => onUpdateConfig({ whatsapp_api_key: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
+                                        <Input
+                                            id="whatsappPhoneNumberId"
+                                            placeholder="1098485747..."
+                                            value={config.whatsapp_phone_number_id}
+                                            onChange={(e) => onUpdateConfig({ whatsapp_phone_number_id: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>
+                                        <Input
+                                            id="whatsappBusinessAccountId"
+                                            placeholder="948475839..."
+                                            value={config.whatsapp_business_account_id}
+                                            onChange={(e) => onUpdateConfig({ whatsapp_business_account_id: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex justify-end pt-4 gap-2">
+                                <Button
+                                    variant="secondary"
+                                    onClick={onTestWhatsapp}
+                                    disabled={testingWhatsapp || !hotelHasKey}
+                                    className="gap-2"
+                                >
+                                    {testingWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                    Test Connection
+                                </Button>
+                                <div className="flex-1"></div>
+                                {isWhatsappDirty && (
+                                    <span className="text-xs text-amber-500 flex items-center mr-2 font-medium">
+                                        ⚠️ Unsaved changes
+                                    </span>
+                                )}
+                                <Button onClick={onSaveWhatsapp} disabled={isSavingWhatsapp || !isWhatsappDirty} className="gap-2">
+                                    {isSavingWhatsapp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    Save API Settings
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
