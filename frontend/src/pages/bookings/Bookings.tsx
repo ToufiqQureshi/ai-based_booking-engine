@@ -149,7 +149,13 @@ export function BookingsPage() {
 
   const fetchBookings = () => { refetch(); };
 
+  const [isCancelling, setIsCancelling] = useState<string | null>(null);
+
   const handleCancelBooking = async (bookingId: string) => {
+    if (isCancelling) return;
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+    setIsCancelling(bookingId);
     const queryKey = ['bookings', statusFilter];
     const previousBookings = queryClient.getQueryData<BookingData[]>(queryKey);
     if (previousBookings) {
@@ -157,13 +163,15 @@ export function BookingsPage() {
         old?.map((b) => (b.id === bookingId ? { ...b, status: 'cancelled' } : b))
       );
     }
-    toast({ title: 'Booking Cancelled', description: 'The booking has been cancelled.' });
     try {
       await apiClient.patch(`/bookings/${bookingId}`, { status: 'cancelled' });
       queryClient.invalidateQueries({ queryKey });
+      toast({ title: 'Booking Cancelled', description: 'The booking has been cancelled.' });
     } catch {
       if (previousBookings) queryClient.setQueryData(queryKey, previousBookings);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to cancel booking on server.' });
+    } finally {
+      setIsCancelling(null);
     }
   };
 
@@ -418,9 +426,15 @@ export function BookingsPage() {
                                 {booking.status !== 'cancelled' && (
                                   <DropdownMenuItem
                                     className="text-destructive"
+                                    disabled={isCancelling === booking.id}
                                     onClick={() => handleCancelBooking(booking.id)}
                                   >
-                                    <X className="mr-2 h-4 w-4" />Cancel Booking
+                                    {isCancelling === booking.id ? (
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <X className="mr-2 h-4 w-4" />
+                                    )}
+                                    Cancel Booking
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>

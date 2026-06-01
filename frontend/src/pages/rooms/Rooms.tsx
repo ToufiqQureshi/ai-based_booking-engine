@@ -28,6 +28,7 @@ export function RoomsPage() {
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<RoomType | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<RatePlan | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { toast } = useToast();
 
@@ -65,8 +66,9 @@ export function RoomsPage() {
   };
 
   const handleDeleteRoom = async (roomId: string) => {
-    if (!confirm("Are you sure you want to delete this room type?")) return;
+    if (isDeleting || !confirm("Are you sure you want to delete this room type?")) return;
 
+    setIsDeleting(true);
     try {
       await apiClient.delete(`/rooms/${roomId}`);
       toast({
@@ -80,6 +82,8 @@ export function RoomsPage() {
         title: 'Error',
         description: 'Failed to delete the room category.',
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 

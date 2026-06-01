@@ -13,23 +13,18 @@ from app.api.deps import CurrentUser, DbSession
 from app.models.booking import Booking, BookingStatus
 from app.models.room import RoomType
 from app.core.redis_client import redis_client
+from app.core.cache import cache_response
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 
 @router.get("/stats")
+@cache_response(expire=300, key_prefix="dashboard_stats")
 async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
     """
     Dashboard ke liye summary stats.
     Parallel execution optimized + Redis cache (5 min TTL).
     """
-    cache_key = f"dashboard_stats:{current_user.hotel_id}"
-    try:
-        cached_data = redis_client.get_value(cache_key)
-        if cached_data:
-            return json.loads(cached_data)
-    except Exception as e:
-        print(f"Redis Read Failed or Not Configured: {e}")
 
     today = date.today()
     yesterday = today - timedelta(days=1)
@@ -111,27 +106,14 @@ async def get_dashboard_stats(current_user: CurrentUser, session: DbSession):
         }
     }
 
-    # Cache result in Redis (5 minutes)
-    try:
-        redis_client.set_value(cache_key, json.dumps(data), expire=300)
-    except Exception as e:
-        print(f"Redis Write Failed: {e}")
-
     return data
 
 
 @router.get("/recent-bookings")
+@cache_response(expire=60, key_prefix="dashboard_recent_bookings")
 async def get_recent_bookings(current_user: CurrentUser, session: DbSession):
     """Recent 5 bookings for dashboard — Redis cache (1 min TTL)"""
     from app.models.booking import Guest
-    
-    cache_key = f"dashboard_recent_bookings:{current_user.hotel_id}"
-    try:
-        cached = redis_client.get_value(cache_key)
-        if cached:
-            return json.loads(cached)
-    except Exception:
-        pass
     
     result = await session.execute(
         select(Booking, Guest)
@@ -157,10 +139,4 @@ async def get_recent_bookings(current_user: CurrentUser, session: DbSession):
         booking_dict["guest"] = guest_dict
         response.append(booking_dict)
     
-    # Cache for 1 min (bookings update frequently)
-    try:
-        redis_client.set_value(cache_key, json.dumps(response), expire=60)
-    except Exception:
-        pass
-
     return response

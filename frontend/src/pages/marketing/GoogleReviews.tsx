@@ -621,6 +621,8 @@ export default function GoogleReviews() {
 
   // ── Post Reply ───────────────────────────────────────────────────────────
   const handlePostReply = async (review: Review, replyText: string) => {
+    // Note: 'posting' state is managed per ReviewCard to allow parallel actions,
+    // but the API call itself is executed here.
     await apiClient.post(`/integration/google/reviews/${review.reviewId}/reply`, {
       comment: replyText,
     });

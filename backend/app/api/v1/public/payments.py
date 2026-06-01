@@ -148,16 +148,41 @@ class RazorpayOrderRequest(BaseModel):
     receipt: str
 
 @router.post("/razorpay/create-order")
-async def create_razorpay_order(data: RazorpayOrderRequest):
+async def create_razorpay_order(data: RazorpayOrderRequest, session: DbSession):
     """
     Creates a Razorpay order and returns the order details.
     Amount should be in INR (not paise, we convert it here).
     """
+    # --- Idempotency Check ---
+    # One order per receipt (booking_id) within a short window
+    lock_key = f"razorpay_order_lock:{data.receipt}"
+    try:
+        if redis_client.get_value(lock_key):
+            raise HTTPException(status_code=409, detail="Order creation already in progress.")
+        redis_client.set_value(lock_key, "locked", expire=60)
+    except HTTPException: raise
+    except: pass
+
+    # Fetch hotel to get its specific Razorpay keys if available
+    booking = await session.get(Booking, data.receipt)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found for order creation")
+
+    hotel = await session.get(Hotel, booking.hotel_id)
+    h_settings = hotel.settings if hotel and hotel.settings else {}
+    hotel_key_id = h_settings.get("razorpay_key_id")
+    hotel_key_secret = h_settings.get("razorpay_key_secret")
+
     settings = get_settings()
-    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
-        raise HTTPException(status_code=500, detail="Razorpay is not configured on the server")
+
+    # Use hotel-specific keys or platform fallback
+    key_id = hotel_key_id or settings.RAZORPAY_KEY_ID
+    key_secret = hotel_key_secret or settings.RAZORPAY_KEY_SECRET
+
+    if not key_id or not key_secret:
+        raise HTTPException(status_code=500, detail="Razorpay is not configured for this property")
         
-    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    client = razorpay.Client(auth=(key_id, key_secret))
     
     try:
         # Razorpay expects amount in smallest currency unit (paise for INR)
@@ -187,11 +212,33 @@ async def verify_razorpay_payment(data: RazorpayVerifyRequest, session: DbSessio
     """
     Verifies the Razorpay signature and updates the booking status to CONFIRMED.
     """
+    # --- Idempotency Check ---
+    lock_key = f"payment_verify_lock:{data.booking_id}"
+    try:
+        if redis_client.get_value(lock_key):
+            raise HTTPException(status_code=409, detail="Verification already in progress.")
+        redis_client.set_value(lock_key, "locked", expire=60)
+    except HTTPException: raise
+    except: pass
+
+    # Fetch hotel to get its specific Razorpay keys if available
+    booking = await session.get(Booking, data.booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    hotel = await session.get(Hotel, booking.hotel_id)
+    h_settings = hotel.settings if hotel and hotel.settings else {}
+    hotel_key_id = h_settings.get("razorpay_key_id")
+    hotel_key_secret = h_settings.get("razorpay_key_secret")
+
     settings = get_settings()
-    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
-        raise HTTPException(status_code=500, detail="Razorpay is not configured on the server")
+    key_id = hotel_key_id or settings.RAZORPAY_KEY_ID
+    key_secret = hotel_key_secret or settings.RAZORPAY_KEY_SECRET
+
+    if not key_id or not key_secret:
+        raise HTTPException(status_code=500, detail="Razorpay is not configured for this property")
         
-    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    client = razorpay.Client(auth=(key_id, key_secret))
     
     try:
         # Verify Signature
@@ -202,10 +249,6 @@ async def verify_razorpay_payment(data: RazorpayVerifyRequest, session: DbSessio
         })
         
         # If verification is successful, update booking status
-        booking = await session.get(Booking, data.booking_id)
-        if not booking:
-            raise HTTPException(status_code=404, detail="Booking not found")
-            
         booking.status = BookingStatus.CONFIRMED
         booking.paid_amount = booking.total_amount # Assuming full payment was made online
         booking.updated_at = datetime.utcnow()
@@ -227,7 +270,6 @@ async def verify_razorpay_payment(data: RazorpayVerifyRequest, session: DbSessio
         await session.commit()
         
         # Send confirmation email
-        hotel = await session.get(Hotel, booking.hotel_id)
         guest = await session.get(Guest, booking.guest_id)
         
         if hotel and guest:
@@ -277,4 +319,3 @@ async def verify_razorpay_payment(data: RazorpayVerifyRequest, session: DbSessio
     except Exception as e:
         logger.error(f"Payment verification failed: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error during verification")
-
