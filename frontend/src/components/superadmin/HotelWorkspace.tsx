@@ -98,105 +98,108 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
     return (
         <>
             <Sheet open={true} onOpenChange={(open) => !open && onBack()}>
-                <SheetContent className="w-full sm:max-w-lg bg-background border-l border-border p-0 shadow-2xl flex flex-col h-full overflow-hidden">
-                    <div className="p-6 border-b border-border bg-muted/20 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-50/5 text-indigo-600 rounded-xl flex items-center justify-center border shadow-sm">
-                                <Building2 className="w-5 h-5" />
+                <SheetContent className="w-full sm:max-w-lg bg-slate-950/80 backdrop-blur-xl border-l border-white/10 p-0 shadow-2xl flex flex-col h-full overflow-hidden text-slate-50">
+                    <div className="p-8 border-b border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                                <Building2 className="w-6 h-6" />
                             </div>
                             <div>
-                                <SheetTitle className="text-lg font-black">{hotel.name}</SheetTitle>
-                                <SheetDescription className="text-xs font-mono text-indigo-600 font-bold mt-0.5">slug: {hotel.slug}</SheetDescription>
+                                <SheetTitle className="text-xl font-black text-white">{hotel.name}</SheetTitle>
+                                <SheetDescription className="text-xs font-mono text-indigo-300 mt-1">slug: {hotel.slug}</SheetDescription>
                             </div>
                         </div>
-                        <Badge className={`rounded-lg px-2.5 py-1 font-black text-[9px] uppercase tracking-widest border ${
-                            hotel.is_active ? 'bg-emerald-500/10 text-emerald-700' : 'bg-red-500/10 text-red-700'
+                        <Badge className={`rounded-xl px-3 py-1.5 font-black text-[10px] uppercase tracking-widest border ${
+                            hotel.is_active ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
                         }`}>
                             {hotel.is_active ? 'Active' : 'Locked'}
                         </Badge>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-6">
-                        <Tabs defaultValue="properties" className="w-full space-y-6">
-                            <TabsList className="bg-muted w-full flex rounded-xl p-1">
-                                <TabsTrigger value="properties" className="flex-1 rounded-lg text-[10px] font-bold">Properties</TabsTrigger>
-                                <TabsTrigger value="integrations" className="flex-1 rounded-lg text-[10px] font-bold">Integrations</TabsTrigger>
-                                <TabsTrigger value="danger" className="flex-1 rounded-lg text-[10px] font-bold text-red-600">Danger Zone</TabsTrigger>
+                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        <Tabs defaultValue="properties" className="w-full space-y-8">
+                            <TabsList className="bg-slate-900/50 backdrop-blur-md border border-white/5 w-full flex rounded-2xl p-1.5 shadow-inner">
+                                <TabsTrigger value="properties" className="flex-1 rounded-xl text-[11px] font-bold data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all">Properties</TabsTrigger>
+                                <TabsTrigger value="integrations" className="flex-1 rounded-xl text-[11px] font-bold data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all">Integrations</TabsTrigger>
+                                <TabsTrigger value="danger" className="flex-1 rounded-xl text-[11px] font-bold data-[state=active]:bg-rose-600 data-[state=active]:text-white transition-all">Danger Zone</TabsTrigger>
                             </TabsList>
 
                             {/* PROPERTIES TAB */}
                             <TabsContent value="properties" className="space-y-6 mt-0">
-                                <div className="p-5 border border-border rounded-2xl bg-muted/10 space-y-4">
-                                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Subscription & Plan</h4>
+                                <div className="p-6 border border-white/10 rounded-3xl bg-slate-900/40 backdrop-blur-sm space-y-4 shadow-lg">
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Subscription & Plan</h4>
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <Badge className="font-bold uppercase tracking-wider">{hotel.subscription?.plan || 'Free'}</Badge>
-                                            <p className="text-xs text-muted-foreground mt-1">Status: {hotel.subscription?.status || 'inactive'}</p>
+                                            <Badge className="font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border-indigo-500/30">{hotel.subscription?.plan || 'Free'}</Badge>
+                                            <p className="text-xs text-slate-400 mt-2">Status: <span className="text-slate-200">{hotel.subscription?.status || 'inactive'}</span></p>
                                         </div>
-                                        <Button size="sm" variant="outline" onClick={() => setIsSubModalOpen(true)}>Edit Plan</Button>
+                                        <Button size="sm" variant="outline" className="border-white/20 hover:bg-white/10 hover:text-white transition-all rounded-xl" onClick={() => setIsSubModalOpen(true)}>Edit Plan</Button>
                                     </div>
                                 </div>
 
-                                <div className="p-5 border border-border rounded-2xl bg-muted/10 space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">App Quotas & Limits</h4>
-                                        <Button size="sm" variant="outline" onClick={() => setIsQuotaModalOpen(true)}>Edit Quotas</Button>
+                                <div className="p-6 border border-white/10 rounded-3xl bg-slate-900/40 backdrop-blur-sm space-y-6 shadow-lg">
+                                    <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">App Quotas & Limits</h4>
+                                        <Button size="sm" variant="outline" className="border-white/20 hover:bg-white/10 hover:text-white transition-all rounded-xl" onClick={() => setIsQuotaModalOpen(true)}>Edit Quotas</Button>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <p className="text-xs text-muted-foreground">WA Credits</p>
-                                            <p className="font-bold font-mono text-sm">{hotel.subscription?.whatsapp_credits ?? 0}</p>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-2 bg-slate-950/50 p-4 rounded-2xl border border-white/5">
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">WA Credits</p>
+                                            <p className="font-black font-mono text-xl text-teal-300">{hotel.subscription?.whatsapp_credits ?? 0}</p>
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="text-xs text-muted-foreground">AI Limit</p>
-                                            <p className="font-bold font-mono text-sm">{hotel.subscription?.ai_usage_limit ?? 0}</p>
+                                        <div className="space-y-2 bg-slate-950/50 p-4 rounded-2xl border border-white/5">
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">AI Limit</p>
+                                            <p className="font-black font-mono text-xl text-violet-300">{hotel.subscription?.ai_usage_limit ?? 0}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="p-5 border border-border rounded-2xl bg-muted/10 space-y-4">
-                                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Feature Flags</h4>
-                                    {[
-                                        { id: 'feature_ai_agent', label: 'AI Assistant', desc: 'Enable AI booking assistant' },
-                                        { id: 'feature_guest_bot', label: 'Guest Bot', desc: 'Enable automated guest messaging' },
-                                        { id: 'feature_rate_shopper', label: 'Rate Shopper', desc: 'Enable competitor rate tracking' }
-                                    ].map(feature => (
-                                        <div key={feature.id} className="flex items-center justify-between">
-                                            <div>
-                                                <Label className="font-bold text-sm">{feature.label}</Label>
-                                                <p className="text-[10px] text-muted-foreground">{feature.desc}</p>
+                                <div className="p-6 border border-white/10 rounded-3xl bg-slate-900/40 backdrop-blur-sm space-y-6 shadow-lg">
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-white/10 pb-4">Feature Flags</h4>
+                                    <div className="space-y-6">
+                                        {[
+                                            { id: 'feature_ai_agent', label: 'AI Assistant', desc: 'Enable AI booking assistant' },
+                                            { id: 'feature_guest_bot', label: 'Guest Bot', desc: 'Enable automated guest messaging' },
+                                            { id: 'feature_rate_shopper', label: 'Rate Shopper', desc: 'Enable competitor rate tracking' }
+                                        ].map(feature => (
+                                            <div key={feature.id} className="flex items-center justify-between">
+                                                <div>
+                                                    <Label className="font-bold text-sm text-slate-200">{feature.label}</Label>
+                                                    <p className="text-[11px] text-slate-400 mt-0.5">{feature.desc}</p>
+                                                </div>
+                                                <Switch
+                                                    className="data-[state=checked]:bg-teal-500"
+                                                    checked={hotel[feature.id]}
+                                                    onCheckedChange={(checked) => {
+                                                        apiClient.patch(`/superadmin/hotels/${hotel.id}`, { [feature.id]: checked })
+                                                            .then(() => {
+                                                                toast.success(`${feature.label} updated`);
+                                                                queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+                                                            });
+                                                    }}
+                                                />
                                             </div>
-                                            <Switch
-                                                checked={hotel[feature.id]}
-                                                onCheckedChange={(checked) => {
-                                                    apiClient.patch(`/superadmin/hotels/${hotel.id}`, { [feature.id]: checked })
-                                                        .then(() => {
-                                                            toast.success(`${feature.label} updated`);
-                                                            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
-                                                        });
-                                                }}
-                                            />
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             </TabsContent>
 
                             {/* INTEGRATIONS TAB */}
                             <TabsContent value="integrations" className="space-y-6 mt-0">
-                                <div className="space-y-4">
+                                <div className="p-6 border border-white/10 rounded-3xl bg-slate-900/40 backdrop-blur-sm space-y-6 shadow-lg">
                                     <div className="space-y-2">
-                                        <Label className="text-xs font-bold flex items-center gap-2"><Key className="w-3 h-3"/> OpenAI API Key</Label>
-                                        <Input type="password" value={openAiKey} onChange={e => setOpenAiKey(e.target.value)} placeholder="sk-..." />
+                                        <Label className="text-xs font-bold text-slate-300 flex items-center gap-2"><Key className="w-4 h-4 text-violet-400"/> OpenAI API Key</Label>
+                                        <Input type="password" value={openAiKey} onChange={e => setOpenAiKey(e.target.value)} placeholder="sk-..." className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 focus-visible:ring-violet-500" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-xs font-bold flex items-center gap-2"><MessageSquare className="w-3 h-3"/> WA Admin Phone</Label>
-                                        <Input value={waAdminPhone} onChange={e => setWaAdminPhone(e.target.value)} placeholder="+1234567890" />
+                                        <Label className="text-xs font-bold text-slate-300 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-teal-400"/> WA Admin Phone</Label>
+                                        <Input value={waAdminPhone} onChange={e => setWaAdminPhone(e.target.value)} placeholder="+1234567890" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 focus-visible:ring-teal-500" />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-xs font-bold flex items-center gap-2"><Webhook className="w-3 h-3"/> Custom Webhook URL</Label>
-                                        <Input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://..." />
+                                        <Label className="text-xs font-bold text-slate-300 flex items-center gap-2"><Webhook className="w-4 h-4 text-indigo-400"/> Custom Webhook URL</Label>
+                                        <Input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://..." className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 focus-visible:ring-indigo-500" />
                                     </div>
-                                    <Button className="w-full font-bold" onClick={() => saveKeysMutation.mutate({ 
+                                    <Button className="w-full font-bold h-12 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-500/25 transition-all" onClick={() => saveKeysMutation.mutate({ 
                                         openai_api_key: openAiKey, 
                                         whatsapp_admin_phone: waAdminPhone,
                                         webhook_url: webhookUrl 
@@ -208,19 +211,20 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
 
                             {/* DANGER ZONE TAB */}
                             <TabsContent value="danger" className="space-y-6 mt-0">
-                                <div className="border border-red-200 bg-red-50/30 p-6 rounded-2xl space-y-6">
-                                    <div className="flex items-center gap-3 text-red-600 mb-2">
+                                <div className="border border-rose-500/20 bg-rose-500/5 backdrop-blur-sm p-6 rounded-3xl space-y-6 shadow-[inset_0_0_20px_rgba(244,63,94,0.05)]">
+                                    <div className="flex items-center gap-3 text-rose-400 mb-2 border-b border-rose-500/10 pb-4">
                                         <AlertTriangle className="w-6 h-6" />
                                         <h3 className="font-black text-lg">Danger Zone</h3>
                                     </div>
 
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="font-bold text-sm">Account Status</p>
-                                            <p className="text-xs text-muted-foreground max-w-[200px]">Lock out all users of this property.</p>
+                                            <p className="font-bold text-sm text-slate-200">Account Status</p>
+                                            <p className="text-xs text-slate-400 max-w-[200px] mt-1">Lock out all users of this property.</p>
                                         </div>
                                         <Button 
                                             variant={hotel.is_active ? "destructive" : "default"}
+                                            className="rounded-xl shadow-lg"
                                             onClick={() => {
                                                 apiClient.patch(`/superadmin/hotels/${hotel.id}`, { is_active: !hotel.is_active })
                                                     .then(() => {
@@ -234,14 +238,14 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                                         </Button>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-4 border-t border-red-100">
+                                    <div className="flex items-center justify-between pt-4 border-t border-rose-500/10">
                                         <div>
-                                            <p className="font-bold text-sm">Wipe Hotel Data</p>
-                                            <p className="text-xs text-muted-foreground max-w-[200px]">Delete all reservations, guests, and logs.</p>
+                                            <p className="font-bold text-sm text-slate-200">Wipe Hotel Data</p>
+                                            <p className="text-xs text-slate-400 max-w-[200px] mt-1">Delete all reservations, guests, and logs.</p>
                                         </div>
                                         <Button 
                                             variant="outline" 
-                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                            className="text-rose-400 border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 rounded-xl"
                                             onClick={() => {
                                                 if(confirm(`Are you sure you want to WIPE all operational data for ${hotel.name}?`)) {
                                                     wipeDataMutation.mutate();
@@ -253,13 +257,14 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                                         </Button>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-4 border-t border-red-100">
+                                    <div className="flex items-center justify-between pt-4 border-t border-rose-500/10">
                                         <div>
-                                            <p className="font-bold text-sm text-red-700">Delete Property</p>
-                                            <p className="text-xs text-red-600/80 max-w-[200px]">Permanently remove this hotel and all its data.</p>
+                                            <p className="font-bold text-sm text-rose-500">Delete Property</p>
+                                            <p className="text-xs text-rose-500/70 max-w-[200px] mt-1">Permanently remove this hotel and all its data.</p>
                                         </div>
                                         <Button 
                                             variant="destructive"
+                                            className="rounded-xl bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-600/25"
                                             onClick={() => {
                                                 const code = Math.floor(1000 + Math.random() * 9000);
                                                 const res = prompt(`Type ${code} to permanently delete ${hotel.name}`);
@@ -277,14 +282,14 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                         </Tabs>
                     </div>
 
-                    <div className="p-6 border-t border-border bg-background">
+                    <div className="p-6 border-t border-white/10 bg-slate-950/80 backdrop-blur-md">
                         <Button
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 rounded-xl text-sm"
+                            className="w-full bg-teal-500 hover:bg-teal-400 text-slate-950 font-black h-14 rounded-2xl text-sm shadow-[0_0_20px_rgba(20,184,166,0.3)] transition-all"
                             onClick={() => impersonateMutation.mutate()}
                             disabled={impersonateMutation.isPending}
                         >
-                            <UserCheck className="w-4 h-4 mr-2" />
-                            Impersonate Hotel Admin
+                            <UserCheck className="w-5 h-5 mr-3" />
+                            IMPERSONATE HOTEL ADMIN
                         </Button>
                     </div>
                 </SheetContent>
