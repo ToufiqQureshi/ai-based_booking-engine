@@ -68,3 +68,30 @@ def safe_background(
             logger.exception("Background task '%s' failed", name)
 
     bg.add_task(_runner())
+
+async def log_timeline_task(
+    booking_id: str,
+    event_type: str,
+    message: str,
+    old_value: Optional[str] = None,
+    new_value: Optional[str] = None,
+    changed_by: str = "system",
+) -> None:
+    """Background task to log events to the booking timeline."""
+    from app.core.database import async_session
+    from app.models.timeline import BookingTimeline
+
+    async with async_session() as session:
+        try:
+            timeline_event = BookingTimeline(
+                booking_id=booking_id,
+                event_type=event_type,
+                old_value=old_value,
+                new_value=new_value,
+                message=message,
+                changed_by=changed_by
+            )
+            session.add(timeline_event)
+            await session.commit()
+        except Exception:
+            logger.exception("Failed to log timeline event for booking %s", booking_id)
