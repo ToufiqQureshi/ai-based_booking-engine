@@ -278,6 +278,69 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                     </CardContent>
                 </Card>
             )}
+            {tab === 'features' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Feature Flags</CardTitle>
+                        <CardDescription>Enable or disable premium features for this hotel.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {[
+                            { id: 'feature_ai_agent', label: 'AI Assistant', desc: 'Enable AI booking assistant' },
+                            { id: 'feature_guest_bot', label: 'Guest Bot', desc: 'Enable automated guest messaging' },
+                            { id: 'feature_rate_shopper', label: 'Rate Shopper', desc: 'Enable competitor rate tracking' }
+                        ].map(feature => (
+                            <div key={feature.id} className="flex items-center justify-between p-4 bg-muted/20 border rounded-2xl">
+                                <div className="space-y-0.5">
+                                    <Label className="text-base font-bold">{feature.label}</Label>
+                                    <p className="text-xs text-muted-foreground">{feature.desc}</p>
+                                </div>
+                                <Switch
+                                    checked={hotel[feature.id]}
+                                    onCheckedChange={(checked) => {
+                                        apiClient.patch(`/superadmin/hotels/${hotel.id}`, { [feature.id]: checked })
+                                            .then(() => {
+                                                toast.success(`${feature.label} ${checked ? 'enabled' : 'disabled'}`);
+                                                queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+                                            });
+                                    }}
+                                    className="data-[state=checked]:bg-indigo-600"
+                                />
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
+
+            {tab === 'permissions' && (
+                <Card className="border-red-200">
+                    <CardHeader>
+                        <CardTitle className="text-red-600">Danger Zone</CardTitle>
+                        <CardDescription>Critical account actions and status control.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center justify-between p-4 bg-red-50/50 border border-red-100 rounded-2xl">
+                            <div className="space-y-0.5">
+                                <Label className="text-base font-bold text-red-900">Account Status</Label>
+                                <p className="text-xs text-red-600/80">Disable to lock out all users of this hotel.</p>
+                            </div>
+                            <Button 
+                                variant={hotel.is_active ? "destructive" : "default"}
+                                onClick={() => {
+                                    apiClient.patch(`/superadmin/hotels/${hotel.id}`, { is_active: !hotel.is_active })
+                                        .then(() => {
+                                            toast.success(`Hotel account ${!hotel.is_active ? 'enabled' : 'disabled'}`);
+                                            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+                                        });
+                                }}
+                            >
+                                {hotel.is_active ? <XCircle className="w-4 h-4 mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
+                                {hotel.is_active ? 'Disable Account' : 'Enable Account'}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 };
