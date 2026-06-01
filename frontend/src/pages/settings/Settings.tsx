@@ -33,6 +33,7 @@ import { PoliciesTab } from '@/components/settings/PoliciesTab';
 import { TeamList } from '@/components/settings/TeamList';
 import { PageShell } from '@/components/layout/PageShell';
 import { AIAgentTab } from '@/components/settings/AIAgentTab';
+import { GoogleHotelAdsTab } from '@/components/settings/GoogleHotelAdsTab';
 
 export function SettingsPage() {
   const { hotel, user, setHotel } = useAuth();
@@ -218,6 +219,13 @@ export function SettingsPage() {
             <Image className="h-4 w-4" />
             <span className="font-medium">Property Gallery</span>
           </TabsTrigger>
+          <TabsTrigger 
+            value="google-hotel-ads" 
+            className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+          >
+            <Globe className="h-4 w-4" />
+            <span className="font-medium">Google Hotel Ads</span>
+          </TabsTrigger>
         </TabsList>
 
         <div className="flex-1">
@@ -313,6 +321,9 @@ export function SettingsPage() {
               }}
             />
           </TabsContent>
+
+          {/* Google Hotel Ads Settings */}
+          <GoogleHotelAdsTab hotel={hotel} />
         </div>
       </Tabs>
     </PageShell>

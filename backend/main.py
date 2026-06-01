@@ -30,7 +30,7 @@ from app.core.database import init_db
 from app.core.limiter import limiter, _rate_limit_exceeded_handler, RateLimitExceeded
 
 # Import routers
-from app.api.v1 import auth, users, hotels, rooms, bookings, dashboard, rates, payments, availability, reports, public, integration, upload, addons, channel_manager, amenities, properties, competitors, admin, agent, promos, notifications, analytics, leads, superadmin
+from app.api.v1 import auth, users, hotels, rooms, bookings, dashboard, rates, payments, availability, reports, public, integration, upload, addons, channel_manager, amenities, properties, competitors, admin, agent, promos, notifications, analytics, leads, superadmin, google_hotel_ads
 
 
 
@@ -177,6 +177,7 @@ app.include_router(notifications.router, prefix=API_V1_PREFIX, tags=["Notificati
 app.include_router(analytics.router, prefix=API_V1_PREFIX + "/analytics", tags=["Analytics"])
 app.include_router(leads.router, prefix=API_V1_PREFIX + "/leads", tags=["Leads"])
 app.include_router(superadmin.router, prefix=API_V1_PREFIX)
+app.include_router(google_hotel_ads.router, prefix=API_V1_PREFIX)
 
 
 # Root endpoint
