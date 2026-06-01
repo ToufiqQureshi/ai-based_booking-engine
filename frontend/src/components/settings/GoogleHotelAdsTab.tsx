@@ -35,7 +35,7 @@ export function GoogleHotelAdsTab({ hotel }: GoogleHotelAdsTabProps) {
       setIsSaving(true);
       await apiClient.put('/integration/settings', {
         google_hotel_ads_enabled: settings?.google_hotel_ads_enabled,
-        google_hotel_center_account_id: settings?.google_hotel_center_account_id
+        google_hotel_center_id: settings?.google_hotel_center_id
       });
       toast({ title: 'Settings saved', description: 'Google Hotel Ads settings updated.' });
     } catch (error: any) {
@@ -87,8 +87,8 @@ export function GoogleHotelAdsTab({ hotel }: GoogleHotelAdsTabProps) {
                 <Label>Google Hotel Center Account ID</Label>
                 <Input 
                   placeholder="e.g. 123456789" 
-                  value={settings.google_hotel_center_account_id || ''}
-                  onChange={(e) => handleUpdate('google_hotel_center_account_id', e.target.value)}
+                  value={settings.google_hotel_center_id || ''}
+                  onChange={(e) => handleUpdate('google_hotel_center_id', e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">The ID of your Google Hotel Center account.</p>
               </div>
