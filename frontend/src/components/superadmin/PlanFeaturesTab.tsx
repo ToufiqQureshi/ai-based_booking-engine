@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { Search, Loader2, Building2, Plus, Shield, Users, Mail, Phone, Calendar, Globe, Trash2, CheckCircle2, Lock, Tag, MapPin, Edit, Settings2, BarChart3, Radio, RefreshCw, Smartphone, Key, Star, LayoutGrid, CheckSquare, XSquare, MessageSquare, ListFilter, PlayCircle, Filter, Download, Zap, UploadCloud, ChevronRight, Save, LayoutTemplate, Activity, AlertTriangle, ShieldCheck, FileText, Send, Eye, X, Crown, Clock, Copy, ArrowRight, UserCheck, CheckCircle, SlidersHorizontal, Settings } from 'lucide-react';
@@ -15,27 +15,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from '@/components/ui/separator';
 import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+import { toast } from 'sonner';
 
-export function PlanFeaturesTab(props: any) {
-  const {
-    user, logout, authLoading, theme, toggleTheme, selectedWorkspaceHotel,
-    setSelectedWorkspaceHotel, workspaceTab, setWorkspaceTab, workspacePermissions, setWorkspacePermissions, editedPlanFeatures,
-    setEditedPlanFeatures, searchQuery, setSearchQuery, userSearchQuery, setUserSearchQuery, selectedQuotaHotel,
-    setSelectedQuotaHotel, whatsappCredits, setWhatsappCredits, smsCredits, setSmsCredits, aiUsageLimit,
-    setAiUsageLimit, broadcastTitle, setBroadcastTitle, broadcastMessage, setBroadcastMessage, broadcastType,
-    setBroadcastType, isAddUserOpen, setIsAddUserOpen, addUserEmail, setAddUserEmail, addUserName,
-    setAddUserName, addUserPassword, setAddUserPassword, addUserRole, setAddUserRole, statusFilter,
-    setStatusFilter, planFilter, setPlanFilter, featureFilterAI, setFeatureFilterAI, featureFilterBot,
-    setFeatureFilterBot, featureFilterRates, setFeatureFilterRates, detailHotel, setDetailHotel, selectedSubHotel,
-    setSelectedSubHotel, subPlanName, setSubPlanName, subStatus, setSubStatus, subEndDate,
-    setSubEndDate, auditSearchQuery, setAuditSearchQuery, auditActionFilter, setAuditActionFilter, toast,
-    queryClient, hotels, isLoading, refetch, users, isLoadingUsers,
-    auditLogs, isLoadingAudit, refetchAudit, broadcasts, isLoadingBroadcasts, refetchBroadcasts,
-    planFeatures, isLoadingPlanFeatures, refetchPlanFeatures, activeDetailHotel, updateWorkspacePermissionsMutation, toggleFeatureMutation,
-    updateQuotaMutation, deletePropertyMutation, toggleSubMutation, handleSaveEditedPlanFeatures, savePlanFeaturesMutation, createBroadcastMutation,
-    deleteBroadcastMutation, addUserMutation, updateUserStatusMutation, toggleUserStatusMutation, deleteUserMutation, getInitials,
-    filteredHotels, filteredAuditLogs, uniqueAuditActions
-  } = props;
+export function PlanFeaturesTab() {
+    const queryClient = useQueryClient();
+    const [editedPlanFeatures, setEditedPlanFeatures] = useState<Record<string, Record<string, boolean>>>({});
+
+    const { data: planFeatures = {}, isLoading: isLoadingPlanFeatures } = useQuery<Record<string, Record<string, boolean>>>({
+        queryKey: ['superadmin-plan-features'],
+        queryFn: () => apiClient.get('/superadmin/plan-features')
+    });
+
+    useEffect(() => {
+        if (planFeatures && Object.keys(planFeatures).length > 0) {
+            setEditedPlanFeatures(planFeatures);
+        }
+    }, [planFeatures]);
+
+    const updatePlanFeaturesMutation = useMutation({
+        mutationFn: (data: Record<string, Record<string, boolean>>) =>
+            apiClient.post('/superadmin/plan-features', data),
+        onSuccess: () => {
+            toast.success("Global plan-to-feature matrix saved and active properties synced.");
+            queryClient.invalidateQueries({ queryKey: ['superadmin-plan-features'] });
+        },
+        onError: (err: any) => {
+            toast.error(err.response?.data?.detail || "Failed to update plan features matrix.");
+        }
+    });
+
   return (
     <>
 <TabsContent value="plan-features" className="mt-0">

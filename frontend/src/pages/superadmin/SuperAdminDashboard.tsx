@@ -11,6 +11,8 @@ import { HotelsTab } from '@/components/superadmin/HotelsTab';
 import { HotelWorkspace } from '@/components/superadmin/HotelWorkspace';
 import { AnalyticsTab } from '@/components/superadmin/AnalyticsTab';
 import { BroadcastsTab } from '@/components/superadmin/BroadcastsTab';
+import { UsersTab } from '@/components/superadmin/UsersTab';
+import { PlanFeaturesTab } from '@/components/superadmin/PlanFeaturesTab';
 
 export default function SuperAdminDashboard() {
     const { user, logout, isLoading: authLoading } = useAuth();
@@ -80,6 +82,8 @@ export default function SuperAdminDashboard() {
                         <Tabs defaultValue="hotels" className="w-full">
                             <TabsList className="bg-muted p-1 rounded-xl">
                                 <TabsTrigger value="hotels" className="rounded-lg font-bold px-6">Properties</TabsTrigger>
+                                <TabsTrigger value="users" className="rounded-lg font-bold px-6">Users</TabsTrigger>
+                                <TabsTrigger value="plan-features" className="rounded-lg font-bold px-6">Plan Features</TabsTrigger>
                                 <TabsTrigger value="analytics" className="rounded-lg font-bold px-6">Analytics</TabsTrigger>
                                 <TabsTrigger value="broadcasts" className="rounded-lg font-bold px-6">Broadcasts</TabsTrigger>
                                 <TabsTrigger value="audit" className="rounded-lg font-bold px-6">Audit Trail</TabsTrigger>
@@ -106,6 +110,8 @@ export default function SuperAdminDashboard() {
                                 />
                             </TabsContent>
                             
+                            <UsersTab />
+                            <PlanFeaturesTab />
                             <AnalyticsTab hotels={hotels} users={users} onSelectHotel={setSelectedHotel} />
                             <BroadcastsTab />
 

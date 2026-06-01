@@ -16,26 +16,31 @@ import { Separator } from '@/components/ui/separator';
 import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 
-export function AuditLogsTab(props: any) {
-  const {
-    user, logout, authLoading, theme, toggleTheme, selectedWorkspaceHotel,
-    setSelectedWorkspaceHotel, workspaceTab, setWorkspaceTab, workspacePermissions, setWorkspacePermissions, editedPlanFeatures,
-    setEditedPlanFeatures, searchQuery, setSearchQuery, userSearchQuery, setUserSearchQuery, selectedQuotaHotel,
-    setSelectedQuotaHotel, whatsappCredits, setWhatsappCredits, smsCredits, setSmsCredits, aiUsageLimit,
-    setAiUsageLimit, broadcastTitle, setBroadcastTitle, broadcastMessage, setBroadcastMessage, broadcastType,
-    setBroadcastType, isAddUserOpen, setIsAddUserOpen, addUserEmail, setAddUserEmail, addUserName,
-    setAddUserName, addUserPassword, setAddUserPassword, addUserRole, setAddUserRole, statusFilter,
-    setStatusFilter, planFilter, setPlanFilter, featureFilterAI, setFeatureFilterAI, featureFilterBot,
-    setFeatureFilterBot, featureFilterRates, setFeatureFilterRates, detailHotel, setDetailHotel, selectedSubHotel,
-    setSelectedSubHotel, subPlanName, setSubPlanName, subStatus, setSubStatus, subEndDate,
-    setSubEndDate, auditSearchQuery, setAuditSearchQuery, auditActionFilter, setAuditActionFilter, toast,
-    queryClient, hotels, isLoading, refetch, users, isLoadingUsers,
-    auditLogs, isLoadingAudit, refetchAudit, broadcasts, isLoadingBroadcasts, refetchBroadcasts,
-    planFeatures, isLoadingPlanFeatures, refetchPlanFeatures, activeDetailHotel, updateWorkspacePermissionsMutation, toggleFeatureMutation,
-    updateQuotaMutation, deletePropertyMutation, toggleSubMutation, handleSaveEditedPlanFeatures, savePlanFeaturesMutation, createBroadcastMutation,
-    deleteBroadcastMutation, addUserMutation, updateUserStatusMutation, toggleUserStatusMutation, deleteUserMutation, getInitials,
-    filteredHotels, filteredAuditLogs, uniqueAuditActions
-  } = props;
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+
+export function AuditLogsTab() {
+    const [auditSearchQuery, setAuditSearchQuery] = React.useState('');
+    const [auditActionFilter, setAuditActionFilter] = React.useState('all');
+
+    const { data: auditLogs = [], isLoading: isLoadingAudit, refetch: refetchAudit } = useQuery<any[]>({
+        queryKey: ['superadmin-audit-logs'],
+        queryFn: () => apiClient.get('/superadmin/audit-logs'),
+    });
+
+    const filteredAuditLogs = auditLogs.filter(log => {
+        const matchesSearch =
+            log.description.toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
+            log.user_email.toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
+            log.action.toLowerCase().includes(auditSearchQuery.toLowerCase());
+
+        const matchesAction = auditActionFilter === 'all' || log.action.toUpperCase() === auditActionFilter;
+
+        return matchesSearch && matchesAction;
+    });
+
+    const uniqueAuditActions = Array.from(new Set(auditLogs.map(log => log.action.toUpperCase())));
+
   return (
     <>
 <TabsContent value="audit" className="mt-0">
