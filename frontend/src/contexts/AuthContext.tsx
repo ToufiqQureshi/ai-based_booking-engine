@@ -98,11 +98,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           console.warn('Backend unreachable on init, using Supabase session fallback:', err);
           // Set minimal user from session — don't sign out
+          const admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"];
+          const userEmail = session.user.email?.toLowerCase() || '';
+          const fallbackRole = admin_emails.includes(userEmail) ? 'SUPER_ADMIN' : 'OWNER';
           setUser({
             id: session.user.id,
             email: session.user.email || '',
             name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: 'OWNER' as any,
+            role: fallbackRole as any,
             hotel_id: '',
             created_at: session.user.created_at,
             updated_at: session.user.updated_at || session.user.created_at,
