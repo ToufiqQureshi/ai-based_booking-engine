@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import select, func, case, or_
 import json
 from datetime import datetime, timedelta, timezone
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import DbSession, CurrentUser
 from app.models.analytics import AnalyticsSession, AnalyticsEvent, SessionStartRequest, SessionPingRequest, EventTrackRequest
@@ -226,7 +226,7 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         session_q = select(AnalyticsSession).where(
             AnalyticsSession.hotel_id == hotel_id,
             AnalyticsSession.started_at >= start_date_naive
-        ).options(joinedload(AnalyticsSession.events))
+        ).options(selectinload(AnalyticsSession.events))
         sessions = (await session.execute(session_q)).scalars().unique().all()
         
         booking_q = select(Booking).where(
