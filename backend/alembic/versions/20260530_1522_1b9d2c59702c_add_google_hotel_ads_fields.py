@@ -19,11 +19,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add feature_google_ads to hotels table
-    op.add_column('hotels', sa.Column('feature_google_ads', sa.Boolean(), server_default='false', nullable=False))
+    # feature_google_ads already exists in production database
 
-    # Add Google Hotel Ads fields to integration_settings table
-    op.add_column('integration_settings', sa.Column('google_hotel_ads_enabled', sa.Boolean(), server_default='false', nullable=False))
+    # google_hotel_ads_enabled already exists
     op.add_column('integration_settings', sa.Column('google_hotel_center_id', sa.String(), nullable=True))
     op.add_column('integration_settings', sa.Column('google_ads_account_id', sa.String(), nullable=True))
     op.add_column('integration_settings', sa.Column('google_ads_last_ari_sync', sa.DateTime(), nullable=True))
@@ -35,5 +33,5 @@ def downgrade() -> None:
     op.drop_column('integration_settings', 'google_ads_last_ari_sync')
     op.drop_column('integration_settings', 'google_ads_account_id')
     op.drop_column('integration_settings', 'google_hotel_center_id')
-    op.drop_column('integration_settings', 'google_hotel_ads_enabled')
-    op.drop_column('hotels', 'feature_google_ads')
+    # op.drop_column('integration_settings', 'google_hotel_ads_enabled')
+    pass
