@@ -138,19 +138,21 @@ async def get_current_user(
             await session.flush()
             
             # User banao
+            from app.models.user import UserRole
             user = User(
                 id=str(uuid.uuid4()),
                 email=email,
                 name=name,
                 hashed_password="SUPABASE_AUTH",
-                role="owner",
+                role=UserRole.OWNER,
                 hotel_id=hotel.id,
                 supabase_id=supabase_id,
                 is_active=True
             )
             session.add(user)
             await session.commit()
-            await session.refresh(user)
+            # Explicitly load hotel to avoid MissingGreenlet error in get_current_active_user
+            await session.refresh(user, ["hotel"])
             logger.info(f"Auto-registration successful for {email}")
         except Exception as e:
             logger.error(f"Auto-Sync Error for {email}: {str(e)}")

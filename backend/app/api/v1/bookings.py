@@ -303,10 +303,6 @@ async def create_booking(
     
     # Extract multi-tenant settings
     h_settings = hotel.settings if hotel and hotel.settings else {}
-    sender_email = h_settings.get("email_sender_address")
-    sender_name = h_settings.get("email_sender_name")
-    cc_list = h_settings.get("email_cc_list")
-    signature = h_settings.get("email_signature")
     
     background_tasks.add_task(
         email_service.send_guest_booking_confirmation,
@@ -316,9 +312,7 @@ async def create_booking(
         check_in=str(booking.check_in),
         check_out=str(booking.check_out),
         total_amount=booking.total_amount,
-        sender_email=sender_email,
-        sender_name=sender_name,
-        signature=signature
+        hotel_settings=h_settings
     )
     
     # Send to hotel (can get from hotel contact or settings, fallback to global)
@@ -331,9 +325,7 @@ async def create_booking(
         check_in=str(booking.check_in),
         check_out=str(booking.check_out),
         total_amount=booking.total_amount,
-        cc_list=cc_list,
-        sender_email=sender_email,
-        sender_name=sender_name
+        hotel_settings=h_settings
     )
     
     response = booking.model_dump()
