@@ -1,16 +1,22 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useState } from 'react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, UserCheck, ShieldCheck, Lock, Sliders, Users, SlidersHorizontal, MessageSquare, Zap, BrainCircuit, Trash2, XCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { 
+    UserCheck, ShieldCheck, Key, Webhook, Zap, Trash2, XCircle, 
+    MessageSquare, AlertTriangle, Building2, Calendar, CreditCard,
+    ServerCrash, Activity
+} from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 
 interface HotelWorkspaceProps {
     hotel: any;
@@ -19,26 +25,30 @@ interface HotelWorkspaceProps {
 }
 
 export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) => {
-    const [tab, setTab] = useState<'overview' | 'users' | 'permissions' | 'features' | 'google_ads'>('overview');
     const queryClient = useQueryClient();
+    const [isQuotaModalOpen, setIsQuotaModalOpen] = useState(false);
+    const [isSubModalOpen, setIsSubModalOpen] = useState(false);
 
     // Quota states
     const [waCredits, setWaCredits] = useState(hotel.subscription?.whatsapp_credits?.toString() || '1000');
+    const [smsCredits, setSmsCredits] = useState(hotel.subscription?.sms_credits?.toString() || '1000');
     const [aiLimit, setAiLimit] = useState(hotel.subscription?.ai_usage_limit?.toString() || '50000');
-
-    // Google Ads states
-    const [hcId, setHcId] = useState(hotel.integration_settings?.google_hotel_center_id || '');
-    const [adsId, setAdsId] = useState(hotel.integration_settings?.google_ads_account_id || '');
 
     // Sub states
     const [plan, setPlan] = useState(hotel.subscription?.plan || 'Basic');
     const [status, setStatus] = useState(hotel.subscription?.status || 'active');
+    
+    // API Keys & Webhooks
+    const [waAdminPhone, setWaAdminPhone] = useState(hotel.integration_settings?.whatsapp_admin_phone || '');
+    const [openAiKey, setOpenAiKey] = useState(hotel.integration_settings?.openai_api_key || '');
+    const [webhookUrl, setWebhookUrl] = useState(hotel.integration_settings?.webhook_url || '');
 
     const updateSubMutation = useMutation({
         mutationFn: (data: any) => apiClient.post(`/superadmin/hotels/${hotel.id}/subscription`, data),
         onSuccess: () => {
             toast.success("Subscription updated");
             queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+            setIsSubModalOpen(false);
         }
     });
 
@@ -46,6 +56,15 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
         mutationFn: (data: any) => apiClient.patch(`/superadmin/hotels/${hotel.id}/quotas`, data),
         onSuccess: () => {
             toast.success("Quotas updated");
+            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+            setIsQuotaModalOpen(false);
+        }
+    });
+
+    const saveKeysMutation = useMutation({
+        mutationFn: (data: any) => apiClient.patch(`/superadmin/hotels/${hotel.id}`, { integration_settings: { ...hotel.integration_settings, ...data } }),
+        onSuccess: () => {
+            toast.success("Settings updated successfully");
             queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
         }
     });
@@ -59,288 +78,282 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
         }
     });
 
+    const wipeDataMutation = useMutation({
+        mutationFn: () => apiClient.post(`/superadmin/hotels/${hotel.id}/wipe`, {}),
+        onSuccess: () => {
+            toast.success("Property data successfully wiped and reset");
+            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+        }
+    });
+
+    const deletePropertyMutation = useMutation({
+        mutationFn: () => apiClient.delete(`/superadmin/hotels/${hotel.id}`),
+        onSuccess: () => {
+            toast.success("Property permanently deleted");
+            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+            onBack();
+        }
+    });
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between bg-muted/20 p-6 rounded-2xl border">
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" onClick={onBack} className="rounded-xl"><ArrowLeft className="w-5 h-5" /></Button>
-                    <div>
-                        <h2 className="text-2xl font-black">{hotel.name}</h2>
-                        <p className="text-xs text-muted-foreground font-mono">{hotel.slug}</p>
+        <>
+            <Sheet open={true} onOpenChange={(open) => !open && onBack()}>
+                <SheetContent className="w-full sm:max-w-lg bg-background border-l border-border p-0 shadow-2xl flex flex-col h-full overflow-hidden">
+                    <div className="p-6 border-b border-border bg-muted/20 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-50/5 text-indigo-600 rounded-xl flex items-center justify-center border shadow-sm">
+                                <Building2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <SheetTitle className="text-lg font-black">{hotel.name}</SheetTitle>
+                                <SheetDescription className="text-xs font-mono text-indigo-600 font-bold mt-0.5">slug: {hotel.slug}</SheetDescription>
+                            </div>
+                        </div>
+                        <Badge className={`rounded-lg px-2.5 py-1 font-black text-[9px] uppercase tracking-widest border ${
+                            hotel.is_active ? 'bg-emerald-500/10 text-emerald-700' : 'bg-red-500/10 text-red-700'
+                        }`}>
+                            {hotel.is_active ? 'Active' : 'Locked'}
+                        </Badge>
                     </div>
-                </div>
-                <div className="flex gap-3">
-                    <Button className="bg-emerald-600 hover:bg-emerald-700 font-bold" onClick={() => impersonateMutation.mutate()} disabled={impersonateMutation.isPending}>
-                        <UserCheck className="w-4 h-4 mr-2" /> Impersonate
-                    </Button>
-                </div>
-            </div>
 
-            <div className="flex border-b gap-2 overflow-x-auto">
-                {['overview', 'users', 'permissions', 'features', 'google_ads'].map(t => (
-                    <button key={t} onClick={() => setTab(t as any)} className={`px-6 py-3 border-b-2 font-bold text-sm capitalize transition-all ${tab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                        {t.replace('_', ' ')}
-                    </button>
-                ))}
-            </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <Tabs defaultValue="properties" className="w-full space-y-6">
+                            <TabsList className="bg-muted w-full flex rounded-xl p-1">
+                                <TabsTrigger value="properties" className="flex-1 rounded-lg text-[10px] font-bold">Properties</TabsTrigger>
+                                <TabsTrigger value="integrations" className="flex-1 rounded-lg text-[10px] font-bold">Integrations</TabsTrigger>
+                                <TabsTrigger value="danger" className="flex-1 rounded-lg text-[10px] font-bold text-red-600">Danger Zone</TabsTrigger>
+                            </TabsList>
 
-            {tab === 'overview' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <Card className="lg:col-span-2">
-                        <CardHeader><CardTitle>Subscription Control</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Plan Tier</Label>
-                                    <Select value={plan} onValueChange={setPlan}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Free">Free</SelectItem>
-                                            <SelectItem value="Basic">Basic</SelectItem>
-                                            <SelectItem value="Premium">Premium</SelectItem>
-                                            <SelectItem value="Enterprise">Enterprise</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Status</Label>
-                                    <Select value={status} onValueChange={setStatus}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="active">Active</SelectItem>
-                                            <SelectItem value="inactive">Inactive</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <Button className="w-full" onClick={() => updateSubMutation.mutate({ plan_name: plan, status })} disabled={updateSubMutation.isPending}>Save Subscription</Button>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader><CardTitle>Quotas</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>WA Credits</Label>
-                                <Input type="number" value={waCredits} onChange={e => setWaCredits(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>AI Limit</Label>
-                                <Input type="number" value={aiLimit} onChange={e => setAiLimit(e.target.value)} />
-                            </div>
-                            <Button className="w-full" variant="outline" onClick={() => updateQuotasMutation.mutate({ whatsapp_credits: parseInt(waCredits), ai_usage_limit: parseInt(aiLimit) })} disabled={updateQuotasMutation.isPending}>Update Limits</Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-
-            {tab === 'google_ads' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle>Google Hotel Ads Integration</CardTitle>
-                            <CardDescription>Manage the property's connection to Google Hotel Center and Ads.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="flex items-center justify-between p-4 bg-muted/20 border rounded-2xl">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base font-bold">Enable GHA Feature</Label>
-                                    <p className="text-xs text-muted-foreground">Allows the hotel to configure Google Ads in their settings.</p>
-                                </div>
-                                <Switch
-                                    checked={hotel.feature_google_ads}
-                                    onCheckedChange={(checked) => {
-                                        apiClient.patch(`/superadmin/hotels/${hotel.id}`, { feature_google_ads: checked })
-                                            .then(() => {
-                                                toast.success(`Google Ads feature ${checked ? 'enabled' : 'disabled'}`);
-                                                queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
-                                            });
-                                    }}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label>Google Hotel Center ID</Label>
-                                    <Input
-                                        placeholder="e.g. 123456"
-                                        value={hcId}
-                                        onChange={(e) => setHcId(e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Google Ads Account ID</Label>
-                                    <Input
-                                        placeholder="e.g. 987-654-3210"
-                                        value={adsId}
-                                        onChange={(e) => setAdsId(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-                            <Button
-                                className="w-full"
-                                variant="outline"
-                                onClick={() => {
-                                    apiClient.put('/integration/settings', {
-                                        google_hotel_center_id: hcId,
-                                        google_ads_account_id: adsId
-                                    }, { headers: { 'X-Impersonate-Hotel-ID': hotel.id } }) // This assumes superadmin can update via impersonation or specific endpoint
-                                    .then(() => toast.success("Google IDs updated"))
-                                    .catch(() => {
-                                        // Fallback to superadmin specific update if needed
-                                        apiClient.patch(`/superadmin/hotels/${hotel.id}`, {
-                                            integration_settings: {
-                                                ...hotel.integration_settings,
-                                                google_hotel_center_id: hcId,
-                                                google_ads_account_id: adsId
-                                            }
-                                        }).then(() => toast.success("Google IDs updated via SuperAdmin"));
-                                    });
-                                }}
-                            >
-                                Save Google Integration IDs
-                            </Button>
-
-                            <div className="p-4 border rounded-2xl space-y-3">
-                                <h4 className="text-sm font-bold">Sync Status</h4>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Last ARI Sync:</span>
-                                    <span className="font-mono">
-                                        {hotel.integration_settings?.google_ads_last_ari_sync
-                                            ? format(new Date(hotel.integration_settings.google_ads_last_ari_sync), 'MMM d, yyyy HH:mm')
-                                            : 'Never'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Integration Health:</span>
-                                    <Badge variant={hotel.integration_settings?.google_ads_status === 'active' ? 'default' : 'secondary'}>
-                                        {hotel.integration_settings?.google_ads_status || 'inactive'}
-                                    </Badge>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Technical Links</CardTitle>
-                            <CardDescription>Endpoints for Google verification.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Hotel List XML</Label>
-                                <div className="p-2 bg-muted/50 rounded-lg text-[10px] font-mono break-all border">
-                                    /api/v1/google/feed/hotels.xml
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Landing Pages (POS) XML</Label>
-                                <div className="p-2 bg-muted/50 rounded-lg text-[10px] font-mono break-all border">
-                                    /api/v1/google/feed/pos.xml
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">ARI Pull Endpoint</Label>
-                                <div className="p-2 bg-muted/50 rounded-lg text-[10px] font-mono break-all border">
-                                    /api/v1/google/feed/ari.xml?hotel_id={hotel.id}
-                                </div>
-                            </div>
-                            <Button
-                                variant="outline"
-                                className="w-full text-xs font-bold"
-                                onClick={() => {
-                                    apiClient.post(`/google/sync/push?hotel_id=${hotel.id}`)
-                                        .then(() => toast.success("Push notification sent to Google"));
-                                }}
-                            >
-                                <Zap className="w-3.5 h-3.5 mr-2" /> Force Push Sync
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-
-            {tab === 'users' && (
-                <Card>
-                    <CardHeader><CardTitle>User Accounts</CardTitle></CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            {users.filter(u => u.hotel_id === hotel.id).map(u => (
-                                <div key={u.id} className="p-4 border rounded-xl flex justify-between items-center">
-                                    <div>
-                                        <p className="font-bold">{u.name}</p>
-                                        <p className="text-xs text-muted-foreground">{u.email} • {u.role}</p>
+                            {/* PROPERTIES TAB */}
+                            <TabsContent value="properties" className="space-y-6 mt-0">
+                                <div className="p-5 border border-border rounded-2xl bg-muted/10 space-y-4">
+                                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Subscription & Plan</h4>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Badge className="font-bold uppercase tracking-wider">{hotel.subscription?.plan || 'Free'}</Badge>
+                                            <p className="text-xs text-muted-foreground mt-1">Status: {hotel.subscription?.status || 'inactive'}</p>
+                                        </div>
+                                        <Button size="sm" variant="outline" onClick={() => setIsSubModalOpen(true)}>Edit Plan</Button>
                                     </div>
-                                    <Badge variant={u.is_active ? 'default' : 'destructive'}>{u.is_active ? 'Active' : 'Suspended'}</Badge>
                                 </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-            {tab === 'features' && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Feature Flags</CardTitle>
-                        <CardDescription>Enable or disable premium features for this hotel.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {[
-                            { id: 'feature_ai_agent', label: 'AI Assistant', desc: 'Enable AI booking assistant' },
-                            { id: 'feature_guest_bot', label: 'Guest Bot', desc: 'Enable automated guest messaging' },
-                            { id: 'feature_rate_shopper', label: 'Rate Shopper', desc: 'Enable competitor rate tracking' }
-                        ].map(feature => (
-                            <div key={feature.id} className="flex items-center justify-between p-4 bg-muted/20 border rounded-2xl">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base font-bold">{feature.label}</Label>
-                                    <p className="text-xs text-muted-foreground">{feature.desc}</p>
-                                </div>
-                                <Switch
-                                    checked={hotel[feature.id]}
-                                    onCheckedChange={(checked) => {
-                                        apiClient.patch(`/superadmin/hotels/${hotel.id}`, { [feature.id]: checked })
-                                            .then(() => {
-                                                toast.success(`${feature.label} ${checked ? 'enabled' : 'disabled'}`);
-                                                queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
-                                            });
-                                    }}
-                                    className="data-[state=checked]:bg-indigo-600"
-                                />
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
 
-            {tab === 'permissions' && (
-                <Card className="border-red-200">
-                    <CardHeader>
-                        <CardTitle className="text-red-600">Danger Zone</CardTitle>
-                        <CardDescription>Critical account actions and status control.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="flex items-center justify-between p-4 bg-red-50/50 border border-red-100 rounded-2xl">
-                            <div className="space-y-0.5">
-                                <Label className="text-base font-bold text-red-900">Account Status</Label>
-                                <p className="text-xs text-red-600/80">Disable to lock out all users of this hotel.</p>
-                            </div>
-                            <Button 
-                                variant={hotel.is_active ? "destructive" : "default"}
-                                onClick={() => {
-                                    apiClient.patch(`/superadmin/hotels/${hotel.id}`, { is_active: !hotel.is_active })
-                                        .then(() => {
-                                            toast.success(`Hotel account ${!hotel.is_active ? 'enabled' : 'disabled'}`);
-                                            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
-                                        });
-                                }}
-                            >
-                                {hotel.is_active ? <XCircle className="w-4 h-4 mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
-                                {hotel.is_active ? 'Disable Account' : 'Enable Account'}
-                            </Button>
+                                <div className="p-5 border border-border rounded-2xl bg-muted/10 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">App Quotas & Limits</h4>
+                                        <Button size="sm" variant="outline" onClick={() => setIsQuotaModalOpen(true)}>Edit Quotas</Button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-muted-foreground">WA Credits</p>
+                                            <p className="font-bold font-mono text-sm">{hotel.subscription?.whatsapp_credits ?? 0}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-muted-foreground">AI Limit</p>
+                                            <p className="font-bold font-mono text-sm">{hotel.subscription?.ai_usage_limit ?? 0}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-5 border border-border rounded-2xl bg-muted/10 space-y-4">
+                                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Feature Flags</h4>
+                                    {[
+                                        { id: 'feature_ai_agent', label: 'AI Assistant', desc: 'Enable AI booking assistant' },
+                                        { id: 'feature_guest_bot', label: 'Guest Bot', desc: 'Enable automated guest messaging' },
+                                        { id: 'feature_rate_shopper', label: 'Rate Shopper', desc: 'Enable competitor rate tracking' }
+                                    ].map(feature => (
+                                        <div key={feature.id} className="flex items-center justify-between">
+                                            <div>
+                                                <Label className="font-bold text-sm">{feature.label}</Label>
+                                                <p className="text-[10px] text-muted-foreground">{feature.desc}</p>
+                                            </div>
+                                            <Switch
+                                                checked={hotel[feature.id]}
+                                                onCheckedChange={(checked) => {
+                                                    apiClient.patch(`/superadmin/hotels/${hotel.id}`, { [feature.id]: checked })
+                                                        .then(() => {
+                                                            toast.success(`${feature.label} updated`);
+                                                            queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+                                                        });
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </TabsContent>
+
+                            {/* INTEGRATIONS TAB */}
+                            <TabsContent value="integrations" className="space-y-6 mt-0">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold flex items-center gap-2"><Key className="w-3 h-3"/> OpenAI API Key</Label>
+                                        <Input type="password" value={openAiKey} onChange={e => setOpenAiKey(e.target.value)} placeholder="sk-..." />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold flex items-center gap-2"><MessageSquare className="w-3 h-3"/> WA Admin Phone</Label>
+                                        <Input value={waAdminPhone} onChange={e => setWaAdminPhone(e.target.value)} placeholder="+1234567890" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold flex items-center gap-2"><Webhook className="w-3 h-3"/> Custom Webhook URL</Label>
+                                        <Input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://..." />
+                                    </div>
+                                    <Button className="w-full font-bold" onClick={() => saveKeysMutation.mutate({ 
+                                        openai_api_key: openAiKey, 
+                                        whatsapp_admin_phone: waAdminPhone,
+                                        webhook_url: webhookUrl 
+                                    })}>
+                                        Save Integration Keys
+                                    </Button>
+                                </div>
+                            </TabsContent>
+
+                            {/* DANGER ZONE TAB */}
+                            <TabsContent value="danger" className="space-y-6 mt-0">
+                                <div className="border border-red-200 bg-red-50/30 p-6 rounded-2xl space-y-6">
+                                    <div className="flex items-center gap-3 text-red-600 mb-2">
+                                        <AlertTriangle className="w-6 h-6" />
+                                        <h3 className="font-black text-lg">Danger Zone</h3>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-bold text-sm">Account Status</p>
+                                            <p className="text-xs text-muted-foreground max-w-[200px]">Lock out all users of this property.</p>
+                                        </div>
+                                        <Button 
+                                            variant={hotel.is_active ? "destructive" : "default"}
+                                            onClick={() => {
+                                                apiClient.patch(`/superadmin/hotels/${hotel.id}`, { is_active: !hotel.is_active })
+                                                    .then(() => {
+                                                        toast.success(`Hotel account ${!hotel.is_active ? 'enabled' : 'disabled'}`);
+                                                        queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+                                                    });
+                                            }}
+                                        >
+                                            {hotel.is_active ? <XCircle className="w-4 h-4 mr-2" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
+                                            {hotel.is_active ? 'Disable' : 'Enable'}
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-4 border-t border-red-100">
+                                        <div>
+                                            <p className="font-bold text-sm">Wipe Hotel Data</p>
+                                            <p className="text-xs text-muted-foreground max-w-[200px]">Delete all reservations, guests, and logs.</p>
+                                        </div>
+                                        <Button 
+                                            variant="outline" 
+                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                            onClick={() => {
+                                                if(confirm(`Are you sure you want to WIPE all operational data for ${hotel.name}?`)) {
+                                                    wipeDataMutation.mutate();
+                                                }
+                                            }}
+                                            disabled={wipeDataMutation.isPending}
+                                        >
+                                            <ServerCrash className="w-4 h-4 mr-2" /> Wipe Data
+                                        </Button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-4 border-t border-red-100">
+                                        <div>
+                                            <p className="font-bold text-sm text-red-700">Delete Property</p>
+                                            <p className="text-xs text-red-600/80 max-w-[200px]">Permanently remove this hotel and all its data.</p>
+                                        </div>
+                                        <Button 
+                                            variant="destructive"
+                                            onClick={() => {
+                                                const code = Math.floor(1000 + Math.random() * 9000);
+                                                const res = prompt(`Type ${code} to permanently delete ${hotel.name}`);
+                                                if (res === code.toString()) {
+                                                    deletePropertyMutation.mutate();
+                                                }
+                                            }}
+                                            disabled={deletePropertyMutation.isPending}
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                        </Button>
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+                    </div>
+
+                    <div className="p-6 border-t border-border bg-background">
+                        <Button
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 rounded-xl text-sm"
+                            onClick={() => impersonateMutation.mutate()}
+                            disabled={impersonateMutation.isPending}
+                        >
+                            <UserCheck className="w-4 h-4 mr-2" />
+                            Impersonate Hotel Admin
+                        </Button>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Quota Modal */}
+            <Dialog open={isQuotaModalOpen} onOpenChange={setIsQuotaModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Adjust App Quotas</DialogTitle>
+                        <DialogDescription>Modify the resource limits for this property.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>WhatsApp Credits</Label>
+                            <Input type="number" value={waCredits} onChange={e => setWaCredits(e.target.value)} />
                         </div>
-                    </CardContent>
-                </Card>
-            )}
-        </div>
+                        <div className="space-y-2">
+                            <Label>SMS Credits</Label>
+                            <Input type="number" value={smsCredits} onChange={e => setSmsCredits(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>AI Usage Limit</Label>
+                            <Input type="number" value={aiLimit} onChange={e => setAiLimit(e.target.value)} />
+                        </div>
+                        <Button className="w-full" onClick={() => updateQuotasMutation.mutate({ whatsapp_credits: parseInt(waCredits), sms_credits: parseInt(smsCredits), ai_usage_limit: parseInt(aiLimit) })} disabled={updateQuotasMutation.isPending}>
+                            Save Quotas
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Subscription Modal */}
+            <Dialog open={isSubModalOpen} onOpenChange={setIsSubModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Modify Subscription Plan</DialogTitle>
+                        <DialogDescription>Alter current billing plan for {hotel.name}.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Subscription Tier</Label>
+                            <Select value={plan} onValueChange={setPlan}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Free">Free / Trial Plan</SelectItem>
+                                    <SelectItem value="Basic">Basic Plan</SelectItem>
+                                    <SelectItem value="Premium">Premium Plan</SelectItem>
+                                    <SelectItem value="Enterprise">Enterprise Tier</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Status</Label>
+                            <Select value={status} onValueChange={setStatus}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="inactive">Inactive</SelectItem>
+                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button className="w-full" onClick={() => updateSubMutation.mutate({ plan_name: plan, status })} disabled={updateSubMutation.isPending}>
+                            Save Subscription Settings
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 };

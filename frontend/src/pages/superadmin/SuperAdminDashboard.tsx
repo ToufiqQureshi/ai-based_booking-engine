@@ -65,65 +65,63 @@ export default function SuperAdminDashboard() {
             </header>
 
             <main className="p-8 max-w-[1600px] mx-auto space-y-8">
-                {selectedHotel ? (
+                {selectedHotel && (
                     <HotelWorkspace
                         hotel={selectedHotel}
                         users={users}
                         onBack={() => setSelectedHotel(null)}
                     />
-                ) : (
-                    <>
-                        <StatsGrid
-                            hotelsCount={hotels.length}
-                            usersCount={users.length}
-                            aiCount={hotels.filter((h: any) => h.feature_ai_agent).length}
-                        />
-
-                        <Tabs defaultValue="hotels" className="w-full">
-                            <TabsList className="bg-muted p-1 rounded-xl">
-                                <TabsTrigger value="hotels" className="rounded-lg font-bold px-6">Properties</TabsTrigger>
-                                <TabsTrigger value="users" className="rounded-lg font-bold px-6">Users</TabsTrigger>
-                                <TabsTrigger value="plan-features" className="rounded-lg font-bold px-6">Plan Features</TabsTrigger>
-                                <TabsTrigger value="analytics" className="rounded-lg font-bold px-6">Analytics</TabsTrigger>
-                                <TabsTrigger value="broadcasts" className="rounded-lg font-bold px-6">Broadcasts</TabsTrigger>
-                                <TabsTrigger value="audit" className="rounded-lg font-bold px-6">Audit Trail</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="hotels" className="mt-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <div className="relative">
-                                        <input
-                                            placeholder="Search hotels..."
-                                            className="bg-muted/50 border rounded-xl pl-4 pr-10 py-2 text-sm w-80 focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                        />
-                                    </div>
-                                    <Button onClick={() => refetch()} variant="outline" className="rounded-xl"><RefreshCw className="w-4 h-4 mr-2" /> Sync Data</Button>
-                                </div>
-                                <HotelsTab
-                                    hotels={hotels.filter((h: any) => h.name.toLowerCase().includes(searchQuery.toLowerCase()))}
-                                    users={users}
-                                    onSelectHotel={setSelectedHotel}
-                                    onImpersonate={(id: string) => impersonateMutation.mutate(id)}
-                                    isImpersonating={impersonateMutation.isPending}
-                                />
-                            </TabsContent>
-                            
-                            <UsersTab />
-                            <PlanFeaturesTab />
-                            <AnalyticsTab hotels={hotels} users={users} onSelectHotel={setSelectedHotel} />
-                            <BroadcastsTab />
-
-                            <TabsContent value="audit" className="mt-6">
-                                <div className="p-12 text-center border-2 border-dashed rounded-3xl text-muted-foreground font-medium">
-                                    Audit logs are being optimized for high-volume traffic.
-                                    <br/>Please check back shortly.
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </>
                 )}
+                
+                <StatsGrid
+                    hotelsCount={hotels.length}
+                    usersCount={users.length}
+                    aiCount={hotels.filter((h: any) => h.feature_ai_agent).length}
+                />
+
+                <Tabs defaultValue="hotels" className="w-full">
+                    <TabsList className="bg-muted p-1 rounded-xl">
+                        <TabsTrigger value="hotels" className="rounded-lg font-bold px-6">Properties</TabsTrigger>
+                        <TabsTrigger value="users" className="rounded-lg font-bold px-6">Users</TabsTrigger>
+                        <TabsTrigger value="plan-features" className="rounded-lg font-bold px-6">Plan Features</TabsTrigger>
+                        <TabsTrigger value="analytics" className="rounded-lg font-bold px-6">Analytics</TabsTrigger>
+                        <TabsTrigger value="broadcasts" className="rounded-lg font-bold px-6">Broadcasts</TabsTrigger>
+                        <TabsTrigger value="audit" className="rounded-lg font-bold px-6">Audit Trail</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="hotels" className="mt-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="relative">
+                                <input
+                                    placeholder="Search hotels..."
+                                    className="bg-muted/50 border rounded-xl pl-4 pr-10 py-2 text-sm w-80 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <Button onClick={() => refetch()} variant="outline" className="rounded-xl"><RefreshCw className="w-4 h-4 mr-2" /> Sync Data</Button>
+                        </div>
+                        <HotelsTab
+                            hotels={hotels.filter((h: any) => h.name.toLowerCase().includes(searchQuery.toLowerCase()))}
+                            users={users}
+                            onSelectHotel={setSelectedHotel}
+                            onImpersonate={(id: string) => impersonateMutation.mutate(id)}
+                            isImpersonating={impersonateMutation.isPending}
+                        />
+                    </TabsContent>
+                    
+                    <UsersTab />
+                    <PlanFeaturesTab />
+                    <AnalyticsTab hotels={hotels} users={users} onSelectHotel={setSelectedHotel} />
+                    <BroadcastsTab />
+
+                    <TabsContent value="audit" className="mt-6">
+                        <div className="p-12 text-center border-2 border-dashed rounded-3xl text-muted-foreground font-medium">
+                            Audit logs are being optimized for high-volume traffic.
+                            <br/>Please check back shortly.
+                        </div>
+                    </TabsContent>
+                </Tabs>
             </main>
         </div>
     );
