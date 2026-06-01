@@ -48,16 +48,16 @@ export function DashboardPage() {
   const { data: stats, isLoading: isStatsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboardStats'],
     queryFn: () => apiClient.get<DashboardStats>('/dashboard/stats'),
-    staleTime: 60000,
-    refetchOnWindowFocus: false
+    staleTime: 30000, // Reduced to 30s for more real-time dashboard
+    refetchOnWindowFocus: true
   });
 
   // 2. Fetch Recent Bookings
   const { data: recentBookings = [] } = useQuery<RecentBooking[]>({
     queryKey: ['recentBookings'],
     queryFn: () => apiClient.get<RecentBooking[]>('/dashboard/recent-bookings'),
-    staleTime: 60000,
-    refetchOnWindowFocus: false
+    staleTime: 30000,
+    refetchOnWindowFocus: true
   });
 
   // 3. Fetch AI Analysis Summary

@@ -190,6 +190,8 @@ export default function BookingSelection() {
             }
             try {
                 setIsLoading(true);
+                // Clear any cached checkout state if we are starting a fresh search
+                sessionStorage.removeItem(`checkout_state:${hotelSlug}`);
                 const queryGuests = paramGuests || (adults + children).toString() || '1';
                 const normalizedCheckIn = checkIn.replace(/\s+/g, '-');
                 const normalizedCheckOut = checkOut.replace(/\s+/g, '-');

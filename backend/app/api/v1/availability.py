@@ -20,6 +20,10 @@ def clear_availability_cache(hotel_id: str):
     try:
         redis_client.delete_pattern(f"availability:{hotel_id}:*")
         redis_client.delete_pattern(f"public:rooms:{hotel_id}:*")
+        # Also clear analytics dashboard as it depends on booking/inventory data
+        redis_client.delete_pattern(f"analytics_dashboard:{hotel_id}:*")
+        # Clear dashboard stats
+        redis_client.delete_pattern(f"dashboard_stats:{hotel_id}:*")
     except Exception as e:
         print(f"Failed clearing availability cache for hotel {hotel_id}: {e}")
 
