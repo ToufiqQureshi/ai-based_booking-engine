@@ -1,7 +1,7 @@
 from typing import List, Optional, Any, Dict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks
-from sqlmodel import select, and_, or_
+from sqlmodel import select, and_, or_, func
 from pydantic import BaseModel, EmailStr
 import uuid
 import logging
@@ -129,6 +129,7 @@ def generate_booking_number() -> str:
 
 from fastapi import Request
 from app.core.limiter import limiter
+from app.models.rates import RatePlan
 
 @router.post("/bookings", response_model=PublicBookingResponse)
 @limiter.limit("5/minute")
@@ -170,13 +171,116 @@ async def create_public_booking(
         if not booking_data.rooms:
             raise HTTPException(status_code=400, detail="At least one room is required")
         
-        room_type_id = booking_data.rooms[0].room_type_id
-        room_type = await session.get(RoomType, room_type_id)
+        # --- NEW: Strict Availability & Price Verification with Row Locking ---
+        room_type_ids = [r.room_type_id for r in booking_data.rooms]
+        unique_rt_ids = sorted(list(set(room_type_ids)))
         
-        if not room_type:
-            raise HTTPException(status_code=404, detail="Room type not found")
+        # Lock RoomTypes to prevent race conditions during inventory check
+        rt_query = select(RoomType).where(RoomType.id.in_(unique_rt_ids)).with_for_update()
+        rt_result = await session.execute(rt_query)
+        locked_room_types = {rt.id: rt for rt in rt_result.scalars().all()}
         
-        hotel_id = room_type.hotel_id
+        if not locked_room_types:
+            raise HTTPException(status_code=404, detail="Requested room types not found")
+
+        first_rt = locked_room_types.get(booking_data.rooms[0].room_type_id)
+        if not first_rt:
+            raise HTTPException(status_code=404, detail="Primary room type not found")
+
+        hotel_id = first_rt.hotel_id
+
+        # 1. Fetch all overlapping bookings for this hotel and date range
+        bookings_query = select(Booking).where(
+            Booking.hotel_id == hotel_id,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING, BookingStatus.CHECKED_IN]),
+            and_(Booking.check_in < booking_data.check_out, Booking.check_out > booking_data.check_in)
+        )
+        bookings_res = await session.execute(bookings_query)
+        overlapping_bookings = bookings_res.scalars().all()
+
+        # 2. Fetch all overlapping blocks
+        blocks_query = select(RoomBlock).where(
+            RoomBlock.hotel_id == hotel_id,
+            and_(RoomBlock.start_date < booking_data.check_out, RoomBlock.end_date >= booking_data.check_in)
+        )
+        blocks_res = await session.execute(blocks_query)
+        overlapping_blocks = blocks_res.scalars().all()
+
+        # 3. Fetch Daily Rates for price verification
+        rates_query = select(RoomRate).where(
+            RoomRate.hotel_id == hotel_id,
+            RoomRate.rate_plan_id == None,
+            and_(RoomRate.date_from < booking_data.check_out, RoomRate.date_to >= booking_data.check_in)
+        )
+        rates_res = await session.execute(rates_query)
+        daily_rates = rates_res.scalars().all()
+
+        daily_price_map = {}
+        for dr in daily_rates:
+            c = max(dr.date_from, booking_data.check_in)
+            while c <= min(dr.date_to, booking_data.check_out - timedelta(days=1)):
+                daily_price_map[(dr.room_type_id, c.isoformat())] = dr.price
+                c += timedelta(days=1)
+
+        # 4. Perform day-by-day availability and price check
+        for room_req in booking_data.rooms:
+            rt = locked_room_types.get(room_req.room_type_id)
+            if not rt:
+                raise HTTPException(status_code=404, detail=f"Room type {room_req.room_type_id} not found")
+
+            # Calculate expected price based on current DB state
+            recalculated_total = 0.0
+            plan_modifier = 0.0
+            if room_req.rate_plan_id and not room_req.rate_plan_id.startswith("virtual-"):
+                rp = await session.get(RatePlan, room_req.rate_plan_id)
+                if rp:
+                    plan_modifier = float(rp.price_adjustment or 0.0)
+
+            curr_day = booking_data.check_in
+            while curr_day < booking_data.check_out:
+                d_str = curr_day.isoformat()
+
+                # A. Inventory Check
+                booked_on_day = 0
+                for b in overlapping_bookings:
+                    if b.check_in <= curr_day < b.check_out:
+                        for rb in b.rooms:
+                            if rb.get("room_type_id") == rt.id:
+                                booked_on_day += 1
+
+                blocked_on_day = 0
+                for bl in overlapping_blocks:
+                    if bl.room_type_id == rt.id and bl.start_date <= curr_day <= bl.end_date:
+                        blocked_on_day += bl.blocked_count
+
+                available = rt.total_inventory - booked_on_day - blocked_on_day
+                if available <= 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"Room type '{rt.name}' is no longer available for {d_str}. Please refresh and try again."
+                    )
+
+                # B. Price Accumulation
+                nightly_base = daily_price_map.get((rt.id, d_str), float(rt.base_price))
+                nightly_total = nightly_base + plan_modifier
+
+                # Handle extra persons (Simplified version of search logic)
+                extra_adults = max(0, room_req.guests - rt.base_occupancy)
+                if extra_adults > 0:
+                    rate_adult = float(rt.extra_adult_price) if rt.extra_adult_price else float(rt.extra_person_price or 1000.0)
+                    nightly_total += (extra_adults * rate_adult)
+
+                recalculated_total += nightly_total
+                curr_day += timedelta(days=1)
+
+            # C. Verification: Does the price submitted by guest match the current DB price?
+            # We allow a small margin for rounding, but significant changes must be rejected.
+            if abs(recalculated_total - room_req.total_price) > 5.0:
+                 logger.warning(f"Price mismatch: Recalculated {recalculated_total} vs Submitted {room_req.total_price}")
+                 raise HTTPException(
+                     status_code=status.HTTP_409_CONFLICT,
+                     detail=f"The price for '{rt.name}' has been updated to INR {recalculated_total}. Please review and try again."
+                 )
         
         # Check if guest exists by email for this hotel
         guest_data = booking_data.guest
@@ -302,7 +406,7 @@ async def create_public_booking(
         hotel_policy = settings.get("cancellation_policy")
         
         for room in booking_data.rooms:
-            rt = await session.get(RoomType, room.room_type_id)
+            rt = locked_room_types.get(room.room_type_id)
             cancellation_policy = rt.cancellation_policy if rt else None
             
             # Resolve rate plan cancellation settings

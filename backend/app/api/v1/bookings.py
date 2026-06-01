@@ -16,7 +16,6 @@ from app.models.booking import (
     Guest, GuestCreate, GuestRead, BookingStatus,
 )
 from app.models.room import RoomType
-from app.core.tasks import log_timeline_task
 from app.api.v1.availability import clear_availability_cache
 from app.services.email_service import get_email_service
 from app.core.redis_client import redis_client as _redis
@@ -281,6 +280,7 @@ async def create_booking(
     session.add(booking)
     await session.flush() # Get booking ID
     
+    from app.core.tasks import log_timeline_task
     # Log to Timeline in background
     background_tasks.add_task(
         log_timeline_task,
@@ -442,6 +442,7 @@ async def update_booking(
 
     # Log to timeline in background if status changed
     if old_status != new_status:
+        from app.core.tasks import log_timeline_task
         background_tasks.add_task(
             log_timeline_task,
             booking_id=booking.id,

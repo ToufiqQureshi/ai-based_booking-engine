@@ -4,6 +4,7 @@ Receives tracking events from the widget and provides aggregated data to the das
 """
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import select, func, case, or_
+import json
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import joinedload
 
@@ -112,28 +113,98 @@ async def track_ping(request: SessionPingRequest, session: DbSession):
     return {"status": "ok"}
 
 @router.post("/track/event")
-async def track_event(request: EventTrackRequest, session: DbSession):
-    """Log a specific event (e.g. room_view, add_to_cart)"""
-    event = AnalyticsEvent(
-        session_id=request.session_id,
-        event_type=request.event_type,
-        page_url=request.page_url,
-        room_type_id=request.room_type_id,
-        time_spent_seconds=request.time_spent_seconds or 0,
-        metadata_json=request.metadata_json
-    )
-    session.add(event)
+async def track_event(request: EventTrackRequest, background_tasks: BackgroundTasks):
+    """
+    Log a specific event (e.g. room_view, add_to_cart).
+    Optimized: Uses Redis list as a buffer for high-frequency events.
+    """
+    event_data = {
+        "session_id": request.session_id,
+        "event_type": request.event_type,
+        "page_url": request.page_url,
+        "room_type_id": request.room_type_id,
+        "time_spent_seconds": request.time_spent_seconds or 0,
+        "metadata_json": request.metadata_json,
+        "created_at": datetime.utcnow().isoformat()
+    }
     
-    # If it's a booking event, update the session
-    if request.event_type == "booking_complete":
-        result = await session.execute(select(AnalyticsSession).where(AnalyticsSession.id == request.session_id))
-        db_session = result.scalar_one_or_none()
-        if db_session:
-            db_session.has_booked = True
-            session.add(db_session)
+    try:
+        # Push to Redis buffer
+        from app.core.redis_client import redis_client
+        r = redis_client.get_instance()
+        if r:
+            r.rpush("analytics_event_buffer", json.dumps(event_data))
 
-    await session.commit()
+            # If buffer is getting large, trigger a flush in background
+            buffer_size = r.llen("analytics_event_buffer")
+            if buffer_size >= 50:
+                background_tasks.add_task(flush_analytics_buffer)
+        else:
+            # Fallback to direct DB if Redis is down
+            from app.core.database import async_session
+            async with async_session() as session:
+                event = AnalyticsEvent(**event_data)
+                session.add(event)
+                if request.event_type == "booking_complete":
+                    res = await session.execute(select(AnalyticsSession).where(AnalyticsSession.id == request.session_id))
+                    db_s = res.scalar_one_or_none()
+                    if db_s:
+                        db_s.has_booked = True
+                        session.add(db_s)
+                await session.commit()
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to buffer analytics event: {e}")
+
     return {"status": "ok"}
+
+async def flush_analytics_buffer():
+    """
+    Background task to flush buffered analytics events from Redis to Supabase.
+    """
+    from app.core.redis_client import redis_client
+    from app.core.database import async_session
+    import logging
+
+    r = redis_client.get_instance()
+    if not r:
+        return
+
+    # Atomic pop of all current events
+    events_json = []
+    # Limit to 500 at a time to prevent huge transactions
+    for _ in range(500):
+        val = r.lpop("analytics_event_buffer")
+        if not val:
+            break
+        events_json.append(val)
+
+    if not events_json:
+        return
+
+    async with async_session() as session:
+        try:
+            for item_json in events_json:
+                data = json.loads(item_json)
+                # Convert ISO string back to datetime
+                if "created_at" in data:
+                    data["created_at"] = datetime.fromisoformat(data["created_at"])
+
+                event = AnalyticsEvent(**data)
+                session.add(event)
+
+                if data.get("event_type") == "booking_complete":
+                    res = await session.execute(select(AnalyticsSession).where(AnalyticsSession.id == data["session_id"]))
+                    db_s = res.scalar_one_or_none()
+                    if db_s:
+                        db_s.has_booked = True
+                        session.add(db_s)
+
+            await session.commit()
+            logging.info(f"Successfully flushed {len(events_json)} analytics events to DB")
+        except Exception as e:
+            logging.error(f"Failed to flush analytics buffer: {e}")
+            # Optional: push back to redis or a DLQ
 
 
 # --- Dashboard API for Hoteliers ---
