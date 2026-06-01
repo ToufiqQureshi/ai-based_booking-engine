@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, RefreshCw, Sun, Moon, ShieldCheck } from 'lucide-react';
+import { LogOut, RefreshCw, Sun, Moon, ShieldCheck, BarChart3, Radio } from 'lucide-react';
 import { apiClient } from '@/api/client';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { StatsGrid } from '@/components/superadmin/StatsGrid';
 import { HotelsTab } from '@/components/superadmin/HotelsTab';
 import { HotelWorkspace } from '@/components/superadmin/HotelWorkspace';
+import { AnalyticsTab } from '@/components/superadmin/AnalyticsTab';
+import { BroadcastsTab } from '@/components/superadmin/BroadcastsTab';
 
 export default function SuperAdminDashboard() {
     const { user, logout, isLoading: authLoading } = useAuth();
@@ -72,12 +74,14 @@ export default function SuperAdminDashboard() {
                         <StatsGrid
                             hotelsCount={hotels.length}
                             usersCount={users.length}
-                            aiCount={hotels.filter(h => h.feature_ai_agent).length}
+                            aiCount={hotels.filter((h: any) => h.feature_ai_agent).length}
                         />
 
                         <Tabs defaultValue="hotels" className="w-full">
                             <TabsList className="bg-muted p-1 rounded-xl">
                                 <TabsTrigger value="hotels" className="rounded-lg font-bold px-6">Properties</TabsTrigger>
+                                <TabsTrigger value="analytics" className="rounded-lg font-bold px-6">Analytics</TabsTrigger>
+                                <TabsTrigger value="broadcasts" className="rounded-lg font-bold px-6">Broadcasts</TabsTrigger>
                                 <TabsTrigger value="audit" className="rounded-lg font-bold px-6">Audit Trail</TabsTrigger>
                             </TabsList>
 
@@ -94,13 +98,16 @@ export default function SuperAdminDashboard() {
                                     <Button onClick={() => refetch()} variant="outline" className="rounded-xl"><RefreshCw className="w-4 h-4 mr-2" /> Sync Data</Button>
                                 </div>
                                 <HotelsTab
-                                    hotels={hotels.filter(h => h.name.toLowerCase().includes(searchQuery.toLowerCase()))}
+                                    hotels={hotels.filter((h: any) => h.name.toLowerCase().includes(searchQuery.toLowerCase()))}
                                     users={users}
                                     onSelectHotel={setSelectedHotel}
-                                    onImpersonate={(id) => impersonateMutation.mutate(id)}
+                                    onImpersonate={(id: string) => impersonateMutation.mutate(id)}
                                     isImpersonating={impersonateMutation.isPending}
                                 />
                             </TabsContent>
+                            
+                            <AnalyticsTab hotels={hotels} users={users} />
+                            <BroadcastsTab />
 
                             <TabsContent value="audit" className="mt-6">
                                 <div className="p-12 text-center border-2 border-dashed rounded-3xl text-muted-foreground font-medium">

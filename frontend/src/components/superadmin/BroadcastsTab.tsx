@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { Search, Loader2, Building2, Plus, Shield, Users, Mail, Phone, Calendar, Globe, Trash2, CheckCircle2, Lock, Tag, MapPin, Edit, Settings2, BarChart3, Radio, RefreshCw, Smartphone, Key, Star, LayoutGrid, CheckSquare, XSquare, MessageSquare, ListFilter, PlayCircle, Filter, Download, Zap, UploadCloud, ChevronRight, Save, LayoutTemplate, Activity, AlertTriangle, ShieldCheck, FileText, Send, Eye, X, Crown, Clock, Copy, ArrowRight, UserCheck, CheckCircle, SlidersHorizontal, Settings } from 'lucide-react';
@@ -15,27 +15,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from '@/components/ui/separator';
 import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+import { toast } from 'sonner';
 
-export function BroadcastsTab(props: any) {
-  const {
-    user, logout, authLoading, theme, toggleTheme, selectedWorkspaceHotel,
-    setSelectedWorkspaceHotel, workspaceTab, setWorkspaceTab, workspacePermissions, setWorkspacePermissions, editedPlanFeatures,
-    setEditedPlanFeatures, searchQuery, setSearchQuery, userSearchQuery, setUserSearchQuery, selectedQuotaHotel,
-    setSelectedQuotaHotel, whatsappCredits, setWhatsappCredits, smsCredits, setSmsCredits, aiUsageLimit,
-    setAiUsageLimit, broadcastTitle, setBroadcastTitle, broadcastMessage, setBroadcastMessage, broadcastType,
-    setBroadcastType, isAddUserOpen, setIsAddUserOpen, addUserEmail, setAddUserEmail, addUserName,
-    setAddUserName, addUserPassword, setAddUserPassword, addUserRole, setAddUserRole, statusFilter,
-    setStatusFilter, planFilter, setPlanFilter, featureFilterAI, setFeatureFilterAI, featureFilterBot,
-    setFeatureFilterBot, featureFilterRates, setFeatureFilterRates, detailHotel, setDetailHotel, selectedSubHotel,
-    setSelectedSubHotel, subPlanName, setSubPlanName, subStatus, setSubStatus, subEndDate,
-    setSubEndDate, auditSearchQuery, setAuditSearchQuery, auditActionFilter, setAuditActionFilter, toast,
-    queryClient, hotels, isLoading, refetch, users, isLoadingUsers,
-    auditLogs, isLoadingAudit, refetchAudit, broadcasts, isLoadingBroadcasts, refetchBroadcasts,
-    planFeatures, isLoadingPlanFeatures, refetchPlanFeatures, activeDetailHotel, updateWorkspacePermissionsMutation, toggleFeatureMutation,
-    updateQuotaMutation, deletePropertyMutation, toggleSubMutation, handleSaveEditedPlanFeatures, savePlanFeaturesMutation, createBroadcastMutation,
-    deleteBroadcastMutation, addUserMutation, updateUserStatusMutation, toggleUserStatusMutation, deleteUserMutation, getInitials,
-    filteredHotels, filteredAuditLogs, uniqueAuditActions
-  } = props;
+export function BroadcastsTab() {
+    const queryClient = useQueryClient();
+    const [broadcastTitle, setBroadcastTitle] = useState('');
+    const [broadcastMessage, setBroadcastMessage] = useState('');
+    const [broadcastType, setBroadcastType] = useState('info');
+
+    const { data: broadcasts = [], isLoading: isLoadingBroadcasts, refetch: refetchBroadcasts } = useQuery<any[]>({
+        queryKey: ['broadcasts'],
+        queryFn: () => apiClient.get('/broadcasts'),
+    });
+
+    const createBroadcastMutation = useMutation({
+        mutationFn: (data: any) => apiClient.post('/superadmin/broadcasts', data),
+        onSuccess: () => {
+            toast.success("Platform broadcast published successfully!");
+            setBroadcastTitle('');
+            setBroadcastMessage('');
+            queryClient.invalidateQueries({ queryKey: ['broadcasts'] });
+        },
+        onError: (err: any) => {
+            toast.error(err.response?.data?.detail || "Failed to publish broadcast.");
+        }
+    });
+
+    const deleteBroadcastMutation = useMutation({
+        mutationFn: (id: string) => apiClient.delete(`/superadmin/broadcasts/${id}`),
+        onSuccess: () => {
+            toast.success("Broadcast deactivated and removed.");
+            queryClient.invalidateQueries({ queryKey: ['broadcasts'] });
+        }
+    });
+
   return (
     <>
 <TabsContent value="broadcasts" className="mt-0">
