@@ -23,17 +23,17 @@ import { apiClient } from '@/api/client';
 import { Hotel } from '@/types/api';
 
 import { useEffect } from 'react';
-import { PromoManager } from '@/components/settings/PromoManager';
-import { PropertyGallery } from '@/components/settings/PropertyGallery';
+import { PromoManager } from './components/PromoManager';
+import { PropertyGallery } from './components/PropertyGallery';
 
-import { GeneralTab } from '@/components/settings/GeneralTab';
-import { BrandingTab } from '@/components/settings/BrandingTab';
-import { EmailTab } from '@/components/settings/EmailTab';
-import { PoliciesTab } from '@/components/settings/PoliciesTab';
-import { TeamList } from '@/components/settings/TeamList';
+import { GeneralTab } from './components/GeneralTab';
+import { BrandingTab } from './components/BrandingTab';
+import { EmailTab } from './components/EmailTab';
+import { PoliciesTab } from './components/PoliciesTab';
+import { TeamList } from './components/TeamList';
 import { PageShell } from '@/components/layout/PageShell';
-import { AIAgentTab } from '@/components/settings/AIAgentTab';
-import { GoogleHotelAdsTab } from '@/components/settings/GoogleHotelAdsTab';
+import { AIAgentTab } from './components/AIAgentTab';
+import { GoogleHotelAdsTab } from './components/GoogleHotelAdsTab';
 
 export function SettingsPage() {
   const { hotel, user, setHotel } = useAuth();
