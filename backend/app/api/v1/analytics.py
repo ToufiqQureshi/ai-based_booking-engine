@@ -232,8 +232,8 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         booking_q = select(Booking).where(
             Booking.hotel_id == hotel_id,
             Booking.created_at >= start_date_naive
-        ).options(joinedload(Booking.rooms))
-        bookings = (await session.execute(booking_q)).scalars().unique().all()
+        )
+        bookings = (await session.execute(booking_q)).scalars().all()
         
         room_types_q = select(RoomType).where(RoomType.hotel_id == hotel_id)
         room_types = (await session.execute(room_types_q)).scalars().all()
@@ -431,8 +431,8 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         booking_window_data = [{"window": k, "count": v} for k, v in window_buckets.items()]
 
         # 15. Occupancy Forecast
-        future_q = select(Booking).where(Booking.hotel_id == hotel_id, Booking.check_out >= datetime.utcnow().date(), Booking.status != "cancelled").options(joinedload(Booking.rooms))
-        future_bookings = (await session.execute(future_q)).scalars().unique().all()
+        future_q = select(Booking).where(Booking.hotel_id == hotel_id, Booking.check_out >= datetime.utcnow().date(), Booking.status != "cancelled")
+        future_bookings = (await session.execute(future_q)).scalars().all()
         forecast = []
         for i in range(7):
             d = (datetime.utcnow() + timedelta(days=i)).date()
