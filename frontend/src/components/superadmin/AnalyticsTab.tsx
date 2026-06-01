@@ -26,7 +26,7 @@ const getHotelHashValue = (id: string, seed: number) => {
     return Math.abs(hash);
 };
 
-export function AnalyticsTab({ hotels, users }: { hotels: any[], users: any[] }) {
+export function AnalyticsTab({ hotels, users, onSelectHotel }: { hotels: any[], users: any[], onSelectHotel?: (h: any) => void }) {
   return (
     <>
 <TabsContent value="analytics" className="mt-0">
@@ -237,13 +237,10 @@ export function AnalyticsTab({ hotels, users }: { hotels: any[], users: any[] })
                                                                     variant="outline"
                                                                     className="h-8 rounded-lg hover:bg-primary/10 border-border hover:border-primary/20 hover:text-primary font-bold transition-all text-xs"
                                                                     onClick={() => {
-                                                                        setSelectedQuotaHotel(hotel);
-                                                                        setWhatsappCredits(hotel.subscription?.whatsapp_credits?.toString() || '1000');
-                                                                        setSmsCredits(hotel.subscription?.sms_credits?.toString() || '1000');
-                                                                        setAiUsageLimit(hotel.subscription?.ai_usage_limit?.toString() || '50000');
+                                                                        if (onSelectHotel) onSelectHotel(hotel);
                                                                     }}
                                                                 >
-                                                                    <Sliders className="w-3.5 h-3.5 mr-1.5" /> Adjust Limits
+                                                                    <Sliders className="w-3.5 h-3.5 mr-1.5" /> Manage Hotel
                                                                 </Button>
                                                             </TableCell>
                                                         </TableRow>

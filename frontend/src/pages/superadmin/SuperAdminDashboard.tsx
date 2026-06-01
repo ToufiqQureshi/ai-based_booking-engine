@@ -106,7 +106,7 @@ export default function SuperAdminDashboard() {
                                 />
                             </TabsContent>
                             
-                            <AnalyticsTab hotels={hotels} users={users} />
+                            <AnalyticsTab hotels={hotels} users={users} onSelectHotel={setSelectedHotel} />
                             <BroadcastsTab />
 
                             <TabsContent value="audit" className="mt-6">
