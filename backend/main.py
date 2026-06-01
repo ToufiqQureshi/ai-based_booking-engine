@@ -178,6 +178,7 @@ app.include_router(analytics.router, prefix=API_V1_PREFIX + "/analytics", tags=[
 app.include_router(leads.router, prefix=API_V1_PREFIX + "/leads", tags=["Leads"])
 app.include_router(google_ads.router, prefix=API_V1_PREFIX)
 app.include_router(superadmin.router, prefix=API_V1_PREFIX)
+app.include_router(google_hotel_ads.router, prefix=API_V1_PREFIX)
 
 
 # Root endpoint
