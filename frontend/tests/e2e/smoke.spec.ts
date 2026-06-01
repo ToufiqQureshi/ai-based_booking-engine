@@ -13,9 +13,9 @@ test('login page is accessible', async ({ page }) => {
 
 test('public search page loads', async ({ page }) => {
   // Assuming a test hotel exists or just checking route stability
-  await page.goto('/book/test-hotel');
-  // Check if dates or search button are visible
-  await expect(page.getByText(/check-in/i)).toBeVisible();
+  await page.goto('/book/test-hotel/rooms');
+  // Check if dates or search button are visible - uses exact text from RoomSearchHeader
+  await expect(page.getByText("Check In").first()).toBeVisible();
 });
 
 test('analytics dashboard requires auth', async ({ page }) => {

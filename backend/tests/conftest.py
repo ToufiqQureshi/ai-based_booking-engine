@@ -51,7 +51,7 @@ async def auth_client(client: AsyncClient) -> AsyncClient:
     Authenticated test client fixture.
     Mocks a logged-in hotelier user.
     """
-    from jose import jwt
+    import jwt
     from app.core.config import get_settings
     settings = get_settings()
 

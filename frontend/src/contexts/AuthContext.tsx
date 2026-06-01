@@ -29,90 +29,104 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check for existing session on mount
   useEffect(() => {
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      try {
+        // Guard against unconfigured Supabase in CI/Dev to prevent hang
+        // We check for both presence and the literal string 'undefined' which can happen in some build setups
+        const sbUrl = import.meta.env.VITE_SUPABASE_URL;
+        if (!sbUrl || sbUrl === 'undefined' || sbUrl === '') {
+          console.warn('Supabase URL missing, skipping auth init');
+          setIsLoading(false);
+          return;
+        }
 
-      if (session) {
-        tokenStorage.setTokens({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token || '',
-          token_type: 'Bearer',
-          expires_in: session.expires_in || 3600,
-        });
+        const { data: { session } } = await supabase.auth.getSession();
 
-        try {
-          const currentUser = await authApi.getCurrentUser();
-          setUser(currentUser);
+        if (session) {
+          tokenStorage.setTokens({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token || '',
+            token_type: 'Bearer',
+            expires_in: session.expires_in || 3600,
+          });
 
           try {
-            const hotelData = await apiClient.get<Hotel>('/hotels/me');
-            setHotel(hotelData);
-          } catch {
-            // Silently fail
-          }
-        } catch (err: any) {
-          if (err && err.status === 403) {
-            console.error('User or Hotel is deactivated on backend:', err);
-            if (err.message === 'User is deactivated') {
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-                role: 'OWNER' as any,
-                hotel_id: '',
-                is_active: false,
-                created_at: session.user.created_at,
-                updated_at: session.user.updated_at || session.user.created_at,
-              });
-              return;
-            } else if (err.message === 'Hotel is deactivated') {
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-                role: 'OWNER' as any,
-                hotel_id: '',
-                is_active: true,
-                created_at: session.user.created_at,
-                updated_at: session.user.updated_at || session.user.created_at,
-              });
-              setHotel({
-                id: '',
-                name: session.user.user_metadata?.hotel_name || 'My Hotel',
-                slug: '',
-                is_active: false,
-                address: { city: '', country: '' },
-                contact: {},
-                settings: {
-                  currency: 'INR',
-                  timezone: 'UTC',
-                  check_in_time: '14:00',
-                  check_out_time: '12:00',
-                },
-                photos: [],
-                amenities: [],
-                created_at: session.user.created_at,
-                updated_at: session.user.created_at,
-              });
-              return;
+            const currentUser = await authApi.getCurrentUser();
+            setUser(currentUser);
+
+            try {
+              const hotelData = await apiClient.get<Hotel>('/hotels/me');
+              setHotel(hotelData);
+            } catch {
+              // Silently fail
             }
+          } catch (err: any) {
+            if (err && err.status === 403) {
+              console.error('User or Hotel is deactivated on backend:', err);
+              if (err.message === 'User is deactivated') {
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                  role: 'OWNER' as any,
+                  hotel_id: '',
+                  is_active: false,
+                  created_at: session.user.created_at,
+                  updated_at: session.user.updated_at || session.user.created_at,
+                });
+                return;
+              } else if (err.message === 'Hotel is deactivated') {
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                  role: 'OWNER' as any,
+                  hotel_id: '',
+                  is_active: true,
+                  created_at: session.user.created_at,
+                  updated_at: session.user.updated_at || session.user.created_at,
+                });
+                setHotel({
+                  id: '',
+                  name: session.user.user_metadata?.hotel_name || 'My Hotel',
+                  slug: '',
+                  is_active: false,
+                  address: { city: '', country: '' },
+                  contact: {},
+                  settings: {
+                    currency: 'INR',
+                    timezone: 'UTC',
+                    check_in_time: '14:00',
+                    check_out_time: '12:00',
+                  },
+                  photos: [],
+                  amenities: [],
+                  created_at: session.user.created_at,
+                  updated_at: session.user.created_at,
+                });
+                return;
+              }
+            }
+            console.warn('Backend unreachable on init, using Supabase session fallback:', err);
+            // Set minimal user from session — don't sign out
+            const admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"];
+            const userEmail = session.user.email?.toLowerCase() || '';
+            const fallbackRole = admin_emails.includes(userEmail) ? 'SUPER_ADMIN' : 'OWNER';
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+              role: fallbackRole as any,
+              hotel_id: '',
+              created_at: session.user.created_at,
+              updated_at: session.user.updated_at || session.user.created_at,
+            });
           }
-          console.warn('Backend unreachable on init, using Supabase session fallback:', err);
-          // Set minimal user from session — don't sign out
-          const admin_emails = ["tech.revmerito@gmail.com", "techrevmerito@gmail.com"];
-          const userEmail = session.user.email?.toLowerCase() || '';
-          const fallbackRole = admin_emails.includes(userEmail) ? 'SUPER_ADMIN' : 'OWNER';
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: fallbackRole as any,
-            hotel_id: '',
-            created_at: session.user.created_at,
-            updated_at: session.user.updated_at || session.user.created_at,
-          });
         }
+      } catch (err) {
+        console.error('Auth initialization failed:', err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     initAuth();

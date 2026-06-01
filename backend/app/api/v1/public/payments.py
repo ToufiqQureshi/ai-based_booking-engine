@@ -21,7 +21,6 @@ from app.services.email_service import get_email_service
 from app.core.config import get_settings
 from app.core.time import utcnow
 from app.core.limiter import limiter
-from app.core.tasks import safe_background
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -316,6 +315,7 @@ async def verify_razorpay_payment(
                 cc_list = h_settings.get("email_cc_list")
                 signature_str = h_settings.get("email_signature")
 
+                from app.core.tasks import safe_background
                 safe_background(
                     background_tasks,
                     lambda svc=email_service, ge=guest.email, gn=f"{guest.first_name} {guest.last_name}", bn=booking.booking_number, ci=str(booking.check_in), co=str(booking.check_out), ta=booking.total_amount, se=sender_email, sn=sender_name, sig=signature_str: svc.send_guest_booking_confirmation(
