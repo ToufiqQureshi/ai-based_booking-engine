@@ -104,7 +104,7 @@ export function BroadcastsTab(props: any) {
                                              placeholder="e.g. Scheduled System Upkeep"
                                              className="h-12 bg-muted/30 border-border rounded-xl font-medium focus:ring-2 focus:ring-primary/20"
                                              value={broadcastTitle}
-                                             onChange={(e) => setBroadcastTitle(e.target.value)}
+                                             onChange={(e: any) => setBroadcastTitle(e.target.value)}
                                          />
                                      </div>
 
@@ -115,7 +115,7 @@ export function BroadcastsTab(props: any) {
                                              rows={4}
                                              className="w-full p-4 bg-muted/30 border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none"
                                              value={broadcastMessage}
-                                             onChange={(e) => setBroadcastMessage(e.target.value)}
+                                             onChange={(e: any) => setBroadcastMessage(e.target.value)}
                                          />
                                      </div>
 
@@ -205,7 +205,7 @@ export function BroadcastsTab(props: any) {
                                              <h5 className="text-base font-bold text-foreground">No Active Announcements</h5>
                                              <p className="text-xs text-muted-foreground font-medium max-w-sm mt-1">Create a broadcast banner using the control module to broadcast live alerts across the enterprise.</p>
                                          </div>
-                                     ) : broadcasts.map((b) => (
+                                     ) : broadcasts.map((b: any) => (
                                          <div
                                              key={b.id}
                                              className={`p-6 rounded-2xl border flex items-start justify-between gap-6 transition-all shadow-sm hover:shadow-md ${

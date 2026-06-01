@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { Search, Loader2, Building2, Plus, Shield, Users, Mail, Phone, Calendar, Globe, Trash2, CheckCircle2, Lock, Tag, MapPin, Edit, Settings2, BarChart3, Radio, RefreshCw, Smartphone, Key, Star, LayoutGrid, CheckSquare, XSquare, MessageSquare, ListFilter, PlayCircle, Filter, Download, Zap, UploadCloud, ChevronRight, Save, LayoutTemplate, Activity, AlertTriangle, ShieldCheck, FileText, Send, Eye, X, Crown, Clock, Copy, ArrowRight, UserCheck, CheckCircle, SlidersHorizontal, Settings } from 'lucide-react';
+import { Search, Loader2, Building2, Plus, Shield, Users, Mail, Phone, Calendar, Globe, Trash2, CheckCircle2, Lock, Tag, MapPin, Edit, Settings2, BarChart3, Radio, RefreshCw, Smartphone, Key, Star, LayoutGrid, CheckSquare, XSquare, MessageSquare, ListFilter, PlayCircle, Filter, Download, Zap, UploadCloud, ChevronRight, Save, LayoutTemplate, Activity, AlertTriangle, ShieldCheck, FileText, Send, Eye, X, Crown, Clock, Copy, ArrowRight, UserCheck, CheckCircle, SlidersHorizontal, Settings, BrainCircuit, Sliders } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from '@/components/ui/separator';
 import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
+
+// Fallback hash function if not provided via props
+const getHotelHashValue = (id: string, seed: number) => {
+    let hash = seed;
+    for (let i = 0; i < id.length; i++) {
+        hash = (hash << 5) - hash + id.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash);
+};
 
 export function AnalyticsTab(props: any) {
   const {
@@ -55,7 +65,7 @@ export function AnalyticsTab(props: any) {
                                         <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Estimated Monthly Revenue</span>
                                         <h2 className="text-3xl font-black text-foreground tracking-tight">
                                             ${(() => {
-                                                const mrr = hotels.reduce((acc, hotel) => {
+                                                const mrr = hotels.reduce((acc: number, hotel: any) => {
                                                     const plan = hotel.subscription?.plan?.toLowerCase() || 'none';
                                                     if (plan === 'enterprise') return acc + 199;
                                                     if (plan === 'premium') return acc + 99;
@@ -67,7 +77,7 @@ export function AnalyticsTab(props: any) {
                                         </h2>
                                         <p className="text-[11px] text-muted-foreground font-medium pt-1">
                                             Projected ARR: <strong className="text-foreground">${(() => {
-                                                const mrr = hotels.reduce((acc, hotel) => {
+                                                const mrr = hotels.reduce((acc: number, hotel: any) => {
                                                     const plan = hotel.subscription?.plan?.toLowerCase() || 'none';
                                                     if (plan === 'enterprise') return acc + 199;
                                                     if (plan === 'premium') return acc + 99;
@@ -92,13 +102,13 @@ export function AnalyticsTab(props: any) {
                                     <div className="space-y-1">
                                         <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">AI Activation Status</span>
                                         <h2 className="text-3xl font-black text-foreground tracking-tight">
-                                            {hotels.filter(h => h.feature_ai_agent).length} <span className="text-sm font-bold text-muted-foreground">Agents</span>
+                                            {hotels.filter((h: any) => h.feature_ai_agent).length} <span className="text-sm font-bold text-muted-foreground">Agents</span>
                                             <span className="mx-2 text-border">/</span>
-                                            {hotels.filter(h => h.feature_guest_bot).length} <span className="text-sm font-bold text-muted-foreground">Bots</span>
+                                            {hotels.filter((h: any) => h.feature_guest_bot).length} <span className="text-sm font-bold text-muted-foreground">Bots</span>
                                         </h2>
                                         <p className="text-[11px] text-muted-foreground font-medium pt-1">
                                             AI Suite enabled on <strong className="text-foreground">
-                                                {Math.round((hotels.filter(h => h.feature_ai_agent || h.feature_guest_bot).length / (hotels.length || 1)) * 100)}%
+                                                {Math.round((hotels.filter((h: any) => h.feature_ai_agent || h.feature_guest_bot).length / (hotels.length || 1)) * 100)}%
                                             </strong> of all properties
                                         </p>
                                     </div>
@@ -112,10 +122,10 @@ export function AnalyticsTab(props: any) {
                                     </div>
                                     <div className="space-y-2.5 pt-1">
                                         {[
-                                            { name: 'Enterprise ($199)', count: hotels.filter(h => h.subscription?.plan?.toLowerCase() === 'enterprise').length, color: 'bg-purple-600' },
-                                            { name: 'Premium ($99)', count: hotels.filter(h => h.subscription?.plan?.toLowerCase() === 'premium').length, color: 'bg-blue-600' },
-                                            { name: 'Basic ($49)', count: hotels.filter(h => h.subscription?.plan?.toLowerCase() === 'basic').length, color: 'bg-emerald-600' },
-                                            { name: 'Free / Trial', count: hotels.filter(h => !h.subscription?.plan || h.subscription.plan.toLowerCase() === 'free' || h.subscription.plan.toLowerCase() === 'none').length, color: 'bg-muted-foreground/30' },
+                                            { name: 'Enterprise ($199)', count: hotels.filter((h: any) => h.subscription?.plan?.toLowerCase() === 'enterprise').length, color: 'bg-purple-600' },
+                                            { name: 'Premium ($99)', count: hotels.filter((h: any) => h.subscription?.plan?.toLowerCase() === 'premium').length, color: 'bg-blue-600' },
+                                            { name: 'Basic ($49)', count: hotels.filter((h: any) => h.subscription?.plan?.toLowerCase() === 'basic').length, color: 'bg-emerald-600' },
+                                            { name: 'Free / Trial', count: hotels.filter((h: any) => !h.subscription?.plan || h.subscription.plan.toLowerCase() === 'free' || h.subscription.plan.toLowerCase() === 'none').length, color: 'bg-muted-foreground/30' },
                                         ].map((tier, idx) => {
                                             const total = hotels.length || 1;
                                             const pct = Math.round((tier.count / total) * 100);
@@ -173,7 +183,7 @@ export function AnalyticsTab(props: any) {
                                                     </TableCell>
                                                 </TableRow>
                                             ) : (
-                                                hotels.map((hotel) => {
+                                                hotels.map((hotel: any) => {
                                                     const isAgentUnlocked = hotel.feature_ai_agent;
                                                     const isBotUnlocked = hotel.feature_guest_bot;
                                                     

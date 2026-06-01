@@ -234,15 +234,18 @@ export const apiClient = {
     }
   },
 
-  put: async <T>(endpoint: string, data?: unknown): Promise<T> => {
+  put: async <T>(endpoint: string, data?: unknown, config?: RequestInit): Promise<T> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const headers = getHeaders(config?.headers);
+    const { headers: _unusedHeaders, ...restConfig } = config || {};
 
     const makeRequest = () => fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
-      headers: getHeaders(),
+      headers,
       body: data ? JSON.stringify(data) : undefined,
       signal: controller.signal,
+      ...restConfig,
     });
 
     try {
@@ -255,15 +258,18 @@ export const apiClient = {
     }
   },
 
-  patch: async <T>(endpoint: string, data?: unknown): Promise<T> => {
+  patch: async <T>(endpoint: string, data?: unknown, config?: RequestInit): Promise<T> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const headers = getHeaders(config?.headers);
+    const { headers: _unusedHeaders, ...restConfig } = config || {};
 
     const makeRequest = () => fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PATCH',
-      headers: getHeaders(),
+      headers,
       body: data ? JSON.stringify(data) : undefined,
       signal: controller.signal,
+      ...restConfig,
     });
 
     try {
