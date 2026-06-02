@@ -87,101 +87,99 @@ export const SocialProofWidget: React.FC<SocialProofWidgetProps> = ({ hotel, sta
 
     const proofs: { icon: React.ReactNode; text: string; color: string; key: string }[] = [];
 
-    if (!isEnabled) return null;
-
-    if (
-        settings?.show_viewers_count !== false &&
-        typeof stats?.active_viewers === 'number' &&
-        stats.active_viewers > 0
-    ) {
-        proofs.push({
-            key: 'viewers',
-            icon: <Eye className="w-4 h-4 text-blue-500" />,
-            text: `${stats.active_viewers} ${stats.active_viewers === 1 ? 'person is' : 'people are'} viewing this hotel right now`,
-            color: 'bg-blue-50 text-blue-700 border-blue-100',
-        });
-    }
-
-    if (
-        settings?.show_last_booked !== false &&
-        typeof stats?.hours_since_last_booking === 'number' &&
-        stats.hours_since_last_booking >= 0
-    ) {
-        const hours = stats.hours_since_last_booking;
-        let text: string;
-        if (hours < 1) {
-            text = 'Booked in the last hour';
-        } else if (hours < 24) {
-            text = `Last booked ${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'} ago`;
-        } else {
-            const days = Math.round(hours / 24);
-            text = `Last booked ${days} day${days === 1 ? '' : 's'} ago`;
-        }
-        proofs.push({
-            key: 'last_booked',
-            icon: <Clock className="w-4 h-4 text-orange-500" />,
-            text,
-            color: 'bg-orange-50 text-orange-700 border-orange-100',
-        });
-    }
-
-    // Cancellation policy — show only if real policy text is available
-    const hasPolicyText = typeof stats?.cancellation_policy_text === 'string' && (stats.cancellation_policy_text || '').trim().length > 0;
-    const hasHotelPolicyText = typeof hotel?.settings?.cancellation_policy === 'string' && (hotel?.settings?.cancellation_policy || '').trim().length > 0;
-    if (hasPolicyText || hasHotelPolicyText) {
-        proofs.push({
-            key: 'cancellation',
-            icon: <ShieldCheck className="w-4 h-4 text-green-500" />,
-            text: stats?.cancellation_policy_text || (hotel?.settings?.cancellation_policy as string),
-            color: 'bg-green-50 text-green-700 border-green-100',
-        });
-    }
-
-    if (
-        settings?.show_popular_badge !== false &&
-        typeof stats?.bookings_this_month === 'number' &&
-        stats.bookings_this_month > 0
-    ) {
-        const count = stats.bookings_this_month;
-        const template = (settings?.popular_badge_text as string) || 'Popular choice! {count} bookings this month';
-        const text = template.replace('{count}', count.toString());
-        proofs.push({
-            key: 'popular',
-            icon: <TrendingUp className="w-4 h-4 text-purple-500" />,
-            text,
-            color: 'bg-purple-50 text-purple-700 border-purple-100',
-        });
-    }
-
-    // Review summary — only when real reviews exist
-    if (
-        settings?.show_review_summary !== false &&
-        typeof stats?.review_count === 'number' &&
-        stats.review_count > 0 &&
-        typeof stats?.avg_rating === 'number' &&
-        stats.avg_rating > 0
-    ) {
-        proofs.push({
-            key: 'reviews',
-            icon: <Star className="w-4 h-4 text-amber-500" />,
-            text: `${stats.avg_rating.toFixed(1)}★ from ${stats.review_count} review${stats.review_count === 1 ? '' : 's'}`,
-            color: 'bg-amber-50 text-amber-700 border-amber-100',
-        });
-    }
-
-    // Custom badges the hotelier added in settings
-    for (const b of stats?.custom_badges || []) {
-        if (typeof b?.label === 'string' && b.label.trim().length > 0) {
-            const icon = (typeof b.icon === 'string' && b.icon.trim()) || '✨';
+    if (isEnabled) {
+        if (
+            settings?.show_viewers_count !== false &&
+            typeof stats?.active_viewers === 'number' &&
+            stats.active_viewers > 0
+        ) {
             proofs.push({
-                key: `custom-${b.label}`,
-                icon: <span className="text-base" aria-hidden>{icon}</span>,
-                text: b.label,
-                color: 'bg-violet-50 text-violet-700 border-violet-100',
+                key: 'viewers',
+                icon: <Eye className="w-4 h-4 text-blue-500" />,
+                text: `${stats.active_viewers} ${stats.active_viewers === 1 ? 'person is' : 'people are'} viewing this hotel right now`,
+                color: 'bg-blue-50 text-blue-700 border-blue-100',
             });
         }
+
+        if (
+            settings?.show_last_booked !== false &&
+            typeof stats?.hours_since_last_booking === 'number' &&
+            stats.hours_since_last_booking >= 0
+        ) {
+            const hours = stats.hours_since_last_booking;
+            let text: string;
+            if (hours < 1) {
+                text = 'Booked in the last hour';
+            } else if (hours < 24) {
+                text = `Last booked ${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'} ago`;
+            } else {
+                const days = Math.round(hours / 24);
+                text = `Last booked ${days} day${days === 1 ? '' : 's'} ago`;
+            }
+            proofs.push({
+                key: 'last_booked',
+                icon: <Clock className="w-4 h-4 text-orange-500" />,
+                text,
+                color: 'bg-orange-50 text-orange-700 border-orange-100',
+            });
+        }
+
+        const hasPolicyText = typeof stats?.cancellation_policy_text === 'string' && (stats.cancellation_policy_text || '').trim().length > 0;
+        const hasHotelPolicyText = typeof hotel?.settings?.cancellation_policy === 'string' && (hotel?.settings?.cancellation_policy || '').trim().length > 0;
+        if (hasPolicyText || hasHotelPolicyText) {
+            proofs.push({
+                key: 'cancellation',
+                icon: <ShieldCheck className="w-4 h-4 text-green-500" />,
+                text: stats?.cancellation_policy_text || (hotel?.settings?.cancellation_policy as string),
+                color: 'bg-green-50 text-green-700 border-green-100',
+            });
+        }
+
+        if (
+            settings?.show_popular_badge !== false &&
+            typeof stats?.bookings_this_month === 'number' &&
+            stats.bookings_this_month > 0
+        ) {
+            const count = stats.bookings_this_month;
+            const template = (settings?.popular_badge_text as string) || 'Popular choice! {count} bookings this month';
+            const text = template.replace('{count}', count.toString());
+            proofs.push({
+                key: 'popular',
+                icon: <TrendingUp className="w-4 h-4 text-purple-500" />,
+                text,
+                color: 'bg-purple-50 text-purple-700 border-purple-100',
+            });
+        }
+
+        if (
+            settings?.show_review_summary !== false &&
+            typeof stats?.review_count === 'number' &&
+            stats.review_count > 0 &&
+            typeof stats?.avg_rating === 'number' &&
+            stats.avg_rating > 0
+        ) {
+            proofs.push({
+                key: 'reviews',
+                icon: <Star className="w-4 h-4 text-amber-500" />,
+                text: `${stats.avg_rating.toFixed(1)}★ from ${stats.review_count} review${stats.review_count === 1 ? '' : 's'}`,
+                color: 'bg-amber-50 text-amber-700 border-amber-100',
+            });
+        }
+
+        for (const b of stats?.custom_badges || []) {
+            if (typeof b?.label === 'string' && b.label.trim().length > 0) {
+                const icon = (typeof b.icon === 'string' && b.icon.trim()) || '✨';
+                proofs.push({
+                    key: `custom-${b.label}`,
+                    icon: <span className="text-base" aria-hidden>{icon}</span>,
+                    text: b.label,
+                    color: 'bg-violet-50 text-violet-700 border-violet-100',
+                });
+            }
+        }
     }
 
+    // All hooks must be called unconditionally — no early returns above this line
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
@@ -193,7 +191,7 @@ export const SocialProofWidget: React.FC<SocialProofWidgetProps> = ({ hotel, sta
         setCurrentIndex((prev) => (prev + 1) % proofs.length);
     }, 5000);
 
-    if (proofs.length === 0) return null;
+    if (!isEnabled || proofs.length === 0) return null;
 
     return (
         <div className="space-y-3 mb-6" data-testid="social-proof-widget">
