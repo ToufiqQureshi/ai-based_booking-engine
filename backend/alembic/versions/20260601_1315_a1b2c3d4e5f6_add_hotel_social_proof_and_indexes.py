@@ -31,7 +31,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a1b2c3d4e5f6'
+revision: str = 'b2c3d4e5f6g7'
 down_revision: Union[str, Sequence[str], None] = '8c4d5e6f7a8b'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -39,82 +39,101 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # 1. New social proof table
-    op.create_table(
-        'hotel_social_proof_settings',
-        sa.Column('id', sa.String(), nullable=False),
-        sa.Column('hotel_id', sa.String(), nullable=False),
-        sa.Column('is_enabled', sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column('show_viewers_count', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('show_last_booked', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('show_popular_badge', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('show_review_summary', sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column('popular_badge_text', sa.String(), nullable=False, server_default='Popular choice! {count} bookings this month'),
-        sa.Column('custom_badges', JSONB(), nullable=True, server_default=sa.text("'[]'::jsonb")),
-        sa.Column('cached_booking_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('cached_review_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('cached_avg_rating', sa.Float(), nullable=False, server_default='0.0'),
-        sa.Column('cached_hours_since_last_booking', sa.Float(), nullable=True),
-        sa.Column('cache_refreshed_at', sa.DateTime(), nullable=True),
-        sa.Column('updated_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['hotel_id'], ['hotels.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('hotel_id', name='uq_hotel_social_proof_settings_hotel_id'),
-    )
-    op.create_index(
-        'ix_hotel_social_proof_settings_is_enabled',
-        'hotel_social_proof_settings',
-        ['is_enabled'],
-    )
-    # hotel_id has UNIQUE constraint already → automatic index.
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if not inspector.has_table('hotel_social_proof_settings'):
+        op.create_table(
+            'hotel_social_proof_settings',
+            sa.Column('id', sa.String(), nullable=False),
+            sa.Column('hotel_id', sa.String(), nullable=False),
+            sa.Column('is_enabled', sa.Boolean(), server_default=sa.text('false'), nullable=False),
+            sa.Column('show_viewers_count', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+            sa.Column('show_last_booked', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+            sa.Column('show_popular_badge', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+            sa.Column('show_review_summary', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+            sa.Column('popular_badge_text', sa.String(), server_default=sa.text("'Popular choice! {count} bookings this month'"), nullable=False),
+            sa.Column('custom_badges', sa.JSON(), server_default=sa.text("'[]'::jsonb"), nullable=True),
+            sa.Column('cached_booking_count', sa.Integer(), server_default=sa.text('0'), nullable=False),
+            sa.Column('cached_review_count', sa.Integer(), server_default=sa.text('0'), nullable=False),
+            sa.Column('cached_avg_rating', sa.Float(), server_default=sa.text('0.0'), nullable=False),
+            sa.Column('cached_hours_since_last_booking', sa.Float(), nullable=True),
+            sa.Column('cache_refreshed_at', sa.DateTime(), nullable=True),
+            sa.Column('updated_at', sa.DateTime(), nullable=False),
+            sa.ForeignKeyConstraint(['hotel_id'], ['hotels.id'], ondelete='CASCADE'),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('hotel_id', name='uq_hotel_social_proof_settings_hotel_id')
+        )
+        op.create_index(
+            'ix_hotel_social_proof_settings_is_enabled',
+            'hotel_social_proof_settings',
+            ['is_enabled'],
+            unique=False
+        )
+        op.create_index(
+            'ix_hotel_social_proof_settings_hotel_id',
+            'hotel_social_proof_settings',
+            ['hotel_id'],
+            unique=False
+        )
+
+    # 2. Add config to Bookings table to track if we should show a booking in the popup
+    columns = [col['name'] for col in inspector.get_columns('bookings')]
+    if 'show_in_social_proof' not in columns:
+        op.add_column(
+            'bookings',
+            sa.Column('show_in_social_proof', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+        )
+
+    def create_index_safe(idx_name, table_name, columns, unique=False):
+        bind = op.get_bind()
+        inspector = sa.inspect(bind)
+        if table_name in inspector.get_table_names():
+            existing = {idx['name'] for idx in inspector.get_indexes(table_name)}
+            if idx_name not in existing:
+                op.create_index(idx_name, table_name, columns, unique=unique)
 
     # 2. Performance indexes (composite / covering)
     # Bookings — "this month" and "last booking" scans
-    op.create_index(
+    create_index_safe(
         'ix_bookings_hotel_id_created_at',
         'bookings',
-        ['hotel_id', sa.text('created_at DESC')],
+        ['hotel_id', sa.text('created_at DESC')]
     )
-    op.create_index(
+    create_index_safe(
         'ix_bookings_hotel_id_status',
         'bookings',
-        ['hotel_id', 'status'],
+        ['hotel_id', 'status']
     )
 
     # Room types — public "available rooms" widget
-    op.create_index(
+    create_index_safe(
         'ix_room_types_hotel_id_is_active',
         'room_types',
-        ['hotel_id', 'is_active'],
+        ['hotel_id', 'is_active']
     )
 
     # Rate plans — refundable check on social proof
-    op.create_index(
+    create_index_safe(
         'ix_rate_plans_hotel_id_is_active',
         'rate_plans',
-        ['hotel_id', 'is_active'],
+        ['hotel_id', 'is_active']
     )
 
     # Integration settings — super-admin integrations page
-    op.create_index(
+    create_index_safe(
         'ix_integration_settings_hotel_id',
         'integration_settings',
         ['hotel_id'],
-        unique=False,
+        unique=False
     )
 
     # Promo codes — checkout-time promo lookup (if not already unique)
-    # Use IF NOT EXISTS via inspector to avoid failures on re-runs.
-    bind = op.get_bind()
-    inspector = sa.inspect(bind)
-    if 'promo_codes' in inspector.get_table_names():
-        existing = {idx['name'] for idx in inspector.get_indexes('promo_codes')}
-        if 'ix_promo_codes_hotel_id_code' not in existing:
-            op.create_index(
-                'ix_promo_codes_hotel_id_code',
-                'promo_codes',
-                ['hotel_id', 'code'],
-                unique=True,
-            )
+    create_index_safe(
+        'ix_promo_codes_hotel_id_code',
+        'promo_codes',
+        ['hotel_id', 'code'],
+        unique=True
+    )
 
 
 def downgrade() -> None:

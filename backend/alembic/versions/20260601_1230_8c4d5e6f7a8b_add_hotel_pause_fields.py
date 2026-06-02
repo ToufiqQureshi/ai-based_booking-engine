@@ -23,20 +23,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.add_column(
-        'hotel',
+        'hotels',
         sa.Column('is_paused', sa.Boolean(), nullable=False, server_default=sa.false()),
     )
     op.add_column(
-        'hotel',
+        'hotels',
         sa.Column('pause_reason', sa.String(), nullable=True),
     )
     op.add_column(
-        'hotel',
+        'hotels',
         sa.Column('paused_at', sa.DateTime(), nullable=True),
     )
 
 
 def downgrade() -> None:
-    op.drop_column('hotel', 'paused_at')
-    op.drop_column('hotel', 'pause_reason')
-    op.drop_column('hotel', 'is_paused')
+    op.drop_column('hotels', 'paused_at')
+    op.drop_column('hotels', 'pause_reason')
+    op.drop_column('hotels', 'is_paused')
