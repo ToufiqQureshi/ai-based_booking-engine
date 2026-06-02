@@ -35,9 +35,33 @@ PLAN_FEATURES_PATH = os.path.join(
 )
 
 
-async def get_super_admin(current_user: CurrentUser):
+async def get_super_admin(request: Request, current_user: CurrentUser):
+    """
+    Two-layer superadmin guard:
+    1. Role check — user must have SUPER_ADMIN role.
+    2. IP allowlist — if SUPERADMIN_ALLOWED_IPS is configured, request must
+       come from an allowed IP. This ensures that even if a token is leaked,
+       it cannot be used from an unknown network to reach superadmin endpoints.
+    """
     if current_user.role != UserRole.SUPER_ADMIN:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only super admins can access this resource")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access restricted to Staybooker staff only",
+        )
+
+    allowed_ips = get_settings().superadmin_allowed_ip_set
+    if allowed_ips:
+        client_ip = _get_client_ip(request)
+        if client_ip not in allowed_ips:
+            logger.warning(
+                "Superadmin access denied — IP %s not in allowlist (user: %s)",
+                client_ip, current_user.email,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied from this IP address",
+            )
+
     return current_user
 
 

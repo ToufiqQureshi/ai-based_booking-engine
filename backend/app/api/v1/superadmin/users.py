@@ -118,6 +118,74 @@ async def delete_user(
     return {"message": "User account deleted successfully"}
 
 
+@router.post("/employees")
+async def create_staybooker_employee(
+    request: Request, data: SuperAdminUserCreate, session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+):
+    """
+    Add a new Staybooker employee as SUPER_ADMIN.
+    Only existing super admins can call this — no public signup allowed.
+    """
+    from app.core import security
+    from app.core.supabase import get_supabase
+
+    email = data.email.lower().strip()
+    if (await session.execute(select(User).where(User.email == email))).scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="An account with this email already exists")
+
+    supabase_client = get_supabase()
+
+    def _create_sb_user():
+        return supabase_client.auth.admin.create_user({
+            "email": email,
+            "password": data.password,
+            "email_confirm": True,
+            "user_metadata": {"name": data.name, "is_staff": True},
+        })
+
+    try:
+        sb_user = await asyncio.to_thread(_create_sb_user)
+        supabase_id = sb_user.user.id
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create account: {str(e)}")
+
+    new_user = User(
+        email=email,
+        name=data.name,
+        role=UserRole.SUPER_ADMIN,   # Always SUPER_ADMIN for Staybooker employees
+        supabase_id=supabase_id,
+        hashed_password=security.get_password_hash(data.password),
+        hotel_id=None,               # No hotel — platform employee
+        is_active=True,
+    )
+    session.add(new_user)
+    session.add(AuditLog(
+        user_id=super_admin.id, user_email=super_admin.email,
+        action="CREATE_EMPLOYEE",
+        description=f"Added Staybooker employee '{email}' as SUPER_ADMIN",
+        ip_address=_get_client_ip(request),
+    ))
+    try:
+        await session.commit()
+        await session.refresh(new_user)
+    except Exception as e:
+        await session.rollback()
+        try:
+            supabase_client.auth.admin.delete_user(supabase_id)
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=f"Failed to save employee: {str(e)}")
+
+    return {
+        "id": new_user.id,
+        "email": new_user.email,
+        "name": new_user.name,
+        "role": new_user.role,
+        "message": f"Employee account created. {email} can now login at superadmin.staybooker.ai",
+    }
+
+
 @router.post("/hotels/{hotel_id}/users")
 async def create_hotel_user(
     hotel_id: str, data: SuperAdminUserCreate, session: DbSession,

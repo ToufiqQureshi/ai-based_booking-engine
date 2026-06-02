@@ -94,8 +94,11 @@ const App = () => {
                 {/* Super Admin Specialized Routing */}
                 {isSuperAdmin ? (
                   <Route path="/">
+                    {/* Only login is allowed on superadmin subdomain — no public signup */}
+                    <Route path="/login" element={<LoginPage />} />
                     <Route path="/superadmin" element={<SuperAdminDashboard />} />
                     <Route index element={<Navigate to="/superadmin" replace />} />
+                    {/* Everything else (including /signup) redirects to superadmin panel */}
                     <Route path="*" element={<Navigate to="/superadmin" replace />} />
                   </Route>
                 ) : (

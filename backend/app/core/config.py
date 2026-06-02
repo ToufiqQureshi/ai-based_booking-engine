@@ -114,6 +114,12 @@ class Settings(BaseSettings):
     # Empty by default; must be set explicitly via env (MASTER_ADMIN_EMAILS=a@x.com,b@y.com).
     MASTER_ADMIN_EMAILS: str = ""
 
+    # Superadmin IP Allowlist — comma-separated IPs/CIDR blocks.
+    # If set, ALL /superadmin/* API requests from IPs NOT in this list are blocked 403.
+    # Example: SUPERADMIN_ALLOWED_IPS=203.0.113.10,10.0.0.0/8
+    # Leave empty to allow from any IP (less secure — not recommended for production).
+    SUPERADMIN_ALLOWED_IPS: str = ""
+
     # WhatsApp Meta webhook verification
     WHATSAPP_VERIFY_TOKEN: Optional[str] = None
     WHATSAPP_APP_SECRET: Optional[str] = None  # For HMAC signature verification
@@ -126,6 +132,13 @@ class Settings(BaseSettings):
         if isinstance(v, list):
             return ",".join(v)
         return str(v)
+
+    @property
+    def superadmin_allowed_ip_set(self) -> set[str]:
+        """Parsed set of allowed IPs for superadmin routes. Empty = allow all."""
+        if not self.SUPERADMIN_ALLOWED_IPS:
+            return set()
+        return {ip.strip() for ip in self.SUPERADMIN_ALLOWED_IPS.split(",") if ip.strip()}
 
     @property
     def master_admin_email_set(self) -> set[str]:
