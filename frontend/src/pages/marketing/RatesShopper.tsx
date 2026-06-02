@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,62 +18,57 @@ import { ShieldAlert } from 'lucide-react';
 
 export default function RatesShopper() {
     const { hotel } = useAuth();
-    const [competitors, setCompetitors] = useState<any[]>([]);
-    const [chartData, setChartData] = useState<any[]>([]);
-    const [tableData, setTableData] = useState<any[]>([]);
-    const [chartCompetitorNames, setChartCompetitorNames] = useState<string[]>([]);
-    const [marketAnalysis, setMarketAnalysis] = useState<any[]>([]); // New State
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [isScraping, setIsScraping] = useState(false);
     const [forceRefreshMap, setForceRefreshMap] = useState<Record<string, boolean>>({});
-    // Initialize from localStorage or default to "ALL"
     const [activeTab, setActiveTab] = useState(() => localStorage.getItem("rateShopperActiveTab") || "ALL");
+    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [newCompName, setNewCompName] = useState('');
+    const [newCompUrl, setNewCompUrl] = useState('');
+    const [newCompSource, setNewCompSource] = useState('MAKEMYTRIP');
+    const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-    // Persist tab change
     useEffect(() => {
         localStorage.setItem("rateShopperActiveTab", activeTab);
     }, [activeTab]);
 
-    // Add Dialog State
-    const [isAddOpen, setIsAddOpen] = useState(false);
-    const [newCompName, setNewCompName] = useState('');
-    const [newCompUrl, setNewCompUrl] = useState('');
-    const [newCompSource, setNewCompSource] = useState('MAKEMYTRIP'); // Default to active platform
-
-    const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
-
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
+    // Single useQuery replacing 3 separate useEffect fetches — React Query handles
+    // caching, deduplication, and background refresh automatically
+    const { data: rateShopperData, isLoading, refetch: refetchAll } = useQuery({
+        queryKey: ['rateShopperData', startDate],
+        queryFn: async () => {
             const [compRes, rateRes, analysisRes] = await Promise.all([
                 apiClient.get('/competitors'),
                 apiClient.get('/competitors/rates/comparison', { start_date: startDate }),
-                apiClient.get('/competitors/analysis', { start_date: startDate, days: '7' }) // Fetch Analysis
+                apiClient.get('/competitors/analysis', { start_date: startDate, days: '7' }),
             ]);
-            setCompetitors(compRes as any[]);
-            setChartData((rateRes as any).chart_data);
-            setTableData((rateRes as any).table_data);
-            setChartCompetitorNames((rateRes as any).competitors);
-            setMarketAnalysis(analysisRes as any[]);
-        } catch (error) {
-            console.error("Failed to fetch rate shopper data", error);
-            toast.error("Failed to load data");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+            return {
+                competitors: compRes as any[],
+                chartData: (rateRes as any).chart_data,
+                tableData: (rateRes as any).table_data,
+                chartCompetitorNames: (rateRes as any).competitors,
+                marketAnalysis: analysisRes as any[],
+            };
+        },
+        staleTime: 1000 * 60 * 60, // 1 hour — competitor data doesn't change minute-to-minute
+        gcTime: 1000 * 60 * 120,
+        onError: () => toast.error("Failed to load rate shopper data"),
+    } as any);
+
+    const competitors = rateShopperData?.competitors ?? [];
+    const chartData = rateShopperData?.chartData ?? [];
+    const tableData = rateShopperData?.tableData ?? [];
+    const chartCompetitorNames = rateShopperData?.chartCompetitorNames ?? [];
+    const marketAnalysis = rateShopperData?.marketAnalysis ?? [];
+
+    const fetchData = useCallback(() => refetchAll(), [refetchAll]);
 
     useEffect(() => {
-        fetchData();
-
-        // Real-time listener for extension updates
-        const onScrapeComplete = () => {
-            fetchData();
-        };
-
+        // Real-time listener for scraping extension updates
+        const onScrapeComplete = () => refetchAll();
         window.addEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
         return () => window.removeEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
-    }, [startDate]); // Refetch when date changes
+    }, [refetchAll]);
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setStartDate(e.target.value);
@@ -281,8 +277,7 @@ export default function RatesShopper() {
         try {
             await apiClient.delete(`/competitors/${id}`);
             toast.success("Competitor removed");
-            setCompetitors(prev => prev.filter(c => c.id !== id));
-            fetchData(); // Refresh all data to clear from table/chart
+            refetchAll(); // Refresh all data via React Query
         } catch (error) {
             console.error(error);
             toast.error("Failed to delete competitor");

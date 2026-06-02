@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useVisibilityInterval } from '@/hooks/useVisibilityInterval';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -161,71 +162,49 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const AnalyticsDashboard: React.FC = () => {
-  const [cachedData, setCachedData] = useState<Record<number, AnalyticsData>>({});
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [switching, setSwitching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const [activeUsers, setActiveUsers] = useState<number>(0);
 
-  const fetchAnalytics = useCallback(async (daysCount: number, isSilent = false) => {
-    if (cachedData[daysCount]) {
-      if (!isSilent) setData(cachedData[daysCount]);
-      return;
-    }
-    if (!isSilent) {
-      if (data) setSwitching(true);
-      else setLoading(true);
-    }
-    try {
-      const result = await api.get<AnalyticsData>(`/analytics/dashboard?days=${daysCount}`);
-      setCachedData(prev => ({ ...prev, [daysCount]: result }));
-      if (days === daysCount) setData(result);
-    } catch (err: any) {
-      if (!isSilent) setError(err.message || 'Failed to load analytics data.');
-    } finally {
-      if (!isSilent) { setLoading(false); setSwitching(false); }
-    }
-  }, [cachedData, data, days]);
+  // Main analytics — React Query handles caching, deduplication, and background refresh
+  const {
+    data,
+    isLoading: loading,
+    isFetching: switching,
+    error: queryError,
+    refetch,
+  } = useQuery<AnalyticsData>({
+    queryKey: ['analyticsDashboard', days],
+    queryFn: () => api.get<AnalyticsData>(`/analytics/dashboard?days=${days}`),
+    staleTime: 1000 * 60 * 10, // 10 minutes — matches backend 600s cache
+    gcTime: 1000 * 60 * 30,   // keep all 3 tab variants in memory for 30 min
+  });
 
-  useEffect(() => {
-    fetchAnalytics(days);
-    [7, 30, 90].filter(d => d !== days).forEach(d => {
-      if (!cachedData[d]) fetchAnalytics(d, true);
-    });
-  }, [days]);
+  const error = queryError ? (queryError as any).message || 'Failed to load analytics data.' : null;
 
-  // Live stats polling: extracted from the useEffect above so we can drive
-  // it with the visibility-aware hook (P2.9) and so it isn't recreated on
-  // every render.
+  // Live stats polling — visibility-aware, pauses when tab is hidden
   const fetchLiveStats = useCallback(async () => {
     try {
       const [activeRes, feedRes] = await Promise.all([
         api.get<{ active_visitors: number }>('/analytics/live/active'),
-        api.get<any[]>('/analytics/live/feed')
+        api.get<any[]>('/analytics/live/feed'),
       ]);
       setActiveUsers(activeRes.active_visitors);
-      const mappedEvents: LiveEvent[] = feedRes.map(e => ({
+      setLiveEvents(feedRes.map(e => ({
         id: Math.random().toString(),
         type: (e.event === 'booking_complete' ? 'booking' : e.event === 'search' ? 'search' : 'view') as LiveEvent['type'],
         message: e.event === 'booking_complete' ? '🎉 New Booking Confirmed' :
                  e.event === 'search' ? '🔍 Searching availability' :
                  e.event === 'room_view' ? '👁 Viewing room details' : '📄 New page visit',
         timestamp: new Date(e.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-        amount: e.metadata?.total_amount
-      }));
-      setLiveEvents(mappedEvents);
+        amount: e.metadata?.total_amount,
+      })));
     } catch (err) {
       console.error('Live feed poll failed', err);
     }
   }, []);
 
-  // Initial fetch on mount / days change.
   useEffect(() => { fetchLiveStats(); }, [fetchLiveStats, days]);
-
-  // Visibility-aware polling — pauses when the tab is hidden.
   useVisibilityInterval(fetchLiveStats, 30000);
 
   const handleExport = () => {
@@ -258,9 +237,7 @@ export const AnalyticsDashboard: React.FC = () => {
   };
 
   const handleDaysChange = (d: number) => {
-    setDays(d);
-    if (cachedData[d]) setData(cachedData[d]);
-    else { setSwitching(true); fetchAnalytics(d); }
+    setDays(d); // queryKey changes → React Query fetches automatically
   };
 
   // ── Loading / Error States ─────────────────────────────────────────────
@@ -278,7 +255,7 @@ export const AnalyticsDashboard: React.FC = () => {
         <p className="font-bold text-red-700">Failed to load analytics</p>
         <p className="text-sm text-red-500 mt-1">{error}</p>
       </div>
-      <button onClick={() => { setError(null); setLoading(true); fetchAnalytics(days); }}
+      <button onClick={() => refetch()}
         className="ml-auto flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl text-sm font-bold transition-colors">
         <RefreshCw className="w-4 h-4" /> Retry
       </button>

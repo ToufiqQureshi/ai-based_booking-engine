@@ -5,7 +5,8 @@ import {
   CheckCircle2, AlertTriangle, Sparkles,
   CalendarDays
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -60,9 +61,6 @@ const DAYS_TO_SHOW = 14;
 
 export function AvailabilityPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [availabilityData, setAvailabilityData] = useState<RoomAvailability[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRoomType, setSelectedRoomType] = useState('all');
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isWeekendDialogOpen, setIsWeekendDialogOpen] = useState(false);
@@ -71,27 +69,35 @@ export function AvailabilityPage() {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
 
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const dates = Array.from({ length: DAYS_TO_SHOW }, (_, i) => addDays(currentDate, i));
+  const startDateStr = format(dates[0], 'yyyy-MM-dd');
+  const endDateStr = format(dates[dates.length - 1], 'yyyy-MM-dd');
 
-  const fetchAvailability = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    else setIsRefreshing(true);
-    try {
-      const data = await apiClient.get<RoomAvailability[]>('/availability', {
-        start_date: format(dates[0], 'yyyy-MM-dd'),
-        end_date: format(dates[dates.length - 1], 'yyyy-MM-dd'),
-      });
-      setAvailabilityData(data);
-    } catch {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load availability data.' });
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+  const {
+    data: availabilityData = [],
+    isLoading,
+    isFetching: isRefreshing,
+    refetch,
+  } = useQuery<RoomAvailability[]>({
+    queryKey: ['availability', startDateStr, endDateStr],
+    queryFn: () => apiClient.get<RoomAvailability[]>('/availability', {
+      start_date: startDateStr,
+      end_date: endDateStr,
+    }),
+    staleTime: 1000 * 60 * 2, // 2 minutes — availability changes with bookings
+    gcTime: 1000 * 60 * 10,
+  });
+
+  // Used by dialogs after mutations to refresh data
+  const fetchAvailability = useCallback((silent = false) => {
+    if (!silent) {
+      queryClient.invalidateQueries({ queryKey: ['availability'] });
+    } else {
+      refetch();
     }
-  }, [currentDate]);
-
-  useEffect(() => { fetchAvailability(); }, [currentDate]);
+  }, [queryClient, refetch]);
 
   const navigateDate = (dir: 'prev' | 'next') =>
     setCurrentDate(d => addDays(d, dir === 'next' ? DAYS_TO_SHOW : -DAYS_TO_SHOW));
