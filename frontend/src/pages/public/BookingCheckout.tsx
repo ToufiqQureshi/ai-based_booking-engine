@@ -251,21 +251,12 @@ function BookingCheckoutInner() {
         }, 100);
     };
 
-    if (!state || !state.rooms || state.rooms.length === 0 || !state.checkInDate || !state.checkOutDate) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
-                <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center">
-                    <Calendar className="w-10 h-10 text-slate-300" />
-                </div>
-                <h2 className="text-2xl font-bold text-slate-900">Session Expired</h2>
-                <p className="text-slate-500">Please start your search again to find the best rates.</p>
-                <Button onClick={() => navigate(`/book/${hotelSlug}/rooms`)} size="lg" className="rounded-full px-8">Back to Search</Button>
-            </div>
-        )
-    }
-
-    const room = state.rooms[0];
-    const nights = (new Date(state.checkOutDate).getTime() - new Date(state.checkInDate).getTime()) / (1000 * 60 * 60 * 24);
+    // Null-safe derived values — computed before any early return so useMemo below
+    // is always called (Rules of Hooks). The early return guard comes after useMemo.
+    const room = state?.rooms?.[0] ?? null;
+    const nights = state?.checkOutDate && state?.checkInDate
+        ? (new Date(state.checkOutDate).getTime() - new Date(state.checkInDate).getTime()) / (1000 * 60 * 60 * 24)
+        : 0;
 
     const onSubmit = async (data: CheckoutFormData) => {
         // Synchronous guard: prevents double-submit even before React re-renders the disabled button.
@@ -475,8 +466,8 @@ function BookingCheckoutInner() {
     const addonTaxRate = Number(settings?.addon_tax_rate) || 0;
     const addonTaxType = settings?.addon_tax_type || 'exclusive';
 
-    const addonsTotal = state.addons?.reduce((sum, a) => sum + a.price, 0) || 0;
-    const grandTotal = state.totalRoomPrice + addonsTotal;
+    const addonsTotal = state?.addons?.reduce((sum, a) => sum + a.price, 0) || 0;
+    const grandTotal = (state?.totalRoomPrice ?? 0) + addonsTotal;
 
     const getRoomTaxRate = (price: number) => {
         if (roomTaxCalculationMethod === 'flat') {
@@ -495,7 +486,7 @@ function BookingCheckoutInner() {
     let roomSubtotal = 0;
     let roomTaxAmount = 0;
     let appliedRoomTaxRate = 0;
-    if (state.rooms && state.rooms.length > 0) {
+    if (state?.rooms && state.rooms.length > 0) {
         state.rooms.forEach((room: any) => {
             const r_rate = getRoomTaxRate(room.price_per_night);
             appliedRoomTaxRate = r_rate;
@@ -510,12 +501,13 @@ function BookingCheckoutInner() {
             }
         });
     } else {
+        const totalRoomPrice = state?.totalRoomPrice ?? 0;
         if (roomTaxType === 'inclusive') {
-            roomSubtotal = state.totalRoomPrice / (1 + (roomTaxRate / 100));
-            roomTaxAmount = state.totalRoomPrice - roomSubtotal;
+            roomSubtotal = totalRoomPrice / (1 + (roomTaxRate / 100));
+            roomTaxAmount = totalRoomPrice - roomSubtotal;
         } else {
-            roomSubtotal = state.totalRoomPrice;
-            roomTaxAmount = state.totalRoomPrice * (roomTaxRate / 100);
+            roomSubtotal = totalRoomPrice;
+            roomTaxAmount = totalRoomPrice * (roomTaxRate / 100);
         }
     }
 
@@ -531,7 +523,7 @@ function BookingCheckoutInner() {
 
     const subtotalAmount = roomSubtotal + addonSubtotal;
     const taxAmount = roomTaxAmount + addonTaxAmount;
-    const totalBeforeDiscount = (roomTaxType === 'exclusive' ? state.totalRoomPrice + roomTaxAmount : state.totalRoomPrice) + 
+    const totalBeforeDiscount = (roomTaxType === 'exclusive' ? (state?.totalRoomPrice ?? 0) + roomTaxAmount : (state?.totalRoomPrice ?? 0)) +
                                 (addonTaxType === 'exclusive' ? addonsTotal + addonTaxAmount : addonsTotal);
     const finalTotal = totalBeforeDiscount - discountAmount;
 
@@ -544,7 +536,7 @@ function BookingCheckoutInner() {
         try {
             const res = await apiClient.post<{ valid: boolean, discount: number, message: string }>('/promos/validate', {
                 code: code,
-                hotel_id: room.hotel_id,
+                hotel_id: room?.hotel_id,
                 booking_amount: grandTotal
             });
 
@@ -571,7 +563,7 @@ function BookingCheckoutInner() {
     const themeColor = getNormalizedColor(hotel?.primary_color);
 
     const ctx = useMemo(() => ({
-        hotelSlug: hotelSlug as string, hotel, room, state, setState, register, formState, getNormalizedColor, themeColor, handleEmailBlur, allAddons, currentAddons: state.addons || [], handleToggleAddon, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, paymentMethod, setPaymentMethod, handleCheckout: onSubmit, handleSubmit, nights, hotelPaymentMode, roomsTotal: subtotalAmount - (state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0), addonsTotal: state.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0,
+        hotelSlug: hotelSlug as string, hotel, room, state, setState, register, formState, getNormalizedColor, themeColor, handleEmailBlur, allAddons, currentAddons: state?.addons || [], handleToggleAddon, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, paymentMethod, setPaymentMethod, handleCheckout: onSubmit, handleSubmit, nights, hotelPaymentMode, roomsTotal: subtotalAmount - (state?.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0), addonsTotal: state?.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0,
         appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount, addonTaxRate, addonTaxAmount, appliedPromo, setAppliedPromo, setDiscountAmount
     }), [
         hotelSlug, hotel, room, state, register, formState, themeColor, allAddons,
@@ -581,6 +573,20 @@ function BookingCheckoutInner() {
         appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount,
         addonTaxRate, addonTaxAmount, appliedPromo
     ]);
+
+    // Early return AFTER all hooks — guards the render below when state isn't loaded yet
+    if (!state || !state.rooms || state.rooms.length === 0 || !state.checkInDate || !state.checkOutDate) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
+                <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center">
+                    <Calendar className="w-10 h-10 text-slate-300" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">Session Expired</h2>
+                <p className="text-slate-500">Please start your search again to find the best rates.</p>
+                <Button onClick={() => navigate(`/book/${hotelSlug}/rooms`)} size="lg" className="rounded-full px-8">Back to Search</Button>
+            </div>
+        );
+    }
 
     return (
         <BookingCheckoutContext.Provider value={ctx}>

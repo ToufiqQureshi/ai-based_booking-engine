@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Code, Key, Globe, Plus, Trash2, Search, MessageCircle, Loader2, Save, Sparkles } from 'lucide-react';
+import { Code, Key, Globe, Search, MessageCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,13 +48,6 @@ interface WidgetCode {
 const IntegrationPage = () => {
     const { hotel, setHotel, user } = useAuth();
     const [settings, setSettings] = useState<IntegrationSettings | null>(null);
-    const [whatsappConfig, setWhatsappConfig] = useState({
-        whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
-        whatsapp_phone_number_id: hotel?.settings?.whatsapp_phone_number_id || '',
-        whatsapp_business_account_id: hotel?.settings?.whatsapp_business_account_id || '',
-    });
-    const [isSavingWhatsapp, setIsSavingWhatsapp] = useState(false);
-    const [isWhatsappDirty, setIsWhatsappDirty] = useState(false);
     const [isAIEnabled, setIsAIEnabled] = useState(hotel?.feature_ai_agent || false);
     const [isSavingAI, setIsSavingAI] = useState(false);
     const [activeHotelSlug, setActiveHotelSlug] = useState<string>('');
@@ -66,7 +55,6 @@ const IntegrationPage = () => {
     const [widgetCode, setWidgetCode] = useState<WidgetCode | null>(null);
     const [loading, setLoading] = useState(true);
     const [testingAI, setTestingAI] = useState(false);
-    const [testingWhatsapp, setTestingWhatsapp] = useState(false);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
 
@@ -128,28 +116,6 @@ const IntegrationPage = () => {
         }
     };
 
-    const updateWhatsappSettings = (updates: Partial<typeof whatsappConfig>) => {
-        setWhatsappConfig(prev => ({ ...prev, ...updates }));
-        setIsWhatsappDirty(true);
-    };
-
-    const handleSaveWhatsappSettings = async () => {
-        if (isSavingWhatsapp) return;
-        setIsSavingWhatsapp(true);
-        try {
-            const updatedHotel = await apiClient.patch<any>('/hotels/me', {
-                settings: whatsappConfig
-            });
-            setHotel(updatedHotel);
-            setIsWhatsappDirty(false);
-            toast.success('WhatsApp settings saved successfully');
-        } catch (error) {
-            toast.error('Failed to save WhatsApp settings');
-        } finally {
-            setIsSavingWhatsapp(false);
-        }
-    };
-
     const handleToggleAI = async (enabled: boolean) => {
         if (isSavingAI) return;
         setIsAIEnabled(enabled);
@@ -182,23 +148,6 @@ const IntegrationPage = () => {
             toast.error('Test failed. Check your API key and network.');
         } finally {
             setTestingAI(false);
-        }
-    };
-
-    const testWhatsapp = async () => {
-        if (testingWhatsapp) return;
-        setTestingWhatsapp(true);
-        try {
-            const res = await apiClient.post<any>('/integration/test-whatsapp');
-            if (res.status === 'success') {
-                toast.success(res.message);
-            } else {
-                toast.error(res.message);
-            }
-        } catch (error) {
-            toast.error('Test failed. Please check your credentials or save before testing.');
-        } finally {
-            setTestingWhatsapp(false);
         }
     };
 
@@ -273,7 +222,7 @@ const IntegrationPage = () => {
                 </TabsContent>
 
                 <TabsContent value="whatsapp">
-                    <WhatsappTab config={whatsappConfig} user={user} isAIEnabled={isAIEnabled} isSavingAI={isSavingAI} isSavingWhatsapp={isSavingWhatsapp} isWhatsappDirty={isWhatsappDirty} onUpdateConfig={updateWhatsappSettings} onSaveWhatsapp={handleSaveWhatsappSettings} onToggleAI={handleToggleAI} onTestWhatsapp={testWhatsapp} testingWhatsapp={testingWhatsapp} hotelHasKey={!!hotel?.settings?.whatsapp_api_key} hotel={hotel} />
+                    <WhatsappTab user={user} isAIEnabled={isAIEnabled} isSavingAI={isSavingAI} onToggleAI={handleToggleAI} hotel={hotel} />
                 </TabsContent>
             </Tabs>
         </PageShell>
