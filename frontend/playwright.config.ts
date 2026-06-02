@@ -22,5 +22,6 @@ export default defineConfig({
     command: process.env.CI ? 'npm run build && npm run preview' : 'npm run dev',
     url: process.env.CI ? 'http://127.0.0.1:4173' : 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
+    timeout: 120000,
   },
 });

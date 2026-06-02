@@ -55,7 +55,7 @@ export default function BookingConfirmation() {
         // Hotel Info (Mock for now)
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
-        doc.text("Staybooker Collection", 14, 45);
+        doc.text(hotel?.name || hotel?.settings?.name || 'Hotel', 14, 45);
 
         // Guest Info
         doc.setFontSize(12);

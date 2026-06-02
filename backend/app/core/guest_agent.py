@@ -6,6 +6,7 @@ from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
+import logging
 
 from app.models.booking import Booking, BookingStatus, BookingSource
 from app.models.room import RoomType
@@ -13,6 +14,8 @@ from app.models.hotel import Hotel, HotelSettings
 from app.models.amenity import Amenity
 from app.models.lead import Lead
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 # Explicitly Read-Only System Prompt
 SYSTEM_PROMPT = """You are the virtual concierge for '{hotel_name}'. 
@@ -325,5 +328,5 @@ def create_guest_agent_graph(
         return graph
         
     except Exception as e:
-        print(f"DEBUG ERROR: {e}")
+        logger.error(f"Guest agent error: {e}")
         raise

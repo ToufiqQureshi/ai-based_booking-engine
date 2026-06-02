@@ -5,6 +5,7 @@ Receives tracking events from the widget and provides aggregated data to the das
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import select, func, case, or_
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -14,6 +15,7 @@ from app.models.booking import Booking, BookingStatus
 from app.core.cache import cache_response
 from app.models.room import RoomType
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Analytics"])
 
@@ -70,7 +72,7 @@ async def track_start(hotel_id: str, request: SessionStartRequest, req_fastapi: 
                     if geo_data.get("status") == "success":
                         country_name = geo_data.get("country", "Unknown")
     except Exception as e:
-        print(f"GeoIP Lookup Failed: {e}")
+        logger.warning(f"GeoIP Lookup Failed: {e}")
 
     new_session = AnalyticsSession(
         hotel_id=actual_hotel_id,

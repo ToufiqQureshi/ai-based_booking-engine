@@ -145,6 +145,15 @@ async def get_public_hotel_by_slug(request: Request, hotel_slug: str, session: D
     from app.core.sensitive_fields import mask_hotel_for_hotelier
 
     hotel_id = await resolve_hotel_id(hotel_slug, session)
+
+    cache_key = f"public:hotel-details:{hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
@@ -152,7 +161,14 @@ async def get_public_hotel_by_slug(request: Request, hotel_slug: str, session: D
     if not hotel.is_active:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
-    return mask_hotel_for_hotelier(hotel)
+    masked = mask_hotel_for_hotelier(hotel)
+
+    try:
+        redis_client.set_value(cache_key, json.dumps(masked, default=str), expire=300)
+    except Exception:
+        pass
+
+    return masked
 
 
 @router.get("/hotels/slug/{hotel_slug}/widget-config", response_model=dict)
@@ -161,7 +177,6 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
     Get configuration for the booking widget.
     Includes allowed_domains for security check.
     """
-    hotel_id = await resolve_hotel_id(hotel_slug, session)
     hotel_id = await resolve_hotel_id(hotel_slug, session)
 
     from app.models.integration import IntegrationSettings
@@ -212,6 +227,15 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
     from app.core.sensitive_fields import mask_hotel_for_hotelier
 
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
+
+    cache_key = f"public:hotel-details:{hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
@@ -223,11 +247,14 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
     settings_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
     settings_res = await session.execute(settings_query)
     int_settings = settings_res.scalar_one_or_none()
+    masked = mask_hotel_for_hotelier(hotel)
     if int_settings and getattr(int_settings, 'widget_primary_color', None):
-        # Override the primary color on a copy-style dict
-        masked = mask_hotel_for_hotelier(hotel)
         masked["primary_color"] = int_settings.widget_primary_color
-        return masked
 
-    return mask_hotel_for_hotelier(hotel)
+    try:
+        redis_client.set_value(cache_key, json.dumps(masked, default=str), expire=300)
+    except Exception:
+        pass
+
+    return masked
 

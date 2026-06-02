@@ -20,6 +20,9 @@ def _clear_rate_caches(hotel_id: str):
     # Public room search caches prices — must be cleared when rates change
     redis_client.delete_pattern(f"public:rooms:{hotel_id}:*")
     redis_client.delete_pattern(f"rooms:{hotel_id}:*")
+    # Bump rate version for SSE clients so they auto-refresh
+    import time
+    redis_client.set_value(f"rate_version:{hotel_id}", str(int(time.time())), expire=86400)
 
 
 @router.get("/plans", response_model=List[RatePlanRead])

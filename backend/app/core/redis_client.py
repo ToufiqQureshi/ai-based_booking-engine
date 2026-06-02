@@ -4,7 +4,10 @@ import json
 import time
 import asyncio
 import fnmatch
+import logging
 from typing import Optional, Any
+
+_logger = logging.getLogger(__name__)
 
 class RedisClient:
     _instance: Optional[redis.Redis] = None
@@ -62,7 +65,7 @@ class RedisClient:
                 r.setex(key, expire, value)
                 return
             except Exception as e:
-                print(f"Redis set failed, falling back to local memory: {e}")
+                _logger.warning(f"Redis set failed, using local memory: {e}")
         
         # Memory Fallback
         cls._local_memory_cache[key] = (value, time.time() + expire)
@@ -82,7 +85,7 @@ class RedisClient:
                         return val.decode('utf-8')
                     return val
             except Exception as e:
-                print(f"Redis get failed, falling back to local memory: {e}")
+                _logger.warning(f"Redis get failed, using local memory: {e}")
         
         # Memory Fallback
         if key in cls._local_memory_cache:
@@ -124,7 +127,7 @@ class RedisClient:
                 if keys:
                     r.delete(*keys)
             except Exception as e:
-                print(f"Redis delete pattern failed: {e}")
+                _logger.error(f"Redis delete pattern failed: {e}")
 
         # Local Memory Pattern Delete
         keys_to_del = [k for k in cls._local_memory_cache.keys() if fnmatch.fnmatch(k, pattern)]
@@ -165,7 +168,7 @@ class RedisClient:
                 result = r.set(key, value, nx=True, ex=expire)
                 return bool(result)
             except Exception as e:
-                print(f"Redis SET NX EX failed, falling back to local memory: {e}")
+                _logger.warning(f"Redis SET NX EX failed, using local memory: {e}")
 
         # In-memory fallback: use a per-key asyncio.Lock to make the check-then-set
         # atomic across coroutines on this worker. Across workers / instances, the

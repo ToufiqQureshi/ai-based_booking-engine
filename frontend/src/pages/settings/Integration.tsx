@@ -76,37 +76,28 @@ const IntegrationPage = () => {
 
     const fetchData = async () => {
         try {
-            // Fetch current hotel slug via properties
-            try {
-                const properties = await apiClient.get<any[]>('/properties');
-                const currentProp = properties.find(p => p.is_current) || properties[0];
-                if (currentProp) {
-                    setActiveHotelSlug(currentProp.slug);
-                }
-            } catch (err) {
-                console.error("Failed to fetch properties fallback", err);
-            }
+            const [properties, settingsData, keysData, widgetData] = await Promise.all([
+                apiClient.get<any[]>('/properties').catch(() => []),
+                apiClient.get<IntegrationSettings>('/integration/settings'),
+                apiClient.get<ApiKey[]>('/integration/api-keys').catch(() => []),
+                apiClient.get<WidgetCode>('/integration/widget-code').catch(() => null),
+            ]);
 
-            // Fetch integration settings
-            const settingsData = await apiClient.get<IntegrationSettings>('/integration/settings');
+            const currentProp = properties.find((p: any) => p.is_current) || properties[0];
+            if (currentProp) setActiveHotelSlug(currentProp.slug);
+
             setSettings(settingsData);
-
-            // Fetch API keys
-            const keysData = await apiClient.get<ApiKey[]>('/integration/api-keys');
             setApiKeys(keysData);
-
-            // Fetch widget code
-            const widgetData = await apiClient.get<WidgetCode>('/integration/widget-code');
 
             if (widgetData) {
                 const currentOrigin = window.location.origin;
                 const urlRegex = /(http:\/\/localhost:8080|https:\/\/app\.gadget4me\.in|https:\/\/api\.hotelierhub\.com|https:\/\/book\.hotelierhub\.com)/g;
-                widgetData.html_code = widgetData.html_code.replace(urlRegex, currentOrigin);
-                widgetData.javascript_code = widgetData.javascript_code.replace(urlRegex, currentOrigin);
-                widgetData.instructions = widgetData.instructions.replace(urlRegex, currentOrigin);
+                widgetData.html_code = widgetData.html_code?.replace(urlRegex, currentOrigin);
+                widgetData.javascript_code = widgetData.javascript_code?.replace(urlRegex, currentOrigin);
+                widgetData.instructions = widgetData.instructions?.replace(urlRegex, currentOrigin);
+                setWidgetCode(widgetData);
             }
 
-            setWidgetCode(widgetData);
             setLoading(false);
         } catch (error) {
             console.error('Error fetching integration data:', error);

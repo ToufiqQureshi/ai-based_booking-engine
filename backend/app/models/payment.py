@@ -21,6 +21,8 @@ class PaymentBase(SQLModel):
     status: PaymentStatus = Field(default=PaymentStatus.PENDING)
     payment_method: Optional[str] = None
     gateway_reference: Optional[str] = None
+    transaction_id: Optional[str] = None
+    reference_number: Optional[str] = None
 
 class Payment(PaymentBase, table=True):
     __tablename__ = "payments"

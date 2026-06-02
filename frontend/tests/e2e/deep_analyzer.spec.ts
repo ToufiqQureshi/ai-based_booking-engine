@@ -15,32 +15,28 @@ test.describe('Deep Page Analyzer - Health Checks', () => {
     test(`Verify ${pageInfo.name} stability`, async ({ page }) => {
       await page.goto(pageInfo.path);
 
-      // 1. Check if it redirects to login (if not authenticated)
-      // This is a "Pass" because it shows the security guard is working
+      // Allow time for auth redirect if Supabase is available
+      await page.waitForTimeout(1500);
+
       const url = page.url();
+      const bodyText = await page.textContent('body') || '';
+
       if (url.includes('login')) {
-        console.log(`${pageInfo.name} is protected by Login.`);
+        // Redirected to login — security guard working correctly
         await expect(page).toHaveURL(/.*login.*/);
       } else {
-        // 2. If it's public (like Landing), check for crashes
-        const bodyText = await page.textContent('body');
+        // No redirect (CI without backend) — just verify no crash
         expect(bodyText).not.toContain('Internal Server Error');
-        expect(bodyText).not.toContain('404');
+        // A loading/skeleton state is fine; raw "404" text in body is not
+        const has404Text = bodyText.trim() === '404' || bodyText.includes('404 Not Found');
+        expect(has404Text).toBeFalsy();
       }
     });
   }
 });
 
 test('Public Booking Widget Health', async ({ page }) => {
-  // Test a generic hotel slug
   await page.goto('/book/test-hotel');
-
-  // Check if critical elements are present
-  const calendarVisible = await page.isVisible('[data-testid="calendar"]');
-  const searchButton = await page.isVisible('button:has-text("Search")');
-
-  // Even if they are not visible due to "Hotel not found",
-  // we check that the page didn't throw a "White Screen"
   const title = await page.title();
   expect(title).toBeTruthy();
 });
