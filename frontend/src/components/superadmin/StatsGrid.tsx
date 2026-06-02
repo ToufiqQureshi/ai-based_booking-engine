@@ -1,73 +1,82 @@
 import { motion } from 'framer-motion';
-import { Building2, Users, BrainCircuit, ShieldCheck } from 'lucide-react';
+import { Building2, Users, BrainCircuit, Activity } from 'lucide-react';
 
 interface StatsProps {
     hotelsCount: number;
     usersCount: number;
     aiCount: number;
+    activeCount?: number; // hotels with active subscription
 }
 
-export const StatsGrid = ({ hotelsCount, usersCount, aiCount }: StatsProps) => {
+export const StatsGrid = ({ hotelsCount, usersCount, aiCount, activeCount }: StatsProps) => {
+    const activeHotels = activeCount ?? hotelsCount;
+    const aiPct = hotelsCount > 0 ? Math.round((aiCount / hotelsCount) * 100) : 0;
+
     const stats = [
         {
-            label: 'Total Hotels',
+            label: 'Total Properties',
             value: hotelsCount,
-            trend: '+12%',
+            sub: `${activeHotels} active`,
             icon: Building2,
             color: 'text-indigo-600',
-            bg: 'bg-indigo-50',
-            gradient: 'from-indigo-500/10 via-transparent to-transparent'
+            bg: 'bg-indigo-50 dark:bg-indigo-950/30',
+            border: 'border-indigo-100 dark:border-indigo-900/40',
+            gradient: 'from-indigo-500/8 via-transparent to-transparent',
         },
         {
-            label: 'Active Users',
+            label: 'Total Users',
             value: usersCount,
-            trend: '+5%',
+            sub: 'across all properties',
             icon: Users,
             color: 'text-emerald-600',
-            bg: 'bg-emerald-50',
-            gradient: 'from-emerald-500/10 via-transparent to-transparent'
+            bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+            border: 'border-emerald-100 dark:border-emerald-900/40',
+            gradient: 'from-emerald-500/8 via-transparent to-transparent',
         },
         {
-            label: 'AI Features Active',
+            label: 'AI Agent Active',
             value: aiCount,
-            trend: 'Trending',
+            sub: `${aiPct}% of properties`,
             icon: BrainCircuit,
             color: 'text-purple-600',
-            bg: 'bg-purple-50',
-            gradient: 'from-purple-500/10 via-transparent to-transparent'
+            bg: 'bg-purple-50 dark:bg-purple-950/30',
+            border: 'border-purple-100 dark:border-purple-900/40',
+            gradient: 'from-purple-500/8 via-transparent to-transparent',
         },
         {
-            label: 'System Health',
-            value: '99.9%',
-            trend: 'Operational',
-            icon: ShieldCheck,
+            label: 'Avg Users / Property',
+            value: hotelsCount > 0 ? (usersCount / hotelsCount).toFixed(1) : '—',
+            sub: 'owner + staff',
+            icon: Activity,
             color: 'text-blue-600',
-            bg: 'bg-blue-50',
-            gradient: 'from-blue-500/10 via-transparent to-transparent'
+            bg: 'bg-blue-50 dark:bg-blue-950/30',
+            border: 'border-blue-100 dark:border-blue-900/40',
+            gradient: 'from-blue-500/8 via-transparent to-transparent',
         },
     ];
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat, i) => (
                 <motion.div
                     key={i}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: i * 0.1 }}
-                    whileHover={{ y: -5, scale: 1.02 }}
-                    className="group relative border border-border/80 shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl bg-background overflow-hidden p-6 cursor-pointer"
+                    transition={{ duration: 0.35, delay: i * 0.07 }}
+                    className={`group relative border ${stat.border} shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl bg-background overflow-hidden p-5`}
                 >
                     <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-                    <div className="flex items-center justify-between mb-4 relative z-10">
-                        <div className={`${stat.bg} ${stat.color} p-3.5 rounded-2xl transition-all duration-300 group-hover:scale-110 shadow-sm`}>
-                            <stat.icon className="w-6 h-6" />
+                    <div className="flex items-start justify-between mb-3 relative z-10">
+                        <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl border ${stat.border}`}>
+                            <stat.icon className="w-5 h-5" />
                         </div>
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground text-right leading-tight max-w-[80px]">
+                            {stat.label}
+                        </span>
                     </div>
-                    <div className="flex items-end justify-between relative z-10">
-                        <h3 className="text-3xl font-black text-foreground tabular-nums tracking-tight">{stat.value}</h3>
-                        <span className="text-[10px] font-black px-2.5 py-1 bg-muted rounded-xl text-muted-foreground transition-all duration-300 group-hover:bg-indigo-50 group-hover:text-indigo-600">{stat.trend}</span>
+                    <div className="relative z-10">
+                        <h3 className="text-2xl font-black text-foreground tabular-nums">{stat.value}</h3>
+                        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{stat.sub}</p>
                     </div>
                 </motion.div>
             ))}

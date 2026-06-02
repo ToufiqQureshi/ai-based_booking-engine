@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, DbSession
@@ -20,6 +20,14 @@ import jwt
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract real client IP, respecting Railway/proxy forwarding headers."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
 
 PLAN_FEATURES_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
@@ -163,7 +171,7 @@ async def update_hotel_status(
 
 @router.delete("/hotels/{hotel_id}")
 async def delete_hotel(
-    hotel_id: str, session: DbSession,
+    hotel_id: str, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     """Permanently delete a hotel and all associated data."""
@@ -227,7 +235,7 @@ async def delete_hotel(
             user_id=super_admin.id, user_email=super_admin.email,
             action="DELETE_HOTEL",
             description=f"Permanently deleted hotel '{hotel.name}' (Slug: {hotel.slug})",
-            ip_address="127.0.0.1",
+            ip_address=_get_client_ip(request),
         ))
         await session.commit()
         return {"message": "Hotel and all associated data deleted successfully"}
@@ -238,7 +246,7 @@ async def delete_hotel(
 
 @router.post("/impersonate/{hotel_id}")
 async def impersonate_hotel(
-    hotel_id: str, session: DbSession,
+    hotel_id: str, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     """Generate a login token to access a hotel as its owner."""
@@ -268,7 +276,7 @@ async def impersonate_hotel(
         user_id=super_admin.id, user_email=super_admin.email, hotel_id=hotel_id,
         action="IMPERSONATE",
         description=f"Super admin impersonated hotel '{hotel.name}' via user '{target_user.email}'",
-        ip_address="127.0.0.1",
+        ip_address=_get_client_ip(request),
     ))
     await session.commit()
     return {"access_token": token, "token_type": "Bearer", "target_email": target_user.email, "target_name": target_user.name, "hotel_name": hotel.name}
@@ -276,9 +284,10 @@ async def impersonate_hotel(
 
 @router.post("/social-proof/refresh")
 async def refresh_social_proof_stats(
+    request: Request,
+    session: DbSession,
     hotel_id: Optional[str] = None,
     super_admin: User = Depends(get_super_admin),
-    session: DbSession = None,
 ):
     """Recompute social proof cache for one or all hotels."""
     from app.core.social_proof_refresh import refresh_all_social_proof_stats, refresh_one_hotel_now
@@ -291,7 +300,7 @@ async def refresh_social_proof_stats(
             user_id=super_admin.id, user_email=super_admin.email,
             action="REFRESH_SOCIAL_PROOF",
             description=f"Refreshed social proof cache for hotel {hotel_id}",
-            ip_address="127.0.0.1",
+            ip_address=_get_client_ip(request),
         ))
         await session.commit()
         return {"status": "success", "hotel_id": hotel_id}
@@ -301,7 +310,7 @@ async def refresh_social_proof_stats(
         user_id=super_admin.id, user_email=super_admin.email,
         action="REFRESH_SOCIAL_PROOF_ALL",
         description=f"Refreshed social proof cache for {summary['hotels_total']} hotels",
-        ip_address="127.0.0.1",
+        ip_address=_get_client_ip(request),
     ))
     await session.commit()
     return {"status": "success", **summary}

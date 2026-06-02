@@ -4,7 +4,7 @@ Super Admin — Subscriptions, quotas, plan features, broadcasts, audit logs.
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import select
 
 from app.api.deps import DbSession
@@ -12,7 +12,7 @@ from app.models.audit import AuditLog, SystemBroadcast
 from app.models.hotel import Hotel
 from app.models.subscription import Subscription
 from app.models.user import User
-from .hotels import get_super_admin, load_plan_features, save_plan_features
+from .hotels import get_super_admin, load_plan_features, save_plan_features, _get_client_ip
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -57,7 +57,7 @@ async def update_subscription(
 
 @router.patch("/hotels/{hotel_id}/quotas")
 async def update_quotas(
-    hotel_id: str, data: dict, session: DbSession,
+    hotel_id: str, request: Request, data: dict, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     sub = (await session.execute(select(Subscription).where(Subscription.hotel_id == hotel_id))).scalar_one_or_none()
@@ -74,7 +74,7 @@ async def update_quotas(
         user_id=super_admin.id, user_email=super_admin.email, hotel_id=hotel_id,
         action="UPDATE_QUOTAS",
         description=f"Updated quotas for hotel '{hotel.name if hotel else hotel_id}': WA={sub.whatsapp_credits}, SMS={sub.sms_credits}, AI={sub.ai_usage_limit}",
-        ip_address="127.0.0.1",
+        ip_address=_get_client_ip(request),
     ))
     await session.commit()
     return {"message": "Quotas updated successfully", "quotas": sub}
@@ -87,7 +87,7 @@ async def get_plan_features(super_admin: User = Depends(get_super_admin)):
 
 @router.post("/plan-features")
 async def update_plan_features(
-    data: dict, session: DbSession,
+    data: dict, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     """Update plan-to-features mapping and sync all matching hotels."""
@@ -113,7 +113,7 @@ async def update_plan_features(
         user_id=super_admin.id, user_email=super_admin.email,
         action="UPDATE_PLAN_FEATURES",
         description="Updated global subscription plan features matrix and synced active properties",
-        ip_address="127.0.0.1",
+        ip_address=_get_client_ip(request),
     ))
     await session.commit()
     return {"message": "Plan features updated and hotels synced successfully", "plan_features": current}
@@ -130,7 +130,10 @@ async def get_audit_logs(
 
 
 @router.get("/broadcasts")
-async def get_broadcasts(session: DbSession):
+async def get_broadcasts(
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+):
     result = await session.execute(
         select(SystemBroadcast).where(SystemBroadcast.is_active == True).order_by(SystemBroadcast.created_at.desc())
     )
@@ -151,7 +154,7 @@ async def create_broadcast(
         user_id=super_admin.id, user_email=super_admin.email,
         action="CREATE_BROADCAST",
         description=f"Created system broadcast: '{broadcast.title}'",
-        ip_address="127.0.0.1",
+        ip_address=_get_client_ip(request),
     ))
     await session.commit()
     await session.refresh(broadcast)

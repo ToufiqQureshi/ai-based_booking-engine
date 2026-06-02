@@ -115,12 +115,17 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
         },
     });
 
+    // Wipe = pause the hotel (soft disable). Full deletion is a separate action below.
     const wipeDataMutation = useMutation({
-        mutationFn: () => apiClient.post(`/superadmin/hotels/${hotel.id}/wipe`, {}),
+        mutationFn: () => apiClient.patch(`/superadmin/hotels/${hotel.id}`, {
+            is_paused: true,
+            pause_reason: 'Manual data pause by super admin',
+        }),
         onSuccess: () => {
-            toast.success("Property data successfully wiped and reset");
+            toast.success("Property paused — bookings & public access disabled");
             queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
-        }
+        },
+        onError: () => toast.error("Failed to pause property"),
     });
 
     const deletePropertyMutation = useMutation({
@@ -257,20 +262,20 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
 
                                     <div className="flex items-center justify-between pt-4 border-t border-rose-500/10">
                                         <div>
-                                            <p className="font-bold text-sm text-slate-200">Wipe Hotel Data</p>
-                                            <p className="text-xs text-slate-400 max-w-[200px] mt-1">Delete all reservations, guests, and logs.</p>
+                                            <p className="font-bold text-sm text-slate-200">Pause Property</p>
+                                            <p className="text-xs text-slate-400 max-w-[200px] mt-1">Disable public booking access. Owner can still log in.</p>
                                         </div>
-                                        <Button 
-                                            variant="outline" 
-                                            className="text-rose-400 border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 rounded-xl"
+                                        <Button
+                                            variant="outline"
+                                            className="text-amber-400 border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-300 rounded-xl"
                                             onClick={() => {
-                                                if(confirm(`Are you sure you want to WIPE all operational data for ${hotel.name}?`)) {
+                                                if (confirm(`Pause ${hotel.name}? Public booking will be disabled.`)) {
                                                     wipeDataMutation.mutate();
                                                 }
                                             }}
                                             disabled={wipeDataMutation.isPending}
                                         >
-                                            <ServerCrash className="w-4 h-4 mr-2" /> Wipe Data
+                                            <ServerCrash className="w-4 h-4 mr-2" /> Pause Property
                                         </Button>
                                     </div>
 

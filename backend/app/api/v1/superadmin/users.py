@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlmodel import select
 
@@ -14,7 +14,7 @@ from app.api.deps import DbSession
 from app.models.audit import AuditLog
 from app.models.hotel import Hotel
 from app.models.user import User, UserRole
-from .hotels import get_super_admin
+from .hotels import get_super_admin, _get_client_ip
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -36,7 +36,7 @@ async def list_users(
     from sqlalchemy.orm import selectinload
     stmt = select(User).options(selectinload(User.hotel))
     if query:
-        stmt = stmt.where(User.email.contains(query) | User.name.contains(query))
+        stmt = stmt.where(User.email.ilike(f"%{query}%") | User.name.ilike(f"%{query}%"))
     result = await session.execute(stmt)
     return [
         {
@@ -69,7 +69,7 @@ async def update_user_role(
 
 @router.patch("/users/{user_id}/status")
 async def update_user_status(
-    user_id: str, data: dict, session: DbSession,
+    user_id: str, request: Request, data: dict, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     user = await session.get(User, user_id)
@@ -84,7 +84,7 @@ async def update_user_status(
         user_id=super_admin.id, user_email=super_admin.email,
         action="UPDATE_USER_STATUS",
         description=f"Updated status for user '{user.email}': active={user.is_active}",
-        ip_address="127.0.0.1",
+        ip_address=_get_client_ip(request),
     ))
     await session.commit()
     return {"message": "User status updated successfully", "is_active": user.is_active}
@@ -92,25 +92,26 @@ async def update_user_status(
 
 @router.delete("/users/{user_id}")
 async def delete_user(
-    user_id: str, session: DbSession,
+    user_id: str, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
-    from sqlalchemy import text
     user = await session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     if user.supabase_id:
         try:
-            await session.execute(text("DELETE FROM auth.users WHERE id = :sub_id"), {"sub_id": user.supabase_id})
+            from app.core.supabase import get_supabase
+            supabase_client = get_supabase()
+            await asyncio.to_thread(supabase_client.auth.admin.delete_user, user.supabase_id)
         except Exception as e:
-            logger.error("Failed to delete user %s from auth.users: %s", user.email, e)
+            logger.error("Failed to delete user %s from Supabase auth: %s", user.email, e)
 
     session.add(AuditLog(
         user_id=super_admin.id, user_email=super_admin.email,
         action="DELETE_USER",
         description=f"Deleted user '{user.email}' (Supabase ID: {user.supabase_id})",
-        ip_address="127.0.0.1",
+        ip_address=_get_client_ip(request),
     ))
     await session.delete(user)
     await session.commit()
