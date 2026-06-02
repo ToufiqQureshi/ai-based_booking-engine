@@ -81,22 +81,41 @@ async def get_current_user(
                 session.add(user)
                 await session.commit()
                 await session.refresh(user)
-    # Auto-heal: User exists but missing hotel_id
+    # Auto-heal: User exists but missing hotel_id (Multi-property migration)
     if user and not user.hotel_id:
-        logger.info(f"Auto-healing missing hotel for user {email}")
+        from app.models.links import UserHotelLink
         from app.models.hotel import Hotel
         import uuid
         
-        hotel_name = payload.get("user_metadata", {}).get("hotel_name", f"{user.name or 'My'}'s Hotel")
-        hotel_slug = f"hotel-{str(uuid.uuid4())[:8]}"
-        hotel = Hotel(name=hotel_name, slug=hotel_slug)
-        session.add(hotel)
-        await session.flush()
+        # 1. Check if user already has links via the new multi-property system
+        link_query = select(UserHotelLink).where(UserHotelLink.user_id == user.id)
+        links_res = await session.execute(link_query)
+        links = links_res.scalars().all()
         
-        user.hotel_id = hotel.id
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        if links:
+            # If links exist, just use the first one as active context
+            logger.info(f"Auto-healing user {email}: Setting hotel_id from existing UserHotelLink")
+            user.hotel_id = links[0].hotel_id
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+        else:
+            # 2. Truly orphaned user (legacy signup or corrupted state) - Create default hotel
+            logger.info(f"Auto-healing missing hotel for user {email}: Creating new default hotel")
+            hotel_name = payload.get("user_metadata", {}).get("hotel_name", f"{user.name or 'My'}'s Hotel")
+            hotel_slug = f"hotel-{str(uuid.uuid4())[:8]}"
+            hotel = Hotel(name=hotel_name, slug=hotel_slug)
+            session.add(hotel)
+            await session.flush()
+
+            user.hotel_id = hotel.id
+            # Also create the link for the new hotel
+            new_link = UserHotelLink(user_id=user.id, hotel_id=hotel.id, role=user.role)
+            session.add(new_link)
+
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
 
     # 3. Last Resort: Agar email se bhi nahi mila, toh Auto-Registration (First time login)
     if user is None:

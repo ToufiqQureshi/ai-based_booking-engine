@@ -77,9 +77,13 @@ async def add_property(prop_data: PropertyCreate, current_user: CurrentUser, ses
     new_hotel = Hotel(
         name=prop_data.name,
         slug=prop_data.slug,
-        contact_email=prop_data.email or current_user.email,
-        contact_phone=prop_data.phone or ""
     )
+    # Correctly initialize contact info as dict if needed
+    new_hotel.contact = {
+        "email": prop_data.email or current_user.email,
+        "phone": prop_data.phone or ""
+    }
+
     session.add(new_hotel)
     await session.flush()
     await session.refresh(new_hotel)
