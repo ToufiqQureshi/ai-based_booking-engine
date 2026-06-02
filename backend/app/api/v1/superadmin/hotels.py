@@ -68,15 +68,28 @@ DEFAULT_ROLE_PERMISSIONS = {
 @router.get("/hotels", response_model=List[dict])
 async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_admin)):
     """List all hotels with owner and subscription details."""
-    result = await session.execute(select(Hotel))
+    hotels = (await session.execute(select(Hotel))).scalars().all()
+    if not hotels:
+        return []
+
+    hotel_ids = [h.id for h in hotels]
+
+    # Batch fetch owners — 1 query instead of N
+    owners_res = await session.execute(
+        select(User).where(User.hotel_id.in_(hotel_ids), User.role == UserRole.OWNER)
+    )
+    owners_map: dict[str, User] = {u.hotel_id: u for u in owners_res.scalars().all()}
+
+    # Batch fetch subscriptions — 1 query instead of N
+    subs_res = await session.execute(
+        select(Subscription).where(Subscription.hotel_id.in_(hotel_ids))
+    )
+    subs_map: dict[str, Subscription] = {s.hotel_id: s for s in subs_res.scalars().all()}
+
     final_result = []
-    for hotel in result.scalars().all():
-        owner = (await session.execute(
-            select(User).where(User.hotel_id == hotel.id, User.role == UserRole.OWNER)
-        )).scalar_one_or_none()
-        sub = (await session.execute(
-            select(Subscription).where(Subscription.hotel_id == hotel.id)
-        )).scalar_one_or_none()
+    for hotel in hotels:
+        owner = owners_map.get(hotel.id)
+        sub = subs_map.get(hotel.id)
         settings_dict = hotel.settings or {}
         final_result.append({
             "id": hotel.id,

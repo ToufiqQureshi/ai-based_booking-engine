@@ -104,10 +104,12 @@ async def update_my_hotel(
             current_user.email, current_user.hotel_id, sorted(stripped),
         )
 
+    # Save old slug BEFORE update so we can bust its cache key after commit
+    old_slug = hotel.slug
+
     if "slug" in update_data and update_data["slug"]:
         new_slug = update_data["slug"].lower().strip()
         if new_slug != hotel.slug:
-            # Check uniqueness
             existing = await session.execute(select(Hotel).where(Hotel.slug == new_slug))
             if existing.scalar_one_or_none():
                 raise HTTPException(
@@ -126,19 +128,18 @@ async def update_my_hotel(
     await session.commit()
     await session.refresh(hotel)
 
-    # Invalidate public caches on settings change (e.g. tax settings update)
     try:
         from app.core.redis_client import redis_client
+        from app.api.v1.availability import clear_availability_cache
+        # Bust both old and new slug — covers slug-change scenario
+        for slug in {old_slug, hotel.slug}:
+            redis_client.delete_key(f"public:slug-to-id:{slug}")
+            redis_client.delete_key(f"public:social-proof:{slug}")
         redis_client.delete_key(f"public:hotel-details:{hotel.id}")
         redis_client.delete_key(f"public:widget-config:{hotel.id}")
-        redis_client.delete_key(f"public:slug-to-id:{hotel.slug}")
         redis_client.delete_key(f"public:slug-to-id:{hotel.id}")
-        redis_client.delete_key(f"public:social-proof:{hotel.slug}")
-        redis_client.delete_key(f"public:social-proof:{hotel.id}")
-        # Clear rooms and availability cache
-        from app.api.v1.availability import clear_availability_cache
         clear_availability_cache(hotel.id)
-    except Exception as e:
+    except Exception:
         pass
 
     return mask_hotel_for_hotelier(hotel)

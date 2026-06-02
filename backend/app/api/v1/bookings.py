@@ -9,7 +9,9 @@ from fastapi import APIRouter, HTTPException, status, Query, BackgroundTasks
 from sqlmodel import select
 import uuid
 
+from fastapi import Request
 from app.api.deps import CurrentUser, DbSession
+from app.core.cache import cache_response, invalidate_cache
 from app.models.timeline import BookingTimeline
 from app.models.booking import (
     Booking, BookingCreate, BookingRead, BookingUpdate,
@@ -20,13 +22,19 @@ from app.api.v1.availability import clear_availability_cache
 from app.services.email_service import get_email_service
 from app.core.redis_client import redis_client as _redis
 
-def _clear_dashboard_cache(hotel_id: str):
-    """Dashboard stats + recent bookings cache clear karta hai jab booking change ho."""
+def _clear_booking_caches(hotel_id: str):
+    """Clear all booking-related caches when bookings change."""
     try:
         _redis.delete_value(f"dashboard_stats:{hotel_id}")
         _redis.delete_value(f"dashboard_recent_bookings:{hotel_id}")
+        _redis.delete_pattern(f"bookings:{hotel_id}:*")
+        _redis.delete_pattern(f"reports_dashboard:{hotel_id}:*")
+        _redis.delete_pattern(f"reports_occupancy:{hotel_id}:*")
     except Exception:
         pass
+
+# Keep old name as alias for compatibility with existing callers
+_clear_dashboard_cache = _clear_booking_caches
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -39,7 +47,9 @@ def generate_booking_number() -> str:
 
 
 @router.get("", response_model=List[BookingRead])
+@cache_response(expire=30, key_prefix="bookings")
 async def get_bookings(
+    request: Request,
     current_user: CurrentUser,
     session: DbSession,
     status_filter: Optional[BookingStatus] = Query(None, alias="status"),
