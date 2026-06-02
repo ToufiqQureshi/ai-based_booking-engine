@@ -105,9 +105,30 @@ async def get_availability(
             price_map[(dr.room_type_id, curr.isoformat())] = dr.price
             curr = curr + timedelta(days=1)
 
-    # 6. Calculate availability
+    # 6. Pre-group booked counts by (room_type_id, date) to avoid O(n*m) loop
+    from collections import defaultdict
+    booked_by_room_date: dict = defaultdict(int)
+    for b in bookings:
+        curr = b.check_in
+        while curr < b.check_out:
+            for rb in (b.rooms or []):
+                if isinstance(rb, dict):
+                    rt_id = rb.get("room_type_id")
+                    if rt_id:
+                        booked_by_room_date[(rt_id, curr.isoformat())] += 1
+            curr += timedelta(days=1)
+
+    # Pre-group blocked counts by (room_type_id, date)
+    blocked_by_room_date: dict = defaultdict(int)
+    for block in blocks:
+        curr = block.start_date
+        while curr <= block.end_date:
+            blocked_by_room_date[(block.room_type_id, curr.isoformat())] += block.blocked_count
+            curr += timedelta(days=1)
+
+    # 7. Calculate availability using pre-grouped maps
     availability_data = []
-    
+
     for room in room_types:
         room_data = {
             "id": room.id,
@@ -115,37 +136,25 @@ async def get_availability(
             "totalInventory": room.total_inventory,
             "availability": []
         }
-        
+
         for day in date_range:
-            # Count booked rooms
-            booked_count = 0
-            for booking in bookings:
-                if booking.check_in <= day < booking.check_out:
-                    for booked_room in booking.rooms:
-                        if booked_room.get("room_type_id") == room.id:
-                            booked_count += 1
-            
-            # Count blocked rooms
-            blocked_count = 0
-            for block in blocks:
-                # Blocks are inclusive of start and end date usually, or match logic
-                # RoomBlock: start_date, end_date. Assuming inclusive.
-                if block.room_type_id == room.id and block.start_date <= day <= block.end_date:
-                    blocked_count += block.blocked_count
+            day_str = day.isoformat()
+            booked_count = booked_by_room_date[(room.id, day_str)]
+            blocked_count = blocked_by_room_date[(room.id, day_str)]
 
             available = max(0, room.total_inventory - booked_count - blocked_count)
-            is_blocked = blocked_count >= room.total_inventory # Fully blocked by blocks
-            
+            is_blocked = blocked_count >= room.total_inventory  # Fully blocked by blocks
+
             room_data["availability"].append({
-                "date": day.isoformat(),
+                "date": day_str,
                 "totalRooms": room.total_inventory,
                 "bookedRooms": booked_count,
                 "blockedRooms": blocked_count,
                 "availableRooms": available,
                 "isBlocked": is_blocked or available == 0,
-                "price": price_map.get((room.id, day.isoformat()), room.base_price) 
+                "price": price_map.get((room.id, day_str), room.base_price)
             })
-            
+
         availability_data.append(room_data)
         
     try:

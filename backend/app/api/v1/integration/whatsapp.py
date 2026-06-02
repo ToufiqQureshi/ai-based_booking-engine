@@ -116,11 +116,15 @@ async def whatsapp_webhook_receive(
             whatsapp_token_to_use = None
 
             if not is_central_number:
-                # Specific hotel number — match by stored phone_number_id
-                hotel_res = await session.execute(select(Hotel))
+                # Specific hotel number — match by stored phone_number_id.
+                # Load only active hotels. On PostgreSQL this could use a JSON index.
+                # For now, fetch active hotels and filter in Python.
+                hotel_res = await session.execute(
+                    select(Hotel).where(Hotel.is_active == True)
+                )
                 for h in hotel_res.scalars().all():
                     h_settings = h.settings or {}
-                    if str(h_settings.get("whatsapp_phone_number_id")) == phone_number_id:
+                    if str(h_settings.get("whatsapp_phone_number_id") or "") == phone_number_id:
                         target_hotel = h
                         whatsapp_token_to_use = h_settings.get("whatsapp_api_key")
                         break
