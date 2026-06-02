@@ -526,21 +526,24 @@ async def create_public_booking(
             check_in=booking.check_in,
             check_out=booking.check_out,
             total_amount=booking.total_amount,
+            subtotal_amount=booking.subtotal_amount,
+            tax_amount=booking.tax_amount,
+            discount_amount=booking.discount_amount,
+            tax_details=booking.tax_details or {},
             guest={
                 "first_name": guest.first_name,
                 "last_name": guest.last_name,
                 "email": guest.email,
                 "phone": guest.phone
             },
-            rooms=booking.rooms
+            rooms=booking.rooms,
+            addons=booking.addons or [],
         )
         
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Public booking error")
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Booking failed: {str(e)}")
 
 

@@ -14,7 +14,10 @@ from app.models.rates import RoomRate
 from pydantic import BaseModel
 
 import json
+import logging
 from app.core.redis_client import redis_client
+
+logger = logging.getLogger(__name__)
 
 def clear_availability_cache(hotel_id: str):
     try:
@@ -25,7 +28,7 @@ def clear_availability_cache(hotel_id: str):
         # Clear dashboard stats
         redis_client.delete_pattern(f"dashboard_stats:{hotel_id}:*")
     except Exception as e:
-        print(f"Failed clearing availability cache for hotel {hotel_id}: {e}")
+        logger.error(f"Failed clearing availability cache for hotel {hotel_id}: {e}")
 
 router = APIRouter(prefix="/availability", tags=["Availability"])
 
@@ -46,7 +49,7 @@ async def get_availability(
         if cached:
             return json.loads(cached)
     except Exception as e:
-        print(f"Redis get availability failed: {e}")
+        logger.warning(f"Redis get availability failed: {e}")
 
     # 1. Get all room types
     room_types_result = await session.execute(
@@ -148,7 +151,7 @@ async def get_availability(
     try:
         redis_client.set_value(cache_key, json.dumps(availability_data), expire=300)
     except Exception as e:
-        print(f"Redis set availability failed: {e}")
+        logger.warning(f"Redis set availability failed: {e}")
         
     return availability_data
 
@@ -198,7 +201,7 @@ async def delete_block(
     session: DbSession
 ):
     """Remove a room block"""
-    print(f"DEBUG: Attempting to delete block {block_id} for hotel {current_user.hotel_id}")
+    logger.debug(f"Attempting to delete block {block_id} for hotel {current_user.hotel_id}")
     result = await session.execute(
         select(RoomBlock).where(
             RoomBlock.id == block_id,
@@ -208,7 +211,7 @@ async def delete_block(
     block = result.scalar_one_or_none()
     
     if not block:
-        print(f"DEBUG: Block {block_id} NOT FOUND")
+        logger.warning(f"Block {block_id} NOT FOUND for hotel {current_user.hotel_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Block not found"

@@ -162,7 +162,6 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
     Includes allowed_domains for security check.
     """
     hotel_id = await resolve_hotel_id(hotel_slug, session)
-    hotel_id = await resolve_hotel_id(hotel_slug, session)
 
     from app.models.integration import IntegrationSettings
     
