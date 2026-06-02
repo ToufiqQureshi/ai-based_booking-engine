@@ -63,7 +63,8 @@ if settings.SENTRY_DSN:
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
         send_default_pii=True,
-        traces_sample_rate=1.0,
+        traces_sample_rate=0.1,  # 10% in production — 1.0 causes performance overhead
+        profiles_sample_rate=0.1,
     )
 
 # FastAPI app create karo
