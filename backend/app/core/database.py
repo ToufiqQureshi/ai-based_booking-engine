@@ -103,6 +103,16 @@ async def init_db():
         except Exception:
             pass
 
+    for col, col_type in [
+        ("transaction_id", "VARCHAR(255)"),
+        ("reference_number", "VARCHAR(255)")
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE payments ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
 
 
 async def get_session() -> AsyncSession:
