@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import {
     LogOut, Sun, Moon, ShieldCheck, Building2, Users, LayoutGrid,
     Radio, ClipboardList, BarChart3, RefreshCw, ChevronRight, Menu, X,
-    Zap, Crown
+    Zap, Crown, Heart, DollarSign, Database, Shield, Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient, tokenStorage } from '@/api/client';
@@ -19,21 +19,30 @@ import { BroadcastsTab } from '@/components/superadmin/BroadcastsTab';
 import { UsersTab } from '@/components/superadmin/UsersTab';
 import { PlanFeaturesTab } from '@/components/superadmin/PlanFeaturesTab';
 import { AuditLogsTab } from '@/components/superadmin/AuditLogsTab';
+import { HealthTab } from '@/components/superadmin/HealthTab';
+import { RevenueTab } from '@/components/superadmin/RevenueTab';
+import { CacheTab } from '@/components/superadmin/CacheTab';
+import { SessionsTab } from '@/components/superadmin/SessionsTab';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
 
-type NavSection = 'overview' | 'hotels' | 'users' | 'plans' | 'analytics' | 'broadcasts' | 'audit';
+type NavSection = 'overview' | 'hotels' | 'users' | 'plans' | 'analytics' |
+    'broadcasts' | 'audit' | 'health' | 'revenue' | 'cache' | 'sessions';
 
-const NAV_ITEMS: { id: NavSection; label: string; icon: any; badge?: string }[] = [
-    { id: 'overview',   label: 'Overview',       icon: LayoutGrid },
-    { id: 'hotels',     label: 'Properties',      icon: Building2 },
-    { id: 'users',      label: 'Users',           icon: Users },
-    { id: 'plans',      label: 'Plan Features',   icon: Crown },
-    { id: 'analytics',  label: 'Analytics',       icon: BarChart3 },
-    { id: 'broadcasts', label: 'Broadcasts',      icon: Radio },
-    { id: 'audit',      label: 'Audit Trail',     icon: ClipboardList },
+const NAV_ITEMS: { id: NavSection; label: string; icon: any; group?: string }[] = [
+    { id: 'overview',   label: 'Overview',       icon: LayoutGrid,  group: 'main' },
+    { id: 'hotels',     label: 'Properties',      icon: Building2,   group: 'main' },
+    { id: 'users',      label: 'Users',           icon: Users,       group: 'main' },
+    { id: 'plans',      label: 'Plan Features',   icon: Crown,       group: 'main' },
+    { id: 'analytics',  label: 'Analytics',       icon: BarChart3,   group: 'insights' },
+    { id: 'revenue',    label: 'Revenue',         icon: DollarSign,  group: 'insights' },
+    { id: 'health',     label: 'Health Monitor',  icon: Heart,       group: 'insights' },
+    { id: 'broadcasts', label: 'Broadcasts',      icon: Radio,       group: 'system' },
+    { id: 'audit',      label: 'Audit Trail',     icon: ClipboardList, group: 'system' },
+    { id: 'sessions',   label: 'Sessions',        icon: Shield,      group: 'system' },
+    { id: 'cache',      label: 'Cache',           icon: Database,    group: 'system' },
 ];
 
 export default function SuperAdminDashboard() {
@@ -144,27 +153,33 @@ export default function SuperAdminDashboard() {
                         </div>
 
                         {/* Nav */}
-                        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-                            {NAV_ITEMS.map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => { setActiveSection(item.id); setSelectedHotel(null); }}
-                                    className={cn(
-                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150",
-                                        activeSection === item.id
-                                            ? "bg-indigo-600 text-white shadow-sm"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                                    )}
-                                >
-                                    <item.icon className="w-4 h-4 shrink-0" />
-                                    <span className="truncate">{item.label}</span>
-                                    {item.badge && (
-                                        <Badge className="ml-auto text-[9px] px-1.5 py-0 bg-indigo-100 text-indigo-700 border-0">
-                                            {item.badge}
-                                        </Badge>
-                                    )}
-                                </button>
-                            ))}
+                        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
+                            {(['main', 'insights', 'system'] as const).map(group => {
+                                const items = NAV_ITEMS.filter(n => n.group === group);
+                                const groupLabel = group === 'main' ? 'Management' : group === 'insights' ? 'Insights' : 'System';
+                                return (
+                                    <div key={group}>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-3 mb-1">{groupLabel}</p>
+                                        <div className="space-y-0.5">
+                                            {items.map(item => (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => { setActiveSection(item.id); setSelectedHotel(null); }}
+                                                    className={cn(
+                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150",
+                                                        activeSection === item.id
+                                                            ? "bg-indigo-600 text-white shadow-sm"
+                                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                                    )}
+                                                >
+                                                    <item.icon className="w-4 h-4 shrink-0" />
+                                                    <span className="truncate">{item.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </nav>
 
                         {/* User info at bottom */}
@@ -303,8 +318,12 @@ export default function SuperAdminDashboard() {
                                 {activeSection === 'users' && <UsersTab />}
                                 {activeSection === 'plans' && <PlanFeaturesTab />}
                                 {activeSection === 'analytics' && <AnalyticsTab hotels={hotels} users={users} onSelectHotel={setSelectedHotel} />}
+                                {activeSection === 'revenue' && <RevenueTab />}
+                                {activeSection === 'health' && <HealthTab onSelectHotel={setSelectedHotel} />}
                                 {activeSection === 'broadcasts' && <BroadcastsTab />}
                                 {activeSection === 'audit' && <AuditLogsTab />}
+                                {activeSection === 'sessions' && <SessionsTab />}
+                                {activeSection === 'cache' && <CacheTab hotels={hotels} />}
                             </>
                         )}
                     </div>

@@ -1,9 +1,13 @@
-import { motion } from 'framer-motion';
-import { Building2, UserCheck, Settings, ChevronUp, ChevronDown, BrainCircuit, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Building2, UserCheck, Settings, ChevronUp, ChevronDown, BrainCircuit, Zap, CheckSquare, Square, X, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Hotel {
     id: string;
@@ -38,6 +42,38 @@ const PLAN_COLORS: Record<string, string> = {
 export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImpersonating }: HotelsTabProps) => {
     const [sortKey, setSortKey] = useState<SortKey>('name');
     const [sortAsc, setSortAsc] = useState(true);
+    const [selected, setSelected] = useState<Set<string>>(new Set());
+    const [bulkAction, setBulkAction] = useState('');
+    const qc = useQueryClient();
+
+    const bulkMutation = useMutation({
+        mutationFn: (payload: any) => apiClient.post('/superadmin/hotels/bulk', payload),
+        onSuccess: (res: any) => {
+            toast.success(`Bulk action applied to ${res.processed} hotels`);
+            if (res.failed > 0) toast.error(`${res.failed} hotels failed`);
+            setSelected(new Set());
+            setBulkAction('');
+            qc.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+        },
+        onError: () => toast.error('Bulk action failed'),
+    });
+
+    const toggleSelect = (id: string) => {
+        setSelected(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+    const toggleAll = () => {
+        setSelected(prev => prev.size === hotels.length ? new Set() : new Set(hotels.map(h => h.id)));
+    };
+
+    const applyBulk = () => {
+        if (!bulkAction || selected.size === 0) return;
+        if (!confirm(`Apply "${bulkAction}" to ${selected.size} hotel(s)?`)) return;
+        bulkMutation.mutate({ hotel_ids: Array.from(selected), action: bulkAction });
+    };
 
     const toggleSort = (key: SortKey) => {
         if (sortKey === key) setSortAsc(a => !a);
@@ -66,17 +102,53 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
     );
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="border border-border rounded-2xl overflow-hidden bg-background shadow-sm"
-        >
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+
+        {/* Bulk action bar */}
+        <AnimatePresence>
+            {selected.size > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl"
+                >
+                    <span className="text-sm font-bold text-indigo-700 dark:text-indigo-400">{selected.size} selected</span>
+                    <Select value={bulkAction} onValueChange={setBulkAction}>
+                        <SelectTrigger className="w-44 h-8 text-xs rounded-lg">
+                            <SelectValue placeholder="Choose action…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="enable">✅ Enable All</SelectItem>
+                            <SelectItem value="disable">🔒 Disable All</SelectItem>
+                            <SelectItem value="pause">⏸ Pause All</SelectItem>
+                            <SelectItem value="unpause">▶️ Unpause All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button size="sm" className="h-8 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold" onClick={applyBulk} disabled={!bulkAction || bulkMutation.isPending}>
+                        Apply
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 rounded-lg text-xs" onClick={() => setSelected(new Set())}>
+                        <X className="w-3.5 h-3.5" />
+                    </Button>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
+        <div className="border border-border rounded-2xl overflow-hidden bg-background shadow-sm">
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-b border-border bg-muted/30">
+                            <th className="w-10 pl-4 py-3">
+                                <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground">
+                                    {selected.size === hotels.length
+                                        ? <CheckSquare className="w-4 h-4 text-indigo-600" />
+                                        : <Square className="w-4 h-4" />}
+                                </button>
+                            </th>
                             <th
-                                className="text-left py-3 pl-5 pr-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-foreground select-none"
+                                className="text-left py-3 pr-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-foreground select-none"
                                 onClick={() => toggleSort('name')}
                             >
                                 Property <SortIcon col="name" />
@@ -118,11 +190,20 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                                     key={hotel.id}
                                     className={cn(
                                         "border-b border-border/60 hover:bg-muted/20 transition-colors group",
+                                        selected.has(hotel.id) && "bg-indigo-50/50 dark:bg-indigo-950/10",
                                         i === sorted.length - 1 && "border-0"
                                     )}
                                 >
+                                    {/* Checkbox */}
+                                    <td className="pl-4 py-3.5 w-10">
+                                        <button onClick={() => toggleSelect(hotel.id)} className="text-muted-foreground hover:text-indigo-600">
+                                            {selected.has(hotel.id)
+                                                ? <CheckSquare className="w-4 h-4 text-indigo-600" />
+                                                : <Square className="w-4 h-4" />}
+                                        </button>
+                                    </td>
                                     {/* Property */}
-                                    <td className="py-3.5 pl-5 pr-3">
+                                    <td className="py-3.5 pr-3">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 text-indigo-600 flex items-center justify-center shrink-0">
                                                 <Building2 className="w-4 h-4" />
@@ -212,9 +293,19 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                 </table>
             </div>
 
-            <div className="px-5 py-3 border-t border-border bg-muted/10 text-[10px] text-muted-foreground font-medium">
-                Showing {sorted.length} of {hotels.length} properties
+            <div className="px-5 py-3 border-t border-border bg-muted/10 flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground font-medium">
+                    Showing {sorted.length} of {hotels.length} properties
+                </span>
+                <a
+                    href="/api/v1/superadmin/export/all-hotels"
+                    target="_blank"
+                    className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-indigo-600 transition-colors"
+                >
+                    <Download className="w-3 h-3" /> Export CSV
+                </a>
             </div>
+        </div>
         </motion.div>
     );
 };

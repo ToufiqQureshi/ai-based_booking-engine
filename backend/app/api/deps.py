@@ -198,19 +198,33 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)]
+    current_user: Annotated[User, Depends(get_current_user)],
+    token: Annotated[str, Depends(oauth2_scheme)],
 ) -> User:
     """Shortcut dependency for active user"""
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is deactivated"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is deactivated")
     if current_user.hotel and not current_user.hotel.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Hotel is deactivated"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Hotel is deactivated")
+
+    # Check if token has been force-revoked by superadmin
+    token_prefix = token[:16] if token else ""
+    try:
+        from app.api.v1.superadmin.sessions import is_token_revoked, record_session
+        if is_token_revoked(token_prefix):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session revoked by admin")
+        # Record active session (best-effort, non-blocking)
+        record_session(current_user.id, token_prefix, {
+            "user_id": current_user.id,
+            "email": current_user.email,
+            "role": str(current_user.role),
+            "hotel_id": current_user.hotel_id,
+        })
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # Never block auth because of session tracking failure
+
     return current_user
 
 
