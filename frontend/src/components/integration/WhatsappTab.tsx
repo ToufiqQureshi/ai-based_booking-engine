@@ -56,7 +56,9 @@ export const WhatsappTab = ({
                                 WhatsApp Business API Configuration
                             </CardTitle>
                             <CardDescription>
-                                Provide Meta WhatsApp Cloud API credentials to dispatch instant guest confirmations and reservation followups.
+                                {isSuperAdmin
+                                    ? 'Provide Meta WhatsApp Cloud API credentials to dispatch instant guest confirmations and reservation followups.'
+                                    : 'View your WhatsApp messaging stats and credits. Contact Staybooker support to configure or enable WhatsApp for your property.'}
                             </CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
@@ -199,7 +201,7 @@ export const WhatsappTab = ({
                         </div>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-1">
-                        💡 Make sure you also configure the AI Provider credentials under the <strong>External Services</strong> tab to activate the chatbot brain.
+                        Your Staybooker support team handles AI configuration. Contact support@staybooker.ai for assistance.
                     </p>
                 </CardContent>
             </Card>
