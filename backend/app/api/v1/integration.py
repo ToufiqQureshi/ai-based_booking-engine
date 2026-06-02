@@ -60,10 +60,7 @@ async def get_integration_settings(
     Get integration settings for current hotel.
 
     SECURITY: For non-super-admin callers, sensitive fields
-    (ai_api_key, google_business_access_token, google_business_refresh_token,
-    whatsapp_token, webhook_secret) are stripped from the response and
-    replaced with `has_*` boolean flags. The actual secrets are
-    managed by the super-admin in their dashboard.
+    are stripped from the response.
     """
     from app.models.user import UserRole
 
@@ -71,83 +68,23 @@ async def get_integration_settings(
     result = await session.execute(query)
     settings = result.scalar_one_or_none()
 
-    is_super_admin = current_user.role == UserRole.SUPER_ADMIN
-
-    if not settings:
-        # Return default empty settings
-        empty = IntegrationSettingsRead(
-            hotel_id=current_user.hotel_id,
-            webhook_url="",
-            webhook_secret="",
-            whatsapp_phone_number_id="",
-            whatsapp_business_account_id="",
-            whatsapp_token="",
-            google_place_id=""
-        )
-        if not is_super_admin:
-            empty.ai_api_key = None
-            empty.google_business_access_token = None
-            empty.google_business_refresh_token = None
-        return empty
-
-    # Build the read response
-    response = IntegrationSettingsRead.model_validate(settings)
-
-    if not is_super_admin:
-        # Strip all secrets for hotelier callers. Hoteliers see
-        # the *config* (provider name, model, allowed domains)
-        # but never the *credential*.
-        response.ai_api_key = None
-        response.google_business_access_token = None
-        response.google_business_refresh_token = None
-        # Surface presence flags so the UI can show "configured"
-        # without exposing the value
-        response_dict = response.model_dump()
-        response_dict["has_ai_api_key"] = bool(settings.ai_api_key)
-        response_dict["has_google_business_token"] = bool(
-            settings.google_business_access_token or settings.google_business_refresh_token
-        )
-        # Pydantic will ignore extras on dump
-        return response
-
-    return response
-
-
-@router.get("/widget-code", response_model=WidgetCodeResponse)
-async def get_widget_code(
-    current_user: CurrentUser,
-    session: DbSession
-):
-    """
-    Get the embeddable widget code for the current hotel.
-    """
-    hotel = await session.get(Hotel, current_user.hotel_id)
-    if not hotel:
-        raise HTTPException(status_code=404, detail="Hotel not found")
-
-    # Construct widget URL using hotel slug
-    settings = get_settings()
-    base_url = settings.FRONTEND_URL or "https://staybooker.ai"
-    widget_url = f"{base_url}/widget/{hotel.slug}"
-
-    embed_code = f'''<script src="{base_url}/widget.js"></script>
-<div id="staybooker-widget" data-hotel-slug="{hotel.slug}"></div>'''
-
-    return WidgetCodeResponse(
-        widget_url=widget_url,
-        embed_code=embed_code
-    )
-    result = await session.execute(query)
-    settings = result.scalar_one_or_none()
-    
-    # Create default settings if not exists
     if not settings:
         settings = IntegrationSettings(hotel_id=current_user.hotel_id)
         session.add(settings)
         await session.commit()
         await session.refresh(settings)
+
+    # Build the read response
+    response = IntegrationSettingsRead.model_validate(settings)
     
-    return settings
+    is_super_admin = current_user.role == UserRole.SUPER_ADMIN
+    if not is_super_admin:
+        # Strip all secrets for hotelier callers.
+        response.ai_api_key = None
+        response.google_business_access_token = None
+        response.google_business_refresh_token = None
+
+    return response
 
 
 @router.put("/settings", response_model=IntegrationSettingsRead)
