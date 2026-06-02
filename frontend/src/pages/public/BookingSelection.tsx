@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, ChevronLeft, ChevronRight, Check, ShoppingBag, X, ArrowRight, Sparkles, Hotel as HotelIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -182,6 +182,9 @@ export default function BookingSelection() {
         navigate(`/book/${hotelSlug}/rooms?${params.toString()}`);
     };
 
+    // Ref to the current fetchData so SSE can trigger a refresh without stale closures
+    const fetchDataRef = useRef<(() => void) | null>(null);
+
     useEffect(() => {
         const fetchData = async () => {
             if (!hotelSlug || !checkIn || !checkOut) {
@@ -223,8 +226,30 @@ export default function BookingSelection() {
                 setIsLoading(false);
             }
         };
+        fetchDataRef.current = fetchData;
         fetchData();
     }, [hotelSlug, checkIn, checkOut, paramGuests, paramAdults, paramChildren, urlPromo, location.state]);
+
+    // SSE subscription: auto-refresh rates when hotelier updates them
+    useEffect(() => {
+        if (!hotel?.id) return;
+        const apiBase = import.meta.env.VITE_API_URL || '';
+        const es = new EventSource(`${apiBase}/api/v1/public/hotels/${hotel.id}/rate-updates`);
+        es.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'rate_update' && fetchDataRef.current) {
+                    fetchDataRef.current();
+                }
+            } catch (_) {
+                // ignore parse errors
+            }
+        };
+        es.onerror = () => {
+            // SSE errors are non-critical; connection will auto-retry
+        };
+        return () => es.close();
+    }, [hotel?.id]);
 
     const handleSelectRate = (room: PublicRoomSearchResult, ratePlan: RateOption) => {
         setPendingRoom(room);
