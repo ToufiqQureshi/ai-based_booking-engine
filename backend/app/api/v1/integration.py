@@ -5,6 +5,7 @@ Manage API keys, widget code, and integration settings
 from typing import List, Optional, Any, Dict, Tuple
 from datetime import datetime, timedelta
 import hmac
+import logging
 from fastapi import APIRouter, HTTPException, status, Depends, Request, Header
 from fastapi.responses import RedirectResponse
 from sqlmodel import select
@@ -25,6 +26,7 @@ from app.models.hotel import Hotel
 from app.core.redis_client import redis_client
 from app.core.cache import cache_response, invalidate_cache
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/integration", tags=["Integration"])
 
 
@@ -976,64 +978,25 @@ async def whatsapp_webhook_receive(
 ):
     """
     Meta calls this POST endpoint when a guest sends a WhatsApp message.
-
-    Every POST must carry a valid X-Hub-Signature-256 header computed using
-    HMAC-SHA256 over the raw body with WHATSAPP_APP_SECRET as the key. We
-    verify this BEFORE doing any DB work or hitting the AI agent — without
-    it, any internet attacker who discovers the URL could:
-      - Spam us with fake "guest messages", wasting LLM tokens.
-      - Potentially trigger outbound WhatsApp replies to arbitrary phone
-        numbers via the AI agent flow below.
+    Signature is verified before any DB work to prevent spoofed requests.
     """
-    import logging
-    logger = logging.getLogger("whatsapp_webhook")
-
-    settings = get_settings()
-    app_secret = settings.WHATSAPP_APP_SECRET
+    config = get_settings()
+    app_secret = config.WHATSAPP_APP_SECRET
     if not app_secret:
         logger.error("WhatsApp webhook POST received but WHATSAPP_APP_SECRET is not configured")
         raise HTTPException(status_code=500, detail="WhatsApp webhook is not configured on this server")
 
-    # Read the raw body BEFORE parsing JSON so the signature check covers the
-    # exact bytes Meta signed. request.body() can only be consumed once.
     raw_body = await request.body()
     if not _verify_meta_signature(raw_body, x_hub_signature_256, app_secret):
         logger.warning(
-            "WhatsApp webhook signature verification failed "
-            "(header_present=%s, body_len=%d)",
+            "WhatsApp webhook signature verification failed (header_present=%s, body_len=%d)",
             bool(x_hub_signature_256), len(raw_body),
         )
         raise HTTPException(status_code=401, detail="Invalid signature")
 
-    debug_log = []  # Collect debug info to return in response
-
     try:
         body = json.loads(raw_body.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
-
-    entry = body.get("entry", [])
-    if not entry:
-        return {"status": "ignored", "reason": "no entries"}
-
-
-@router.post("/whatsapp/webhook")
-@limiter.limit("60/minute")
-async def whatsapp_webhook_receive(
-    request: Request,
-    session: DbSession
-):
-    """
-    Meta calls this POST endpoint when a guest sends a WhatsApp message.
-    """
-    import logging
-    logger = logging.getLogger("whatsapp_webhook")
-    
-    debug_log = []  # Collect debug info to return in response
-    
-    try:
-        body = await request.json()
-    except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON body")
 
     entry = body.get("entry", [])
@@ -1067,7 +1030,7 @@ async def whatsapp_webhook_receive(
             whatsapp_token_to_use = None
             
             if not is_central_number:
-                # OLD BEHAVIOR: Specific Hotel Number Match
+                # Specific Hotel Number — find hotel by phone_number_id
                 hotel_stmt = select(Hotel)
                 hotel_res = await session.execute(hotel_stmt)
                 hotels = hotel_res.scalars().all()
@@ -1078,51 +1041,39 @@ async def whatsapp_webhook_receive(
                         target_hotel = h
                         whatsapp_token_to_use = h_settings.get("whatsapp_api_key")
                         break
-                
+
                 if not target_hotel:
-                    debug_log.append(f"SKIP: No hotel found for specific phone_number_id '{phone_number_id}'")
+                    debug_log.append(f"SKIP: No hotel found for phone_number_id '{phone_number_id}'")
                     continue
+
+                debug_log.append(f"MATCH: Hotel '{target_hotel.name}' (ID: {target_hotel.id})")
+
+                # Subscription / feature / AI checks for specific hotel number
+                from app.models.subscription import Subscription
+                sub_stmt = select(Subscription).where(Subscription.hotel_id == target_hotel.id, Subscription.status == "active")
+                sub_res = await session.execute(sub_stmt)
+                subscription = sub_res.scalar_one_or_none()
+
+                if subscription and subscription.whatsapp_credits <= 0:
+                    debug_log.append("SKIP: WhatsApp credits exhausted")
+                    continue
+
+                if not target_hotel.feature_ai_agent:
+                    debug_log.append("SKIP: feature_ai_agent is False")
+                    continue
+
+                int_stmt = select(IntegrationSettings).where(IntegrationSettings.hotel_id == target_hotel.id)
+                int_res = await session.execute(int_stmt)
+                int_settings = int_res.scalar_one_or_none()
+
+                if not int_settings or not int_settings.ai_api_key:
+                    debug_log.append(f"SKIP: AI not configured (int_settings={bool(int_settings)})")
+                    continue
+
+                debug_log.append(f"AI Config: provider={int_settings.ai_provider}, model={int_settings.ai_model}")
             else:
-                # NEW BEHAVIOR: Central Number Handling
+                # Central Number — hotel will be resolved per-message below
                 whatsapp_token_to_use = config.CENTRAL_WHATSAPP_TOKEN
-                # We don't know the hotel yet. We will resolve it per message.
-                    
-            if not target_hotel:
-                debug_log.append(f"SKIP: No hotel found matching phone_number_id '{phone_number_id}'")
-                continue
-            
-            debug_log.append(f"MATCH: Hotel '{target_hotel.name}' (ID: {target_hotel.id})")
-                
-            # Check Subscription and WhatsApp credits quota
-            from app.models.subscription import Subscription
-            sub_stmt = select(Subscription).where(Subscription.hotel_id == target_hotel.id, Subscription.status == "active")
-            sub_res = await session.execute(sub_stmt)
-            subscription = sub_res.scalar_one_or_none()
-
-            # If credits are exhausted, do not respond to save costs
-            if subscription and subscription.whatsapp_credits <= 0:
-                debug_log.append("SKIP: WhatsApp credits exhausted")
-                continue
-            
-            debug_log.append(f"Subscription: {'active' if subscription else 'none (OK, no limit)'}")
-
-            # Check if AI feature flag is active
-            if not target_hotel.feature_ai_agent:
-                debug_log.append("SKIP: feature_ai_agent is False")
-                continue
-            
-            debug_log.append(f"feature_ai_agent: {target_hotel.feature_ai_agent}")
-
-            # Load integration settings to get AI credentials
-            int_stmt = select(IntegrationSettings).where(IntegrationSettings.hotel_id == target_hotel.id)
-            int_res = await session.execute(int_stmt)
-            int_settings = int_res.scalar_one_or_none()
-            
-            if not int_settings or not int_settings.ai_api_key:
-                debug_log.append(f"SKIP: int_settings={bool(int_settings)}, ai_api_key={bool(int_settings.ai_api_key) if int_settings else False}")
-                continue
-            
-            debug_log.append(f"AI Config: provider={int_settings.ai_provider}, model={int_settings.ai_model}")
 
             messages = value.get("messages", [])
             contacts = value.get("contacts", [])

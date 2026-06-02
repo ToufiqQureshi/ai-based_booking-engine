@@ -86,7 +86,7 @@ async def delete_rate_plan(plan_id: str, current_user: CurrentUser, session: DbS
             detail="Rate plan not found"
         )
         
-    session.delete(rate_plan)
+    await session.delete(rate_plan)
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
     return {"message": "Rate plan deleted"}
