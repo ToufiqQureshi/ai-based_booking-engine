@@ -5,7 +5,7 @@ API Keys, Webhooks, and Integration Settings for external hotel websites
 from datetime import datetime
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Relationship
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import secrets
 
 class APIKey(SQLModel, table=True):
@@ -111,6 +111,7 @@ class APIKeyCreate(BaseModel):
 
 
 class APIKeyRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     name: str
     key_prefix: str
@@ -128,6 +129,7 @@ class APIKeyWithSecret(APIKeyRead):
 
 
 class IntegrationSettingsRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     hotel_id: str
     widget_enabled: bool
     widget_theme: str
