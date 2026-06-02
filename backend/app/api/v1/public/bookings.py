@@ -115,8 +115,13 @@ class PublicBookingResponse(BaseModel):
     check_in: date
     check_out: date
     total_amount: float
+    subtotal_amount: float = 0.0
+    tax_amount: float = 0.0
+    discount_amount: float = 0.0
+    tax_details: dict = {}
     guest: dict
     rooms: List[dict]
+    addons: List[dict] = []
 
 
 

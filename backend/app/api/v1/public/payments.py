@@ -310,24 +310,18 @@ async def verify_razorpay_payment(
             guest = await session.get(Guest, booking.guest_id)
             if hotel and guest:
                 email_service = await get_email_service()
-                sender_email = h_settings.get("email_sender_address")
-                sender_name = h_settings.get("email_sender_name")
-                cc_list = h_settings.get("email_cc_list")
-                signature_str = h_settings.get("email_signature")
 
                 from app.core.tasks import safe_background
                 safe_background(
                     background_tasks,
-                    lambda svc=email_service, ge=guest.email, gn=f"{guest.first_name} {guest.last_name}", bn=booking.booking_number, ci=str(booking.check_in), co=str(booking.check_out), ta=booking.total_amount, se=sender_email, sn=sender_name, sig=signature_str: svc.send_guest_booking_confirmation(
+                    lambda svc=email_service, ge=guest.email, gn=f"{guest.first_name} {guest.last_name}", bn=booking.booking_number, ci=str(booking.check_in), co=str(booking.check_out), ta=booking.total_amount, hs=h_settings: svc.send_guest_booking_confirmation(
                         guest_email=ge,
                         guest_name=gn,
                         booking_number=bn,
                         check_in=ci,
                         check_out=co,
                         total_amount=ta,
-                        sender_email=se,
-                        sender_name=sn,
-                        signature=sig,
+                        hotel_settings=hs,
                     ),
                     task_name="send_guest_booking_confirmation",
                 )
@@ -335,16 +329,14 @@ async def verify_razorpay_payment(
                 hotel_emails = hotel.contact.get("email", "") if hotel.contact else ""
                 safe_background(
                     background_tasks,
-                    lambda svc=email_service, he=hotel_emails, bn=booking.booking_number, gn=f"{guest.first_name} {guest.last_name}", ci=str(booking.check_in), co=str(booking.check_out), ta=booking.total_amount, cc=cc_list, se=sender_email, sn=sender_name: svc.send_hotel_booking_notification(
+                    lambda svc=email_service, he=hotel_emails, bn=booking.booking_number, gn=f"{guest.first_name} {guest.last_name}", ci=str(booking.check_in), co=str(booking.check_out), ta=booking.total_amount, hs=h_settings: svc.send_hotel_booking_notification(
                         hotel_emails=he,
                         booking_number=bn,
                         guest_name=gn,
                         check_in=ci,
                         check_out=co,
                         total_amount=ta,
-                        cc_list=cc,
-                        sender_email=se,
-                        sender_name=sn,
+                        hotel_settings=hs,
                     ),
                     task_name="send_hotel_booking_notification",
                 )
