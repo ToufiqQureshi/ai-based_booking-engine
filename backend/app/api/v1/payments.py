@@ -1,14 +1,20 @@
 """
 Payments Router
 """
-from typing import List
-from fastapi import APIRouter, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, status, Request
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
+from pydantic import BaseModel
+import logging
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.payment import Payment, PaymentCreate, PaymentRead
-from app.models.booking import Booking, Guest
+from app.models.booking import Booking, BookingStatus, Guest
+from app.models.hotel import Hotel
+from app.core.time import utcnow
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -81,9 +87,101 @@ async def create_payment(
     # Get guest info for response
     guest_result = await session.execute(select(Guest).where(Guest.id == booking.guest_id))
     guest = guest_result.scalar_one_or_none()
-    
+
     response = payment.model_dump()
     response["booking_number"] = booking.booking_number
     response["guest_name"] = f"{guest.first_name} {guest.last_name}"
     return response
+
+
+class RefundRequest(BaseModel):
+    booking_id: str
+    amount: Optional[float] = None  # None = full refund
+    reason: str = "requested_by_customer"
+
+
+@router.post("/refund")
+async def create_razorpay_refund(
+    data: RefundRequest,
+    current_user: CurrentUser,
+    session: DbSession,
+):
+    """
+    Initiate a Razorpay refund for a confirmed booking.
+    Only hoteliers for their own hotel can refund.
+    """
+    import razorpay
+    from app.core.config import get_settings
+
+    # Verify booking belongs to this hotel
+    booking = await session.get(Booking, data.booking_id)
+    if not booking or booking.hotel_id != current_user.hotel_id:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    # Find the completed payment record
+    stmt = select(Payment).where(
+        Payment.booking_id == data.booking_id,
+        Payment.hotel_id == current_user.hotel_id,
+        Payment.status == "completed"
+    )
+    result = await session.execute(stmt)
+    payment = result.scalar_one_or_none()
+
+    if not payment or not payment.transaction_id:
+        raise HTTPException(status_code=404, detail="No completed payment found for this booking")
+
+    hotel = await session.get(Hotel, booking.hotel_id)
+    h_settings = hotel.settings if hotel and hotel.settings else {}
+
+    settings = get_settings()
+    key_id = h_settings.get("razorpay_key_id") or settings.RAZORPAY_KEY_ID
+    key_secret = h_settings.get("razorpay_key_secret") or settings.RAZORPAY_KEY_SECRET
+
+    if not key_id or not key_secret:
+        raise HTTPException(status_code=500, detail="Razorpay not configured for this property")
+
+    # Patch Razorpay User-Agent (same as in public/payments.py)
+    def _patched_update_user_agent_header(self, options):
+        user_agent = "{}{}".format('Razorpay-Python/', self._get_version())
+        if 'headers' in options:
+            options['headers']['User-Agent'] = user_agent
+        else:
+            options['headers'] = {'User-Agent': user_agent}
+        return options
+
+    razorpay.Client._update_user_agent_header = _patched_update_user_agent_header
+    client = razorpay.Client(auth=(key_id, key_secret))
+
+    refund_amount = int((data.amount or booking.total_amount) * 100)  # paise
+
+    try:
+        refund = client.payment.refund(payment.transaction_id, {
+            "amount": refund_amount,
+            "notes": {"reason": data.reason, "booking_id": data.booking_id}
+        })
+
+        # Update payment and booking status
+        payment.status = "refunded"
+        booking.status = BookingStatus.CANCELLED
+        booking.updated_at = utcnow()
+        session.add(payment)
+        session.add(booking)
+        await session.commit()
+
+        # Clear availability cache
+        try:
+            from app.api.v1.availability import clear_availability_cache
+            clear_availability_cache(booking.hotel_id)
+        except Exception:
+            pass
+
+        logger.info(f"Refund initiated for booking {data.booking_id}: {refund.get('id')}")
+        return {
+            "status": "success",
+            "refund_id": refund.get("id"),
+            "amount": data.amount or booking.total_amount
+        }
+    except Exception as e:
+        logger.error(f"Refund failed for booking {data.booking_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Refund failed: {str(e)}")
 
