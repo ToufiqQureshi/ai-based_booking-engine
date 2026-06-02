@@ -41,3 +41,5 @@ __all__ = [
     "HotelSocialProofSettingsUpdate",
     "PublicSocialProofResponse",
 ]
+from app.models.links import UserHotelLink
+__all__.append("UserHotelLink")
