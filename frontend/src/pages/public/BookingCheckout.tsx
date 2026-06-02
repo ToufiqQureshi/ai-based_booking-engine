@@ -421,12 +421,32 @@ function BookingCheckoutInner() {
                 navigate(`/book/${hotelSlug}/confirmation`, { state: { booking: response } });
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Booking failed:', error);
+            const detail = error?.response?.data?.detail || error?.message || '';
+            let title = "Booking Failed";
+            let description = "Something went wrong. Please try again.";
+
+            if (error?.response?.status === 409) {
+                if (detail.toLowerCase().includes('price') || detail.toLowerCase().includes('updated')) {
+                    title = "Price Updated";
+                    description = detail || "The room price has changed. Please go back and review the new price.";
+                } else if (detail.toLowerCase().includes('available') || detail.toLowerCase().includes('no longer')) {
+                    title = "Room No Longer Available";
+                    description = "This room was just booked by someone else. Please go back and choose another option.";
+                } else {
+                    title = "Booking Conflict";
+                    description = detail || "Please go back and try again.";
+                }
+            } else if (error?.response?.status === 400) {
+                title = "Invalid Request";
+                description = detail || "Please check your booking details and try again.";
+            }
+
             toast({
                 variant: "destructive",
-                title: "Booking Failed",
-                description: "Something went wrong. Please try again.",
+                title,
+                description,
             });
             submitInFlightRef.current = false;
         } finally {
