@@ -75,7 +75,7 @@ async def get_integration_settings(
         await session.refresh(settings)
 
     # Build the read response
-    response = IntegrationSettingsRead.model_validate(settings)
+    response = IntegrationSettingsRead.model_validate(settings, from_attributes=True)
     
     is_super_admin = current_user.role == UserRole.SUPER_ADMIN
     if not is_super_admin:
