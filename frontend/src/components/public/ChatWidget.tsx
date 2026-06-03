@@ -304,21 +304,25 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                                                     color: '#334155'
                                                                 }}
                                                             >
-                                                                <div className="prose prose-sm max-w-none break-words font-medium">
-                                                                    <ReactMarkdown
-                                                                        components={{
-                                                                            p: ({ children }) => <p className="m-0 mb-1 last:mb-0 leading-relaxed">{children}</p>,
-                                                                            a: ({ href, children }) => (
-                                                                                <a href={href} className="font-bold underline hover:opacity-85 transition-opacity" target="_blank" rel="noopener noreferrer" style={{ color: primaryColor }}>
-                                                                                    {children}
-                                                                                </a>
-                                                                            ),
-                                                                            ul: ({ children }) => <ul className="mb-2 list-disc pl-4 space-y-0.5">{children}</ul>,
-                                                                            li: ({ children }) => <li className="text-[13px]">{children}</li>,
-                                                                        }}
-                                                                    >
-                                                                        {chatText}
-                                                                    </ReactMarkdown>
+                                                                <div className={msg.role === 'user' ? "font-semibold text-inherit" : "prose prose-sm max-w-none break-words font-medium text-[#334155] dark:text-slate-800"}>
+                                                                    {msg.role === 'user' ? (
+                                                                        chatText
+                                                                    ) : (
+                                                                        <ReactMarkdown
+                                                                            components={{
+                                                                                p: ({ children }) => <p className="m-0 mb-1 last:mb-0 leading-relaxed text-inherit">{children}</p>,
+                                                                                a: ({ href, children }) => (
+                                                                                    <a href={href} className="font-extrabold underline hover:opacity-85 transition-opacity" target="_blank" rel="noopener noreferrer" style={{ color: primaryColor }}>
+                                                                                        {children}
+                                                                                    </a>
+                                                                                ),
+                                                                                ul: ({ children }) => <ul className="mb-2 list-disc pl-4 space-y-0.5">{children}</ul>,
+                                                                                li: ({ children }) => <li className="text-[13px] text-inherit">{children}</li>,
+                                                                            }}
+                                                                        >
+                                                                            {chatText}
+                                                                        </ReactMarkdown>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         )}
