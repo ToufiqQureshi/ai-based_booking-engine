@@ -19,23 +19,22 @@ export function NotificationPopover() {
     const [unreadCount, setUnreadCount] = useState(0);
 
     const fetchNotifications = async () => {
+        if (document.visibilityState === 'hidden') return;
         try {
             setIsLoading(true);
             const data = await apiClient.get<Notification[]>('/notifications?limit=20');
             setNotifications(data);
             setUnreadCount(data.filter(n => !n.is_read).length);
         } catch (error) {
-            console.error("Failed to fetch notifications", error);
+            // Network blips are expected — use warn so error trackers don't capture this
+            console.warn("Failed to fetch notifications", error);
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        // Initial fetch
         fetchNotifications();
-
-        // Poll every 60 seconds
         const interval = setInterval(fetchNotifications, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -46,7 +45,7 @@ export function NotificationPopover() {
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (error) {
-            console.error("Failed to mark as read", error);
+            console.warn("Failed to mark as read", error);
         }
     };
 
@@ -56,7 +55,7 @@ export function NotificationPopover() {
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
             setUnreadCount(0);
         } catch (error) {
-            console.error("Failed to mark all read", error);
+            console.warn("Failed to mark all read", error);
         }
     };
 
