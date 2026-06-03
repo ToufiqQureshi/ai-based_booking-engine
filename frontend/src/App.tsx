@@ -34,6 +34,7 @@ const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
 const SuperAdminDashboard = lazy(() => import("@/pages/superadmin/SuperAdminDashboard"));
 const GoogleReviewsPage = lazy(() => import("@/pages/marketing/GoogleReviews"));
+const ChainDashboard = lazy(() => import("@/pages/chain/ChainDashboard"));
 
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -123,6 +124,7 @@ const App = () => {
                       <Route path="/reviews" element={<GoogleReviewsPage />} />
                       <Route path="/agent" element={<AgentPage />} />
                       <Route path="/settings/profile" element={<ProfilePage />} />
+                      <Route path="/chain/dashboard" element={<ChainDashboard />} />
                     
                     {/* Note: /superadmin is only available on the admin subdomain above */}
                   </Route>

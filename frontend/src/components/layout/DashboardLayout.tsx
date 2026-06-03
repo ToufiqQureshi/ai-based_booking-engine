@@ -209,6 +209,11 @@ export function DashboardLayout() {
     // Allow root page redirects and profile page
     if (currentPath === '/' || currentPath === '/settings/profile') return true;
 
+    // Brand Console path allowed only if user belongs to a chain
+    if (currentPath === '/chain/dashboard') {
+      return !!user?.chain_id;
+    }
+
     // Check custom role permissions list
     if (!permissions.includes(currentPath)) return false;
 

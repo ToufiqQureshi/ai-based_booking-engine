@@ -10,6 +10,7 @@ export interface User {
   name: string;
   role: UserRole;
   hotel_id: string;
+  chain_id?: string;
   is_active?: boolean;
   avatar_url?: string;
   created_at: string;

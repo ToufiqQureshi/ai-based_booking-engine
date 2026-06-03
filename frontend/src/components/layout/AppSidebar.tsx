@@ -86,7 +86,10 @@ export function AppSidebar() {
     return true;
   };
 
-  const allowedMainNavItems = mainNavItems.filter(isItemAllowed);
+  const allowedMainNavItems = [
+    ...(user?.chain_id ? [{ title: 'Brand Console', url: '/chain/dashboard', icon: Building2 }] : []),
+    ...mainNavItems.filter(isItemAllowed)
+  ];
   const allowedSettingsNavItems = settingsNavItems.filter(isItemAllowed);
 
   return (
