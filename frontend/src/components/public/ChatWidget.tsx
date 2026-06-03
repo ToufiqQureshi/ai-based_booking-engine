@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MessageCircle, X, Send, Bot, User,
-    Calendar, Coffee, MapPin, Clock,
+    Coffee, MapPin, Clock,
     Sparkles, CreditCard, ArrowRight, ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -117,12 +117,12 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                 if (res.ok) {
                     const data = await res.json();
                     setHotelInfo({ name: data.hotel_name, primary_color: data.primary_color, logo_url: data.logo_url });
-                    setMessages([{ role: 'assistant', content: `Hello! I am the virtual concierge for ${data.hotel_name}. How can I assist you today?` }]);
+                    setMessages([{ role: 'assistant', content: `Welcome to ${data.hotel_name}! 🏨 I'm your personal concierge. Are you planning a leisure stay, a romantic getaway, a family trip, or something else? I'd love to help you find the perfect room.` }]);
                 } else {
-                    setMessages([{ role: 'assistant', content: 'Hello! How can I assist you with your stay today?' }]);
+                    setMessages([{ role: 'assistant', content: "Welcome! I'm your personal concierge. Are you planning a leisure stay, a romantic getaway, a family trip, or something else?" }]);
                 }
             } catch (e) {
-                setMessages([{ role: 'assistant', content: 'Hello! How can I assist you with your stay today?' }]);
+                setMessages([{ role: 'assistant', content: "Welcome! I'm your personal concierge. Are you planning a leisure stay, a romantic getaway, a family trip, or something else?" }]);
             }
         };
         fetchConfig();
@@ -446,44 +446,44 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                         {/* suggestion inquiries on welcome screen */}
                                         {messages.length === 1 && !isLoading && (
                                             <div className="mt-4 space-y-2.5 pl-10.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Suggested Queries</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Quick Options</span>
                                                 <div className="grid grid-cols-1 gap-2">
                                                     <button
-                                                        onClick={() => triggerQuickAsk("Check room availability")}
+                                                        onClick={() => triggerQuickAsk("I'm planning a romantic getaway, help me find the best room")}
                                                         className="flex items-center justify-between text-left text-xs bg-white hover:bg-slate-50 border border-slate-150 text-slate-700 px-3.5 py-2.5 rounded-xl transition-all shadow-sm hover:border-slate-200 group active:scale-[0.99]"
                                                     >
                                                         <div className="flex items-center gap-2">
-                                                            <Calendar className="w-4 h-4 text-slate-500 group-hover:scale-105 transition-transform" style={{ color: primaryColor }} />
-                                                            <span className="font-medium text-slate-600">Check Room Rates</span>
+                                                            <Sparkles className="w-4 h-4 group-hover:scale-105 transition-transform" style={{ color: primaryColor }} />
+                                                            <span className="font-medium text-slate-600">Romantic Getaway</span>
                                                         </div>
                                                         <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                                                     </button>
                                                     <button
-                                                        onClick={() => triggerQuickAsk("What amenities are available?")}
+                                                        onClick={() => triggerQuickAsk("Family trip with kids, looking for a spacious room")}
                                                         className="flex items-center justify-between text-left text-xs bg-white hover:bg-slate-50 border border-slate-150 text-slate-700 px-3.5 py-2.5 rounded-xl transition-all shadow-sm hover:border-slate-200 group active:scale-[0.99]"
                                                     >
                                                         <div className="flex items-center gap-2">
-                                                            <Coffee className="w-4 h-4 text-slate-500 group-hover:scale-105 transition-transform" style={{ color: primaryColor }} />
-                                                            <span className="font-medium text-slate-600">Amenities & Pool</span>
+                                                            <Coffee className="w-4 h-4 group-hover:scale-105 transition-transform" style={{ color: primaryColor }} />
+                                                            <span className="font-medium text-slate-600">Family Trip</span>
                                                         </div>
                                                         <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                                                     </button>
                                                     <button
-                                                        onClick={() => triggerQuickAsk("Where is the hotel located?")}
+                                                        onClick={() => triggerQuickAsk("What amenities and facilities are available at the hotel?")}
                                                         className="flex items-center justify-between text-left text-xs bg-white hover:bg-slate-50 border border-slate-150 text-slate-700 px-3.5 py-2.5 rounded-xl transition-all shadow-sm hover:border-slate-200 group active:scale-[0.99]"
                                                     >
                                                         <div className="flex items-center gap-2">
-                                                            <MapPin className="w-4 h-4 text-slate-500 group-hover:scale-105 transition-transform" style={{ color: primaryColor }} />
-                                                            <span className="font-medium text-slate-600">Location & Contact</span>
+                                                            <MapPin className="w-4 h-4 group-hover:scale-105 transition-transform" style={{ color: primaryColor }} />
+                                                            <span className="font-medium text-slate-600">Amenities & Facilities</span>
                                                         </div>
                                                         <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                                                     </button>
                                                     <button
-                                                        onClick={() => triggerQuickAsk("What are check-in and check-out times?")}
+                                                        onClick={() => triggerQuickAsk("What are the check-in time, check-out time and cancellation policy?")}
                                                         className="flex items-center justify-between text-left text-xs bg-white hover:bg-slate-50 border border-slate-150 text-slate-700 px-3.5 py-2.5 rounded-xl transition-all shadow-sm hover:border-slate-200 group active:scale-[0.99]"
                                                     >
                                                         <div className="flex items-center gap-2">
-                                                            <Clock className="w-4 h-4 text-slate-500 group-hover:scale-105 transition-transform" style={{ color: primaryColor }} />
+                                                            <Clock className="w-4 h-4 group-hover:scale-105 transition-transform" style={{ color: primaryColor }} />
                                                             <span className="font-medium text-slate-600">Timings & Policies</span>
                                                         </div>
                                                         <ChevronRight className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
