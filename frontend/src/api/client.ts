@@ -316,6 +316,33 @@ export const apiClient = {
       throw error;
     }
   },
+
+  // Authenticated file download. A plain <a href> cannot send the Bearer
+  // token, so we fetch the blob with auth and trigger a browser download.
+  download: async (endpoint: string, fallbackFilename = 'download.csv'): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'GET',
+      headers: getHeaders(),
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new ApiClientError('Download failed', response.status);
+    }
+    // Try to read filename from Content-Disposition
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : fallbackFilename;
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 export default apiClient;

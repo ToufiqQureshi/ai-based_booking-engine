@@ -308,13 +308,12 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                 <span className="text-[10px] text-muted-foreground font-medium">
                     Showing {sorted.length} of {hotels.length} properties
                 </span>
-                <a
-                    href="/api/v1/superadmin/export/all-hotels"
-                    target="_blank"
+                <button
+                    onClick={() => apiClient.download('/superadmin/export/all-hotels', 'all-hotels.csv').catch(() => toast.error('Export failed'))}
                     className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-indigo-600 transition-colors"
                 >
                     <Download className="w-3 h-3" /> Export CSV
-                </a>
+                </button>
             </div>
         </div>
         </motion.div>
