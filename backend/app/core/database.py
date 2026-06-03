@@ -80,6 +80,18 @@ async def init_db():
     except Exception:
         pass
 
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE hotels ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL"))
+    except Exception:
+        pass
+
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL"))
+    except Exception:
+        pass
+
     for col, col_type in [
         ("cancellation_fee", "NUMERIC DEFAULT 0.00"),
         ("refund_amount", "NUMERIC DEFAULT 0.00"),
