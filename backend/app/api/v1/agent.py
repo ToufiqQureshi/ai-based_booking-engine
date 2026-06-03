@@ -30,10 +30,10 @@ async def chat_with_agent(
     session: DbSession
 ):
     # Enforce SaaS feature flag guard
-    if not current_user.hotel or not getattr(current_user.hotel, "feature_ai_agent", False):
+    if not current_user.hotel or not getattr(current_user.hotel, "feature_ai_assistant", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="AI Agent feature is not enabled for your subscription plan"
+            detail="AI Assistant feature is not enabled for your subscription plan"
         )
 
     try:
