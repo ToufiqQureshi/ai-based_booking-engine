@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List
 from pydantic import BaseModel
-from langchain_core.messages import HumanMessage, AIMessage
 import logging
 
 from app.api.deps import CurrentUser, DbSession
@@ -37,37 +36,28 @@ async def chat_with_agent(
         )
 
     try:
-        # 1. Initialize Agent (returns Graph)
-        graph = create_agent_executor(session, current_user)
+        # 1. Initialize Agent
+        agent = create_agent_executor(session, current_user)
 
-        # 2. Format History (limit to last 20 messages to prevent context blowup)
+        # 2. Build history as Agno Messages (limit last 20)
+        from agno.agent import Message
         chat_history = []
-        for item in payload.history:
+        for item in payload.history[-20:]:
             if len(item) == 2:
                 role, content = item
                 if role.lower() in ["human", "user"]:
-                    chat_history.append(HumanMessage(content=content))
+                    chat_history.append(Message(role="user", content=content))
                 elif role.lower() in ["ai", "assistant", "model"]:
-                    chat_history.append(AIMessage(content=content))
-        chat_history = chat_history[-20:]
+                    chat_history.append(Message(role="assistant", content=content))
 
-        # 3. Invoke Agent
-        # Prepare input messages
-        input_messages = chat_history + [HumanMessage(content=payload.message)]
+        # 3. Build input: history messages + new user message
+        input_messages = chat_history + [Message(role="user", content=payload.message)]
 
-        # Invoke graph
-        result = await graph.ainvoke({
-            "messages": input_messages
-        })
-
-        # Result is state. 'messages' contains the full conversation.
-        # The last message should be AIMessage.
-        last_message = result["messages"][-1]
-
-        return ChatResponse(response=last_message.content)
+        # 4. Run agent
+        result = await agent.arun(input_messages)
+        return ChatResponse(response=result.content or "")
 
     except ValueError as e:
-        # Likely missing API Key
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         logger.error(f"Agent Error: {e}")

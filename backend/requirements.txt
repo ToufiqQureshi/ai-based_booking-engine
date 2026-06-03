@@ -13,11 +13,9 @@ email-validator
 fastapi
 gunicorn
 httpx
-langchain-community
-langchain-core
-langchain-ollama
-langchain-openai
-langgraph
+agno
+groq
+openai
 matplotlib
 openmeteo-requests
 pandas

@@ -189,7 +189,7 @@ async def whatsapp_webhook_receive(
                     if not resolved_hotel:
                         try:
                             from app.core.global_agent import create_global_concierge_graph
-                            from langchain_core.messages import HumanMessage, AIMessage
+                            from agno.agent import Message
 
                             global_agent = create_global_concierge_graph(
                                 session,
@@ -206,11 +206,12 @@ async def whatsapp_webhook_receive(
                             history = json.loads(history_raw) if history_raw else []
 
                             chat_history = [
-                                HumanMessage(content=c) if r in ("human", "user") else AIMessage(content=c)
+                                Message(role="user" if r in ("human", "user") else "assistant", content=c)
                                 for r, c in history if r in ("human", "user", "ai", "assistant", "model")
                             ]
-                            result = await global_agent.ainvoke({"messages": chat_history + [HumanMessage(content=user_message)]})
-                            agent_reply = result["messages"][-1].content
+                            input_messages = chat_history + [Message(role="user", content=user_message)]
+                            result = await global_agent.arun(input_messages)
+                            agent_reply = result.content or ""
 
                             if "ACTION:ROUTE_TO_HOTEL|" in agent_reply:
                                 parts = agent_reply.split("ACTION:ROUTE_TO_HOTEL|")
@@ -231,7 +232,7 @@ async def whatsapp_webhook_receive(
                 # --- HOTEL AGENT ---
                 if resolved_hotel:
                     from app.models.subscription import Subscription
-                    from langchain_core.messages import HumanMessage, AIMessage
+                    from agno.agent import Message
 
                     sub_res = await session.execute(
                         select(Subscription).where(Subscription.hotel_id == resolved_hotel.id, Subscription.status == "active")
@@ -254,13 +255,13 @@ async def whatsapp_webhook_receive(
                     history = json.loads(history_raw) if history_raw else []
 
                     chat_history = [
-                        HumanMessage(content=c) if r in ("human", "user") else AIMessage(content=c)
+                        Message(role="user" if r in ("human", "user") else "assistant", content=c)
                         for r, c in history if r in ("human", "user", "ai", "assistant", "model")
                     ]
 
                     try:
                         from app.core.guest_agent import create_guest_agent_graph
-                        agent = create_guest_agent_graph(
+                        agent = await create_guest_agent_graph(
                             session, resolved_hotel.id,
                             int_settings.ai_provider, int_settings.ai_api_key,
                             int_settings.ai_model, int_settings.ai_base_url,
@@ -268,8 +269,9 @@ async def whatsapp_webhook_receive(
                         )
                         if agent:
                             if not agent_reply:
-                                result = await agent.ainvoke({"messages": chat_history + [HumanMessage(content=user_message)]})
-                                agent_reply = result["messages"][-1].content
+                                input_messages = chat_history + [Message(role="user", content=user_message)]
+                                result = await agent.arun(input_messages)
+                                agent_reply = result.content or ""
 
                             if "ACTION:BOOKING_LINK|" in agent_reply:
                                 try:

@@ -3,9 +3,6 @@ from typing import List, Optional, Dict, Any
 from datetime import date
 from sqlmodel import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from langgraph.prebuilt import create_react_agent
-from langchain_core.tools import tool
-from langchain_core.messages import SystemMessage
 
 from app.models.hotel import Hotel
 from app.core.config import get_settings
@@ -37,8 +34,7 @@ def create_global_concierge_graph(
     """
     Creates the Tier 1 Global Concierge Agent.
     """
-    
-    @tool
+
     async def search_hotels(hotel_name: str) -> str:
         """
         Search for a hotel by name in the Staybooker platform.
@@ -47,16 +43,15 @@ def create_global_concierge_graph(
         query = select(Hotel).where(Hotel.name.ilike(f"%{hotel_name}%")).limit(5)
         res = await session.execute(query)
         hotels = res.scalars().all()
-        
+
         if not hotels:
             return f"No hotels found matching '{hotel_name}'."
-            
+
         result = "Matching Hotels:\n"
         for h in hotels:
             result += f"- Name: '{h.name}', ID: {h.id}\n"
         return result
 
-    @tool
     def route_to_hotel(hotel_id: str, hotel_name: str) -> str:
         """
         Call this tool ONLY when you have positively identified the specific hotel the guest wants.
@@ -70,34 +65,30 @@ def create_global_concierge_graph(
         return f"ACTION:ROUTE_TO_HOTEL|{json.dumps(action_data)}"
 
     tools = [search_hotels, route_to_hotel]
-    
+
     if not ai_api_key or not ai_model:
         return None
-        
-    from langchain_openai import ChatOpenAI
-    
+
+    from agno.agent import Agent
+    from agno.models.openai import OpenAILike
+
     effective_provider = ai_provider
     if not effective_provider and ai_api_key.startswith("gsk_"):
         effective_provider = "groq"
+    default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
 
-    default_base_url = None
-    if effective_provider == "groq":
-        default_base_url = "https://api.groq.com/openai/v1"
-    
-    llm = ChatOpenAI(
-        model=ai_model,
-        temperature=0.3,
-        openai_api_key=ai_api_key,
-        base_url=ai_base_url or default_base_url
+    llm_model = OpenAILike(
+        id=ai_model,
+        api_key=ai_api_key,
+        base_url=ai_base_url or default_base_url,
     )
 
-    formatted_prompt = SYSTEM_PROMPT.format(
-        current_date=date.today().isoformat()
-    )
+    formatted_prompt = SYSTEM_PROMPT.format(current_date=date.today().isoformat())
 
-    graph = create_react_agent(
-        llm, 
-        tools=tools, 
-        state_modifier=SystemMessage(content=formatted_prompt)
+    agent = Agent(
+        model=llm_model,
+        tools=tools,
+        instructions=formatted_prompt,
+        markdown=True,
     )
-    return graph
+    return agent
