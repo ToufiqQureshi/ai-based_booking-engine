@@ -75,8 +75,8 @@ interface CreateBookingDialogProps {
 }
 
 export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
-    const { hotel } = useAuth();
-    const isLocked = hotel?.feature_new_booking === false;
+    const { hotel, user } = useAuth();
+    const isLocked = hotel?.feature_new_booking === false && user?.role !== 'SUPER_ADMIN';
     const [open, setOpen] = useState(false);
     const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
     const { toast } = useToast();
