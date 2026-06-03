@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import tool
-from langchain_core.messages import SystemMessage
 
 from app.core.config import get_settings
 from app.models.timeline import BookingTimeline
@@ -75,9 +74,6 @@ def create_agent_executor(session: AsyncSession, user: User):
     Creates an Agent Graph instance with tools bound to the current user and database session.
     """
     settings = get_settings()
-    # Note: OpenAI Key check removed as we are using Ollama now
-    # if not settings.OPENAI_API_KEY:
-    #     raise ValueError("OPENAI_API_KEY is not set in configuration.")
 
     # --- TOOLS ---
 
@@ -735,7 +731,8 @@ def create_agent_executor(session: AsyncSession, user: User):
             model="openai/gpt-oss-120b",
             temperature=1,
             openai_api_key=target_api_key,
-            base_url="https://api.groq.com/openai/v1"
+            base_url="https://api.groq.com/openai/v1",
+            max_tokens=2048,
         )
     else:
         raise ValueError("No valid GROQ_API_KEY available for this hotel.")

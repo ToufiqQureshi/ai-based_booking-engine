@@ -204,16 +204,17 @@ async def chat_with_guest_ai(
         int_res = await session.execute(int_query)
         integration_settings = int_res.scalar_one_or_none()
 
-        # 2. Prepare History
-        messages = []
+        # 2. Prepare History (limit to last 20 messages to prevent context blowup)
+        chat_history = []
         for msg in payload.history:
             if msg["role"] == "user":
-                messages.append(HumanMessage(content=msg["content"]))
+                chat_history.append(HumanMessage(content=msg["content"]))
             elif msg["role"] == "assistant":
-                messages.append(AIMessage(content=msg["content"]))
-        
+                chat_history.append(AIMessage(content=msg["content"]))
+        chat_history = chat_history[-20:]
+
         # Add current message
-        messages.append(HumanMessage(content=payload.message))
+        messages = chat_history + [HumanMessage(content=payload.message)]
 
         # 3. Initialize Agent
         from app.core.guest_agent import create_guest_agent_graph
@@ -329,13 +330,14 @@ async def stream_guest_ai(
         )
         integration_settings = int_res.scalar_one_or_none()
 
-        messages = []
+        chat_history = []
         for msg in payload.history:
             if msg["role"] == "user":
-                messages.append(HumanMessage(content=msg["content"]))
+                chat_history.append(HumanMessage(content=msg["content"]))
             elif msg["role"] == "assistant":
-                messages.append(AIMessage(content=msg["content"]))
-        messages.append(HumanMessage(content=payload.message))
+                chat_history.append(AIMessage(content=msg["content"]))
+        chat_history = chat_history[-20:]
+        messages = chat_history + [HumanMessage(content=payload.message)]
 
         from app.core.guest_agent import create_guest_agent_graph
         agent = await create_guest_agent_graph(

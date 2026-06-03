@@ -19,18 +19,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Analytics"])
 
-@router.post("/session")
-async def start_session(request: SessionStartRequest, session: DbSession):
-    """
-    Start a new analytics session when a user visits the widget.
-    Needs the hotel_id (extracted from the public widget endpoint context).
-    For security, the widget uses the public API which we might route through here,
-    but we'll assume the widget passes hotel_id for now.
-    Wait, to keep it secure, we should probably have an endpoint that expects `hotel_id`.
-    """
-    # Since this is a public tracking endpoint, we need hotel_id in the body or path.
-    pass # Will refactor to include hotel_id
-
 import httpx
 from fastapi import Request
 
@@ -403,7 +391,6 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
 
         most_booked = sorted(room_stats.values(), key=lambda x: x["bookings"], reverse=True)
         least_booked = sorted(room_stats.values(), key=lambda x: x["bookings"])
-        top_rooms = sorted(room_stats.values(), key=lambda x: x["views"], reverse=True)[:5]
         revenue_mix = [{"name": r["name"], "value": r["revenue"]} for r in most_booked if r["revenue"] > 0]
 
         # 12. Funnel Drop-offs
@@ -473,13 +460,11 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             "ai_revenue": ai_revenue,
             "popular_questions": popular_questions,
             "total_leads": total_leads_count,
-            "ai_engaged": ai_engagement_count,
             "ai_assisted_bookings": ai_bookings_count,
             "device_stats": device_stats,
             "geo_stats": geo_stats,
             "most_booked_rooms": most_booked[:5],
             "least_booked_rooms": least_booked[:5],
-            "top_rooms": top_rooms,
             "revenue_by_room_type": revenue_mix,
             "funnel_dropoffs": funnel_dropoffs,
             "promo_stats": promo_stats,

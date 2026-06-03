@@ -1,21 +1,19 @@
-from typing import List, Optional, Any, Dict
+from typing import List, Optional
 from datetime import date, datetime, timedelta
-from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks
-from sqlmodel import select, and_, or_, func
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+from sqlmodel import select, and_, or_
+from pydantic import BaseModel
 import uuid
 import logging
 
-from app.core.database import get_session
 from app.api.deps import DbSession
-from app.models.hotel import Hotel, HotelRead
+from app.models.hotel import Hotel
 from app.models.room import RoomType, RoomTypeRead, RoomBlock
 from app.models.booking import Booking, BookingStatus, Guest
 from app.models.rates import RatePlan, RoomRate
 from app.models.promo import PromoCode
 from app.core.time import utcnow
 from app.core.redis_client import redis_client
-import json
 from app.services.email_service import get_email_service
 
 router = APIRouter(prefix="/public", tags=["Public"])
@@ -42,36 +40,6 @@ class PublicRoomSearchResult(RoomTypeRead):
     available_rooms: int
     price_starting_at: float
     rate_options: List[RateOption]
-
-
-async def resolve_hotel_id(identifier: str, session: DbSession) -> str:
-    # Normalize identifier (convert spaces and %20 to hyphens, lowercase)
-    normalized = identifier.strip().replace("%20", "-").replace(" ", "-").lower()
-    
-    cache_key = f"public:slug-to-id:{normalized}"
-    try:
-        cached = redis_client.get_value(cache_key)
-        if cached:
-            return cached
-    except Exception as e:
-        logger.error(f"Failed to get slug-to-id cache: {e}")
-
-    # Query DB
-    query = select(Hotel).where(or_(Hotel.slug == normalized, Hotel.id == identifier, Hotel.id == normalized))
-    result = await session.execute(query)
-    hotel = result.scalar_one_or_none()
-    
-    if hotel:
-        # Cache mapping
-        try:
-            redis_client.set_value(f"public:slug-to-id:{hotel.slug}", hotel.id, expire=86400)
-            redis_client.set_value(f"public:slug-to-id:{hotel.id}", hotel.id, expire=86400)
-            if normalized != hotel.slug:
-                redis_client.set_value(f"public:slug-to-id:{normalized}", hotel.id, expire=86400)
-        except Exception as e:
-            logger.error(f"Failed to set slug-to-id cache: {e}")
-        return hotel.id
-    return identifier
 
 
 # --- Public Booking Schemas ---
@@ -134,7 +102,6 @@ def generate_booking_number() -> str:
 
 from fastapi import Request
 from app.core.limiter import limiter
-from app.models.rates import RatePlan
 
 @router.post("/bookings", response_model=PublicBookingResponse)
 @limiter.limit("5/minute")
@@ -172,10 +139,6 @@ async def create_public_booking(
         logger.error(f"Redis idempotency check failed: {e}")
 
     try:
-        # First, we need to find the hotel from the room_type_id
-        if not booking_data.rooms:
-            raise HTTPException(status_code=400, detail="At least one room is required")
-        
         # --- NEW: Strict Availability & Price Verification with Row Locking ---
         room_type_ids = [r.room_type_id for r in booking_data.rooms]
         unique_rt_ids = sorted(list(set(room_type_ids)))

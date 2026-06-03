@@ -40,7 +40,7 @@ async def chat_with_agent(
         # 1. Initialize Agent (returns Graph)
         graph = create_agent_executor(session, current_user)
 
-        # 2. Format History
+        # 2. Format History (limit to last 20 messages to prevent context blowup)
         chat_history = []
         for item in payload.history:
             if len(item) == 2:
@@ -49,6 +49,7 @@ async def chat_with_agent(
                     chat_history.append(HumanMessage(content=content))
                 elif role.lower() in ["ai", "assistant", "model"]:
                     chat_history.append(AIMessage(content=content))
+        chat_history = chat_history[-20:]
 
         # 3. Invoke Agent
         # Prepare input messages
