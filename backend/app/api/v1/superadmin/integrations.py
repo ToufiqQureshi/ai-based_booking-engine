@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
 from sqlmodel import select
 
@@ -13,7 +13,7 @@ from app.api.deps import DbSession
 from app.models.audit import AuditLog
 from app.models.hotel import Hotel
 from app.models.user import User
-from .hotels import get_super_admin
+from .hotels import get_super_admin, _get_client_ip
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -126,6 +126,7 @@ async def get_hotel_integrations(
 async def update_hotel_integrations(
     hotel_id: str,
     payload: HotelIntegrationsUpdate,
+    request: Request,
     super_admin: User = Depends(get_super_admin),
     session: DbSession = None,
 ):
@@ -186,7 +187,7 @@ async def update_hotel_integrations(
         from app.core.redis_client import redis_client
         for key in (f"public:hotel-details:{hotel.id}", f"public:widget-config:{hotel.id}",
                     f"public:slug-to-id:{hotel.slug}", f"public:social-proof:{hotel.slug}"):
-            redis_client.delete_key(key)
+                redis_client.delete_key(key)
     except Exception:
         pass
 
@@ -194,7 +195,7 @@ async def update_hotel_integrations(
         user_id=super_admin.id, user_email=super_admin.email,
         action="UPDATE_HOTEL_INTEGRATIONS",
         description=f"Updated {len(updated)} integration field(s) for hotel {hotel.name}: {', '.join(updated)}",
-        ip_address="127.0.0.1",
+        ip_address=_get_client_ip(request),
     ))
     await session.commit()
     return {"status": "success", "message": f"Updated {len(updated)} field(s) for {hotel.name}", "fields_updated": updated}

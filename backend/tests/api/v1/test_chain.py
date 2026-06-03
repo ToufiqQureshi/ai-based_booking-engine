@@ -118,3 +118,57 @@ async def test_chain_dashboard_success_for_brand_admin(seeded_hotel: Hotel):
         if c_obj:
             await db.delete(c_obj)
         await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Super Admin Brand Management operations
+# ---------------------------------------------------------------------------
+
+async def test_superadmin_chains_crud_and_linking(super_admin_client: AsyncClient, seeded_hotel: Hotel, seeded_user: User):
+    """Test full CRUD operations on chains and linking hotels/users."""
+    
+    # 1. Create a chain group
+    chain_data = {
+        "name": "Super Admin Test Brand",
+        "slug": f"sa-test-brand-{uuid.uuid4().hex[:6]}",
+        "logo_url": "https://test.com/logo.png"
+    }
+    create_res = await super_admin_client.post("/api/v1/superadmin/chains", json=chain_data)
+    assert create_res.status_code == 200
+    chain_json = create_res.json()["chain"]
+    chain_id = chain_json["id"]
+    
+    # 2. Get all chains list
+    list_res = await super_admin_client.get("/api/v1/superadmin/chains")
+    assert list_res.status_code == 200
+    chains_list = list_res.json()
+    assert any(c["id"] == chain_id for c in chains_list)
+    
+    # 3. Update the chain
+    update_data = {
+        "name": "Super Admin Test Brand Updated",
+        "slug": chain_data["slug"],
+        "logo_url": "https://test.com/logo-updated.png"
+    }
+    update_res = await super_admin_client.put(f"/api/v1/superadmin/chains/{chain_id}", json=update_data)
+    assert update_res.status_code == 200
+    
+    # 4. Link hotel and user to chain
+    link_data = {
+        "hotel_ids": [seeded_hotel.id],
+        "user_ids": [seeded_user.id]
+    }
+    link_res = await super_admin_client.post(f"/api/v1/superadmin/chains/{chain_id}/link", json=link_data)
+    assert link_res.status_code == 200
+    
+    # Verify linking in list
+    verify_res = await super_admin_client.get("/api/v1/superadmin/chains")
+    matched_chain = next(c for c in verify_res.json() if c["id"] == chain_id)
+    assert len(matched_chain["hotels"]) == 1
+    assert matched_chain["hotels"][0]["id"] == seeded_hotel.id
+    assert len(matched_chain["users"]) == 1
+    assert matched_chain["users"][0]["id"] == seeded_user.id
+    
+    # 5. Delete chain (and clean up)
+    delete_res = await super_admin_client.delete(f"/api/v1/superadmin/chains/{chain_id}")
+    assert delete_res.status_code == 200

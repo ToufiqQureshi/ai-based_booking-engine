@@ -135,7 +135,7 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_
 
 @router.patch("/hotels/{hotel_id}/permissions")
 async def update_role_permissions(
-    hotel_id: str, permissions: dict, session: DbSession,
+    hotel_id: str, permissions: dict, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     hotel = await session.get(Hotel, hotel_id)
@@ -146,13 +146,22 @@ async def update_role_permissions(
     hotel.settings = settings_dict
     hotel.updated_at = datetime.utcnow()
     session.add(hotel)
+    
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="UPDATE_ROLE_PERMISSIONS",
+        description=f"Updated role permission configuration for hotel '{hotel.name}'",
+        ip_address=_get_client_ip(request),
+    ))
     await session.commit()
     return {"message": "Permissions updated successfully", "role_permissions": permissions}
 
 
 @router.patch("/hotels/{hotel_id}")
 async def update_hotel_status(
-    hotel_id: str, update_data: HotelUpdate, session: DbSession,
+    hotel_id: str, update_data: HotelUpdate, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     """Update hotel feature flags, slug, or active status."""
@@ -166,10 +175,26 @@ async def update_hotel_status(
             if (await session.execute(select(Hotel).where(Hotel.slug == new_slug))).scalar_one_or_none():
                 raise HTTPException(status_code=400, detail="This URL Slug is already taken")
             db_data["slug"] = new_slug
+            
+    changes = []
+    for key, value in db_data.items():
+        old_val = getattr(hotel, key, None)
+        if old_val != value:
+            changes.append(f"{key}: {old_val} -> {value}")
+            
     for key, value in db_data.items():
         setattr(hotel, key, value)
     hotel.updated_at = datetime.utcnow()
     session.add(hotel)
+    
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="UPDATE_HOTEL",
+        description=f"Updated hotel '{hotel.name}': {', '.join(changes)}" if changes else f"Updated hotel '{hotel.name}' status/settings",
+        ip_address=_get_client_ip(request),
+    ))
     await session.commit()
     await session.refresh(hotel)
     return hotel

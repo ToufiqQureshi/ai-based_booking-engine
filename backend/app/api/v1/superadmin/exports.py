@@ -6,7 +6,7 @@ import io
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlmodel import select
 
@@ -15,7 +15,8 @@ from app.models.booking import Booking, Guest
 from app.models.hotel import Hotel
 from app.models.payment import Payment
 from app.models.user import User
-from .hotels import get_super_admin
+from app.models.audit import AuditLog
+from .hotels import get_super_admin, _get_client_ip
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -37,6 +38,7 @@ def _csv_response(rows: list[list], headers: list[str], filename: str) -> Stream
 @router.get("/hotels/{hotel_id}/export/bookings")
 async def export_bookings(
     hotel_id: str,
+    request: Request,
     session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
@@ -77,6 +79,16 @@ async def export_bookings(
             b.created_at.isoformat() if b.created_at else "",
         ])
 
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="EXPORT_BOOKINGS",
+        description=f"Exported booking data for hotel '{hotel.name}' to CSV",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+
     filename = f"{hotel.slug}-bookings-{datetime.utcnow().strftime('%Y%m%d')}.csv"
     return _csv_response(rows, headers, filename)
 
@@ -84,6 +96,7 @@ async def export_bookings(
 @router.get("/hotels/{hotel_id}/export/guests")
 async def export_guests(
     hotel_id: str,
+    request: Request,
     session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
@@ -101,6 +114,17 @@ async def export_guests(
          g.nationality or "", g.created_at.isoformat() if g.created_at else ""]
         for g in guests
     ]
+
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="EXPORT_GUESTS",
+        description=f"Exported guest list data for hotel '{hotel.name}' to CSV",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+
     filename = f"{hotel.slug}-guests-{datetime.utcnow().strftime('%Y%m%d')}.csv"
     return _csv_response(rows, headers, filename)
 
@@ -108,6 +132,7 @@ async def export_guests(
 @router.get("/hotels/{hotel_id}/export/payments")
 async def export_payments(
     hotel_id: str,
+    request: Request,
     session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
@@ -128,12 +153,24 @@ async def export_payments(
          p.created_at.isoformat() if p.created_at else ""]
         for p in payments
     ]
+
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="EXPORT_PAYMENTS",
+        description=f"Exported payment records data for hotel '{hotel.name}' to CSV",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+
     filename = f"{hotel.slug}-payments-{datetime.utcnow().strftime('%Y%m%d')}.csv"
     return _csv_response(rows, headers, filename)
 
 
 @router.get("/export/all-hotels")
 async def export_all_hotels(
+    request: Request,
     session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
@@ -171,5 +208,15 @@ async def export_all_hotels(
         ]
         for h in hotels
     ]
+
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="EXPORT_ALL_HOTELS",
+        description="Exported summary list of all platform hotels as CSV",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+
     filename = f"all-hotels-{datetime.utcnow().strftime('%Y%m%d')}.csv"
     return _csv_response(rows, headers, filename)

@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import {
     LogOut, Sun, Moon, ShieldCheck, Building2, Users, LayoutGrid,
     Radio, ClipboardList, BarChart3, RefreshCw, ChevronRight, Menu, X,
-    Zap, Crown, Heart, DollarSign, Database, Shield, Download
+    Zap, Crown, Heart, DollarSign, Database, Shield, Download, Network
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient, tokenStorage } from '@/api/client';
@@ -24,18 +24,20 @@ import { HealthTab } from '@/components/superadmin/HealthTab';
 import { RevenueTab } from '@/components/superadmin/RevenueTab';
 import { CacheTab } from '@/components/superadmin/CacheTab';
 import { SessionsTab } from '@/components/superadmin/SessionsTab';
+import { BrandsTab } from '@/components/superadmin/BrandsTab';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
 
 type NavSection = 'overview' | 'hotels' | 'users' | 'plans' | 'analytics' |
-    'broadcasts' | 'audit' | 'health' | 'revenue' | 'cache' | 'sessions';
+    'broadcasts' | 'audit' | 'health' | 'revenue' | 'cache' | 'sessions' | 'brands';
 
 const NAV_ITEMS: { id: NavSection; label: string; icon: any; group?: string }[] = [
     { id: 'overview',   label: 'Overview',       icon: LayoutGrid,  group: 'main' },
     { id: 'hotels',     label: 'Properties',      icon: Building2,   group: 'main' },
     { id: 'users',      label: 'Users',           icon: Users,       group: 'main' },
+    { id: 'brands',     label: 'Brand Groups',    icon: Network,     group: 'main' },
     { id: 'plans',      label: 'Plan Features',   icon: Crown,       group: 'main' },
     { id: 'analytics',  label: 'Analytics',       icon: BarChart3,   group: 'insights' },
     { id: 'revenue',    label: 'Revenue',         icon: DollarSign,  group: 'insights' },
@@ -323,6 +325,7 @@ export default function SuperAdminDashboard() {
                                 )}
 
                                 {activeSection === 'users' && <UsersTab />}
+                                {activeSection === 'brands' && <BrandsTab hotels={hotels} users={users} />}
                                 {activeSection === 'plans' && <PlanFeaturesTab />}
                                 {activeSection === 'analytics' && <AnalyticsTab hotels={hotels} users={users} onSelectHotel={handleSelectHotel} />}
                                 {activeSection === 'revenue' && <RevenueTab />}

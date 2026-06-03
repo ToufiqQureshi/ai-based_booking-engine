@@ -52,7 +52,7 @@ async def list_users(
 
 @router.patch("/users/{user_id}/role")
 async def update_user_role(
-    user_id: str, role: str, session: DbSession,
+    user_id: str, role: str, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     user = await session.get(User, user_id)
@@ -60,9 +60,18 @@ async def update_user_role(
         raise HTTPException(status_code=404, detail="User not found")
     if role not in [r.value for r in UserRole]:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {[r.value for r in UserRole]}")
+    old_role = user.role.value if hasattr(user.role, 'value') else str(user.role)
     user.role = UserRole(role)
     user.updated_at = datetime.utcnow()
     session.add(user)
+    
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="UPDATE_USER_ROLE",
+        description=f"Updated role for user '{user.email}' from '{old_role}' to '{role}'",
+        ip_address=_get_client_ip(request),
+    ))
     await session.commit()
     return {"message": f"User role updated to {role}"}
 

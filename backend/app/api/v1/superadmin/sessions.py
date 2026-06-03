@@ -9,11 +9,12 @@ import json
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.api.deps import DbSession
 from app.core.redis_client import redis_client
 from app.models.user import User
-from .hotels import get_super_admin
+from app.models.audit import AuditLog
+from .hotels import get_super_admin, _get_client_ip
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -83,6 +84,7 @@ async def list_active_sessions(super_admin: User = Depends(get_super_admin)):
 @router.delete("/sessions/{user_id}")
 async def revoke_user_sessions(
     user_id: str,
+    request: Request,
     session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
@@ -110,6 +112,19 @@ async def revoke_user_sessions(
             redis_client.set_value(f"{REVOKED_PREFIX}{token_prefix}", "1", expire=SESSION_TTL)
             redis_client.delete_value(k)
             revoked += 1
+
+    # Fetch user's email to make the log descriptive
+    target_user = await session.get(User, user_id)
+    target_email = target_user.email if target_user else user_id
+    
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="REVOKE_SESSIONS",
+        description=f"Force-revoked all {revoked} active sessions for user '{target_email}'",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
 
     return {
         "status": "success",

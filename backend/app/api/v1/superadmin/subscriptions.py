@@ -20,7 +20,7 @@ router = APIRouter()
 
 @router.post("/hotels/{hotel_id}/subscription")
 async def update_subscription(
-    hotel_id: str, sub_data: dict, session: DbSession,
+    hotel_id: str, sub_data: dict, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     """Create or update a hotel's subscription and sync feature flags."""
@@ -51,6 +51,14 @@ async def update_subscription(
             setattr(hotel, feat_key, feat_val)
         session.add(hotel)
 
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="UPDATE_SUBSCRIPTION",
+        description=f"Updated subscription for hotel '{hotel.name}': Plan={sub.plan_name}, Status={sub.status}, EndDate={sub.end_date}",
+        ip_address=_get_client_ip(request),
+    ))
     await session.commit()
     return {"message": "Subscription updated successfully"}
 
@@ -163,12 +171,20 @@ async def create_broadcast(
 
 @router.delete("/broadcasts/{broadcast_id}")
 async def delete_broadcast(
-    broadcast_id: str, session: DbSession,
+    broadcast_id: str, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
     broadcast = await session.get(SystemBroadcast, broadcast_id)
     if not broadcast:
         raise HTTPException(status_code=404, detail="Broadcast not found")
+    
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="DELETE_BROADCAST",
+        description=f"Deleted system broadcast: '{broadcast.title}'",
+        ip_address=_get_client_ip(request),
+    ))
     await session.delete(broadcast)
     await session.commit()
     return {"message": "Broadcast removed"}

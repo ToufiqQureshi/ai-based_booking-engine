@@ -3,12 +3,13 @@ Super Admin — Cache management and Redis stats.
 """
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.api.deps import DbSession
 from app.core.redis_client import redis_client
 from app.models.hotel import Hotel
 from app.models.user import User
-from .hotels import get_super_admin
+from app.models.audit import AuditLog
+from .hotels import get_super_admin, _get_client_ip
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -64,6 +65,7 @@ async def list_cache_keys(
 @router.delete("/cache/hotel/{hotel_id}")
 async def clear_hotel_cache(
     hotel_id: str,
+    request: Request,
     session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
@@ -97,6 +99,16 @@ async def clear_hotel_cache(
         except Exception:
             pass
 
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel_id,
+        action="CLEAR_HOTEL_CACHE",
+        description=f"Cleared all cache keys for hotel '{hotel.name}'",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+
     return {
         "status": "success",
         "hotel_id": hotel_id,
@@ -106,14 +118,34 @@ async def clear_hotel_cache(
 
 
 @router.delete("/cache/all")
-async def flush_all_cache(super_admin: User = Depends(get_super_admin)):
+async def flush_all_cache(
+    request: Request,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+):
     """Flush the entire Redis cache. USE WITH CAUTION."""
     r = redis_client.get_instance()
     if not r:
         redis_client._local_memory_cache.clear()
+        session.add(AuditLog(
+            user_id=super_admin.id,
+            user_email=super_admin.email,
+            action="FLUSH_ALL_CACHE",
+            description="Flushed the entire local memory cache",
+            ip_address=_get_client_ip(request),
+        ))
+        await session.commit()
         return {"status": "success", "mode": "in-memory", "keys_cleared": "all"}
     try:
         r.flushdb()
+        session.add(AuditLog(
+            user_id=super_admin.id,
+            user_email=super_admin.email,
+            action="FLUSH_ALL_CACHE",
+            description="Flushed the entire Redis database cache",
+            ip_address=_get_client_ip(request),
+        ))
+        await session.commit()
         return {"status": "success", "mode": "redis", "message": "All keys flushed"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

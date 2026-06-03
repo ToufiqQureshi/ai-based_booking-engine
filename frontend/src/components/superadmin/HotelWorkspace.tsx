@@ -40,6 +40,24 @@ const FEATURE_FLAGS = [
     { id: 'feature_google_ads',     label: 'Google Hotel Ads',   desc: 'Google Hotel Ads XML feed integration',    icon: Globe,        color: 'text-orange-600 bg-orange-50' },
 ];
 
+const AVAILABLE_ROUTES = [
+    { path: '/dashboard', label: 'Dashboard' },
+    { path: '/analytics', label: 'Analytics' },
+    { path: '/agent', label: 'AI Chat Agent' },
+    { path: '/rooms', label: 'Rooms' },
+    { path: '/rates', label: 'Rates' },
+    { path: '/rate-shopper', label: 'Rate Shopper' },
+    { path: '/availability', label: 'Availability' },
+    { path: '/bookings', label: 'Bookings' },
+    { path: '/guests', label: 'Guests' },
+    { path: '/payments', label: 'Payments' },
+    { path: '/addons', label: 'Addons' },
+    { path: '/amenities', label: 'Amenities' },
+    { path: '/channel-settings', label: 'Channel Settings' },
+    { path: '/integration', label: 'Integrations' },
+    { path: '/settings', label: 'Settings' },
+];
+
 export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) => {
     const qc = useQueryClient();
 
@@ -54,6 +72,31 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
     const [waCredits, setWaCredits] = useState(hotel.subscription?.whatsapp_credits?.toString() || '1000');
     const [smsCredits, setSmsCredits] = useState(hotel.subscription?.sms_credits?.toString() || '1000');
     const [aiLimit, setAiLimit] = useState(hotel.subscription?.ai_usage_limit?.toString() || '50000');
+
+    // Permissions state
+    const [permissions, setPermissions] = useState<Record<string, string[]>>(() => {
+        return hotel.settings?.role_permissions || {
+            OWNER: [
+                "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper",
+                "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
+                "/channel-settings", "/integration", "/settings",
+            ],
+            MANAGER: [
+                "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",
+                "/availability", "/bookings", "/guests", "/payments", "/settings",
+            ],
+            STAFF: ["/availability", "/bookings", "/guests"],
+        };
+    });
+
+    const updatePermissionsMutation = useMutation({
+        mutationFn: (data: any) => apiClient.patch(`/superadmin/hotels/${hotel.id}/permissions`, data),
+        onSuccess: () => {
+            toast.success('Role permissions updated successfully');
+            qc.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+        },
+        onError: () => toast.error('Failed to update role permissions'),
+    });
 
     // Hotel health
     const { data: health } = useQuery<any>({
@@ -239,6 +282,7 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                     <TabsTrigger value="plan" className="rounded-lg text-xs font-bold">Plan & Billing</TabsTrigger>
                     <TabsTrigger value="features" className="rounded-lg text-xs font-bold">Features</TabsTrigger>
                     <TabsTrigger value="integrations" className="rounded-lg text-xs font-bold">Integrations</TabsTrigger>
+                    <TabsTrigger value="permissions" className="rounded-lg text-xs font-bold">Permissions</TabsTrigger>
                     <TabsTrigger value="users" className="rounded-lg text-xs font-bold">Users</TabsTrigger>
                     <TabsTrigger value="exports" className="rounded-lg text-xs font-bold">Exports</TabsTrigger>
                     <TabsTrigger value="danger" className="rounded-lg text-xs font-bold text-red-600 data-[state=active]:bg-red-600 data-[state=active]:text-white">Danger Zone</TabsTrigger>
@@ -348,6 +392,66 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                 {/* ── INTEGRATIONS ── */}
                 <TabsContent value="integrations" className="mt-0">
                     <HotelIntegrationsTab hotel={hotel} />
+                </TabsContent>
+
+                {/* ── PERMISSIONS ── */}
+                <TabsContent value="permissions" className="mt-0">
+                    <div className="border border-border rounded-2xl p-6 bg-background space-y-6">
+                        <div>
+                            <h3 className="text-sm font-black text-foreground">Granular Role-Based Permissions</h3>
+                            <p className="text-xs text-muted-foreground mt-1">Configure which pages and sections are accessible by each user role within this hotel property.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {(['OWNER', 'MANAGER', 'STAFF'] as const).map((role) => {
+                                const rolePerms = permissions[role] || [];
+                                return (
+                                    <div key={role} className="border border-border rounded-xl p-4 bg-muted/15 space-y-4">
+                                        <div className="flex items-center justify-between pb-2 border-b border-border">
+                                            <span className="text-xs font-black uppercase tracking-wider text-foreground">{role}</span>
+                                            <span className="text-[10px] text-muted-foreground font-mono">{rolePerms.length} allowed</span>
+                                        </div>
+                                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                            {AVAILABLE_ROUTES.map((route) => {
+                                                const hasAccess = rolePerms.includes(route.path);
+                                                return (
+                                                    <label key={route.path} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-background/80 cursor-pointer text-xs font-semibold text-foreground">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded border-border text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                                                            checked={hasAccess}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => {
+                                                                    const current = prev[role] || [];
+                                                                    const nextPerms = checked
+                                                                        ? [...current, route.path]
+                                                                        : current.filter(p => p !== route.path);
+                                                                    return {
+                                                                        ...prev,
+                                                                        [role]: nextPerms
+                                                                    };
+                                                                });
+                                                            }}
+                                                        />
+                                                        <span>{route.label}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <Button
+                            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11"
+                            onClick={() => updatePermissionsMutation.mutate(permissions)}
+                            disabled={updatePermissionsMutation.isPending}
+                        >
+                            {updatePermissionsMutation.isPending ? 'Saving Permissions…' : 'Save Role Permissions'}
+                        </Button>
+                    </div>
                 </TabsContent>
 
                 {/* ── USERS ── */}

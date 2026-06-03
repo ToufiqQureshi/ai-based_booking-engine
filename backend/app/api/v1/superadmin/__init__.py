@@ -5,6 +5,7 @@ from .users import router as users_router
 from .subscriptions import router as subscriptions_router
 from .integrations import router as integrations_router
 from .health import router as health_router
+from .chains import router as chains_router
 from .revenue import router as revenue_router
 from .bulk import router as bulk_router
 from .cache_mgmt import router as cache_router
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/superadmin", tags=["Super Admin"])
 router.include_router(hotels_router)
 router.include_router(users_router)
 router.include_router(subscriptions_router)
+router.include_router(chains_router)
 router.include_router(integrations_router)
 router.include_router(health_router)
 router.include_router(revenue_router)
