@@ -512,7 +512,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                         )}
                                         <div ref={scrollRef} />
                                     </div>
-                                </ScrollArea>
+                                                                </ScrollArea>
 
                                 {/* Input Panel */}
                                 <div className="p-3.5 bg-white border-t border-slate-100 shadow-[0_-2px_15px_rgba(0,0,0,0.015)]">
@@ -528,7 +528,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                             onChange={(e) => setInput(e.target.value)}
                                             placeholder="Message Concierge..."
                                             disabled={isLoading}
-                                            className="focus-visible:ring-0 focus-visible:ring-offset-0 border-slate-200 rounded-2xl px-4 py-5 text-[14px] bg-slate-50/50 placeholder:text-slate-400 pr-12 h-11 transition-all focus:bg-white focus:border-slate-300 shadow-inner font-medium"
+                                            className="focus-visible:ring-0 focus-visible:ring-offset-0 border-slate-205 rounded-2xl px-4 py-5 text-[14px] bg-slate-50/50 placeholder:text-slate-400 text-slate-800 dark:text-slate-900 pr-12 h-11 transition-all focus:bg-white focus:border-slate-300 shadow-inner font-medium"
                                         />
                                         <Button
                                             type="submit"
