@@ -139,7 +139,24 @@ class GuestChatResponse(BaseModel):
     response: str
 
 from fastapi import Request
+from fastapi.responses import StreamingResponse
 from app.core.limiter import limiter
+
+
+# ---------------------------------------------------------------------------
+# Pre-warm: populate hotel data cache before first guest message
+# ---------------------------------------------------------------------------
+
+@router.post("/chat/warm/{hotel_slug}", status_code=204)
+async def prewarm_guest_agent_cache(hotel_slug: str, session: DbSession):
+    """
+    Pre-warm the hotel data cache for a given slug.
+    Call this on widget load so the first guest message hits cache, not DB.
+    """
+    hotel_id = await resolve_hotel_id(hotel_slug, session)
+    from app.core.guest_agent import _fetch_hotel_data
+    await _fetch_hotel_data(session, hotel_id)
+
 
 @router.post("/chat/guest", response_model=GuestChatResponse)
 @limiter.limit("5/minute")
@@ -253,9 +270,122 @@ async def chat_with_guest_ai(
                     return GuestChatResponse(response="I'm having a moment of confusion. Could you rephrase your question? I'm happy to help!")
             raise
 
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         logger.error(f"Guest AI Error: {traceback.format_exc()}")
         return GuestChatResponse(response="I'm having trouble connecting. Please try again or reach out directly!")
+
+
+# ---------------------------------------------------------------------------
+# Streaming chat endpoint (SSE)
+# ---------------------------------------------------------------------------
+
+@router.post("/chat/guest/stream")
+@limiter.limit("5/minute")
+async def stream_guest_ai(
+    request: Request,
+    payload: GuestChatRequest,
+    session: DbSession,
+):
+    """
+    Streaming SSE version of the guest chat endpoint.
+    Returns tokens as they are generated so the UI can display them progressively.
+
+    SSE format: each event is  data: {"token": "..."}\n\n
+    Final event:               data: [DONE]\n\n
+    """
+    # --- Setup (mirrors regular endpoint) ---
+    try:
+        import uuid as _uuid
+
+        is_uuid = False
+        try:
+            _uuid.UUID(payload.hotel_slug)
+            is_uuid = True
+        except ValueError:
+            pass
+
+        query = (
+            select(Hotel).where(or_(Hotel.slug == payload.hotel_slug, Hotel.id == payload.hotel_slug))
+            if is_uuid
+            else select(Hotel).where(Hotel.slug == payload.hotel_slug)
+        )
+        result = await session.execute(query)
+        hotel = result.scalar_one_or_none()
+        if not hotel:
+            raise HTTPException(status_code=404, detail="Hotel not found")
+
+        if not getattr(hotel, "feature_guest_bot", False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Guest chatbot feature is not enabled for this hotel",
+            )
+
+        from app.models.integration import IntegrationSettings
+        int_res = await session.execute(
+            select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
+        )
+        integration_settings = int_res.scalar_one_or_none()
+
+        messages = []
+        for msg in payload.history:
+            if msg["role"] == "user":
+                messages.append(HumanMessage(content=msg["content"]))
+            elif msg["role"] == "assistant":
+                messages.append(AIMessage(content=msg["content"]))
+        messages.append(HumanMessage(content=payload.message))
+
+        from app.core.guest_agent import create_guest_agent_graph
+        agent = await create_guest_agent_graph(
+            session,
+            hotel.id,
+            getattr(integration_settings, "ai_provider", None) if integration_settings else None,
+            getattr(integration_settings, "ai_api_key", None) if integration_settings else None,
+            getattr(integration_settings, "ai_model", None) if integration_settings else None,
+            getattr(integration_settings, "ai_base_url", None) if integration_settings else None,
+            hotel.name,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        import traceback
+        logger.error("Stream setup error: %s", traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Failed to initialize AI agent")
+
+    if not agent:
+        import json as _json
+
+        async def _offline():
+            yield f"data: {_json.dumps({'token': 'AI Concierge is currently offline. Please contact the front desk directly.'})}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(_offline(), media_type="text/event-stream")
+
+    import json as _json
+
+    async def _event_gen():
+        try:
+            async for event in agent.astream_events({"messages": messages}, version="v2"):
+                if event["event"] == "on_chat_model_stream":
+                    chunk = event["data"].get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        yield f"data: {_json.dumps({'token': chunk.content})}\n\n"
+        except Exception as exc:
+            logger.error("Stream event error: %s", exc)
+            yield f"data: {_json.dumps({'error': 'Stream interrupted'})}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        _event_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 

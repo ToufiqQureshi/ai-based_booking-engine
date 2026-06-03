@@ -15,6 +15,7 @@ from app.models.rates import RoomRate
 from sqlmodel import delete
 from app.api.v1.availability import clear_availability_cache
 from app.core.cache import cache_response, invalidate_cache
+from app.core.guest_agent import invalidate_guest_agent_cache
 from fastapi import Request
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
@@ -85,6 +86,7 @@ async def create_room(
 
     clear_availability_cache(current_user.hotel_id)
     invalidate_cache(f"rooms:{current_user.hotel_id}:*")
+    invalidate_guest_agent_cache(current_user.hotel_id)
     return room
 
 
@@ -171,6 +173,7 @@ async def update_room(
     clear_availability_cache(current_user.hotel_id)
     invalidate_cache(f"rooms:{current_user.hotel_id}:*")
     invalidate_cache(f"room:{current_user.hotel_id}:*/rooms/{room_id}*")
+    invalidate_guest_agent_cache(current_user.hotel_id)
     return room
 
 
@@ -209,3 +212,4 @@ async def delete_room(room_id: str, current_user: CurrentUser, session: DbSessio
     clear_availability_cache(current_user.hotel_id)
     invalidate_cache(f"rooms:{current_user.hotel_id}:*")
     invalidate_cache(f"room:{current_user.hotel_id}:*/rooms/{room_id}*")
+    invalidate_guest_agent_cache(current_user.hotel_id)

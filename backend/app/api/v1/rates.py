@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.deps import CurrentUser, DbSession
 from app.api.v1.availability import clear_availability_cache
 from app.core.redis_client import redis_client
+from app.core.guest_agent import invalidate_guest_agent_cache
 from app.models.rates import RatePlan, RatePlanCreate, RatePlanRead
 from sqlmodel import select
 
@@ -15,12 +16,11 @@ router = APIRouter(prefix="/rates", tags=["Rates"])
 
 
 def _clear_rate_caches(hotel_id: str):
-    """Clear availability + public room search cache when rates change."""
+    """Clear availability + public room search + guest agent cache when rates change."""
     clear_availability_cache(hotel_id)
-    # Public room search caches prices — must be cleared when rates change
     redis_client.delete_pattern(f"public:rooms:{hotel_id}:*")
     redis_client.delete_pattern(f"rooms:{hotel_id}:*")
-    # Bump rate version for SSE clients so they auto-refresh
+    invalidate_guest_agent_cache(hotel_id)
     import time
     redis_client.set_value(f"rate_version:{hotel_id}", str(int(time.time())), expire=86400)
 
