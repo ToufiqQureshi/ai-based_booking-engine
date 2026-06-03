@@ -23,11 +23,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        'hotels',
-        sa.Column('feature_ai_assistant', sa.Boolean(), nullable=False, server_default=sa.false()),
-    )
+    bind = op.get_bind()
+    existing = {c['name'] for c in sa.inspect(bind).get_columns('hotels')}
+    if 'feature_ai_assistant' not in existing:
+        op.add_column(
+            'hotels',
+            sa.Column('feature_ai_assistant', sa.Boolean(), nullable=False, server_default=sa.false()),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column('hotels', 'feature_ai_assistant')
+    bind = op.get_bind()
+    existing = {c['name'] for c in sa.inspect(bind).get_columns('hotels')}
+    if 'feature_ai_assistant' in existing:
+        op.drop_column('hotels', 'feature_ai_assistant')
