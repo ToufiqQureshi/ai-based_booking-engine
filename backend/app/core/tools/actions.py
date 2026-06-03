@@ -1,4 +1,3 @@
-from langchain_core.tools import tool
 from sqlmodel import select, Session
 from app.models.room import RoomType
 from app.models.promo import PromoCode

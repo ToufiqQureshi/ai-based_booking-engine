@@ -278,7 +278,7 @@ Reply:"""
 
     try:
         from app.core.guest_agent import create_guest_agent_graph
-        from langchain_core.messages import HumanMessage
+        from agno.agent import Message
 
         if settings and settings.ai_api_key:
             agent = await create_guest_agent_graph(
@@ -288,8 +288,8 @@ Reply:"""
                 hotel_name,
             )
             if agent:
-                response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
-                return {"reply": response["messages"][-1].content.strip()}
+                result = await agent.arun([Message(role="user", content=prompt)])
+                return {"reply": (result.content or "").strip()}
 
         config = get_settings()
         if config.GROQ_API_KEY:

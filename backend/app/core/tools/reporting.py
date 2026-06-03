@@ -1,4 +1,3 @@
-from langchain_core.tools import tool
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
@@ -13,7 +12,6 @@ from datetime import date
 REPORT_DIR = "static/reports"
 os.makedirs(REPORT_DIR, exist_ok=True)
 
-@tool
 def generate_pdf_report(revenue: int, occupancy: int, period: str) -> str:
     """
     Generates a professional PDF report with charts for the given data.

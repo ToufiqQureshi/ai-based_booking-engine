@@ -20,6 +20,7 @@ interface HotelIntegrationsData {
     ai_provider?: string;
     ai_model?: string;
     ai_base_url?: string;
+    ai_max_tokens?: number | null;
     ai_whatsapp_credits: number;
     total_messages_sent: number;
     is_paused: boolean;
@@ -43,6 +44,7 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
         ai_model: 'llama-3.3-70b-versatile',
         ai_api_key: '',
         ai_base_url: 'https://api.groq.com/openai/v1',
+        ai_max_tokens: '' as string,
         credit_topup: 0,
     });
 
@@ -59,6 +61,7 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
                 ai_provider: res.ai_provider || 'groq',
                 ai_model: res.ai_model || 'llama-3.3-70b-versatile',
                 ai_base_url: res.ai_base_url || 'https://api.groq.com/openai/v1',
+                ai_max_tokens: res.ai_max_tokens ? String(res.ai_max_tokens) : '',
             }));
         } catch (e) {
             toast.error('Failed to load integration data');
@@ -78,6 +81,7 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
             if (form.ai_provider) payload.ai_provider = form.ai_provider;
             if (form.ai_model) payload.ai_model = form.ai_model;
             if (form.ai_base_url) payload.ai_base_url = form.ai_base_url;
+            if (form.ai_max_tokens) payload.ai_max_tokens = parseInt(form.ai_max_tokens, 10);
             if (form.credit_topup > 0) {
                 payload.ai_whatsapp_credits = (data?.ai_whatsapp_credits || 0) + form.credit_topup;
             }
@@ -194,6 +198,10 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
                     <div>
                         <Label className="text-xs">Base URL</Label>
                         <Input placeholder="https://api.groq.com/openai/v1" value={form.ai_base_url} onChange={e => setForm(p => ({ ...p, ai_base_url: e.target.value }))} />
+                    </div>
+                    <div>
+                        <Label className="text-xs">Max Tokens (optional)</Label>
+                        <Input type="number" min="128" max="32768" placeholder="default: 1024 guest / 2048 assistant" value={form.ai_max_tokens} onChange={e => setForm(p => ({ ...p, ai_max_tokens: e.target.value }))} />
                     </div>
                 </CardContent>
             </Card>

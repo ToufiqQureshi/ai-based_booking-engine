@@ -2,9 +2,6 @@ from typing import List, Optional, Dict, Any
 from datetime import date, timedelta, datetime
 from sqlmodel import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from langchain_ollama import ChatOllama
-from langgraph.prebuilt import create_react_agent
-from langchain_core.tools import tool
 
 from app.core.config import get_settings
 from app.models.timeline import BookingTimeline
@@ -77,7 +74,6 @@ def create_agent_executor(session: AsyncSession, user: User):
 
     # --- TOOLS ---
 
-    @tool
     async def get_dashboard_stats(days: int = 30) -> Dict[str, Any]:
         """
         Get consolidated dashboard stats (Revenue, Occupancy, Bookings) for the last N days.
@@ -122,7 +118,7 @@ def create_agent_executor(session: AsyncSession, user: User):
             Booking.hotel_id == user.hotel_id,
             Booking.check_in >= start_date
         ).group_by(Booking.status)
-        
+
         status_res = await session.execute(status_query)
         status_counts = {s: c for s, c in status_res.all()}
 
@@ -135,7 +131,6 @@ def create_agent_executor(session: AsyncSession, user: User):
             "bookings_by_status": status_counts # Includes pending, confirmed, etc.
         }
 
-    @tool
     async def search_bookings(query_str: str) -> List[Dict[str, Any]]:
         """
         Search for bookings by Guest Name (first or last) or Booking Number.
@@ -182,7 +177,6 @@ def create_agent_executor(session: AsyncSession, user: User):
             })
         return formatted
 
-    @tool
     async def get_booking_details(booking_number: str) -> str:
         """
         Get full details of a specific booking including guest info.
@@ -210,7 +204,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return details
 
-    @tool
     async def cancel_booking(booking_number: str) -> str:
         """
         Cancels a booking with the given booking number.
@@ -236,7 +229,6 @@ def create_agent_executor(session: AsyncSession, user: User):
 
         return f"Booking {booking_number} has been successfully cancelled."
 
-    @tool
     async def analyze_rate_competitiveness(days: int = 7) -> str:
         """
         Analyzes the hotel's rates against competitors for the next few days.
@@ -287,8 +279,7 @@ def create_agent_executor(session: AsyncSession, user: User):
              analysis += "\nYour rates are COMPETITIVE (within 15% of market average)."
 
         return analysis
-    
-    @tool
+
     async def update_room_price(room_name: str, new_price: float) -> str:
         """
         Updates the base price of a room type in the database.
@@ -296,7 +287,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_update_room_price(session, user, room_name, new_price)
 
-    @tool
     async def create_promo_code(code: str, discount_percent: int) -> str:
         """
         Creates a new discount promo code in the database.
@@ -304,7 +294,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_create_promo_code(session, user, code, discount_percent)
 
-    @tool
     async def get_room_inventory() -> str:
         """
         Get the current inventory AND BASE RATES of the hotel.
@@ -314,21 +303,20 @@ def create_agent_executor(session: AsyncSession, user: User):
         query = select(RoomType).where(RoomType.hotel_id == user.hotel_id)
         result = await session.execute(query)
         room_types = result.scalars().all()
-        
+
         if not room_types:
             return "No room inventory found in the system."
-            
+
         summary = "🏨 **Current Room Rates & Inventory:**\n"
         total_rooms = 0
-        
+
         for rt in room_types:
             summary += f"- **{rt.name}**: {rt.total_inventory} rooms. Base Price: **₹{rt.base_price}**\n"
             total_rooms += rt.total_inventory
-            
+
         summary += f"\n**Grand Total: {total_rooms} Rooms**"
         return summary
 
-    @tool
     async def get_pending_payments() -> str:
         """
         List all bookings that have pending payments (Money yet to be collected).
@@ -336,20 +324,19 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         from app.core.tools.finance import logic_get_pending_payments
         pending = await logic_get_pending_payments(session, user.id)
-        
+
         if not pending:
             return "Great news! No pending payments. All confirmed bookings are fully paid."
-            
+
         summary = "💰 **Pending Payments List:**\n"
         total_due = 0
         for p in pending:
             summary += f"- Booking `{p['booking_number']}`: Due **₹{p['due']}** (Status: {p['status']})\n"
             total_due += p['due']
-            
+
         summary += f"\n**Total Outstanding Amount: ₹{total_due}**"
         return summary
 
-    @tool
     async def get_daily_revenue(target_date_str: str = None) -> str:
         """
         Get the specific revenue for a given date (default: today).
@@ -357,7 +344,7 @@ def create_agent_executor(session: AsyncSession, user: User):
         Calculates revenue based on occupied rooms for that night.
         """
         from app.core.tools.finance import logic_get_daily_revenue
-        
+
         if not target_date_str:
             target_date = date.today()
         else:
@@ -365,11 +352,10 @@ def create_agent_executor(session: AsyncSession, user: User):
                 target_date = date.fromisoformat(target_date_str)
             except ValueError:
                 return "Invalid date format. Please use YYYY-MM-DD."
-                
+
         rev = await logic_get_daily_revenue(session, user.id, target_date)
         return f"📅 Revenue for **{target_date.isoformat()}**: **₹{rev}**"
 
-    @tool
     async def get_todays_arrivals() -> str:
         """
         Get a list of guests arriving TODAY.
@@ -377,16 +363,15 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         from app.core.tools.operations import logic_get_todays_arrivals
         arrivals = await logic_get_todays_arrivals(session, user.id)
-        
+
         if not arrivals:
             return "No arrivals scheduled for today."
-            
+
         summary = "🛬 **Today's Arrivals:**\n"
         for a in arrivals:
             summary += f"- **{a['guest_name']}** ({a['room_count']} rooms). Req: {a['special_requests']}\n"
         return summary
 
-    @tool
     async def get_todays_departures() -> str:
         """
         Get a list of guests checking out TODAY.
@@ -394,17 +379,16 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         from app.core.tools.operations import logic_get_todays_departures
         departures = await logic_get_todays_departures(session, user.id)
-        
+
         if not departures:
             return "No departures scheduled for today."
-            
+
         summary = "🛫 **Today's Departures:**\n"
         for d in departures:
             due_msg = f"Due: ₹{d['due_amount']}" if d['due_amount'] > 0 else "Fully Paid ✅"
             summary += f"- **{d['guest_name']}**. {due_msg}\n"
         return summary
 
-    @tool
     async def find_guest(query_str: str) -> str:
         """
         Find a guest by Name, Phone, or Email.
@@ -412,10 +396,10 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         from app.core.tools.guest_inventory import logic_find_guest
         guests = await logic_find_guest(session, user.id, query_str)
-        
+
         if not guests:
             return "No guest found matching that query."
-            
+
         summary = "👤 **Guest Found:**\n"
         for g in guests:
             summary += f"- **{g['name']}** ({g['vip_status']})\n"
@@ -424,7 +408,6 @@ def create_agent_executor(session: AsyncSession, user: User):
             summary += f"  - Last Search: {g['last_visit']}\n"
         return summary
 
-    @tool
     async def block_room_dates(room_type_name: str, start_date_str: str, end_date_str: str, reason: str = "Maintenance") -> str:
         """
         Block a room for a specific date range (e.g. for maintenance).
@@ -433,17 +416,16 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         from app.core.tools.guest_inventory import logic_block_room
         from datetime import date
-        
+
         try:
             s_date = date.fromisoformat(start_date_str)
             e_date = date.fromisoformat(end_date_str)
         except ValueError:
              return "Invalid date format. Use YYYY-MM-DD."
-             
+
         return await logic_block_room(session, user.id, room_type_name, s_date, e_date, reason)
 
 
-    @tool
     async def get_pending_approvals() -> str:
         """
         List bookings that are waiting for YOUR confirmation (Status = Pending).
@@ -451,16 +433,15 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         from app.core.tools.operations import logic_get_pending_bookings
         pending = await logic_get_pending_bookings(session, user.id)
-        
+
         if not pending:
             return "No bookings are waiting for confirmation."
-            
+
         summary = "⏳ **Bookings Waiting for Confirmation:**\n"
         for p in pending:
             summary += f"- **{p['guest_name']}** ({p['dates']}). Amt: ₹{p['amount']}. Src: {p['source']}\n"
         return summary
 
-    @tool
     async def create_quick_booking(guest_name: str, guest_email: str, room_type_name: str, check_in_str: str, nights: int = 1) -> str:
         """
         Creates a quick booking for a guest.
@@ -472,7 +453,7 @@ def create_agent_executor(session: AsyncSession, user: User):
             import uuid
             start_date = date.fromisoformat(check_in_str)
             end_date = start_date + timedelta(days=nights)
-            
+
             # 1. Find Room Type
             rt_res = await session.execute(select(RoomType).where(
                 RoomType.hotel_id == user.hotel_id,
@@ -481,7 +462,7 @@ def create_agent_executor(session: AsyncSession, user: User):
             room_type = rt_res.scalars().first()
             if not room_type:
                 return f"Error: Room type '{room_type_name}' not found."
-            
+
             # 2. Find/Create Guest
             guest_res = await session.execute(select(Guest).where(
                 Guest.email == guest_email,
@@ -498,7 +479,7 @@ def create_agent_executor(session: AsyncSession, user: User):
                 )
                 session.add(guest)
                 await session.flush()
-            
+
             # 3. Create Booking
             booking_num = f"AI{datetime.utcnow().strftime('%y%m%d')}{str(uuid.uuid4())[:4].upper()}"
             new_booking = Booking(
@@ -519,7 +500,7 @@ def create_agent_executor(session: AsyncSession, user: User):
             )
             session.add(new_booking)
             await session.flush()
-            
+
             # 4. Log to BookingTimeline
             timeline = BookingTimeline(
                 booking_id=new_booking.id,
@@ -528,14 +509,13 @@ def create_agent_executor(session: AsyncSession, user: User):
                 changed_by="ai_agent"
             )
             session.add(timeline)
-            
+
             await session.commit()
             return f"✅ Booking Created Successfully! Number: **{booking_num}**. Status: Pending Approval."
-            
+
         except Exception as e:
             return f"❌ Failed to create booking: {str(e)}"
 
-    @tool
     async def check_availability_matrix(start_date_str: str, end_date_str: str) -> str:
         """
         Check which room types are available for a date range.
@@ -545,11 +525,11 @@ def create_agent_executor(session: AsyncSession, user: User):
             from datetime import date
             s_date = date.fromisoformat(start_date_str)
             e_date = date.fromisoformat(end_date_str)
-            
+
             # Get all room types
             rt_res = await session.execute(select(RoomType).where(RoomType.hotel_id == user.hotel_id))
             room_types = rt_res.scalars().all()
-            
+
             # Get all active bookings in range
             b_res = await session.execute(select(Booking).where(
                 Booking.hotel_id == user.hotel_id,
@@ -560,7 +540,7 @@ def create_agent_executor(session: AsyncSession, user: User):
                 )
             ))
             bookings = b_res.scalars().all()
-            
+
             summary = f"📅 **Availability Matrix ({start_date_str} to {end_date_str}):**\n"
             for rt in room_types:
                 # Calculate occupied
@@ -569,17 +549,16 @@ def create_agent_executor(session: AsyncSession, user: User):
                     for r in b.rooms:
                         if r.get("room_type_id") == rt.id:
                             occupied += 1
-                
+
                 avail = rt.total_inventory - occupied
                 status = "✅ Available" if avail > 0 else "❌ Sold Out"
                 summary += f"- **{rt.name}**: {avail}/{rt.total_inventory} left. {status}\n"
-                
+
             return summary
         except Exception as e:
             return f"Error checking availability: {str(e)}"
 
 
-    @tool
     async def search_web(query: str) -> str:
         """
         Search the web for real-time information (Events, Weather, Trends).
@@ -599,7 +578,6 @@ def create_agent_executor(session: AsyncSession, user: User):
 
     # --- ADVANCED ANALYTICS TOOLS ---
 
-    @tool
     async def get_revenue_trend(days: int = 30) -> str:
         """
         Get daily revenue trend for the last N days as a chart.
@@ -607,7 +585,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_revenue_trend(session, user.hotel_id, days)
 
-    @tool
     async def get_occupancy_trend(days: int = 30) -> str:
         """
         Get daily occupancy percentage trend for the last N days as a chart.
@@ -615,7 +592,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_occupancy_trend(session, user.hotel_id, days)
 
-    @tool
     async def get_booking_source_breakdown(days: int = 30) -> str:
         """
         Get breakdown of bookings by source (OTA, direct, walk-in, etc.) as a pie chart.
@@ -623,7 +599,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_booking_source_breakdown(session, user.hotel_id, days)
 
-    @tool
     async def get_room_performance(days: int = 30) -> str:
         """
         Get revenue and booking count per room type as a bar chart.
@@ -631,7 +606,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_room_performance(session, user.hotel_id, days)
 
-    @tool
     async def get_revpar_analysis(days: int = 30) -> str:
         """
         Calculate RevPAR (Revenue per Available Room), ADR (Average Daily Rate),
@@ -640,7 +614,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_revpar(session, user.hotel_id, days)
 
-    @tool
     async def get_revenue_forecast(forecast_days: int = 30) -> str:
         """
         Forecast revenue for the next N days based on historical day-of-week patterns.
@@ -648,7 +621,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_revenue_forecast(session, user.hotel_id, forecast_days)
 
-    @tool
     async def get_smart_alerts() -> str:
         """
         Get proactive operational alerts: low occupancy windows, high demand periods,
@@ -657,7 +629,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_smart_alerts(session, user.hotel_id)
 
-    @tool
     async def get_vip_guests(limit: int = 10) -> str:
         """
         Get top guests ranked by total lifetime spend, with visit count and tier labels.
@@ -665,7 +636,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_vip_guests(session, user.hotel_id, limit)
 
-    @tool
     async def get_at_risk_bookings() -> str:
         """
         Identify bookings that are at risk: imminent check-ins still pending,
@@ -674,7 +644,6 @@ def create_agent_executor(session: AsyncSession, user: User):
         """
         return await logic_get_at_risk_bookings(session, user.hotel_id)
 
-    @tool
     async def get_upsell_opportunities() -> str:
         """
         Find current in-house or upcoming guests who could be upgraded to a higher room category.
@@ -720,21 +689,16 @@ def create_agent_executor(session: AsyncSession, user: User):
         get_upsell_opportunities,
     ]
 
-    # Resolve dynamic keys from hotel relation
+    # Resolve dynamic config from hotel relation
     target_api_key = settings.GROQ_API_KEY
+    target_model = getattr(user.hotel, 'ai_model', None) or "llama-3.3-70b-versatile"
+    target_base_url = getattr(user.hotel, 'ai_base_url', None) or "https://api.groq.com/openai/v1"
+    target_max_tokens = getattr(user.hotel, 'ai_max_tokens', None) or 2048
+
     if user.hotel and getattr(user.hotel, 'ai_api_key', None):
         target_api_key = user.hotel.ai_api_key
 
-    if target_api_key:
-        from langchain_openai import ChatOpenAI
-        llm = ChatOpenAI(
-            model="openai/gpt-oss-120b",
-            temperature=1,
-            openai_api_key=target_api_key,
-            base_url="https://api.groq.com/openai/v1",
-            max_tokens=2048,
-        )
-    else:
+    if not target_api_key:
         raise ValueError("No valid GROQ_API_KEY available for this hotel.")
 
     # Fetch Hotel City for Context - Handle NoneType safety
@@ -742,14 +706,23 @@ def create_agent_executor(session: AsyncSession, user: User):
     if user.hotel and user.hotel.address:
         hotel_city = user.hotel.address.get("city", "Unknown City")
 
-    # Create Agent Graph (LangGraph)
-    graph = create_react_agent(
-        model=llm,
-        tools=tools,
-        prompt=SYSTEM_PROMPT.format(
-            current_date=date.today().isoformat(),
-            city=hotel_city
-        )
+    from agno.agent import Agent
+    from agno.models.openai import OpenAILike
+
+    llm_model = OpenAILike(
+        id=target_model,
+        api_key=target_api_key,
+        base_url=target_base_url,
+        max_tokens=target_max_tokens,
     )
 
-    return graph
+    agent = Agent(
+        model=llm_model,
+        tools=tools,
+        instructions=SYSTEM_PROMPT.format(
+            current_date=date.today().isoformat(),
+            city=hotel_city
+        ),
+        markdown=True,
+    )
+    return agent

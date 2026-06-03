@@ -66,24 +66,32 @@ async def get_integration_settings(current_user: CurrentUser, session: DbSession
     return response
 
 
+_AI_ONLY_FIELDS = frozenset({"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_max_tokens"})
+
+
 @router.put("/settings", response_model=IntegrationSettingsRead)
 async def update_integration_settings(
     settings_update: IntegrationSettingsUpdate,
     current_user: CurrentUser,
     session: DbSession,
 ):
+    from app.models.user import UserRole
+
     query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
     result = await session.execute(query)
     settings = result.scalar_one_or_none()
 
+    # AI credentials are super-admin-only — strip them from hotelier requests
+    update_data = settings_update.model_dump(exclude_unset=True)
+    if current_user.role != UserRole.SUPER_ADMIN:
+        for field in _AI_ONLY_FIELDS:
+            update_data.pop(field, None)
+
     if not settings:
-        settings = IntegrationSettings(
-            hotel_id=current_user.hotel_id,
-            **settings_update.model_dump(exclude_unset=True),
-        )
+        settings = IntegrationSettings(hotel_id=current_user.hotel_id, **update_data)
         session.add(settings)
     else:
-        for key, value in settings_update.model_dump(exclude_unset=True).items():
+        for key, value in update_data.items():
             setattr(settings, key, value)
         settings.updated_at = datetime.utcnow()
 
@@ -91,12 +99,8 @@ async def update_integration_settings(
     hotel_res = await session.execute(hotel_query)
     hotel = hotel_res.scalar_one_or_none()
     if hotel:
-        updates = settings_update.model_dump(exclude_unset=True)
-        for field in ("ai_provider", "ai_api_key", "ai_model", "ai_base_url"):
-            if field in updates:
-                setattr(hotel, field, updates[field])
-        if "widget_primary_color" in updates and updates["widget_primary_color"]:
-            hotel.primary_color = updates["widget_primary_color"]
+        if "widget_primary_color" in update_data and update_data["widget_primary_color"]:
+            hotel.primary_color = update_data["widget_primary_color"]
         session.add(hotel)
 
     await session.commit()
@@ -276,9 +280,9 @@ async def test_ai_connection(current_user: CurrentUser, session: DbSession):
         if not agent:
             return {"status": "error", "message": "Agent failed to initialize. Check your Model ID."}
 
-        from langchain_core.messages import HumanMessage
-        response = await agent.ainvoke({"messages": [HumanMessage(content="Respond with 'Ready' only.")]})
-        return {"status": "success", "message": f"Connection Successful! AI says: {response['messages'][-1].content}"}
+        from agno.agent import Message
+        result = await agent.arun([Message(role="user", content="Respond with 'Ready' only.")])
+        return {"status": "success", "message": f"Connection Successful! AI says: {result.content or ''}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

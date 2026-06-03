@@ -25,6 +25,7 @@ class HotelIntegrationsRead(BaseModel):
     ai_provider: Optional[str] = None
     ai_model: Optional[str] = None
     ai_base_url: Optional[str] = None
+    ai_max_tokens: Optional[int] = None
     ai_api_key_preview: Optional[str] = None
     has_ai_api_key: bool = False
     has_whatsapp_api_key: bool = False
@@ -51,6 +52,7 @@ class HotelIntegrationsUpdate(BaseModel):
     ai_provider: Optional[str] = None
     ai_model: Optional[str] = None
     ai_base_url: Optional[str] = None
+    ai_max_tokens: Optional[int] = None
     ai_api_key: Optional[str] = None
     whatsapp_api_key: Optional[str] = None
     whatsapp_phone_number_id: Optional[str] = None
@@ -94,11 +96,15 @@ async def get_hotel_integrations(
 
     s = hotel.settings if isinstance(hotel.settings, dict) else {}
     ai_key = int_settings.ai_api_key if int_settings else hotel.ai_api_key
+    ai_max_tokens = (
+        getattr(int_settings, 'ai_max_tokens', None) if int_settings else None
+    ) or getattr(hotel, 'ai_max_tokens', None)
     return HotelIntegrationsRead(
         hotel_id=hotel.id, hotel_name=hotel.name,
         ai_provider=int_settings.ai_provider if int_settings else hotel.ai_provider,
         ai_model=int_settings.ai_model if int_settings else hotel.ai_model,
         ai_base_url=int_settings.ai_base_url if int_settings else hotel.ai_base_url,
+        ai_max_tokens=ai_max_tokens,
         ai_api_key_preview=_preview_secret(ai_key),
         has_ai_api_key=bool(ai_key),
         has_whatsapp_api_key=bool(s.get("whatsapp_api_key")),
@@ -146,6 +152,9 @@ async def update_hotel_integrations(
     if payload.ai_base_url is not None:
         hotel.ai_base_url = payload.ai_base_url or None
         updated.append("ai_base_url")
+    if payload.ai_max_tokens is not None:
+        hotel.ai_max_tokens = payload.ai_max_tokens if payload.ai_max_tokens > 0 else None
+        updated.append("ai_max_tokens")
     if payload.ai_api_key is not None:
         hotel.ai_api_key = payload.ai_api_key or None
         updated.append("ai_api_key")

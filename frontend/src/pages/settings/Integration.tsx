@@ -29,10 +29,6 @@ interface IntegrationSettings {
     widget_background_color: string;
     allowed_domains: string;
     webhook_url?: string;
-    ai_provider?: string;
-    ai_api_key?: string;
-    ai_model?: string;
-    ai_base_url?: string;
     google_sheet_url?: string;
     widget_layout?: string;
     widget_custom_css?: string;
@@ -59,7 +55,6 @@ const IntegrationPage = () => {
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
     const [widgetCode, setWidgetCode] = useState<WidgetCode | null>(null);
     const [loading, setLoading] = useState(true);
-    const [testingAI, setTestingAI] = useState(false);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
 
@@ -169,23 +164,6 @@ const IntegrationPage = () => {
         }
     };
 
-    const testAI = async () => {
-        if (testingAI) return;
-        setTestingAI(true);
-        try {
-            const res = await apiClient.post<any>('/integration/test-ai');
-            if (res.status === 'success') {
-                toast.success(res.message);
-            } else {
-                toast.error(res.message);
-            }
-        } catch (error) {
-            toast.error('Test failed. Check your API key and network.');
-        } finally {
-            setTestingAI(false);
-        }
-    };
-
     const createAPIKey = async (name: string) => {
         try {
             const data = await apiClient.post<any>('/integration/api-keys', { name });
@@ -257,7 +235,7 @@ const IntegrationPage = () => {
 
                 {isSuperAdmin && (
                     <TabsContent value="settings">
-                        <ExternalServicesTab settings={settings} user={user} isDirty={isDirty} isSavingSettings={isSavingSettings} testingAI={testingAI} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} onTestAI={testAI} />
+                        <ExternalServicesTab settings={settings} isDirty={isDirty} isSavingSettings={isSavingSettings} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} />
                     </TabsContent>
                 )}
 
