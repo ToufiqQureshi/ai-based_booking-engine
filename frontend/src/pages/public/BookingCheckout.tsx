@@ -87,6 +87,7 @@ function BookingCheckoutInner() {
 
     const [state, setState] = useState<BookingState | null>(null);
     const [hotel, setHotel] = useState<any>(null);
+    const [isInitializing, setIsInitializing] = useState(true);
 
     // Promo state - MUST be before any early returns (React hooks rules)
     const [promoCode, setPromoCode] = useState('');
@@ -198,6 +199,7 @@ function BookingCheckoutInner() {
                 }
             }
         }
+        setIsInitializing(false);
     }, [location.state, setValue, hotelSlug]);
 
     // Persist checkout state to sessionStorage so back-navigation from payment page works
@@ -306,6 +308,7 @@ function BookingCheckoutInner() {
                 })) : [],
                 promo_code: appliedPromo || undefined,
                 special_requests: data.specialRequests,
+                payment_method: paymentMethod === 'property' ? 'pay_at_property' : 'online',
                 idempotency_key: idempotencyKeyRef.current,
             };
 
@@ -337,13 +340,26 @@ function BookingCheckoutInner() {
                 }
 
                 // Create Razorpay Order on backend (idempotent on receipt = bookingId)
-                const orderData = await apiClient.post('/public/razorpay/create-order', {
-                    amount: finalTotal,
-                    receipt: bookingId,
-                    idempotency_key: `order_${bookingId}`,
-                }, {
-                    headers: { 'Idempotency-Key': `order_${bookingId}` },
-                }) as any;
+                let orderData: any;
+                try {
+                    orderData = await apiClient.post('/public/razorpay/create-order', {
+                        amount: finalTotal,
+                        receipt: bookingId,
+                    }, {
+                        headers: { 'Idempotency-Key': `order_${bookingId}` },
+                    });
+                } catch (orderErr: any) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Payment Setup Failed',
+                        description: orderErr?.message?.includes('configured')
+                            ? 'Online payment is not configured for this property. Please select "Pay at Property".'
+                            : 'Could not initiate payment. Please try again or choose "Pay at Property".',
+                    });
+                    setIsSubmitting(false);
+                    submitInFlightRef.current = false;
+                    return;
+                }
 
                 // Open Razorpay Checkout Popup
                 const options = {
@@ -414,24 +430,38 @@ function BookingCheckoutInner() {
 
         } catch (error: any) {
             console.error('Booking failed:', error);
-            const detail = error?.response?.data?.detail || error?.message || '';
+            // ApiClientError stores the backend detail in .message and status in .status
+            const detail = error?.message || '';
+            const status = error?.status ?? error?.response?.status;
             let title = "Booking Failed";
             let description = "Something went wrong. Please try again.";
 
-            if (error?.response?.status === 409) {
-                if (detail.toLowerCase().includes('price') || detail.toLowerCase().includes('updated')) {
-                    title = "Price Updated";
-                    description = detail || "The room price has changed. Please go back and review the new price.";
-                } else if (detail.toLowerCase().includes('available') || detail.toLowerCase().includes('no longer')) {
+            if (status === 409) {
+                const d = detail.toLowerCase();
+                if (d.includes('price') || d.includes('updated') || d.includes('inr')) {
+                    title = "Price Has Changed";
+                    description = detail || "The room price was updated. Please go back and check the new rate before booking.";
+                } else if (d.includes('available') || d.includes('no longer') || d.includes('inventory')) {
                     title = "Room No Longer Available";
                     description = "This room was just booked by someone else. Please go back and choose another option.";
+                } else if (d.includes('progress') || d.includes('duplicate')) {
+                    title = "Already Processing";
+                    description = "A booking attempt is already in progress. Please wait a moment and try again.";
                 } else {
                     title = "Booking Conflict";
                     description = detail || "Please go back and try again.";
                 }
-            } else if (error?.response?.status === 400) {
-                title = "Invalid Request";
+            } else if (status === 400) {
+                title = "Invalid Details";
                 description = detail || "Please check your booking details and try again.";
+            } else if (status === 500) {
+                title = "Server Error";
+                description = detail.includes('razorpay') || detail.includes('payment')
+                    ? "Payment gateway error. Please try 'Pay at Property' or contact the hotel."
+                    : "Our booking system encountered an issue. Please try again in a moment.";
+            } else if (error?.name === 'AbortError' || detail.includes('timeout') || detail.includes('aborted')) {
+                title = "Connection Timeout";
+                description = "Request timed out. Please check your internet connection and try again.";
             }
 
             toast({
@@ -575,6 +605,15 @@ function BookingCheckoutInner() {
     ]);
 
     // Early return AFTER all hooks — guards the render below when state isn't loaded yet
+    if (isInitializing) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
+                <Loader2 className="w-10 h-10 text-violet-500 animate-spin" />
+                <p className="text-slate-500 font-medium">Loading your booking details...</p>
+            </div>
+        );
+    }
+
     if (!state || !state.rooms || state.rooms.length === 0 || !state.checkInDate || !state.checkOutDate) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
