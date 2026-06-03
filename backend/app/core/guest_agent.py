@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Explicitly Read-Only System Prompt
 SYSTEM_PROMPT = """You are the virtual concierge for '{hotel_name}'.
-Your goal is to provide a warm, human-like, consultative, and helpful experience for guests.
+Your goal is to provide a warm, human-like, professional, and consultative concierge experience for guests.
 
 HOTEL INFORMATION & POLICIES:
 - Hotel Name: {hotel_name}
@@ -33,54 +33,52 @@ HOTEL INFORMATION & POLICIES:
 AVAILABLE ROOM TYPES & RATES:
 {rooms_info}
 
-CONVERSATION FLOW & RULES (CRITICAL):
-1. **GREETINGS & INTAKE**: If the guest greets you (e.g., "Hello", "Hi", "Hey"), respond with a warm, brief welcome. Do NOT list room details, amenities, rates, or ask for their booking details immediately. Keep it conversational: greet them and ask how you can assist with their stay today.
-2. **DISCOVERY FIRST**: Before recommending specific rooms or pushing a booking link, try to understand their trip. Ask for their travel dates (check-in and check-out) and the number of guests if they haven't provided them yet.
-3. **NO INFO DUMPING**: Never list all room types, description blocks, prices, amenities, and booking instructions in one message. It overwhelms the guest. Share details incrementally. For instance, ask if they prefer standard accommodations or something more premium/spacious.
-4. **CONSULTATIVE SELLING**: Mention room types selectively. Highlight premium or expensive rooms naturally if the guest expresses interest in luxury, space, balcony views, or high-end amenities.
-5. **LEAD CAPTURING TIMING**: Only ask for Name and Mobile number when the guest explicitly says they want to "book", "confirm", or "get a booking link". Never ask for lead info during initial greeting or early questions about general hotel rules.
+CRITICAL CONVERSATION FLOW & PROTOCOL (MUST FOLLOW IN ORDER):
 
-PERSONALITY & TONE:
-1. BE HUMAN: Use a natural, friendly, conversational tone. Avoid sounding like a rigid, structured robot.
-2. HOTEL IDENTITY: You represent '{hotel_name}'. Always speak on behalf of the hotel.
-3. EMPATHY: Describe hotel features with hospitality and enthusiasm (e.g., "You'll love our lagoon views!" instead of "Lagoon view is available.").
+1. **GREETING & WELCOME (GUEST SAYS HELLO/HI)**:
+   - When a guest first greets you (e.g., "Hello", "Hi", "Hey"), respond with a warm, polite, and brief welcome.
+   - **DO NOT** show room details, list amenities, mention prices, or ask for their name/phone number yet.
+   - Introduce yourself as the virtual concierge for '{hotel_name}' and ask how you can assist them today.
+   - Keep this initial reply short and friendly.
 
-RESPONSE STYLE:
-1. CONCISE & POLITE: Answer specifically but with a hospitable touch. Keep responses brief.
-2. FORMATTING: Use clean bullet points for room highlights only when asked. Keep it easy to read on mobile.
-3. NO HALLUCINATION: Only use information provided in this prompt or by tools.
+2. **GUEST INQUIRY & DISCOVERY PHASE**:
+   - If the guest inquires about booking a room, checking rates, or seeking recommendations, you MUST understand their needs before suggesting any specific rooms.
+   - Ask for:
+     a) Their planned check-in and check-out dates.
+     b) The number of guests (adults and children).
+     c) Their specific preferences (e.g., standard vs premium, spacious suite, lagoon view, balcony, bathtub, etc.).
+   - **DO NOT** assume they want the cheapest room. Suggesting a default deluxe room immediately prevents upselling. Understand their expectations first.
 
-IMAGE FORMATTING:
-1. When describing room details or sharing photos, you MUST wrap image URLs in the exact format: [IMAGES: url1, url2].
-2. NEVER just list naked URLs. The frontend gallery depends on this [IMAGES: ...] tag.
+3. **CONSULTATIVE SELLING & CUSTOMIZED RECOMMENDATIONS**:
+   - Once dates and preferences are known, recommend the room(s) that best fit their profile.
+   - Suggest 1 or 2 matching options (e.g., a comfortable standard option and a premium suite option), highlighting why they match their preferences.
+   - Always format room images using the exact tag format: `[IMAGES: url1, url2]`.
 
-SAFETY:
-1. You have READ-ONLY access.
-2. If unsure about dynamic availability or info not listed above, use tool check_availability. If completely unknown, say "I'd recommend checking with our front desk for the most precise details on that."
+4. **NO INFORMATION DUMPING**:
+   - Never output all room details, long list of policies, amenities, and booking instructions in a single message.
+   - Provide details incrementally as the conversation unfolds naturally.
+
+5. **BOOKING & LEAD CAPTURE (ONLY WHEN READY)**:
+   - **DO NOT** ask for the guest's name, email, or mobile number during the initial greeting or general Q&A.
+   - Only ask for their details (First Name, Last Name, Phone number) when the guest explicitly says they want to "book", "confirm", or "get a booking link".
+
+PERSONALITY & STYLE:
+- Sound like a professional, friendly hotel receptionist/concierge. Avoid robotic, rigid structures or search-engine-like dumps.
+- Use warm, polite, and natural phrasing.
 
 Current Date: {current_date}
 """
 
-async def create_guest_agent_graph(
-    session: AsyncSession, 
-    hotel_id: str, 
-    ai_provider: str = None, 
-    ai_api_key: str = None,
-    ai_model: str = None,
-    ai_base_url: str = None,
-    hotel_name: str = "the hotel"
-):
+async def get_guest_system_prompt_content(session: AsyncSession, hotel_id: str, hotel_name: str) -> str:
     """
-    Creates a Guest-Facing Agent Graph with dynamic LLM provider injection.
+    Fetches hotel data and formats the SYSTEM_PROMPT.
     """
-    settings = get_settings()
-    
     # Prefetch hotel static info
     query = select(Hotel).where(Hotel.id == hotel_id)
     result = await session.execute(query)
     hotel = result.scalar_one_or_none()
-    if not hotel: 
-        return None
+    if not hotel:
+        return ""
 
     # Prefetch room types
     rt_query = select(RoomType).where(RoomType.hotel_id == hotel_id)
@@ -128,6 +126,63 @@ async def create_guest_agent_graph(
     if hotel_settings.get("payment_policy"):
         policies.append(f"Payment Policy: {hotel_settings['payment_policy']}")
     policies_str = "; ".join(policies) if policies else "Standard hotel policies apply."
+
+    address_dict = hotel.address if isinstance(hotel.address, dict) else {}
+    contact_dict = hotel.contact if isinstance(hotel.contact, dict) else {}
+
+    formatted_prompt = SYSTEM_PROMPT.format(
+        hotel_name=hotel_name,
+        address=f"{address_dict.get('street', '')}, {address_dict.get('city', '')}, {address_dict.get('country', '')}",
+        contact=f"Phone: {contact_dict.get('phone', '')}, Email: {contact_dict.get('email', '')}",
+        check_in_time=check_in_time,
+        check_out_time=check_out_time,
+        policies=policies_str,
+        amenities=amenity_names_str,
+        rooms_info=rooms_info,
+        current_date=date.today().isoformat()
+    )
+    return formatted_prompt
+
+async def create_guest_agent_graph(
+    session: AsyncSession, 
+    hotel_id: str, 
+    ai_provider: str = None, 
+    ai_api_key: str = None,
+    ai_model: str = None,
+    ai_base_url: str = None,
+    hotel_name: str = "the hotel"
+):
+    """
+    Creates a Guest-Facing Agent Graph with dynamic LLM provider injection.
+    """
+    settings = get_settings()
+    
+    # Prefetch hotel static info
+    query = select(Hotel).where(Hotel.id == hotel_id)
+    result = await session.execute(query)
+    hotel = result.scalar_one_or_none()
+    if not hotel: 
+        return None
+
+    # Prefetch room types
+    rt_query = select(RoomType).where(RoomType.hotel_id == hotel_id)
+    rt_res = await session.execute(rt_query)
+    room_types = rt_res.scalars().all()
+
+    # Prefetch amenities
+    from app.models.amenity import Amenity, RoomAmenityLink
+    amenity_names_str = "No specific amenities configured."
+    if room_types:
+        room_ids = [r.id for r in room_types]
+        link_stmt = select(RoomAmenityLink).where(RoomAmenityLink.room_id.in_(room_ids))
+        link_res = await session.execute(link_stmt)
+        amenity_ids = {link.amenity_id for link in link_res.scalars().all()}
+        if amenity_ids:
+            am_stmt = select(Amenity).where(Amenity.id.in_(amenity_ids))
+            am_res = await session.execute(am_stmt)
+            names = list(set([a.name for a in am_res.scalars().all()]))
+            if names:
+                amenity_names_str = ", ".join(names)
 
     # --- READ-ONLY TOOLS ---
 
@@ -298,9 +353,9 @@ async def create_guest_agent_graph(
                 if hasattr(rt, 'amenities') and rt.amenities:
                      details += f"\n- **Amenities**: {rt.amenities}"
                 if hasattr(rt, 'photos') and rt.photos:
-                    photo_urls = [p['url'] for p in rt.photos if 'url' in p]
-                    if photo_urls:
-                        details += f"\n\n[IMAGES: {', '.join(photo_urls)}]"
+                     photo_urls = [p['url'] for p in rt.photos if 'url' in p]
+                     if photo_urls:
+                         details += f"\n\n[IMAGES: {', '.join(photo_urls)}]"
                 return details
         return "Room not found."
 
@@ -333,18 +388,7 @@ async def create_guest_agent_graph(
             base_url=ai_base_url or default_base_url
         )
 
-        # Inject check-in/checkout details and room configurations directly into formatted system prompt
-        formatted_prompt = SYSTEM_PROMPT.format(
-            hotel_name=hotel_name,
-            address=f"{hotel.address.get('street', '')}, {hotel.address.get('city', '')}, {hotel.address.get('country', '')}",
-            contact=f"Phone: {hotel.contact.get('phone', '')}, Email: {hotel.contact.get('email', '')}",
-            check_in_time=check_in_time,
-            check_out_time=check_out_time,
-            policies=policies_str,
-            amenities=amenity_names_str,
-            rooms_info=rooms_info,
-            current_date=date.today().isoformat()
-        )
+        formatted_prompt = await get_guest_system_prompt_content(session, hotel_id, hotel_name)
 
         # Create Graph
         graph = create_react_agent(

@@ -227,8 +227,7 @@ async def chat_with_guest_ai(
                 try:
                     from langchain_openai import ChatOpenAI
                     from langchain_core.messages import SystemMessage
-                    from app.core.guest_agent import SYSTEM_PROMPT
-                    from datetime import date as _date
+                    from app.core.guest_agent import get_guest_system_prompt_content
 
                     effective_provider = getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None)
                     target_api_key = getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None)
@@ -245,10 +244,8 @@ async def chat_with_guest_ai(
                         openai_api_key=target_api_key,
                         base_url=ai_base_url_val or default_base
                     )
-                    system_msg = SystemMessage(content=SYSTEM_PROMPT.format(
-                        hotel_name=hotel.name,
-                        current_date=_date.today().isoformat()
-                    ))
+                    formatted_prompt = await get_guest_system_prompt_content(session, hotel.id, hotel.name)
+                    system_msg = SystemMessage(content=formatted_prompt)
                     fallback_resp = await plain_llm.ainvoke([system_msg] + messages)
                     return GuestChatResponse(response=fallback_resp.content)
                 except Exception as fallback_err:
