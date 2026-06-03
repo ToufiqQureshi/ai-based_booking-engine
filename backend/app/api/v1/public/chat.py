@@ -214,16 +214,51 @@ async def chat_with_guest_ai(
 
         # 4. Invoke Agent
         # LangGraph inputs: {"messages": [...]}
-        response = await agent.ainvoke({"messages": messages})
-        
-        # Extract last message content
-        ai_msg = response["messages"][-1]
-        
-        return GuestChatResponse(response=ai_msg.content)
-            
+        try:
+            response = await agent.ainvoke({"messages": messages})
+            ai_msg = response["messages"][-1]
+            return GuestChatResponse(response=ai_msg.content)
+        except Exception as invoke_err:
+            err_str = str(invoke_err)
+            # Groq/Llama tool_use_failed: model generated malformed function call syntax.
+            # Retry once without tools so the guest still gets a helpful reply.
+            if "tool_use_failed" in err_str or "failed_generation" in err_str or "400" in err_str:
+                logger.warning(f"Tool use failed for hotel {hotel.id}, retrying without tools: {invoke_err}")
+                try:
+                    from langchain_openai import ChatOpenAI
+                    from langchain_core.messages import SystemMessage
+                    from app.core.guest_agent import SYSTEM_PROMPT
+                    from datetime import date as _date
+
+                    effective_provider = getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None)
+                    target_api_key = getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None)
+                    ai_model_name = getattr(integration_settings, 'ai_model', None) if integration_settings else getattr(hotel, 'ai_model', None)
+                    ai_base_url_val = getattr(integration_settings, 'ai_base_url', None) if integration_settings else None
+
+                    if not effective_provider and target_api_key and target_api_key.startswith("gsk_"):
+                        effective_provider = "groq"
+                    default_base = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
+
+                    plain_llm = ChatOpenAI(
+                        model=ai_model_name,
+                        temperature=0.7,
+                        openai_api_key=target_api_key,
+                        base_url=ai_base_url_val or default_base
+                    )
+                    system_msg = SystemMessage(content=SYSTEM_PROMPT.format(
+                        hotel_name=hotel.name,
+                        current_date=_date.today().isoformat()
+                    ))
+                    fallback_resp = await plain_llm.ainvoke([system_msg] + messages)
+                    return GuestChatResponse(response=fallback_resp.content)
+                except Exception as fallback_err:
+                    logger.error(f"Fallback also failed: {fallback_err}")
+                    return GuestChatResponse(response="I'm having a moment of confusion. Could you rephrase your question? I'm happy to help!")
+            raise
+
     except Exception as e:
         import traceback
         logger.error(f"Guest AI Error: {traceback.format_exc()}")
-        return GuestChatResponse(response=f"I'm having trouble connecting. Please try again or reach out directly!")
+        return GuestChatResponse(response="I'm having trouble connecting. Please try again or reach out directly!")
 
 
