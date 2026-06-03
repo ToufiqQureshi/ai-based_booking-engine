@@ -11,6 +11,7 @@ import uuid
 
 if TYPE_CHECKING:
     from app.models.hotel import Hotel
+    from app.models.chain import Chain
 
 
 class UserRole(str, Enum):
@@ -39,12 +40,14 @@ class User(UserBase, table=True):
     supabase_id: Optional[str] = Field(default=None, index=True, unique=True)
     hashed_password: str
     hotel_id: Optional[str] = Field(default=None, foreign_key="hotels.id", index=True)
+    chain_id: Optional[str] = Field(default=None, foreign_key="chains.id", index=True)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationship - User belongs to Hotel
     hotel: Optional["Hotel"] = Relationship(back_populates="users")
+    chain: Optional["Chain"] = Relationship(back_populates="users")
 
 
 class UserCreate(SQLModel):
@@ -65,5 +68,6 @@ class UserRead(UserBase):
     """Response schema - Frontend ke User interface se match"""
     id: str
     hotel_id: Optional[str]
+    chain_id: Optional[str]
     created_at: datetime
     updated_at: datetime

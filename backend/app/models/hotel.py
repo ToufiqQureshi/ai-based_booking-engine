@@ -13,9 +13,9 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.room import RoomType
     from app.models.booking import Booking
-    from app.models.booking import Booking
     from app.models.rates import RatePlan
     from app.models.subscription import Subscription
+    from app.models.chain import Chain
 
 
 class Address(SQLModel):
@@ -120,19 +120,13 @@ class HotelBase(SQLModel):
     feature_custom_logo: bool = Field(default=False)
     feature_custom_widget: bool = Field(default=False)
     feature_google_ads: bool = Field(default=False)
-    # Operational state (P4.1):
-    #   is_active=False  → "soft-disabled" — owner can't log in, no public
-    #                       pages, no API access. Used for billing failure.
-    #   is_paused=True   → "soft-paused"  — public booking page shows a
-    #                       "temporarily unavailable" notice, but the owner
-    #                       can still log in to fix things (e.g. update a
-    #                       rate plan, respond to existing guests). Used for
-    #                       maintenance, TOS investigation, etc.
-    # These are independent so the super-admin can keep access while
-    # blocking new bookings, or fully cut off a delinquent tenant.
+    # Operational state
     is_paused: bool = Field(default=False)
     pause_reason: Optional[str] = Field(default=None)
     paused_at: Optional[datetime] = Field(default=None)
+    
+    # Chain Association
+    chain_id: Optional[str] = Field(default=None, foreign_key="chains.id", index=True)
 
 
 class Hotel(HotelBase, table=True):
@@ -181,6 +175,7 @@ class Hotel(HotelBase, table=True):
         back_populates="hotel",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+    chain: Optional["Chain"] = Relationship(back_populates="hotels")
 
 
 class HotelCreate(SQLModel):
@@ -223,9 +218,8 @@ class HotelUpdate(SQLModel):
     feature_custom_logo: Optional[bool] = None
     feature_custom_widget: Optional[bool] = None
     feature_google_ads: Optional[bool] = None
-    is_active: Optional[bool] = None
-    # P4.1 — soft-pause state. Allows super-admin to block new bookings
-    # without cutting off the hotelier.
     is_paused: Optional[bool] = None
     pause_reason: Optional[str] = None
     paused_at: Optional[datetime] = None
+    is_active: Optional[bool] = None
+    chain_id: Optional[str] = None

@@ -20,6 +20,18 @@ from app.core.tools.events import get_local_events
 from app.core.tools.reporting import generate_pdf_report
 
 from app.core.tools.actions import logic_update_room_price, logic_create_promo_code
+from app.core.tools.analytics import (
+    logic_get_revenue_trend,
+    logic_get_occupancy_trend,
+    logic_get_booking_source_breakdown,
+    logic_get_room_performance,
+    logic_get_revpar,
+    logic_get_revenue_forecast,
+    logic_get_smart_alerts,
+    logic_get_vip_guests,
+    logic_get_at_risk_bookings,
+    logic_get_upsell_opportunities,
+)
 
 # System Prompt specialized for Staybooker
 SYSTEM_PROMPT = """You are 'Staybooker AI', a smart hotel assistant.
@@ -31,13 +43,27 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 - **Formatting**: Use Markdown (lists, bolding) for readability.
 
 ### CRITICAL RULES ⚡
-3. **Direct Answers Only**: 
+3. **Direct Answers Only**:
    - "How many pending bookings?" -> Use `get_pending_approvals`. IGNORE 'today' filter. Return ALL pending.
    - "Pending payments?" -> Use `get_pending_payments`.
 4. **Safe Actions**: For modifications (price update, cancel), ALWAYS ask for explicit confirmation first.
 5. **Smart Pricing**: Check Weather/Events/Web Search before suggesting price changes.
 6. **Reasoning First**: ALWAYS explain 'WHY' before recommending an action. Cite data (e.g. "Because of Coldplay concert...").
 7. **Use Web Search**: If you lack context (e.g. "Is it a holiday?"), use `search_web`.
+
+### CHART & ANALYTICS RULES 📊
+8. **Use Analytics Tools**: When user asks for trends, charts, revenue analysis, occupancy, forecasts, VIP guests, or upsell — use the dedicated analytics tools.
+   - Revenue trend/chart → `get_revenue_trend`
+   - Occupancy trend → `get_occupancy_trend`
+   - Room performance → `get_room_performance`
+   - Booking sources → `get_booking_source_breakdown`
+   - RevPAR / ADR / KPIs → `get_revpar_analysis`
+   - Revenue forecast → `get_revenue_forecast`
+   - Smart alerts → `get_smart_alerts`
+   - VIP guests → `get_vip_guests`
+   - At-risk bookings → `get_at_risk_bookings`
+   - Upsell opportunities → `get_upsell_opportunities`
+9. **Chart Data**: When a tool returns a [CHART_DATA]...[/CHART_DATA] block, ALWAYS include it VERBATIM in your response. Do NOT modify, summarize, or remove the JSON inside it. Place it after your text explanation.
 
 ### CURRENT CONTEXT
 - Date: {current_date}
@@ -575,6 +601,92 @@ def create_agent_executor(session: AsyncSession, user: User):
         except Exception as e:
             return f"Web search failed: {str(e)}"
 
+    # --- ADVANCED ANALYTICS TOOLS ---
+
+    @tool
+    async def get_revenue_trend(days: int = 30) -> str:
+        """
+        Get daily revenue trend for the last N days as a chart.
+        Use when hotelier asks for revenue trend, chart, or graph.
+        """
+        return await logic_get_revenue_trend(session, user.hotel_id, days)
+
+    @tool
+    async def get_occupancy_trend(days: int = 30) -> str:
+        """
+        Get daily occupancy percentage trend for the last N days as a chart.
+        Use when hotelier asks for occupancy trend or graph.
+        """
+        return await logic_get_occupancy_trend(session, user.hotel_id, days)
+
+    @tool
+    async def get_booking_source_breakdown(days: int = 30) -> str:
+        """
+        Get breakdown of bookings by source (OTA, direct, walk-in, etc.) as a pie chart.
+        Use when hotelier asks about booking channels or where bookings are coming from.
+        """
+        return await logic_get_booking_source_breakdown(session, user.hotel_id, days)
+
+    @tool
+    async def get_room_performance(days: int = 30) -> str:
+        """
+        Get revenue and booking count per room type as a bar chart.
+        Use when hotelier asks which rooms are performing best or room-wise analysis.
+        """
+        return await logic_get_room_performance(session, user.hotel_id, days)
+
+    @tool
+    async def get_revpar_analysis(days: int = 30) -> str:
+        """
+        Calculate RevPAR (Revenue per Available Room), ADR (Average Daily Rate),
+        and Occupancy % — the core hotel KPIs — with a summary chart.
+        Use when hotelier asks for KPIs, RevPAR, ADR, or performance summary.
+        """
+        return await logic_get_revpar(session, user.hotel_id, days)
+
+    @tool
+    async def get_revenue_forecast(forecast_days: int = 30) -> str:
+        """
+        Forecast revenue for the next N days based on historical day-of-week patterns.
+        Use when hotelier asks about future revenue, demand forecast, or upcoming projections.
+        """
+        return await logic_get_revenue_forecast(session, user.hotel_id, forecast_days)
+
+    @tool
+    async def get_smart_alerts() -> str:
+        """
+        Get proactive operational alerts: low occupancy windows, high demand periods,
+        pending approvals, unpaid dues, and guests arriving with zero payment.
+        Use when hotelier asks for alerts, notifications, or 'what needs attention'.
+        """
+        return await logic_get_smart_alerts(session, user.hotel_id)
+
+    @tool
+    async def get_vip_guests(limit: int = 10) -> str:
+        """
+        Get top guests ranked by total lifetime spend, with visit count and tier labels.
+        Use when hotelier asks about VIP guests, top customers, or loyal guests.
+        """
+        return await logic_get_vip_guests(session, user.hotel_id, limit)
+
+    @tool
+    async def get_at_risk_bookings() -> str:
+        """
+        Identify bookings that are at risk: imminent check-ins still pending,
+        confirmed guests with zero payment, or stale pending approvals.
+        Use when hotelier asks about risk, urgent bookings, or what needs immediate action.
+        """
+        return await logic_get_at_risk_bookings(session, user.hotel_id)
+
+    @tool
+    async def get_upsell_opportunities() -> str:
+        """
+        Find current in-house or upcoming guests who could be upgraded to a higher room category.
+        Returns specific upgrade suggestions with potential extra revenue.
+        Use when hotelier asks about upsell, upgrades, or revenue opportunities.
+        """
+        return await logic_get_upsell_opportunities(session, user.hotel_id)
+
     # --- AGENT SETUP ---
 
     tools = [
@@ -598,7 +710,18 @@ def create_agent_executor(session: AsyncSession, user: User):
         get_pending_approvals,
         search_web,
         create_quick_booking,
-        check_availability_matrix
+        check_availability_matrix,
+        # Advanced analytics
+        get_revenue_trend,
+        get_occupancy_trend,
+        get_booking_source_breakdown,
+        get_room_performance,
+        get_revpar_analysis,
+        get_revenue_forecast,
+        get_smart_alerts,
+        get_vip_guests,
+        get_at_risk_bookings,
+        get_upsell_opportunities,
     ]
 
     # Resolve dynamic keys from hotel relation

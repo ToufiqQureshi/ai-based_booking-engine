@@ -42,4 +42,6 @@ __all__ = [
     "PublicSocialProofResponse",
 ]
 from app.models.links import UserHotelLink
+from app.models.chain import Chain
 __all__.append("UserHotelLink")
+__all__.append("Chain")
