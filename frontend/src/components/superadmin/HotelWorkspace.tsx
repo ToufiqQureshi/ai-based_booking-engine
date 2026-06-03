@@ -81,12 +81,35 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
     const toggleFeatureMutation = useMutation({
         mutationFn: ({ flag, value }: { flag: string; value: boolean }) =>
             apiClient.patch(`/superadmin/hotels/${hotel.id}`, { [flag]: value }),
+        onMutate: async ({ flag, value }) => {
+            // Cancel outgoing queries
+            await qc.cancelQueries({ queryKey: ['superadmin-hotels'] });
+            // Snapshot previous value
+            const previousHotels = qc.getQueryData<any[]>(['superadmin-hotels']);
+            // Optimistically update
+            if (previousHotels) {
+                qc.setQueryData<any[]>(
+                    ['superadmin-hotels'],
+                    previousHotels.map((h: any) =>
+                        h.id === hotel.id ? { ...h, [flag]: value } : h
+                    )
+                );
+            }
+            return { previousHotels };
+        },
+        onError: (err, variables, context: any) => {
+            if (context?.previousHotels) {
+                qc.setQueryData(['superadmin-hotels'], context.previousHotels);
+            }
+            toast.error('Failed to update feature');
+        },
         onSuccess: (_, { flag, value }) => {
             const f = FEATURE_FLAGS.find(f => f.id === flag);
             toast.success(`${f?.label ?? flag} ${value ? 'enabled' : 'disabled'}`);
+        },
+        onSettled: () => {
             qc.invalidateQueries({ queryKey: ['superadmin-hotels'] });
         },
-        onError: () => toast.error('Failed to update feature'),
     });
 
     const impersonateMutation = useMutation({
@@ -314,7 +337,7 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                                     <Switch
                                         checked={isOn}
                                         onCheckedChange={(val) => toggleFeatureMutation.mutate({ flag: f.id, value: val })}
-                                        disabled={toggleFeatureMutation.isPending}
+                                        disabled={toggleFeatureMutation.isPending && toggleFeatureMutation.variables?.flag === f.id}
                                     />
                                 </div>
                             );

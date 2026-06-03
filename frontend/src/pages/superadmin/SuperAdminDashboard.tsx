@@ -50,7 +50,7 @@ export default function SuperAdminDashboard() {
     const { user, logout, isLoading: authLoading } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const [activeSection, setActiveSection] = useState<NavSection>('overview');
-    const [selectedHotel, setSelectedHotel] = useState<any>(null);
+    const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
     const [selectedIntegrationHotel, setSelectedIntegrationHotel] = useState<{id: string, name: string} | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -61,6 +61,9 @@ export default function SuperAdminDashboard() {
         staleTime: 1000 * 60 * 2,
         enabled: !!user && user.role === 'SUPER_ADMIN',
     });
+
+    const selectedHotel = hotels.find((h: any) => h.id === selectedHotelId) || null;
+    const handleSelectHotel = (h: any) => setSelectedHotelId(h ? h.id : null);
 
     const { data: users = [] } = useQuery<any[]>({
         queryKey: ['superadmin-users'],
@@ -166,7 +169,7 @@ export default function SuperAdminDashboard() {
                                             {items.map(item => (
                                                 <button
                                                     key={item.id}
-                                                    onClick={() => { setActiveSection(item.id); setSelectedHotel(null); }}
+                                                    onClick={() => { setActiveSection(item.id); setSelectedHotelId(null); }}
                                                     className={cn(
                                                         "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150",
                                                         activeSection === item.id
@@ -248,7 +251,7 @@ export default function SuperAdminDashboard() {
                             <HotelWorkspace
                                 hotel={selectedHotel}
                                 users={users}
-                                onBack={() => setSelectedHotel(null)}
+                                onBack={() => setSelectedHotelId(null)}
                             />
                         ) : (
                             <>
@@ -278,7 +281,7 @@ export default function SuperAdminDashboard() {
                                             <HotelsTab
                                                 hotels={hotels.slice(0, 6)}
                                                 users={users}
-                                                onSelectHotel={setSelectedHotel}
+                                                onSelectHotel={handleSelectHotel}
                                                 onImpersonate={(id) => impersonateMutation.mutate(id)}
                                                 isImpersonating={impersonateMutation.isPending}
                                                 onOpenIntegrations={(hotel) => setSelectedIntegrationHotel({ id: hotel.id, name: hotel.name })}
@@ -311,7 +314,7 @@ export default function SuperAdminDashboard() {
                                         <HotelsTab
                                             hotels={filteredHotels}
                                             users={users}
-                                            onSelectHotel={setSelectedHotel}
+                                            onSelectHotel={handleSelectHotel}
                                             onImpersonate={(id) => impersonateMutation.mutate(id)}
                                             isImpersonating={impersonateMutation.isPending}
                                             onOpenIntegrations={(hotel) => setSelectedIntegrationHotel({ id: hotel.id, name: hotel.name })}
@@ -321,9 +324,9 @@ export default function SuperAdminDashboard() {
 
                                 {activeSection === 'users' && <UsersTab />}
                                 {activeSection === 'plans' && <PlanFeaturesTab />}
-                                {activeSection === 'analytics' && <AnalyticsTab hotels={hotels} users={users} onSelectHotel={setSelectedHotel} />}
+                                {activeSection === 'analytics' && <AnalyticsTab hotels={hotels} users={users} onSelectHotel={handleSelectHotel} />}
                                 {activeSection === 'revenue' && <RevenueTab />}
-                                {activeSection === 'health' && <HealthTab onSelectHotel={setSelectedHotel} />}
+                                {activeSection === 'health' && <HealthTab onSelectHotel={handleSelectHotel} />}
                                 {activeSection === 'broadcasts' && <BroadcastsTab />}
                                 {activeSection === 'audit' && <AuditLogsTab />}
                                 {activeSection === 'sessions' && <SessionsTab />}

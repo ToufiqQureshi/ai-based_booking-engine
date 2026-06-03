@@ -168,7 +168,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
     return (
         <div className="space-y-6">
             {/* Status overview */}
-            <Card className="border-white/10 bg-slate-900/40 backdrop-blur-sm rounded-3xl">
+            <Card className="border-border bg-card dark:border-white/10 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl shadow-sm">
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -176,7 +176,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 <Server className="h-5 w-5 text-white" />
                             </div>
                             <div>
-                                <CardTitle className="text-white">Integration Status</CardTitle>
+                                <CardTitle className="text-foreground">Integration Status</CardTitle>
                                 <CardDescription>Overview of all configured integrations for {data?.hotel_name}</CardDescription>
                             </div>
                         </div>
@@ -194,42 +194,42 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                         <StatusPill label="Brevo" isOn={data?.has_brevo_key} preview={data?.brevo_key_preview} />
                         <StatusPill label="SMTP" isOn={data?.has_smtp_config} preview={undefined} />
                     </div>
-                    <div className="mt-4 flex items-center gap-4 text-xs text-slate-400">
-                        <span>Credits used: <strong className="text-slate-200">{data?.total_messages_sent || 0}</strong></span>
-                        <Separator orientation="vertical" className="h-3 bg-slate-700" />
-                        <span>Credits remaining: <strong className="text-slate-200">{data?.ai_whatsapp_credits || 0}</strong></span>
+                    <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>Credits used: <strong className="text-foreground">{data?.total_messages_sent || 0}</strong></span>
+                        <Separator orientation="vertical" className="h-3 bg-border dark:bg-slate-700" />
+                        <span>Credits remaining: <strong className="text-foreground">{data?.ai_whatsapp_credits || 0}</strong></span>
                     </div>
                 </CardContent>
             </Card>
 
             {/* AI Provider */}
-            <Card className="border-white/10 bg-slate-900/40 backdrop-blur-sm rounded-3xl">
+            <Card className="border-border bg-card dark:border-white/10 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-400" /> AI Provider</CardTitle>
+                    <CardTitle className="text-foreground flex items-center gap-2"><Sparkles className="w-4 h-4 text-violet-500" /> AI Provider</CardTitle>
                     <CardDescription>Groq, OpenAI, Anthropic, or any OpenAI-compatible endpoint.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">Provider</Label>
-                            <Input value={aiProvider} onChange={e => setAiProvider(e.target.value)} placeholder="groq" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">Provider</Label>
+                            <Input value={aiProvider} onChange={e => setAiProvider(e.target.value)} placeholder="groq" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">Model</Label>
-                            <Input value={aiModel} onChange={e => setAiModel(e.target.value)} placeholder="llama-3.1-70b-versatile" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">Model</Label>
+                            <Input value={aiModel} onChange={e => setAiModel(e.target.value)} placeholder="llama-3.1-70b-versatile" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <Label className="text-xs font-bold text-slate-300">Base URL (optional — for custom endpoints)</Label>
-                            <Input value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)} placeholder="https://api.groq.com/openai/v1" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">Base URL (optional — for custom endpoints)</Label>
+                            <Input value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)} placeholder="https://api.groq.com/openai/v1" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <Label className="text-xs font-bold text-slate-300 flex items-center gap-2">
-                                <Key className="w-3 h-3" /> API Key
-                                {data?.ai_api_key_preview && <span className="text-slate-500 font-normal">current: {data.ai_api_key_preview}</span>}
+                            <Label className="text-xs font-bold text-foreground/80 flex items-center gap-2">
+                                <Key className="w-3 h-3 text-muted-foreground" /> API Key
+                                {data?.ai_api_key_preview && <span className="text-muted-foreground font-normal">current: {data.ai_api_key_preview}</span>}
                             </Label>
                             <div className="relative">
-                                <Input type={showAiKey ? 'text' : 'password'} value={aiApiKey} onChange={e => setAiApiKey(e.target.value)} placeholder="Leave blank to keep existing" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 pr-10" />
-                                <button type="button" onClick={() => setShowAiKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                <Input type={showAiKey ? 'text' : 'password'} value={aiApiKey} onChange={e => setAiApiKey(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <button type="button" onClick={() => setShowAiKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                     {showAiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
                             </div>
@@ -239,29 +239,29 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             </Card>
 
             {/* WhatsApp */}
-            <Card className="border-white/10 bg-slate-900/40 backdrop-blur-sm rounded-3xl">
+            <Card className="border-border bg-card dark:border-white/10 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2"><MessageSquare className="w-4 h-4 text-teal-400" /> WhatsApp / Meta</CardTitle>
+                    <CardTitle className="text-foreground flex items-center gap-2"><MessageSquare className="w-4 h-4 text-teal-500" /> WhatsApp / Meta</CardTitle>
                     <CardDescription>Required for the WhatsApp AI agent. Configure in Meta for Developers.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">Phone Number ID</Label>
-                            <Input value={waPhoneId} onChange={e => setWaPhoneId(e.target.value)} placeholder={data?.has_whatsapp_phone_id ? '(configured)' : ''} className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">Phone Number ID</Label>
+                            <Input value={waPhoneId} onChange={e => setWaPhoneId(e.target.value)} placeholder={data?.has_whatsapp_phone_id ? '(configured)' : ''} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">Business Account ID</Label>
-                            <Input value={waBusinessId} onChange={e => setWaBusinessId(e.target.value)} placeholder={data?.has_whatsapp_business_id ? '(configured)' : ''} className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">Business Account ID</Label>
+                            <Input value={waBusinessId} onChange={e => setWaBusinessId(e.target.value)} placeholder={data?.has_whatsapp_business_id ? '(configured)' : ''} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <Label className="text-xs font-bold text-slate-300 flex items-center gap-2">
-                                <Key className="w-3 h-3" /> API Key (System User Token)
-                                {data?.whatsapp_api_key_preview && <span className="text-slate-500 font-normal">current: {data.whatsapp_api_key_preview}</span>}
+                            <Label className="text-xs font-bold text-foreground/80 flex items-center gap-2">
+                                <Key className="w-3 h-3 text-muted-foreground" /> API Key (System User Token)
+                                {data?.whatsapp_api_key_preview && <span className="text-muted-foreground font-normal">current: {data.whatsapp_api_key_preview}</span>}
                             </Label>
                             <div className="relative">
-                                <Input type={showWaKey ? 'text' : 'password'} value={waApiKey} onChange={e => setWaApiKey(e.target.value)} placeholder="Leave blank to keep existing" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 pr-10" />
-                                <button type="button" onClick={() => setShowWaKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                <Input type={showWaKey ? 'text' : 'password'} value={waApiKey} onChange={e => setWaApiKey(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <button type="button" onClick={() => setShowWaKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                     {showWaKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
                             </div>
@@ -271,48 +271,48 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             </Card>
 
             {/* Email */}
-            <Card className="border-white/10 bg-slate-900/40 backdrop-blur-sm rounded-3xl">
+            <Card className="border-border bg-card dark:border-white/10 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2"><Mail className="w-4 h-4 text-amber-400" /> Email Provider</CardTitle>
+                    <CardTitle className="text-foreground flex items-center gap-2"><Mail className="w-4 h-4 text-amber-500" /> Email Provider</CardTitle>
                     <CardDescription>Brevo is the recommended option. SMTP is the fallback for direct-send setups.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {/* Brevo */}
                     <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-300 flex items-center gap-2">
+                        <Label className="text-xs font-bold text-foreground/80 flex items-center gap-2">
                             Brevo API Key
-                            {data?.brevo_key_preview && <span className="text-slate-500 font-normal">current: {data.brevo_key_preview}</span>}
+                            {data?.brevo_key_preview && <span className="text-muted-foreground font-normal">current: {data.brevo_key_preview}</span>}
                         </Label>
                         <div className="relative">
-                            <Input type={showBrevo ? 'text' : 'password'} value={brevoKey} onChange={e => setBrevoKey(e.target.value)} placeholder="xkeysib-..." className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 pr-10" />
-                            <button type="button" onClick={() => setShowBrevo(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                            <Input type={showBrevo ? 'text' : 'password'} value={brevoKey} onChange={e => setBrevoKey(e.target.value)} placeholder="xkeysib-..." className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                            <button type="button" onClick={() => setShowBrevo(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                 {showBrevo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                         </div>
                     </div>
-                    <Separator className="bg-white/5" />
+                    <Separator className="bg-border dark:bg-white/5" />
                     {/* SMTP */}
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">SMTP Host</Label>
-                            <Input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.gmail.com" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">SMTP Host</Label>
+                            <Input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.gmail.com" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">Port</Label>
-                            <Input type="number" value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">Port</Label>
+                            <Input type="number" value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">Username</Label>
-                            <Input value={smtpUsername} onChange={e => setSmtpUsername(e.target.value)} placeholder={data?.has_smtp_config ? '(configured)' : ''} className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">Username</Label>
+                            <Input value={smtpUsername} onChange={e => setSmtpUsername(e.target.value)} placeholder={data?.has_smtp_config ? '(configured)' : ''} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">From Email</Label>
-                            <Input type="email" value={smtpFromEmail} onChange={e => setSmtpFromEmail(e.target.value)} placeholder="reservations@hotel.com" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">From Email</Label>
+                            <Input type="email" value={smtpFromEmail} onChange={e => setSmtpFromEmail(e.target.value)} placeholder="reservations@hotel.com" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <Label className="text-xs font-bold text-slate-300">Password / App Password</Label>
+                            <Label className="text-xs font-bold text-foreground/80">Password / App Password</Label>
                             <div className="relative">
-                                <Input type={showSmtp ? 'text' : 'password'} value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} placeholder="Leave blank to keep existing" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11 pr-10" />
+                                <Input type={showSmtp ? 'text' : 'password'} value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowSmtp(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
                                     {showSmtp ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -323,33 +323,33 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             </Card>
 
             {/* Quotas & Pause */}
-            <Card className="border-white/10 bg-slate-900/40 backdrop-blur-sm rounded-3xl">
+            <Card className="border-border bg-card dark:border-white/10 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2"><Database className="w-4 h-4 text-emerald-400" /> Quotas & Operational State</CardTitle>
+                    <CardTitle className="text-foreground flex items-center gap-2"><Database className="w-4 h-4 text-emerald-500" /> Quotas & Operational State</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-slate-300">AI WhatsApp Credits (monthly)</Label>
-                            <Input type="number" value={waCredits} onChange={e => setWaCredits(e.target.value)} className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                            <Label className="text-xs font-bold text-foreground/80">AI WhatsApp Credits (monthly)</Label>
+                            <Input type="number" value={waCredits} onChange={e => setWaCredits(e.target.value)} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
                     </div>
-                    <Separator className="bg-white/5" />
+                    <Separator className="bg-border dark:bg-white/5" />
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <div>
-                                <Label className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                                    {isPaused ? <Pause className="w-4 h-4 text-rose-400" /> : <Play className="w-4 h-4 text-emerald-400" />}
+                           <div>
+                                <Label className="text-sm font-bold text-foreground flex items-center gap-2">
+                                    {isPaused ? <Pause className="w-4 h-4 text-rose-500" /> : <Play className="w-4 h-4 text-emerald-500" />}
                                     Hotel Pause State
                                 </Label>
-                                <p className="text-xs text-slate-400 mt-1">When paused, the public booking page shows "temporarily unavailable" but the hotelier can still log in.</p>
+                                <p className="text-xs text-muted-foreground mt-1">When paused, the public booking page shows "temporarily unavailable" but the hotelier can still log in.</p>
                             </div>
                             <Switch checked={isPaused} onCheckedChange={setIsPaused} />
                         </div>
                         {isPaused && (
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold text-slate-300">Pause reason (shown on public page)</Label>
-                                <Input value={pauseReason} onChange={e => setPauseReason(e.target.value)} placeholder="Temporarily unavailable" className="bg-slate-950/50 border-white/10 text-white rounded-xl h-11" />
+                                <Label className="text-xs font-bold text-foreground/80">Pause reason (shown on public page)</Label>
+                                <Input value={pauseReason} onChange={e => setPauseReason(e.target.value)} placeholder="Temporarily unavailable" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                             </div>
                         )}
                     </div>
@@ -357,13 +357,13 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             </Card>
 
             {/* Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-slate-950/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 -mx-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 sticky bottom-0 bg-background/80 dark:bg-slate-950/80 backdrop-blur-md p-4 rounded-2xl border border-border dark:border-white/10 shadow-lg -mx-2">
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         onClick={handleRefreshSocialProof}
                         disabled={isRefreshing}
-                        className="rounded-xl border-white/10 text-slate-200 hover:bg-slate-800"
+                        className="rounded-xl border-border text-foreground hover:bg-muted"
                     >
                         {isRefreshing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                         Refresh Public Cache
@@ -384,12 +384,12 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
 
 function StatusPill({ label, isOn, preview }: { label: string; isOn?: boolean; preview?: string }) {
     return (
-        <div className={`p-3 rounded-2xl border ${isOn ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-white/5 bg-slate-900/40'}`}>
+        <div className={`p-3 rounded-2xl border ${isOn ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-border bg-muted/40 dark:border-white/5 dark:bg-slate-900/40'}`}>
             <div className="flex items-center gap-2">
-                {isOn ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> : <ShieldOff className="w-3.5 h-3.5 text-slate-500" />}
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">{label}</span>
+                {isOn ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> : <ShieldOff className="w-3.5 h-3.5 text-muted-foreground" />}
+                <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/80">{label}</span>
             </div>
-            <p className={`text-xs mt-1 font-medium ${isOn ? 'text-emerald-300' : 'text-slate-500'}`}>
+            <p className={`text-xs mt-1 font-medium ${isOn ? 'text-emerald-600 dark:text-emerald-300' : 'text-muted-foreground'}`}>
                 {isOn ? (preview ? `set ${preview}` : 'configured') : 'not set'}
             </p>
         </div>
