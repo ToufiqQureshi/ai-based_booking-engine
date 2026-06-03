@@ -108,6 +108,8 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_
             "name": hotel.name,
             "slug": hotel.slug,
             "is_active": hotel.is_active,
+            "is_paused": hotel.is_paused,
+            "pause_reason": hotel.pause_reason,
             "settings": settings_dict,
             "owner_email": owner.email if owner else "N/A",
             "owner_name": owner.name if owner else "N/A",

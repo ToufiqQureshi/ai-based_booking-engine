@@ -113,14 +113,14 @@ export function AddEmployeeModal(props: any) {
                             </Button>
                             <Button
                                 className="bg-indigo-600 hover:bg-indigo-750 text-white font-bold h-11 px-6 rounded-xl flex-1 transition-all"
-                                disabled={createUserMutation.isPending}
+                                disabled={addUserMutation.isPending}
                                 onClick={() => {
                                     if (!addUserEmail || !addUserName || !addUserPassword) {
-                                        toast({ title: 'Validation Alert', description: 'Please fill in all employee fields.', variant: 'destructive' });
+                                        toast.error('Please fill in all employee fields.');
                                         return;
                                     }
                                     if (selectedWorkspaceHotel) {
-                                        createUserMutation.mutate({
+                                        addUserMutation.mutate({
                                             hotelId: selectedWorkspaceHotel.id,
                                             data: {
                                                 email: addUserEmail,

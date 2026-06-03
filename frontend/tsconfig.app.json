@@ -26,8 +26,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
-  "exclude": [
-    "src/components/superadmin"
-  ]
+  "include": ["src"]
 }

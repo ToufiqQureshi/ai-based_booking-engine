@@ -29,8 +29,11 @@ export function RevenueTab() {
     );
 
     const d = data ?? {};
-    const trend = (curr: number, prev: number) =>
-        prev === 0 ? null : Math.round(((curr - prev) / prev) * 100);
+    const trend = (curr: number | undefined, prev: number | undefined) => {
+        const c = curr ?? 0;
+        const p = prev ?? 0;
+        return p === 0 ? null : Math.round(((c - p) / p) * 100);
+    };
     const signupTrend = trend(d.new_this_month, d.new_prev_month);
     const churnTrend  = trend(d.churned_this_month, d.churned_prev_month);
 

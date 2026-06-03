@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { Search, Loader2, Building2, Plus, Shield, Users, Mail, Phone, Calendar, Globe, Trash2, CheckCircle2, Lock, Tag, MapPin, Edit, Settings2, BarChart3, Radio, RefreshCw, Smartphone, Key, Star, LayoutGrid, CheckSquare, XSquare, MessageSquare, ListFilter, PlayCircle, Filter, Download, Zap, UploadCloud, ChevronRight, Save, LayoutTemplate, Activity, AlertTriangle, ShieldCheck, FileText, Send, Eye, X, Crown, Clock, Copy, ArrowRight, UserCheck, CheckCircle, SlidersHorizontal, Settings } from 'lucide-react';
+import { Search, Loader2, Building2, Plus, Shield, Users, Mail, Phone, Calendar, Globe, Trash2, CheckCircle2, Lock, Tag, MapPin, Edit, Settings2, BarChart3, Radio, RefreshCw, Smartphone, Key, Star, LayoutGrid, CheckSquare, XSquare, MessageSquare, ListFilter, PlayCircle, Filter, Download, Zap, UploadCloud, ChevronRight, Save, LayoutTemplate, Activity, AlertTriangle, ShieldCheck, FileText, Send, Eye, X, Crown, Clock, Copy, ArrowRight, UserCheck, CheckCircle, SlidersHorizontal, Settings, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,16 +30,16 @@ export function AuditLogsTab() {
 
     const filteredAuditLogs = auditLogs.filter(log => {
         const matchesSearch =
-            log.description.toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
-            log.user_email.toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
-            log.action.toLowerCase().includes(auditSearchQuery.toLowerCase());
+            (log.description || '').toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
+            (log.user_email || '').toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
+            (log.action || '').toLowerCase().includes(auditSearchQuery.toLowerCase());
 
-        const matchesAction = auditActionFilter === 'all' || log.action.toUpperCase() === auditActionFilter;
+        const matchesAction = auditActionFilter === 'all' || (log.action || '').toUpperCase() === auditActionFilter.toUpperCase();
 
         return matchesSearch && matchesAction;
     });
 
-    const uniqueAuditActions = Array.from(new Set(auditLogs.map(log => log.action.toUpperCase())));
+    const uniqueAuditActions = Array.from(new Set(auditLogs.map(log => (log.action || '').toUpperCase()).filter(Boolean)));
 
   return (
     <>
