@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, ChevronLeft, ChevronRight, Check, ShoppingBag, X, ArrowRight, Sparkles, Hotel as HotelIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -306,7 +306,7 @@ export default function BookingSelection() {
     };
 
     // STAAH Starting Rate Calculation
-    const startingRoom = (() => {
+    const startingRoom = useMemo(() => {
         if (!rooms || rooms.length === 0) return null;
         if (hotel?.settings?.featured_room_type_id && hotel.settings.featured_room_type_id !== 'lowest') {
             const featured = rooms.find(r => r.id === hotel.settings.featured_room_type_id);
@@ -323,7 +323,7 @@ export default function BookingSelection() {
             });
         });
         return lowestRoom;
-    })();
+    }, [rooms, hotel?.settings?.featured_room_type_id]);
 
     const startingPrice = (() => {
         if (!startingRoom || !startingRoom.rate_options || startingRoom.rate_options.length === 0) return 0;

@@ -454,6 +454,7 @@ async def create_guest_agent_graph(
             temperature=0.3,
             openai_api_key=ai_api_key,
             base_url=ai_base_url or default_base_url,
+            max_tokens=1024,
         )
 
         formatted_prompt = _build_formatted_prompt(data, hotel_name)

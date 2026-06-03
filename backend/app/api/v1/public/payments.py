@@ -15,6 +15,7 @@ from app.models.room import RoomType, RoomTypeRead, RoomBlock
 from app.models.booking import Booking, BookingStatus, Guest
 from app.models.rates import RatePlan, RoomRate
 from app.models.promo import PromoCode
+from app.models.integration import IntegrationSettings
 from app.core.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
@@ -279,6 +280,7 @@ async def verify_razorpay_payment(
         # Guard against double-confirm: if booking is already in a terminal state,
         # we still respond 200 (idempotent) but skip the side effects.
         already_confirmed = booking.status == BookingStatus.CONFIRMED
+        guest = None
         if not already_confirmed:
             booking.status = BookingStatus.CONFIRMED
             booking.paid_amount = booking.total_amount  # Assuming full payment was made online
@@ -340,6 +342,25 @@ async def verify_razorpay_payment(
                     ),
                     task_name="send_hotel_booking_notification",
                 )
+
+        # Send WhatsApp confirmation if hotel has WhatsApp configured
+        try:
+            if guest and hotel and booking:
+                integration = (await session.execute(
+                    select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
+                )).scalar_one_or_none()
+                if integration and integration.whatsapp_api_key and integration.whatsapp_phone_number_id and guest.phone:
+                    import httpx
+                    wa_message = f"✅ Booking Confirmed!\n\nDear {guest.first_name},\nYour booking #{booking.booking_number} at {hotel.name} is confirmed.\n\nCheck-in: {booking.check_in}\nCheck-out: {booking.check_out}\nTotal: ₹{booking.total_amount:,.0f}\n\nThank you for choosing us!"
+                    async with httpx.AsyncClient() as client:
+                        await client.post(
+                            f"https://graph.facebook.com/v19.0/{integration.whatsapp_phone_number_id}/messages",
+                            headers={"Authorization": f"Bearer {integration.whatsapp_api_key}", "Content-Type": "application/json"},
+                            json={"messaging_product": "whatsapp", "to": guest.phone, "type": "text", "text": {"body": wa_message}},
+                            timeout=10.0
+                        )
+        except Exception as wa_err:
+            logger.warning(f"WhatsApp confirmation failed (non-critical): {wa_err}")
 
         return {"status": "success", "message": "Payment verified and booking confirmed", "already_confirmed": already_confirmed}
 

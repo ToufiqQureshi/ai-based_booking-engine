@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useVisibilityInterval } from '@/hooks/useVisibilityInterval';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, Legend, LineChart, Line
+  BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { apiClient as api } from '../api/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,11 +19,9 @@ import { motion } from 'framer-motion';
 
 interface AnalyticsData {
   total_visitors: number;
-  avg_time_spent_seconds: number;
   total_conversions: number;
   conversion_rate: number;
   device_stats: { type: string; count: number }[];
-  top_rooms: { id: string; name?: string; views: number }[];
   chart_data: { date: string; visitors: number; revenue?: number; occupancy?: number }[];
   funnel_data: { stage: string; count: number }[];
   revenue_total: number;
@@ -204,7 +202,7 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { fetchLiveStats(); }, [fetchLiveStats, days]);
+  useEffect(() => { fetchLiveStats(); }, []);
   useVisibilityInterval(fetchLiveStats, 30000);
 
   const handleExport = () => {

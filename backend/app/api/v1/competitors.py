@@ -129,6 +129,7 @@ async def get_market_analysis(
 
     # 1. Check Redis Cache (Market Analysis is heavy, cache for 1 hour)
     cache_key = f"market_analysis:{current_user.hotel_id}:{today.isoformat()}"
+    r = None
     try:
         r = redis_client.get_instance()
         cached = r.get(cache_key)
@@ -238,10 +239,11 @@ async def get_market_analysis(
         })
 
     # Cache for 1 Hour
-    try:
-        r.setex(cache_key, 3600, json.dumps(results))
-    except Exception as cache_err:
-        logger.warning("Redis cache write failed for %s: %s", cache_key, cache_err)
+    if r:
+        try:
+            r.setex(cache_key, 3600, json.dumps(results))
+        except Exception as cache_err:
+            logger.warning("Redis cache write failed for %s: %s", cache_key, cache_err)
 
     return results
 
@@ -257,6 +259,7 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
     
     # Cache Check
     cache_key = f"rate_comparison:{current_user.hotel_id}:{today.isoformat()}"
+    r = None
     try:
         r = redis_client.get_instance()
         cached = r.get(cache_key)
@@ -354,10 +357,11 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
     }
 
     # Cache for 1 Hour
-    try:
-        r.setex(cache_key, 3600, json.dumps(final_res))
-    except Exception as cache_err:
-        logger.warning("Redis cache write failed for %s: %s", cache_key, cache_err)
+    if r:
+        try:
+            r.setex(cache_key, 3600, json.dumps(final_res))
+        except Exception as cache_err:
+            logger.warning("Redis cache write failed for %s: %s", cache_key, cache_err)
 
     return final_res
 
