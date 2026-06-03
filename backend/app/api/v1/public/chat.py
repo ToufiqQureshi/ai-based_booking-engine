@@ -239,35 +239,38 @@ async def chat_with_guest_ai(
             ai_response = result.content or ""
             return GuestChatResponse(response=ai_response)
         except Exception as invoke_err:
-            err_str = str(invoke_err)
-            # Groq/Llama tool_use_failed: model generated malformed function call syntax.
-            # Retry once without tools so the guest still gets a helpful reply.
-            if "tool_use_failed" in err_str or "failed_generation" in err_str or "400" in err_str:
-                logger.warning(f"Tool use failed for hotel {hotel.id}, retrying without tools: {invoke_err}")
-                try:
-                    from agno.agent import Agent
-                    from agno.models.openai import OpenAILike
-                    from app.core.guest_agent import get_guest_system_prompt_content
+            # Always retry without tools on any agent error (tool failures, model errors, etc.)
+            logger.warning(f"Guest agent failed for hotel {hotel.id}, retrying without tools: {invoke_err}")
+            try:
+                from agno.agent import Agent
+                from agno.models.openai import OpenAILike
+                from app.core.guest_agent import get_guest_system_prompt_content
 
-                    effective_provider = getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None)
-                    target_api_key = getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None)
-                    ai_model_name = getattr(integration_settings, 'ai_model', None) if integration_settings else getattr(hotel, 'ai_model', None)
-                    ai_base_url_val = getattr(integration_settings, 'ai_base_url', None) if integration_settings else None
+                effective_provider = getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None)
+                target_api_key = getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None)
+                ai_model_name = getattr(integration_settings, 'ai_model', None) if integration_settings else getattr(hotel, 'ai_model', None)
+                ai_base_url_val = getattr(integration_settings, 'ai_base_url', None) if integration_settings else None
+                fallback_max_tokens = _max_tokens or 1024
 
-                    if not effective_provider and target_api_key and target_api_key.startswith("gsk_"):
-                        effective_provider = "groq"
-                    default_base = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
+                if not effective_provider and target_api_key and target_api_key.startswith("gsk_"):
+                    effective_provider = "groq"
+                default_base = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
 
-                    system_prompt_str = await get_guest_system_prompt_content(session, hotel.id, hotel.name)
-                    fallback_llm = OpenAILike(id=ai_model_name, api_key=target_api_key, base_url=ai_base_url_val or default_base)
-                    fallback_agent = Agent(model=fallback_llm, instructions=system_prompt_str)
-                    fallback_result = await fallback_agent.arun(payload.message)
-                    ai_response = fallback_result.content or ""
-                    return GuestChatResponse(response=ai_response)
-                except Exception as fallback_err:
-                    logger.error(f"Fallback also failed: {fallback_err}")
-                    return GuestChatResponse(response="I'm having a moment of confusion. Could you rephrase your question? I'm happy to help!")
-            raise
+                system_prompt_str = await get_guest_system_prompt_content(session, hotel.id, hotel.name)
+                fallback_llm = OpenAILike(
+                    id=ai_model_name,
+                    api_key=target_api_key,
+                    base_url=ai_base_url_val or default_base,
+                    max_tokens=fallback_max_tokens,
+                )
+                fallback_agent = Agent(model=fallback_llm, instructions=system_prompt_str)
+                # Pass full conversation so context isn't lost
+                fallback_result = await fallback_agent.arun(messages)
+                ai_response = fallback_result.content or ""
+                return GuestChatResponse(response=ai_response)
+            except Exception as fallback_err:
+                logger.error(f"Fallback also failed: {fallback_err}")
+                return GuestChatResponse(response="I'm having a moment of confusion. Could you rephrase your question? I'm happy to help!")
 
     except HTTPException:
         raise
