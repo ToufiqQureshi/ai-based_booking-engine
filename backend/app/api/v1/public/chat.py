@@ -200,7 +200,7 @@ async def chat_with_guest_ai(
 
         # 3. Initialize Agent
         from app.core.guest_agent import create_guest_agent_graph
-        agent = create_guest_agent_graph(
+        agent = await create_guest_agent_graph(
             session, 
             hotel.id, 
             getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None), 

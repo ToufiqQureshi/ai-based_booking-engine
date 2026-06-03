@@ -281,7 +281,7 @@ Reply:"""
         from langchain_core.messages import HumanMessage
 
         if settings and settings.ai_api_key:
-            agent = create_guest_agent_graph(
+            agent = await create_guest_agent_graph(
                 session, current_user.hotel_id,
                 settings.ai_provider, settings.ai_api_key,
                 settings.ai_model, settings.ai_base_url,

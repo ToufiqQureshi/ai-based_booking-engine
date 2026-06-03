@@ -3,7 +3,11 @@
     "allow": [
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(python -c \"from main import app; print\\('OK'\\)\")"
+      "Bash(python -c \"from main import app; print\\('OK'\\)\")",
+      "Bash(git stash *)",
+      "Bash(git pull *)",
+      "Bash(git checkout *)",
+      "Bash(./venv/Scripts/python.exe -m alembic history)"
     ]
   }
 }

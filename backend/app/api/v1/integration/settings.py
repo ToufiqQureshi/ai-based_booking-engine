@@ -267,7 +267,7 @@ async def test_ai_connection(current_user: CurrentUser, session: DbSession):
         return {"status": "error", "message": "API Key is missing."}
 
     try:
-        agent = create_guest_agent_graph(
+        agent = await create_guest_agent_graph(
             session, current_user.hotel_id,
             settings.ai_provider, settings.ai_api_key,
             settings.ai_model, settings.ai_base_url,
