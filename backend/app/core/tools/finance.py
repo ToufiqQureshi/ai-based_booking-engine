@@ -1,7 +1,6 @@
 from typing import List, Dict, Any
 from datetime import date
 from sqlmodel import select, func, and_
-from langchain_core.tools import tool
 from app.models.booking import Booking, BookingStatus
 
 # We need a way to inject session/user into tools. 

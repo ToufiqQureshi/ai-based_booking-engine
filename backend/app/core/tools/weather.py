@@ -4,7 +4,6 @@ import openmeteo_requests
 import requests_cache
 import pandas as pd
 from retry_requests import retry
-from langchain_core.tools import tool
 from datetime import date
 
 # Open-Meteo Client Setup.
@@ -73,7 +72,6 @@ def _get_weather_forecast_sync(city: str) -> str:
         return f"Weather fetch failed: {str(e)}"
 
 
-@tool
 def get_weather_forecast(city: str) -> str:
     """
     Get weather forecast for a specific city for the next 7 days.

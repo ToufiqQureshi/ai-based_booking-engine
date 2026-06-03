@@ -128,7 +128,6 @@ def generate_booking_number() -> str:
 
 
 # --- Guest AI Chat ---
-from langchain_core.messages import HumanMessage, AIMessage
 
 class GuestChatRequest(BaseModel):
     hotel_slug: str
@@ -205,23 +204,23 @@ async def chat_with_guest_ai(
         integration_settings = int_res.scalar_one_or_none()
 
         # 2. Prepare History (limit to last 20 messages to prevent context blowup)
+        from agno.agent import Message
         chat_history = []
-        for msg in payload.history:
+        for msg in payload.history[-20:]:
             if msg["role"] == "user":
-                chat_history.append(HumanMessage(content=msg["content"]))
+                chat_history.append(Message(role="user", content=msg["content"]))
             elif msg["role"] == "assistant":
-                chat_history.append(AIMessage(content=msg["content"]))
-        chat_history = chat_history[-20:]
+                chat_history.append(Message(role="assistant", content=msg["content"]))
 
         # Add current message
-        messages = chat_history + [HumanMessage(content=payload.message)]
+        messages = chat_history + [Message(role="user", content=payload.message)]
 
         # 3. Initialize Agent
         from app.core.guest_agent import create_guest_agent_graph
         agent = await create_guest_agent_graph(
-            session, 
-            hotel.id, 
-            getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None), 
+            session,
+            hotel.id,
+            getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None),
             getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None),
             getattr(integration_settings, 'ai_model', None) if integration_settings else None,
             getattr(integration_settings, 'ai_base_url', None) if integration_settings else None,
@@ -231,11 +230,10 @@ async def chat_with_guest_ai(
             return GuestChatResponse(response="AI Concierge is currently offline for this hotel. Please contact the front desk directly.")
 
         # 4. Invoke Agent
-        # LangGraph inputs: {"messages": [...]}
         try:
-            response = await agent.ainvoke({"messages": messages})
-            ai_msg = response["messages"][-1]
-            return GuestChatResponse(response=ai_msg.content)
+            result = await agent.arun(messages)
+            ai_response = result.content or ""
+            return GuestChatResponse(response=ai_response)
         except Exception as invoke_err:
             err_str = str(invoke_err)
             # Groq/Llama tool_use_failed: model generated malformed function call syntax.
@@ -243,8 +241,8 @@ async def chat_with_guest_ai(
             if "tool_use_failed" in err_str or "failed_generation" in err_str or "400" in err_str:
                 logger.warning(f"Tool use failed for hotel {hotel.id}, retrying without tools: {invoke_err}")
                 try:
-                    from langchain_openai import ChatOpenAI
-                    from langchain_core.messages import SystemMessage
+                    from agno.agent import Agent
+                    from agno.models.openai import OpenAILike
                     from app.core.guest_agent import get_guest_system_prompt_content
 
                     effective_provider = getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None)
@@ -256,16 +254,12 @@ async def chat_with_guest_ai(
                         effective_provider = "groq"
                     default_base = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
 
-                    plain_llm = ChatOpenAI(
-                        model=ai_model_name,
-                        temperature=0.7,
-                        openai_api_key=target_api_key,
-                        base_url=ai_base_url_val or default_base
-                    )
-                    formatted_prompt = await get_guest_system_prompt_content(session, hotel.id, hotel.name)
-                    system_msg = SystemMessage(content=formatted_prompt)
-                    fallback_resp = await plain_llm.ainvoke([system_msg] + messages)
-                    return GuestChatResponse(response=fallback_resp.content)
+                    system_prompt_str = await get_guest_system_prompt_content(session, hotel.id, hotel.name)
+                    fallback_llm = OpenAILike(id=ai_model_name, api_key=target_api_key, base_url=ai_base_url_val or default_base)
+                    fallback_agent = Agent(model=fallback_llm, instructions=system_prompt_str)
+                    fallback_result = await fallback_agent.arun(payload.message)
+                    ai_response = fallback_result.content or ""
+                    return GuestChatResponse(response=ai_response)
                 except Exception as fallback_err:
                     logger.error(f"Fallback also failed: {fallback_err}")
                     return GuestChatResponse(response="I'm having a moment of confusion. Could you rephrase your question? I'm happy to help!")
@@ -330,14 +324,14 @@ async def stream_guest_ai(
         )
         integration_settings = int_res.scalar_one_or_none()
 
-        chat_history = []
-        for msg in payload.history:
+        from agno.agent import Message as AgnoMessage
+        chat_history_stream = []
+        for msg in payload.history[-20:]:
             if msg["role"] == "user":
-                chat_history.append(HumanMessage(content=msg["content"]))
+                chat_history_stream.append(AgnoMessage(role="user", content=msg["content"]))
             elif msg["role"] == "assistant":
-                chat_history.append(AIMessage(content=msg["content"]))
-        chat_history = chat_history[-20:]
-        messages = chat_history + [HumanMessage(content=payload.message)]
+                chat_history_stream.append(AgnoMessage(role="assistant", content=msg["content"]))
+        messages = chat_history_stream + [AgnoMessage(role="user", content=payload.message)]
 
         from app.core.guest_agent import create_guest_agent_graph
         agent = await create_guest_agent_graph(
@@ -369,11 +363,10 @@ async def stream_guest_ai(
 
     async def _event_gen():
         try:
-            async for event in agent.astream_events({"messages": messages}, version="v2"):
-                if event["event"] == "on_chat_model_stream":
-                    chunk = event["data"].get("chunk")
-                    if chunk and hasattr(chunk, "content") and chunk.content:
-                        yield f"data: {_json.dumps({'token': chunk.content})}\n\n"
+            from agno.agent import RunContentEvent
+            async for event in await agent.arun(messages, stream=True, stream_events=True):
+                if isinstance(event, RunContentEvent) and event.content:
+                    yield f"data: {_json.dumps({'token': event.content})}\n\n"
         except Exception as exc:
             logger.error("Stream event error: %s", exc)
             yield f"data: {_json.dumps({'error': 'Stream interrupted'})}\n\n"

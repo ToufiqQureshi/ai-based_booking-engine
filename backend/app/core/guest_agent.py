@@ -6,7 +6,6 @@ import logging
 
 from sqlmodel import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from langchain_core.tools import tool
 
 from app.models.booking import Booking, BookingStatus
 from app.models.room import RoomType
@@ -256,7 +255,6 @@ async def create_guest_agent_graph(
 
     # --- TOOLS (3 tools, down from 5; hotel info + amenities are in system prompt) ---
 
-    @tool
     async def check_availability(check_in_date: str, check_out_date: str, guests: str = "2") -> str:
         """
         Check real room availability for specific dates.
@@ -304,7 +302,6 @@ async def create_guest_agent_graph(
             return f"No rooms available for {check_in_date} to {check_out_date}. Please try different dates."
         return f"Available rooms ({check_in_date} → {check_out_date}):\n" + "\n".join(available)
 
-    @tool
     async def get_room_details(room_name: str) -> str:
         """
         Get detailed description and photos for a specific room type.
@@ -324,7 +321,6 @@ async def create_guest_agent_graph(
                 return details
         return f"Room '{room_name}' not found."
 
-    @tool
     async def prepare_booking(
         check_in: str,
         check_out: str,
@@ -440,29 +436,28 @@ async def create_guest_agent_graph(
     tools = [check_availability, get_room_details, prepare_booking]
 
     try:
-        from langchain_openai import ChatOpenAI
-        from langgraph.prebuilt import create_react_agent
+        from agno.agent import Agent
+        from agno.models.openai import OpenAILike
 
         effective_provider = ai_provider
         if not effective_provider and ai_api_key.startswith("gsk_"):
             effective_provider = "groq"
-
         default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
 
-        llm = ChatOpenAI(
-            model=ai_model,
-            temperature=0.3,
-            openai_api_key=ai_api_key,
+        llm_model = OpenAILike(
+            id=ai_model,
+            api_key=ai_api_key,
             base_url=ai_base_url or default_base_url,
             max_tokens=1024,
         )
 
         formatted_prompt = _build_formatted_prompt(data, hotel_name)
 
-        return create_react_agent(
-            model=llm,
+        return Agent(
+            model=llm_model,
             tools=tools,
-            prompt=formatted_prompt,
+            instructions=formatted_prompt,
+            markdown=True,
         )
     except Exception as exc:
         logger.error("Guest agent error: %s", exc)

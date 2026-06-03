@@ -276,9 +276,9 @@ async def test_ai_connection(current_user: CurrentUser, session: DbSession):
         if not agent:
             return {"status": "error", "message": "Agent failed to initialize. Check your Model ID."}
 
-        from langchain_core.messages import HumanMessage
-        response = await agent.ainvoke({"messages": [HumanMessage(content="Respond with 'Ready' only.")]})
-        return {"status": "success", "message": f"Connection Successful! AI says: {response['messages'][-1].content}"}
+        from agno.agent import Message
+        result = await agent.arun([Message(role="user", content="Respond with 'Ready' only.")])
+        return {"status": "success", "message": f"Connection Successful! AI says: {result.content or ''}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
