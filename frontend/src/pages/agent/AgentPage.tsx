@@ -206,10 +206,17 @@ const AgentPage = () => {
             const data = await apiClient.post<ChatResponse>('/agent/chat', {
                 message: userMessage,
                 history: newMessages.map(m => [m.role, m.content]),
-            });
+            }, { timeout: 120000 });
             setMessages(prev => [...prev, { role: 'ai', content: data.response }]);
         } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Something went wrong.", variant: "destructive" });
+            const isTimeout = error.name === 'TimeoutError' || error.name === 'AbortError';
+            toast({
+                title: isTimeout ? "Request Timed Out" : "Error",
+                description: isTimeout
+                    ? "AI is taking longer than expected. Please try again."
+                    : (error.message || "Something went wrong."),
+                variant: "destructive"
+            });
         } finally {
             setIsLoading(false);
         }

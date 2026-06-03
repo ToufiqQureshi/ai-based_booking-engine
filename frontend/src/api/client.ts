@@ -192,7 +192,10 @@ export const apiClient = {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(
+      () => controller.abort(new DOMException('Request timed out', 'TimeoutError')),
+      30000
+    );
 
     const makeRequest = () => fetch(url.toString(), {
       method: 'GET',
@@ -211,11 +214,15 @@ export const apiClient = {
     }
   },
 
-  post: async <T>(endpoint: string, data?: unknown, config?: RequestInit): Promise<T> => {
+  post: async <T>(endpoint: string, data?: unknown, config?: RequestInit & { timeout?: number }): Promise<T> => {
+    const { timeout = 30000, headers: configHeaders, ...restConfig } = config || {};
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(
+      () => controller.abort(new DOMException('Request timed out', 'TimeoutError')),
+      timeout
+    );
 
-    const headers = getHeaders(config?.headers);
+    const headers = getHeaders(configHeaders);
 
     // Don't stringify FormData
     const body = data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined);
@@ -224,8 +231,6 @@ export const apiClient = {
     if (data instanceof FormData) {
       delete (headers as any)['Content-Type'];
     }
-
-    const { headers: _unusedHeaders, ...restConfig } = config || {};
 
     const makeRequest = () => fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
@@ -248,7 +253,10 @@ export const apiClient = {
 
   put: async <T>(endpoint: string, data?: unknown, config?: RequestInit): Promise<T> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(
+      () => controller.abort(new DOMException('Request timed out', 'TimeoutError')),
+      30000
+    );
     const headers = getHeaders(config?.headers);
     const { headers: _unusedHeaders, ...restConfig } = config || {};
 
@@ -273,7 +281,10 @@ export const apiClient = {
 
   patch: async <T>(endpoint: string, data?: unknown, config?: RequestInit): Promise<T> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(
+      () => controller.abort(new DOMException('Request timed out', 'TimeoutError')),
+      30000
+    );
     const headers = getHeaders(config?.headers);
     const { headers: _unusedHeaders, ...restConfig } = config || {};
 
@@ -298,7 +309,10 @@ export const apiClient = {
 
   delete: async <T>(endpoint: string): Promise<T> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(
+      () => controller.abort(new DOMException('Request timed out', 'TimeoutError')),
+      30000
+    );
 
     const makeRequest = () => fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
