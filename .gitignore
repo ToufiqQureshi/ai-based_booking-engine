@@ -1,4 +1,7 @@
 
+# Claude Code worktrees (temporary agent workspaces)
+.claude/worktrees/
+
 # Security
 .env
 .env.*
