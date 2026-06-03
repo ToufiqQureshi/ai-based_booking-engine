@@ -114,6 +114,7 @@ class HotelBase(SQLModel):
     feature_rate_shopper: bool = Field(default=False)
     feature_ai_agent: bool = Field(default=False)
     feature_guest_bot: bool = Field(default=False)
+    feature_ai_assistant: bool = Field(default=False)
     feature_new_booking: bool = Field(default=True)
     feature_color_palette: bool = Field(default=False)
     feature_custom_logo: bool = Field(default=False)
@@ -216,6 +217,7 @@ class HotelUpdate(SQLModel):
     feature_rate_shopper: Optional[bool] = None
     feature_ai_agent: Optional[bool] = None
     feature_guest_bot: Optional[bool] = None
+    feature_ai_assistant: Optional[bool] = None
     feature_new_booking: Optional[bool] = None
     feature_color_palette: Optional[bool] = None
     feature_custom_logo: Optional[bool] = None

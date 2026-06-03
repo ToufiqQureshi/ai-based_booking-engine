@@ -57,6 +57,7 @@ export interface Hotel {
   feature_rate_shopper?: boolean;
   feature_ai_agent?: boolean;
   feature_guest_bot?: boolean;
+  feature_ai_assistant?: boolean;
   feature_new_booking?: boolean;
   feature_color_palette?: boolean;
   feature_custom_logo?: boolean;

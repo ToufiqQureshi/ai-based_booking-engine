@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Code, Key, Globe, Search, MessageCircle, Loader2 } from 'lucide-react';
+import { Code, Key, Globe, Search, MessageCircle, Loader2, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ import { ExternalServicesTab } from '@/components/integration/ExternalServicesTa
 import { BookingWidgetTab } from '@/components/integration/BookingWidgetTab';
 import { ChatWidgetTab } from '@/components/integration/ChatWidgetTab';
 import { SearchWidgetTab } from '@/components/integration/SearchWidgetTab';
+import { UsageTab } from '@/components/integration/UsageTab';
 
 interface ApiKey {
     id: string;
@@ -50,6 +51,10 @@ const IntegrationPage = () => {
     const [settings, setSettings] = useState<IntegrationSettings | null>(null);
     const [isAIEnabled, setIsAIEnabled] = useState(hotel?.feature_ai_agent || false);
     const [isSavingAI, setIsSavingAI] = useState(false);
+    const [isGuestBotEnabled, setIsGuestBotEnabled] = useState(hotel?.feature_guest_bot || false);
+    const [isSavingGuestBot, setIsSavingGuestBot] = useState(false);
+    const [isAIAssistantEnabled, setIsAIAssistantEnabled] = useState(hotel?.feature_ai_assistant || false);
+    const [isSavingAIAssistant, setIsSavingAIAssistant] = useState(false);
     const [activeHotelSlug, setActiveHotelSlug] = useState<string>('');
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
     const [widgetCode, setWidgetCode] = useState<WidgetCode | null>(null);
@@ -121,16 +126,46 @@ const IntegrationPage = () => {
         setIsAIEnabled(enabled);
         try {
             setIsSavingAI(true);
-            const updatedHotel = await apiClient.patch<any>('/hotels/me', {
-                feature_ai_agent: enabled
-            });
+            const updatedHotel = await apiClient.patch<any>('/hotels/me', { feature_ai_agent: enabled });
             setHotel(updatedHotel);
             toast.success(enabled ? 'WhatsApp AI Agent is now active!' : 'WhatsApp AI Agent disabled.');
         } catch (error) {
             setIsAIEnabled(!enabled);
-            toast.error('Failed to change AI Agent status.');
+            toast.error('Failed to change WhatsApp AI Agent status.');
         } finally {
             setIsSavingAI(false);
+        }
+    };
+
+    const handleToggleGuestBot = async (enabled: boolean) => {
+        if (isSavingGuestBot) return;
+        setIsGuestBotEnabled(enabled);
+        try {
+            setIsSavingGuestBot(true);
+            const updatedHotel = await apiClient.patch<any>('/hotels/me', { feature_guest_bot: enabled });
+            setHotel(updatedHotel);
+            toast.success(enabled ? 'Guest Chat AI Agent is now active!' : 'Guest Chat AI Agent disabled.');
+        } catch (error) {
+            setIsGuestBotEnabled(!enabled);
+            toast.error('Failed to change Guest Chat AI Agent status.');
+        } finally {
+            setIsSavingGuestBot(false);
+        }
+    };
+
+    const handleToggleAIAssistant = async (enabled: boolean) => {
+        if (isSavingAIAssistant) return;
+        setIsAIAssistantEnabled(enabled);
+        try {
+            setIsSavingAIAssistant(true);
+            const updatedHotel = await apiClient.patch<any>('/hotels/me', { feature_ai_assistant: enabled });
+            setHotel(updatedHotel);
+            toast.success(enabled ? 'Hotelier AI Assistant is now active!' : 'Hotelier AI Assistant disabled.');
+        } catch (error) {
+            setIsAIAssistantEnabled(!enabled);
+            toast.error('Failed to change Hotelier AI Assistant status.');
+        } finally {
+            setIsSavingAIAssistant(false);
         }
     };
 
@@ -186,7 +221,9 @@ const IntegrationPage = () => {
         </div>;
     }
 
-    return (
+        const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
+        return (
         <PageShell
             title="Integration"
             subtitle="Connect your hotel website and manage API access"
@@ -197,8 +234,9 @@ const IntegrationPage = () => {
                     <TabsTrigger value="search-widget" className="gap-2"><Search className="w-4 h-4" />Search Widget</TabsTrigger>
                     <TabsTrigger value="chat-widget" className="gap-2"><MessageCircle className="w-4 h-4" />Chat Widget</TabsTrigger>
                     <TabsTrigger value="api-keys" className="gap-2"><Key className="w-4 h-4" />API Keys</TabsTrigger>
-                    <TabsTrigger value="settings" className="gap-2"><Globe className="w-4 h-4" />External Services</TabsTrigger>
-                    <TabsTrigger value="whatsapp" className="gap-2"><MessageCircle className="w-4 h-4" />WhatsApp</TabsTrigger>
+                    {isSuperAdmin && <TabsTrigger value="settings" className="gap-2"><Globe className="w-4 h-4" />External Services</TabsTrigger>}
+                    {isSuperAdmin && <TabsTrigger value="whatsapp" className="gap-2"><MessageCircle className="w-4 h-4" />WhatsApp</TabsTrigger>}
+                    {!isSuperAdmin && <TabsTrigger value="usage" className="gap-2"><BarChart3 className="w-4 h-4" />Usage</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="widget">
@@ -217,13 +255,35 @@ const IntegrationPage = () => {
                     <ChatWidgetTab hotel={hotel} activeHotelSlug={activeHotelSlug} copyToClipboard={copyToClipboard} />
                 </TabsContent>
 
-                <TabsContent value="settings">
-                    <ExternalServicesTab settings={settings} user={user} isDirty={isDirty} isSavingSettings={isSavingSettings} testingAI={testingAI} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} onTestAI={testAI} />
-                </TabsContent>
+                {isSuperAdmin && (
+                    <TabsContent value="settings">
+                        <ExternalServicesTab settings={settings} user={user} isDirty={isDirty} isSavingSettings={isSavingSettings} testingAI={testingAI} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} onTestAI={testAI} />
+                    </TabsContent>
+                )}
 
-                <TabsContent value="whatsapp">
-                    <WhatsappTab user={user} isAIEnabled={isAIEnabled} isSavingAI={isSavingAI} onToggleAI={handleToggleAI} hotel={hotel} />
-                </TabsContent>
+                {isSuperAdmin && (
+                    <TabsContent value="whatsapp">
+                        <WhatsappTab
+                        user={user}
+                        hotel={hotel}
+                        isAIEnabled={isAIEnabled}
+                        isSavingAI={isSavingAI}
+                        onToggleAI={handleToggleAI}
+                        isGuestBotEnabled={isGuestBotEnabled}
+                        isSavingGuestBot={isSavingGuestBot}
+                        onToggleGuestBot={handleToggleGuestBot}
+                        isAIAssistantEnabled={isAIAssistantEnabled}
+                        isSavingAIAssistant={isSavingAIAssistant}
+                        onToggleAIAssistant={handleToggleAIAssistant}
+                    />
+                    </TabsContent>
+                )}
+
+                {!isSuperAdmin && (
+                    <TabsContent value="usage">
+                        <UsageTab hotel={hotel} />
+                    </TabsContent>
+                )}
             </Tabs>
         </PageShell>
     );

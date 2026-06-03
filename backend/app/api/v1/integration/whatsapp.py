@@ -304,7 +304,15 @@ async def whatsapp_webhook_receive(
                             if subscription:
                                 subscription.whatsapp_credits = max(0, subscription.whatsapp_credits - 1)
                                 session.add(subscription)
-                                await session.commit()
+
+                            # Update hotel settings counters
+                            h_settings = dict(resolved_hotel.settings) if isinstance(resolved_hotel.settings, dict) else {}
+                            h_settings["total_messages_sent"] = int(h_settings.get("total_messages_sent", 0) or 0) + 1
+                            h_settings["ai_whatsapp_credits"] = max(0, int(h_settings.get("ai_whatsapp_credits", 100) or 100) - 1)
+                            resolved_hotel.settings = h_settings
+                            session.add(resolved_hotel)
+
+                            await session.commit()
 
                     except Exception as e:
                         logger.error("Guest Agent error: %s", e, exc_info=True)

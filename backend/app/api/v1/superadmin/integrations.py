@@ -42,6 +42,9 @@ class HotelIntegrationsRead(BaseModel):
     is_paused: bool = False
     pause_reason: Optional[str] = None
     paused_at: Optional[datetime] = None
+    feature_ai_agent: bool = False
+    feature_guest_bot: bool = False
+    feature_ai_assistant: bool = False
 
 
 class HotelIntegrationsUpdate(BaseModel):
@@ -61,6 +64,9 @@ class HotelIntegrationsUpdate(BaseModel):
     ai_whatsapp_credits: Optional[int] = None
     is_paused: Optional[bool] = None
     pause_reason: Optional[str] = None
+    feature_ai_agent: Optional[bool] = None
+    feature_guest_bot: Optional[bool] = None
+    feature_ai_assistant: Optional[bool] = None
 
 
 def _preview_secret(value: Optional[str]) -> Optional[str]:
@@ -110,6 +116,9 @@ async def get_hotel_integrations(
         is_paused=hotel.is_paused,
         pause_reason=hotel.pause_reason,
         paused_at=hotel.paused_at,
+        feature_ai_agent=hotel.feature_ai_agent,
+        feature_guest_bot=hotel.feature_guest_bot,
+        feature_ai_assistant=hotel.feature_ai_assistant,
     )
 
 
@@ -127,7 +136,7 @@ async def update_hotel_integrations(
 
     updated: list[str] = []
 
-    for field in ("ai_provider", "ai_model"):
+    for field in ("ai_provider", "ai_model", "feature_ai_agent", "feature_guest_bot", "feature_ai_assistant"):
         val = getattr(payload, field)
         if val is not None:
             setattr(hotel, field, val)
