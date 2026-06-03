@@ -530,7 +530,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
 
                                     <div>
                                         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 px-2">Extra Charges (Per Night)</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <FormField
                                                 control={form.control}
                                                 name="extra_adult_price"
@@ -553,6 +553,103 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                         <FormControl>
                                                             <Input type="number" className="h-11 rounded-xl border-border" {...field} />
                                                         </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="extra_person_price"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Extra Person (₹)</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" className="h-11 rounded-xl border-border" {...field} />
+                                                        </FormControl>
+                                                        <FormDescription className="text-[10px]">General extra person charge</FormDescription>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 rounded-2xl bg-muted/40 border border-border">
+                                        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-5">Room Policies</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <FormField
+                                                control={form.control}
+                                                name="smoking_allowed"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-border p-4 bg-background">
+                                                        <div className="space-y-0.5">
+                                                            <FormLabel className="text-xs font-bold text-foreground">Smoking Allowed</FormLabel>
+                                                            <FormDescription className="text-[10px]">Guests may smoke in room</FormDescription>
+                                                        </div>
+                                                        <FormControl>
+                                                            <Switch
+                                                                checked={!!field.value}
+                                                                onCheckedChange={field.onChange}
+                                                                className="data-[state=checked]:bg-blue-600"
+                                                            />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="is_pet_friendly"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-border p-4 bg-background">
+                                                        <div className="space-y-0.5">
+                                                            <FormLabel className="text-xs font-bold text-foreground">Pet Friendly</FormLabel>
+                                                            <FormDescription className="text-[10px]">Pets are welcome</FormDescription>
+                                                        </div>
+                                                        <FormControl>
+                                                            <Switch
+                                                                checked={!!field.value}
+                                                                onCheckedChange={field.onChange}
+                                                                className="data-[state=checked]:bg-blue-600"
+                                                            />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="extra_bed_allowed"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-border p-4 bg-background">
+                                                        <div className="space-y-0.5">
+                                                            <FormLabel className="text-xs font-bold text-foreground">Extra Bed Allowed</FormLabel>
+                                                            <FormDescription className="text-[10px]">Additional bed can be added</FormDescription>
+                                                        </div>
+                                                        <FormControl>
+                                                            <Switch
+                                                                checked={!!field.value}
+                                                                onCheckedChange={field.onChange}
+                                                                className="data-[state=checked]:bg-blue-600"
+                                                            />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                        <div className="mt-6">
+                                            <FormField
+                                                control={form.control}
+                                                name="cancellation_policy"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cancellation Policy</FormLabel>
+                                                        <FormControl>
+                                                            <Textarea
+                                                                placeholder="e.g. Free cancellation up to 24 hours before check-in. No refund thereafter."
+                                                                className="min-h-[80px] rounded-xl border-border focus-visible:ring-blue-600/10 focus-visible:border-blue-600 resize-none p-4"
+                                                                {...field}
+                                                            />
+                                                        </FormControl>
+                                                        <FormDescription className="text-[10px]">Optional room-specific cancellation text shown to guests</FormDescription>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}

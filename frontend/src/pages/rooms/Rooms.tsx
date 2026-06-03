@@ -35,11 +35,15 @@ export function RoomsPage() {
   const { data: rooms = [], isLoading: isLoadingRooms, refetch: refetchRooms } = useQuery<RoomType[]>({
     queryKey: ['rooms'],
     queryFn: () => apiClient.get<RoomType[]>('/rooms'),
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 
   const { data: allRatePlans = [], isLoading: isLoadingRates, refetch: refetchRates } = useQuery<RatePlan[]>({
     queryKey: ['rates'],
     queryFn: () => apiClient.get<RatePlan[]>('/rates/plans'),
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 
   const packages = allRatePlans.filter(p => p.is_package);

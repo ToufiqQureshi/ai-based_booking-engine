@@ -144,7 +144,9 @@ export function BookingsPage() {
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['leads'],
-    queryFn: async () => await apiClient.get<LeadData[]>('/leads')
+    queryFn: async () => await apiClient.get<LeadData[]>('/leads'),
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
   });
 
   const fetchBookings = () => { refetch(); };
