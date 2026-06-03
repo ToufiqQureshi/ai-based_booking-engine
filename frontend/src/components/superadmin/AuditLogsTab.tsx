@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from '@/components/ui/separator';
-import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 
 import { useQuery } from '@tanstack/react-query';
@@ -43,7 +43,7 @@ export function AuditLogsTab() {
 
   return (
     <>
-<TabsContent value="audit" className="mt-0">
+<div>
                         <Card className="border-border shadow-sm rounded-2xl p-8 bg-background min-h-[400px]">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                                 <div>
@@ -172,7 +172,7 @@ export function AuditLogsTab() {
                                 </Table>
                             </div>
                         </Card>
-                    </TabsContent>
+                    </div>
 
                      {/* Broadcasts Tab Content */}
                      

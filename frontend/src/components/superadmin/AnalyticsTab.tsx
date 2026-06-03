@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from '@/components/ui/separator';
-import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 
 // Fallback hash function if not provided via props
@@ -29,7 +29,7 @@ const getHotelHashValue = (id: string, seed: number) => {
 export function AnalyticsTab({ hotels, users, onSelectHotel }: { hotels: any[], users: any[], onSelectHotel?: (h: any) => void }) {
   return (
     <>
-<TabsContent value="analytics" className="mt-0">
+<div>
                         <div className="space-y-8">
                             {/* Analytics Summary Cards */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -252,7 +252,7 @@ export function AnalyticsTab({ hotels, users, onSelectHotel }: { hotels: any[], 
                                 </div>
                             </Card>
                         </div>
-                    </TabsContent>
+                    </div>
                     
                     
     </>

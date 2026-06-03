@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { TabsContent } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { toast } from 'sonner';
@@ -67,7 +66,7 @@ export function UsersTab() {
     );
 
     return (
-        <TabsContent value="users" className="mt-0">
+        <div>
             {/* Add Employee Dialog */}
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
                 <DialogContent className="rounded-2xl max-w-md">
@@ -254,6 +253,6 @@ export function UsersTab() {
                     ))}
                 </div>
             </Card>
-        </TabsContent>
+        </div>
     );
 }

@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from '@/components/ui/separator';
-import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
@@ -48,7 +48,7 @@ export function PlanFeaturesTab() {
 
   return (
     <>
-<TabsContent value="plan-features" className="mt-0">
+<div>
                         <Card className="border-border shadow-sm overflow-hidden rounded-2xl bg-background">
                             <CardHeader className="border-b border-border bg-slate-50/40 p-6">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -163,7 +163,7 @@ export function PlanFeaturesTab() {
                                 )}
                             </div>
                         </Card>
-                    </TabsContent>
+                    </div>
                 
     </>
   );

@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from '@/components/ui/separator';
-import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
@@ -56,7 +56,7 @@ export function BroadcastsTab() {
 
   return (
     <>
-<TabsContent value="broadcasts" className="mt-0">
+<div>
                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                              <Card className="border-border shadow-sm rounded-2xl p-8 bg-background lg:col-span-1 h-fit space-y-6">
                                  <div className="flex items-center gap-3">
@@ -269,7 +269,7 @@ export function BroadcastsTab() {
                                  </div>
                              </Card>
                          </div>
-                     </TabsContent>
+                     </div>
 
                     
     </>
