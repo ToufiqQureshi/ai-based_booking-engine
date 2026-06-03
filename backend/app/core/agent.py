@@ -689,8 +689,12 @@ def create_agent_executor(session: AsyncSession, user: User):
         get_upsell_opportunities,
     ]
 
-    # Resolve dynamic keys from hotel relation
+    # Resolve dynamic config from hotel relation
     target_api_key = settings.GROQ_API_KEY
+    target_model = getattr(user.hotel, 'ai_model', None) or "llama-3.3-70b-versatile"
+    target_base_url = getattr(user.hotel, 'ai_base_url', None) or "https://api.groq.com/openai/v1"
+    target_max_tokens = getattr(user.hotel, 'ai_max_tokens', None) or 2048
+
     if user.hotel and getattr(user.hotel, 'ai_api_key', None):
         target_api_key = user.hotel.ai_api_key
 
@@ -706,10 +710,10 @@ def create_agent_executor(session: AsyncSession, user: User):
     from agno.models.openai import OpenAILike
 
     llm_model = OpenAILike(
-        id="openai/gpt-oss-120b",
+        id=target_model,
         api_key=target_api_key,
-        base_url="https://api.groq.com/openai/v1",
-        max_tokens=2048,
+        base_url=target_base_url,
+        max_tokens=target_max_tokens,
     )
 
     agent = Agent(

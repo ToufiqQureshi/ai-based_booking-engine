@@ -16,6 +16,7 @@ interface HotelIntegrationsRead {
     ai_provider?: string;
     ai_model?: string;
     ai_base_url?: string;
+    ai_max_tokens?: number | null;
     ai_api_key_preview?: string;
     has_ai_api_key: boolean;
     has_whatsapp_api_key: boolean;
@@ -50,6 +51,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
     const [aiProvider, setAiProvider] = useState('');
     const [aiModel, setAiModel] = useState('');
     const [aiBaseUrl, setAiBaseUrl] = useState('');
+    const [aiMaxTokens, setAiMaxTokens] = useState('');
     const [aiApiKey, setAiApiKey] = useState('');
     const [waApiKey, setWaApiKey] = useState('');
     const [waPhoneId, setWaPhoneId] = useState('');
@@ -83,6 +85,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             setAiProvider(res.ai_provider || '');
             setAiModel(res.ai_model || '');
             setAiBaseUrl(res.ai_base_url || '');
+            setAiMaxTokens(res.ai_max_tokens ? String(res.ai_max_tokens) : '');
             setWaApiKey(''); // never populate the actual secret — admin must re-enter
             setWaPhoneId('');
             setWaBusinessId('');
@@ -111,6 +114,9 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             if (aiProvider !== (data?.ai_provider || '')) payload.ai_provider = aiProvider;
             if (aiModel !== (data?.ai_model || '')) payload.ai_model = aiModel;
             if (aiBaseUrl !== (data?.ai_base_url || '')) payload.ai_base_url = aiBaseUrl;
+            const parsedMaxTokens = aiMaxTokens ? parseInt(aiMaxTokens, 10) : null;
+            const existingMaxTokens = data?.ai_max_tokens ?? null;
+            if (parsedMaxTokens !== existingMaxTokens) payload.ai_max_tokens = parsedMaxTokens ?? 0;
             if (aiApiKey) payload.ai_api_key = aiApiKey;
             if (waApiKey) payload.whatsapp_api_key = waApiKey;
             if (waPhoneId) payload.whatsapp_phone_number_id = waPhoneId;
@@ -136,7 +142,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             const res = await apiClient.put<{ message: string; fields_updated: string[] }>(`/superadmin/hotels/${hotel.id}/integrations`, payload);
             toast({ title: 'Saved', description: res.message });
             // Clear the password fields after save so they don't sit in memory
-            setAiApiKey(''); setWaApiKey(''); setBrevoKey(''); setSmtpPassword('');
+            setAiApiKey(''); setWaApiKey(''); setBrevoKey(''); setSmtpPassword(''); setAiMaxTokens('');
             loadData();
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Save failed', description: error?.response?.data?.detail || error?.message });
@@ -221,6 +227,19 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                         <div className="space-y-2 md:col-span-2">
                             <Label className="text-xs font-bold text-foreground/80">Base URL (optional — for custom endpoints)</Label>
                             <Input value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)} placeholder="https://api.groq.com/openai/v1" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-foreground/80">Max Tokens</Label>
+                            <Input
+                                type="number"
+                                min="128"
+                                max="32768"
+                                value={aiMaxTokens}
+                                onChange={e => setAiMaxTokens(e.target.value)}
+                                placeholder={`default (guest: 1024 / assistant: 2048)`}
+                                className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11"
+                            />
+                            <p className="text-[10px] text-muted-foreground">Controls response length for all AI agents. Leave blank to use defaults.</p>
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <Label className="text-xs font-bold text-foreground/80 flex items-center gap-2">

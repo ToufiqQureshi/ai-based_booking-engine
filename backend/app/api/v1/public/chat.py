@@ -217,6 +217,9 @@ async def chat_with_guest_ai(
 
         # 3. Initialize Agent
         from app.core.guest_agent import create_guest_agent_graph
+        _max_tokens = (
+            getattr(integration_settings, 'ai_max_tokens', None) if integration_settings else None
+        ) or getattr(hotel, 'ai_max_tokens', None)
         agent = await create_guest_agent_graph(
             session,
             hotel.id,
@@ -224,7 +227,8 @@ async def chat_with_guest_ai(
             getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None),
             getattr(integration_settings, 'ai_model', None) if integration_settings else None,
             getattr(integration_settings, 'ai_base_url', None) if integration_settings else None,
-            hotel.name
+            hotel.name,
+            _max_tokens,
         )
         if not agent:
             return GuestChatResponse(response="AI Concierge is currently offline for this hotel. Please contact the front desk directly.")
@@ -334,6 +338,9 @@ async def stream_guest_ai(
         messages = chat_history_stream + [AgnoMessage(role="user", content=payload.message)]
 
         from app.core.guest_agent import create_guest_agent_graph
+        _stream_max_tokens = (
+            getattr(integration_settings, "ai_max_tokens", None) if integration_settings else None
+        ) or getattr(hotel, "ai_max_tokens", None)
         agent = await create_guest_agent_graph(
             session,
             hotel.id,
@@ -342,6 +349,7 @@ async def stream_guest_ai(
             getattr(integration_settings, "ai_model", None) if integration_settings else None,
             getattr(integration_settings, "ai_base_url", None) if integration_settings else None,
             hotel.name,
+            _stream_max_tokens,
         )
     except HTTPException:
         raise

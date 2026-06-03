@@ -153,6 +153,7 @@ class Hotel(HotelBase, table=True):
     ai_api_key: Optional[str] = Field(default=None)
     ai_model: Optional[str] = Field(default="llama-3.1-70b-versatile")
     ai_base_url: Optional[str] = Field(default=None)
+    ai_max_tokens: Optional[int] = Field(default=None)
     
     # Relationships
     users: List["User"] = Relationship(

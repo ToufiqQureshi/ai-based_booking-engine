@@ -243,6 +243,7 @@ async def create_guest_agent_graph(
     ai_model: str = None,
     ai_base_url: str = None,
     hotel_name: str = "the hotel",
+    ai_max_tokens: int = None,
 ):
     if not ai_api_key or not ai_model:
         return None
@@ -448,7 +449,7 @@ async def create_guest_agent_graph(
             id=ai_model,
             api_key=ai_api_key,
             base_url=ai_base_url or default_base_url,
-            max_tokens=1024,
+            max_tokens=ai_max_tokens or 1024,
         )
 
         formatted_prompt = _build_formatted_prompt(data, hotel_name)
