@@ -1,7 +1,7 @@
 ﻿// Rooms Page - Management with Clean & Professional UI
 import { Plus, Search, Grid, List, Bed, Loader2, Package } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,20 +31,20 @@ export function RoomsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: rooms = [], isLoading: isLoadingRooms, refetch: refetchRooms } = useQuery<RoomType[]>({
+  const { data: rooms = [], isLoading: isLoadingRooms } = useQuery<RoomType[]>({
     queryKey: ['rooms'],
     queryFn: () => apiClient.get<RoomType[]>('/rooms'),
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
   });
 
-  const { data: allRatePlans = [], isLoading: isLoadingRates, refetch: refetchRates } = useQuery<RatePlan[]>({
+  const { data: allRatePlans = [], isLoading: isLoadingRates } = useQuery<RatePlan[]>({
     queryKey: ['rates'],
     queryFn: () => apiClient.get<RatePlan[]>('/rates/plans'),
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
   });
+
+  const invalidateRooms = () => queryClient.invalidateQueries({ queryKey: ['rooms'] });
+  const invalidateRates = () => queryClient.invalidateQueries({ queryKey: ['rates'] });
 
   const packages = allRatePlans.filter(p => p.is_package);
   const isLoading = activeTab === 'room' ? isLoadingRooms : isLoadingRates;
@@ -84,7 +84,7 @@ export function RoomsPage() {
         title: 'Room Deleted',
         description: 'Room category has been successfully removed.',
       });
-      refetchRooms();
+      invalidateRooms();
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -227,7 +227,7 @@ export function RoomsPage() {
                         if (!confirm("Are you sure you want to delete this package?")) return;
                         try {
                           await apiClient.delete(`/rates/plans/${id}`);
-                          refetchRates();
+                          invalidateRates();
                         } catch {
                           toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete the package.' });
                         }
@@ -269,7 +269,7 @@ export function RoomsPage() {
             open={isDialogOpen}
             onOpenChange={setIsDialogOpen}
             onSuccess={() => {
-              refetchRooms();
+              invalidateRooms();
               setIsDialogOpen(false);
             }}
             initialData={selectedRoom}
@@ -280,7 +280,7 @@ export function RoomsPage() {
             open={isPackageDialogOpen}
             onOpenChange={setIsPackageDialogOpen}
             onSuccess={() => {
-              refetchRates();
+              invalidateRates();
               setIsPackageDialogOpen(false);
             }}
             initialData={selectedPackage}
