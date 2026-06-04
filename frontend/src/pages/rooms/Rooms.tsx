@@ -1,5 +1,5 @@
 ﻿// Rooms Page - Management with Clean & Professional UI
-import { Plus, Search, Grid, List, Bed, Loader2, Package, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, Grid, List, Bed, Loader2, Package } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,11 @@ export function RoomsPage() {
 
   const packages = allRatePlans.filter(p => p.is_package);
   const isLoading = activeTab === 'room' ? isLoadingRooms : isLoadingRates;
+
+  const handleTabChange = (tab: 'room' | 'package') => {
+    setActiveTab(tab);
+    setSearchQuery('');
+  };
 
   const handleCreateOpen = () => {
     if (activeTab === 'room') {
@@ -129,7 +134,7 @@ export function RoomsPage() {
           {/* Tabs */}
           <div className="flex bg-muted p-1 rounded-lg">
             <button
-              onClick={() => setActiveTab('room')}
+              onClick={() => handleTabChange('room')}
               className={cn(
                 "px-4 py-1.5 text-xs font-semibold rounded-md transition-all",
                 activeTab === 'room' ? "bg-background text-indigo-600 shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -138,7 +143,7 @@ export function RoomsPage() {
               Rooms
             </button>
             <button
-              onClick={() => setActiveTab('package')}
+              onClick={() => handleTabChange('package')}
               className={cn(
                 "px-4 py-1.5 text-xs font-semibold rounded-md transition-all",
                 activeTab === 'package' ? "bg-background text-indigo-600 shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -218,9 +223,13 @@ export function RoomsPage() {
                       key={pkg.id}
                       pkg={pkg}
                       onEdit={handleEditOpen}
-                      onDelete={(id) => {
-                        if (confirm("Are you sure you want to delete this package?")) {
-                          apiClient.delete(`/rates/plans/${id}`).then(() => refetchRates());
+                      onDelete={async (id) => {
+                        if (!confirm("Are you sure you want to delete this package?")) return;
+                        try {
+                          await apiClient.delete(`/rates/plans/${id}`);
+                          refetchRates();
+                        } catch {
+                          toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete the package.' });
                         }
                       }}
                     />
