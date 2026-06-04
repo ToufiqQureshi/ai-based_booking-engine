@@ -16,6 +16,9 @@ import { ApiError, AuthTokens } from '@/types/api';
 // Dynamic API URL selection
 const getBaseUrl = () => {
   const hostname = window.location.hostname;
+  if (hostname.includes('staging.staybooker.ai')) {
+    return 'https://api-staging.staybooker.ai/api/v1';
+  }
   if (hostname.includes('staybooker.ai')) {
     return 'https://api.staybooker.ai/api/v1';
   }
