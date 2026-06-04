@@ -5,7 +5,7 @@ import {
   Sparkles, ArrowUpRight, ArrowDownRight, Crown, Calendar,
   ChevronRight, Download, BarChart3,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -112,7 +112,8 @@ export function ChainDashboard() {
     try {
       setSwitchingId(hotelId);
       await apiClient.post(`/properties/switch/${hotelId}`, {});
-      window.location.href = '/dashboard';
+      // Brief visual feedback before navigation
+      setTimeout(() => { window.location.href = '/dashboard'; }, 600);
     } catch {
       setSwitchingId(null);
     }
@@ -199,6 +200,34 @@ export function ChainDashboard() {
       title="Brand Console"
       subtitle="Multi-property portfolio governance & analytics"
     >
+      {/* Property switch full-screen animated overlay */}
+      <AnimatePresence>
+        {switchingId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 240, damping: 22 }}
+              className="flex flex-col items-center gap-3"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center shadow-lg">
+                <ArrowLeftRight className="w-8 h-8 text-indigo-600 animate-pulse" />
+              </div>
+              <p className="font-bold text-lg">Switching Property…</p>
+              <p className="text-sm text-muted-foreground">
+                Loading {data?.revenue_by_hotel?.find(h => h.hotel_id === switchingId)?.name || 'hotel'} dashboard
+              </p>
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-600 mt-1" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Tabs + Period Filter ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex gap-2">

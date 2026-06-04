@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlmodel import select
@@ -32,30 +32,44 @@ async def list_chains(
     session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
-    """List all chains with their linked hotels and users."""
-    result = await session.execute(select(Chain))
-    chains = result.scalars().all()
-    
-    chain_list = []
-    for c in chains:
-        # Fetch linked hotels
-        hotels_res = await session.execute(select(Hotel).where(Hotel.chain_id == c.id))
-        hotels = hotels_res.scalars().all()
-        
-        # Fetch linked users
-        users_res = await session.execute(select(User).where(User.chain_id == c.id))
-        users = users_res.scalars().all()
-        
-        chain_list.append({
+    """List all chains with linked hotels and users — bulk-loaded, no N+1."""
+    chains = (await session.execute(select(Chain))).scalars().all()
+    if not chains:
+        return []
+
+    chain_ids = [c.id for c in chains]
+
+    # Bulk fetch — 2 queries total instead of N*2
+    all_hotels = (await session.execute(
+        select(Hotel).where(Hotel.chain_id.in_(chain_ids))
+    )).scalars().all()
+    all_users = (await session.execute(
+        select(User).where(User.chain_id.in_(chain_ids))
+    )).scalars().all()
+
+    hotels_by_chain: Dict[str, list] = {}
+    for h in all_hotels:
+        hotels_by_chain.setdefault(h.chain_id, []).append(
+            {"id": h.id, "name": h.name, "slug": h.slug}
+        )
+    users_by_chain: Dict[str, list] = {}
+    for u in all_users:
+        users_by_chain.setdefault(u.chain_id, []).append(
+            {"id": u.id, "name": u.name, "email": u.email}
+        )
+
+    return [
+        {
             "id": c.id,
             "name": c.name,
             "slug": c.slug,
             "logo_url": c.logo_url,
             "created_at": c.created_at.isoformat() if c.created_at else None,
-            "hotels": [{"id": h.id, "name": h.name, "slug": h.slug} for h in hotels],
-            "users": [{"id": u.id, "name": u.name, "email": u.email} for u in users]
-        })
-    return chain_list
+            "hotels": hotels_by_chain.get(c.id, []),
+            "users": users_by_chain.get(c.id, []),
+        }
+        for c in chains
+    ]
 
 
 @router.post("", response_model=dict)
@@ -160,6 +174,64 @@ async def delete_chain(
     await session.delete(chain)
     await session.commit()
     return {"message": "Chain deleted successfully"}
+
+
+class AddPropertyToChainRequest(BaseModel):
+    name: str
+    slug: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+
+
+@router.post("/{chain_id}/add-property", response_model=dict)
+async def add_property_to_chain(
+    chain_id: str,
+    request: Request,
+    data: AddPropertyToChainRequest,
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+):
+    """Create a new hotel and immediately link it to the chain."""
+    chain = await session.get(Chain, chain_id)
+    if not chain:
+        raise HTTPException(status_code=404, detail="Chain not found")
+
+    existing = (await session.execute(
+        select(Hotel).where(Hotel.slug == data.slug)
+    )).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=400, detail="Hotel slug already exists")
+
+    hotel = Hotel(name=data.name, slug=data.slug, chain_id=chain_id)
+    if data.email or data.phone:
+        hotel.contact = {"email": data.email or "", "phone": data.phone or ""}
+    if data.city:
+        try:
+            hotel.city = data.city
+        except Exception:
+            pass
+    if data.country:
+        try:
+            hotel.country = data.country
+        except Exception:
+            pass
+
+    session.add(hotel)
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        action="ADD_PROPERTY_TO_CHAIN",
+        description=f"Created property '{data.name}' and linked to chain '{chain.name}'",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+    await session.refresh(hotel)
+    return {
+        "message": "Property created and linked to chain",
+        "hotel": {"id": hotel.id, "name": hotel.name, "slug": hotel.slug},
+    }
 
 
 @router.post("/{chain_id}/link", response_model=dict)

@@ -1,19 +1,8 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Building2,
-  Users,
-  Plus,
-  Trash2,
-  Edit,
-  Loader2,
-  RefreshCw,
-  Search,
-  CheckCircle,
-  Network,
-  X,
-  Link2,
-  Lock
+  Building2, Users, Plus, Trash2, Edit, Loader2, RefreshCw, Search,
+  CheckCircle, Network, X, Link2, Lock, PlusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -48,6 +37,14 @@ export function BrandsTab({ hotels, users }: BrandsTabProps) {
   // Linkage States
   const [selectedHotelIds, setSelectedHotelIds] = React.useState<string[]>([]);
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
+
+  // Add Property to Brand States
+  const [isAddPropOpen, setIsAddPropOpen] = React.useState(false);
+  const [addPropBrand, setAddPropBrand] = React.useState<any | null>(null);
+  const [propName, setPropName] = React.useState('');
+  const [propSlug, setPropSlug] = React.useState('');
+  const [propCity, setPropCity] = React.useState('');
+  const [propEmail, setPropEmail] = React.useState('');
 
   // Fetch brand list
   const { data: brands = [], isLoading, refetch } = useQuery<any[]>({
@@ -160,7 +157,40 @@ export function BrandsTab({ hotels, users }: BrandsTabProps) {
     });
   };
 
-  const filteredBrands = brands.filter((b: any) => 
+  // Add Property to Brand Mutation
+  const addPropertyMutation = useMutation({
+    mutationFn: (data: { chainId: string; name: string; slug: string; city: string; email: string }) =>
+      apiClient.post(`/superadmin/chains/${data.chainId}/add-property`, {
+        name: data.name, slug: data.slug,
+        city: data.city || undefined, email: data.email || undefined,
+      }),
+    onSuccess: () => {
+      toast.success("Property created and linked to brand!");
+      setIsAddPropOpen(false);
+      setPropName(''); setPropSlug(''); setPropCity(''); setPropEmail('');
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['superadmin-chains'] });
+      queryClient.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+    },
+    onError: (err: any) => toast.error(err?.message || "Failed to create property"),
+  });
+
+  const openAddProp = (brand: any) => {
+    setAddPropBrand(brand);
+    setPropName(''); setPropSlug(''); setPropCity(''); setPropEmail('');
+    setIsAddPropOpen(true);
+  };
+
+  const handleAddPropSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addPropBrand || !propName || !propSlug) return;
+    addPropertyMutation.mutate({
+      chainId: addPropBrand.id, name: propName, slug: propSlug,
+      city: propCity, email: propEmail,
+    });
+  };
+
+  const filteredBrands = brands.filter((b: any) =>
     b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     b.slug.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -254,6 +284,14 @@ export function BrandsTab({ hotels, users }: BrandsTabProps) {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openAddProp(b)}
+                          className="h-8 text-xs font-semibold gap-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 border-emerald-200"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5" /> Add Property
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => openLinkDialog(b)}
                           className="h-8 text-xs font-semibold gap-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-indigo-600"
                         >
@@ -294,6 +332,64 @@ export function BrandsTab({ hotels, users }: BrandsTabProps) {
           </Table>
         </CardContent>
       </Card>
+
+      {/* ADD PROPERTY TO BRAND DIALOG */}
+      <Dialog open={isAddPropOpen} onOpenChange={setIsAddPropOpen}>
+        <DialogContent className="rounded-2xl border-border bg-background max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black">Add Property to {addPropBrand?.name}</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Create a new hotel and instantly link it to this brand chain.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddPropSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-muted-foreground">Property Name *</label>
+              <Input
+                placeholder="e.g. Grand Palace Mumbai"
+                required
+                value={propName}
+                onChange={e => {
+                  setPropName(e.target.value);
+                  setPropSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                }}
+                className="rounded-xl text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-muted-foreground">URL Slug * (unique)</label>
+              <Input
+                placeholder="e.g. grand-palace-mumbai"
+                required
+                value={propSlug}
+                onChange={e => setPropSlug(e.target.value.replace(/[^a-z0-9-]/g, ''))}
+                className="rounded-xl text-xs"
+              />
+              <p className="text-[10px] text-muted-foreground">Booking URL: /book/{propSlug || 'your-slug'}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-muted-foreground">City</label>
+                <Input placeholder="e.g. Mumbai" value={propCity} onChange={e => setPropCity(e.target.value)} className="rounded-xl text-xs" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-muted-foreground">Email</label>
+                <Input type="email" placeholder="hotel@email.com" value={propEmail} onChange={e => setPropEmail(e.target.value)} className="rounded-xl text-xs" />
+              </div>
+            </div>
+            <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 text-xs text-emerald-700 dark:text-emerald-400 flex items-start gap-2">
+              <Building2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>Property auto-linked to <strong>{addPropBrand?.name}</strong>. Assign an owner later via the Users tab.</span>
+            </div>
+            <DialogFooter className="pt-2">
+              <button type="button" onClick={() => setIsAddPropOpen(false)} className="px-4 py-2 text-xs rounded-xl hover:bg-muted transition-colors">Cancel</button>
+              <Button type="submit" disabled={addPropertyMutation.isPending} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-10 px-5 text-xs font-bold gap-1.5">
+                {addPropertyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><PlusCircle className="w-4 h-4" /> Create Property</>}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* CREATE BRAND DIALOG */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

@@ -48,17 +48,25 @@ async def list_properties(request: Request, current_user: CurrentUser, session: 
             await session.refresh(new_link)
             links = [new_link]
     
-    # 3. Fetch Hotels
+    # 3. Bulk-fetch all hotels in one query (fixes N+1)
+    if not links:
+        return []
+
+    hotel_ids = [lnk.hotel_id for lnk in links]
+    hotels = (await session.execute(
+        select(Hotel).where(Hotel.id.in_(hotel_ids))
+    )).scalars().all()
+    hotel_map = {h.id: h for h in hotels}
+
     properties = []
-    for link in links:
-        hotel = await session.get(Hotel, link.hotel_id)
-        if hotel:
-            # Add extra fields
-            prop_dict = hotel.model_dump()
-            prop_dict["role"] = link.role
-            prop_dict["is_current"] = (hotel.id == current_user.hotel_id)
+    for lnk in links:
+        h = hotel_map.get(lnk.hotel_id)
+        if h:
+            prop_dict = h.model_dump()
+            prop_dict["role"] = lnk.role
+            prop_dict["is_current"] = (h.id == current_user.hotel_id)
             properties.append(prop_dict)
-            
+
     return properties
 
 
