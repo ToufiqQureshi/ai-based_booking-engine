@@ -11,8 +11,15 @@ interface RoomImageCarouselProps {
 
 export function RoomImageCarousel({ photos, roomName, onClick }: RoomImageCarouselProps) {
     const [index, setIndex] = useState(0);
+    const [failedIndexes, setFailedIndexes] = useState<Set<number>>(new Set());
 
-    if (!photos || photos.length === 0) {
+    const handleError = (idx: number) => {
+        setFailedIndexes(prev => new Set(prev).add(idx));
+    };
+
+    const validPhotos = (photos || []).filter((_, i) => !failedIndexes.has(i));
+
+    if (!photos || photos.length === 0 || (failedIndexes.size > 0 && validPhotos.length === 0)) {
         return (
             <div className="w-full h-full flex items-center justify-center flex-col text-slate-400 p-4 text-center cursor-pointer" onClick={onClick}>
                 <Bed className="w-8 h-8 mb-2 opacity-50" />
@@ -27,13 +34,14 @@ export function RoomImageCarousel({ photos, roomName, onClick }: RoomImageCarous
                 <motion.img
                     key={index}
                     src={photos[index].url}
-                    alt={`${roomName} - ${index + 1}`}
+                    alt={roomName}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                     className="w-full h-full object-cover cursor-pointer"
                     onClick={onClick}
+                    onError={() => handleError(index)}
                 />
             </AnimatePresence>
 
