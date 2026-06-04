@@ -1,7 +1,7 @@
 ﻿// Rooms Page - Management with Clean & Professional UI
-import { Plus, Search, Grid, List, Bed, Loader2, Package, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, Grid, List, Bed, Package, Loader2 } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { RoomType, RatePlan } from '@/types/api';
 import { RoomCard } from '@/components/rooms/RoomCard';
 import { RoomListItem } from '@/components/rooms/RoomListItem';
 import { PageShell } from '@/components/layout/PageShell';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy load dialog components
 const RoomDialog = lazy(() => import('@/components/rooms/RoomDialog').then(m => ({ default: m.RoomDialog })));
@@ -31,23 +32,30 @@ export function RoomsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: rooms = [], isLoading: isLoadingRooms, refetch: refetchRooms } = useQuery<RoomType[]>({
+  const { data: rooms = [], isLoading: isLoadingRooms } = useQuery<RoomType[]>({
     queryKey: ['rooms'],
     queryFn: () => apiClient.get<RoomType[]>('/rooms'),
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
   });
 
-  const { data: allRatePlans = [], isLoading: isLoadingRates, refetch: refetchRates } = useQuery<RatePlan[]>({
+  const { data: allRatePlans = [], isLoading: isLoadingRates } = useQuery<RatePlan[]>({
     queryKey: ['rates'],
     queryFn: () => apiClient.get<RatePlan[]>('/rates/plans'),
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
   });
+
+  const invalidateRooms = () => queryClient.invalidateQueries({ queryKey: ['rooms'] });
+  const invalidateRates = () => queryClient.invalidateQueries({ queryKey: ['rates'] });
 
   const packages = allRatePlans.filter(p => p.is_package);
   const isLoading = activeTab === 'room' ? isLoadingRooms : isLoadingRates;
+
+  const handleTabChange = (tab: 'room' | 'package') => {
+    setActiveTab(tab);
+    setSearchQuery('');
+    // Packages don't have a list view — force grid
+    if (tab === 'package') setViewMode('grid');
+  };
 
   const handleCreateOpen = () => {
     if (activeTab === 'room') {
@@ -79,7 +87,7 @@ export function RoomsPage() {
         title: 'Room Deleted',
         description: 'Room category has been successfully removed.',
       });
-      refetchRooms();
+      invalidateRooms();
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -129,7 +137,7 @@ export function RoomsPage() {
           {/* Tabs */}
           <div className="flex bg-muted p-1 rounded-lg">
             <button
-              onClick={() => setActiveTab('room')}
+              onClick={() => handleTabChange('room')}
               className={cn(
                 "px-4 py-1.5 text-xs font-semibold rounded-md transition-all",
                 activeTab === 'room' ? "bg-background text-indigo-600 shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -138,7 +146,7 @@ export function RoomsPage() {
               Rooms
             </button>
             <button
-              onClick={() => setActiveTab('package')}
+              onClick={() => handleTabChange('package')}
               className={cn(
                 "px-4 py-1.5 text-xs font-semibold rounded-md transition-all",
                 activeTab === 'package' ? "bg-background text-indigo-600 shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -173,6 +181,8 @@ export function RoomsPage() {
                 size="icon"
                 className={cn("h-7 w-7 rounded-md", viewMode === 'list' && "bg-muted text-indigo-600")}
                 onClick={() => setViewMode('list')}
+                disabled={activeTab === 'package'}
+                title={activeTab === 'package' ? 'List view not available for packages' : undefined}
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -183,10 +193,39 @@ export function RoomsPage() {
 
       {/* Content Area */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-          <p className="text-muted-foreground text-sm font-medium">Loading content...</p>
-        </div>
+        viewMode === 'list' ? (
+          <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-6 p-4">
+                <Skeleton className="h-14 w-20 rounded-lg shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="h-8 w-8 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border overflow-hidden">
+                <Skeleton className="aspect-[16/10] w-full rounded-none" />
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <div className="pt-2 flex justify-between items-center border-t border-border">
+                    <Skeleton className="h-7 w-20" />
+                    <Skeleton className="h-8 w-14 rounded-md" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : displayItems.length === 0 ? (
         <div className="text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border">
           <Bed className="h-12 w-12 text-slate-300 mx-auto mb-4" />
@@ -218,9 +257,13 @@ export function RoomsPage() {
                       key={pkg.id}
                       pkg={pkg}
                       onEdit={handleEditOpen}
-                      onDelete={(id) => {
-                        if (confirm("Are you sure you want to delete this package?")) {
-                          apiClient.delete(`/rates/plans/${id}`).then(() => refetchRates());
+                      onDelete={async (id) => {
+                        if (!confirm("Are you sure you want to delete this package?")) return;
+                        try {
+                          await apiClient.delete(`/rates/plans/${id}`);
+                          invalidateRates();
+                        } catch {
+                          toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete the package.' });
                         }
                       }}
                     />
@@ -243,11 +286,7 @@ export function RoomsPage() {
                     formatCurrency={formatCurrency}
                   />
                 ))
-              ) : (
-                <div className="p-10 text-center text-muted-foreground italic text-sm">
-                  List view for packages coming soon. Please use grid view.
-                </div>
-              )}
+              ) : null}
             </div>
           )}
         </>
@@ -260,7 +299,7 @@ export function RoomsPage() {
             open={isDialogOpen}
             onOpenChange={setIsDialogOpen}
             onSuccess={() => {
-              refetchRooms();
+              invalidateRooms();
               setIsDialogOpen(false);
             }}
             initialData={selectedRoom}
@@ -271,7 +310,7 @@ export function RoomsPage() {
             open={isPackageDialogOpen}
             onOpenChange={setIsPackageDialogOpen}
             onSuccess={() => {
-              refetchRates();
+              invalidateRates();
               setIsPackageDialogOpen(false);
             }}
             initialData={selectedPackage}

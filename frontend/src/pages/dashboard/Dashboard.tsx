@@ -8,7 +8,6 @@ import {
   Users,
   Bed,
   TrendingUp,
-  Loader2,
   ExternalLink,
   MoreHorizontal,
   Sparkles,
@@ -45,10 +44,10 @@ export function DashboardPage() {
   const { hotel, user } = useAuth();
 
   // 1. Fetch Stats
-  const { data: stats, isLoading: isStatsLoading } = useQuery<DashboardStats>({
+  const { data: stats, isLoading: isStatsLoading, isError: isStatsError } = useQuery<DashboardStats>({
     queryKey: ['dashboardStats'],
     queryFn: () => apiClient.get<DashboardStats>('/dashboard/stats'),
-    staleTime: 1000 * 60 * 5, // 5 minutes — matches server-side cache TTL
+    staleTime: 1000 * 60 * 2,
   });
 
   // 2. Fetch Recent Bookings
@@ -83,17 +82,6 @@ export function DashboardPage() {
 
   const aiNotConfigured = !integration?.ai_api_key || !integration?.ai_model;
 
-  if (isStatsLoading) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-7 w-7 text-indigo-600 animate-spin" />
-          <span className="text-muted-foreground dark:text-muted-foreground font-medium text-sm">Loading dashboard…</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <PageShell
       title="Dashboard"
@@ -102,6 +90,17 @@ export function DashboardPage() {
       <div className="mt-1">
         <WelcomeCard message="Have a productive day managing your hotel! 👋" />
       </div>
+
+      {/* Stats fetch error */}
+      {isStatsError && (
+        <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertTitle className="text-red-800 dark:text-red-400 font-semibold">Could not load dashboard stats</AlertTitle>
+          <AlertDescription className="text-red-700 dark:text-red-500 text-sm">
+            Check your network connection and refresh the page.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* AI Configuration Alert */}
       {aiNotConfigured && (
@@ -126,9 +125,13 @@ export function DashboardPage() {
             <CalendarCheck className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">
-              <AnimatedCounter value={stats?.today_arrivals || 0} />
-            </div>
+            {isStatsLoading ? (
+              <div className="h-9 w-16 bg-muted animate-pulse rounded" />
+            ) : (
+              <div className="text-3xl font-bold text-foreground">
+                <AnimatedCounter value={stats?.today_arrivals || 0} />
+              </div>
+            )}
             <div className="flex items-center text-xs mt-1">
               {stats?.trends?.arrivals !== undefined && (
                 <span className={cn(
@@ -150,9 +153,13 @@ export function DashboardPage() {
             <CalendarX className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">
-              <AnimatedCounter value={stats?.today_departures || 0} />
-            </div>
+            {isStatsLoading ? (
+              <div className="h-9 w-16 bg-muted animate-pulse rounded" />
+            ) : (
+              <div className="text-3xl font-bold text-foreground">
+                <AnimatedCounter value={stats?.today_departures || 0} />
+              </div>
+            )}
             <div className="flex items-center text-xs mt-1 text-muted-foreground">
               <span>{stats?.today_departures || 0} scheduled today</span>
             </div>
@@ -166,9 +173,13 @@ export function DashboardPage() {
             <Bed className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">
-              <AnimatedCounter value={stats?.current_occupancy || 0} />
-            </div>
+            {isStatsLoading ? (
+              <div className="h-9 w-16 bg-muted animate-pulse rounded" />
+            ) : (
+              <div className="text-3xl font-bold text-foreground">
+                <AnimatedCounter value={stats?.current_occupancy || 0} />
+              </div>
+            )}
             <div className="flex items-center text-xs mt-1 text-muted-foreground">
               <span>{stats?.current_occupancy || 0} rooms occupied</span>
             </div>
@@ -182,12 +193,16 @@ export function DashboardPage() {
             <CreditCard className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-700">
-              <AnimatedCounter
-                value={stats?.today_revenue || 0}
-                formatter={(val) => `₹${val.toLocaleString('en-IN')}`}
-              />
-            </div>
+            {isStatsLoading ? (
+              <div className="h-9 w-24 bg-blue-100 animate-pulse rounded" />
+            ) : (
+              <div className="text-3xl font-bold text-blue-700">
+                <AnimatedCounter
+                  value={stats?.today_revenue || 0}
+                  formatter={(val) => `₹${val.toLocaleString('en-IN')}`}
+                />
+              </div>
+            )}
             <div className="flex items-center text-xs mt-1 text-blue-600/70">
               <span>Today's total earnings</span>
             </div>

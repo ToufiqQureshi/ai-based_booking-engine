@@ -72,6 +72,9 @@ const roomSchema = z.object({
     cancellation_policy: z.string().optional(),
     rate_plan_overrides: z.record(z.any()).optional().nullable(),
     is_active: z.boolean().default(true),
+}).refine(data => data.max_occupancy >= data.base_occupancy, {
+    message: 'Max adults must be ≥ base occupancy',
+    path: ['max_occupancy'],
 });
 
 interface RoomDialogProps {
@@ -109,6 +112,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
             smoking_allowed: false,
             is_pet_friendly: false,
             photos: [],
+            amenity_ids: [],
             market_price: undefined,
             cancellation_policy: '',
             rate_plan_overrides: {},

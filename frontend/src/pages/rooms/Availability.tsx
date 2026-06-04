@@ -1,11 +1,11 @@
 // Availability Page - Premium Redesign with Full Feature Set
 import {
-  ChevronLeft, ChevronRight, Edit2, Lock, Loader2,
+  ChevronLeft, ChevronRight, Edit2, Lock,
   BedDouble, BarChart3, RefreshCw, Sliders,
   CheckCircle2, AlertTriangle, Sparkles,
   CalendarDays
 } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { PageShell } from '@/components/layout/PageShell';
+import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/api/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isToday, isBefore, startOfDay } from 'date-fns';
@@ -71,7 +72,10 @@ export function AvailabilityPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const dates = Array.from({ length: DAYS_TO_SHOW }, (_, i) => addDays(currentDate, i));
+  const dates = useMemo(
+    () => Array.from({ length: DAYS_TO_SHOW }, (_, i) => addDays(currentDate, i)),
+    [currentDate]
+  );
   const startDateStr = format(dates[0], 'yyyy-MM-dd');
   const endDateStr = format(dates[dates.length - 1], 'yyyy-MM-dd');
 
@@ -114,19 +118,19 @@ export function AvailabilityPage() {
     : availabilityData.filter(r => r.id === selectedRoomType);
 
   // Compute summary stats for the current view
-  const stats: SummaryStats = filteredData.reduce((acc, room) => {
-    room.availability.forEach(day => {
-      acc.totalRooms += day.totalRooms;
-      acc.totalAvailable += day.availableRooms;
-      acc.totalBooked += day.bookedRooms;
-      acc.totalBlocked += day.blockedRooms || 0;
-    });
-    return acc;
-  }, { totalRooms: 0, totalAvailable: 0, totalBooked: 0, totalBlocked: 0, occupancyRate: 0 });
-
-  stats.occupancyRate = stats.totalRooms > 0
-    ? Math.round((stats.totalBooked / stats.totalRooms) * 100)
-    : 0;
+  const stats: SummaryStats = useMemo(() => {
+    const s = filteredData.reduce((acc, room) => {
+      room.availability.forEach(day => {
+        acc.totalRooms += day.totalRooms;
+        acc.totalAvailable += day.availableRooms;
+        acc.totalBooked += day.bookedRooms;
+        acc.totalBlocked += day.blockedRooms || 0;
+      });
+      return acc;
+    }, { totalRooms: 0, totalAvailable: 0, totalBooked: 0, totalBlocked: 0, occupancyRate: 0 });
+    s.occupancyRate = s.totalRooms > 0 ? Math.round((s.totalBooked / s.totalRooms) * 100) : 0;
+    return s;
+  }, [filteredData]);
 
   const getCellStyle = (day: AvailabilityDay | undefined) => {
     if (!day) return { bg: 'bg-muted/30', text: 'text-muted-foreground', badge: '' };
@@ -138,14 +142,7 @@ export function AvailabilityPage() {
     return { bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-600 dark:text-emerald-400', badge: '' };
   };
 
-  if (isLoading && availabilityData.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-72 gap-3 text-muted-foreground">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm font-medium">Loading availability calendar…</p>
-      </div>
-    );
-  }  return (
+  return (
     <TooltipProvider>
       <PageShell
         title="Calendar"
@@ -328,7 +325,25 @@ export function AvailabilityPage() {
               </div>
 
               {/* Room Rows */}
-              {filteredData.length === 0 ? (
+              {isLoading && availabilityData.length === 0 ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="grid border-b border-border/80"
+                    style={{ gridTemplateColumns: `220px repeat(${DAYS_TO_SHOW}, 1fr)` }}
+                  >
+                    <div className="px-5 py-4 flex flex-col gap-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    {Array.from({ length: DAYS_TO_SHOW }).map((_, j) => (
+                      <div key={j} className="border-l border-border/80 p-2 flex items-center justify-center">
+                        <Skeleton className="h-8 w-10 rounded-lg" />
+                      </div>
+                    ))}
+                  </div>
+                ))
+              ) : filteredData.length === 0 ? (
                 <div className="py-16 text-center text-muted-foreground">
                   <BedDouble className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p className="font-medium">No rooms found</p>

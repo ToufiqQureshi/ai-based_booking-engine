@@ -1,5 +1,5 @@
 import { useState, useRef, ChangeEvent } from 'react';
-import { Upload, X, Star, GripVertical, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, X, Star, ChevronLeft, ChevronRight, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn, getImageUrl } from '@/lib/utils';
 import { RoomPhoto } from '@/types/api';
@@ -22,6 +22,14 @@ export function RoomImageUploader({ images, onChange }: RoomImageUploaderProps) 
     };
 
     const handleFiles = async (files: File[]) => {
+        const MAX_SIZE = 5 * 1024 * 1024;
+        const oversized = files.filter(f => f.size > MAX_SIZE);
+        if (oversized.length > 0) {
+            alert(`${oversized.map(f => f.name).join(', ')} exceed the 5MB limit.`);
+            files = files.filter(f => f.size <= MAX_SIZE);
+            if (files.length === 0) return;
+        }
+
         setUploading(true);
         const newImages: RoomPhoto[] = [];
 
@@ -167,9 +175,9 @@ export function RoomImageUploader({ images, onChange }: RoomImageUploaderProps) 
                                         className="h-8 w-8"
                                         onClick={() => moveImage(index, 'up')}
                                         disabled={index === 0}
-                                        title="Move First/Up"
+                                        title="Move Left"
                                     >
-                                        <GripVertical className="h-4 w-4 rotate-90" />
+                                        <ChevronLeft className="h-4 w-4" />
                                     </Button>
                                     <Button
                                         type="button"
@@ -177,8 +185,20 @@ export function RoomImageUploader({ images, onChange }: RoomImageUploaderProps) 
                                         size="icon"
                                         className="h-8 w-8"
                                         onClick={() => handleDelete(index)}
+                                        title="Remove"
                                     >
                                         <X className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => moveImage(index, 'down')}
+                                        disabled={index === images.length - 1}
+                                        title="Move Right"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
                                     </Button>
                                 </div>
 

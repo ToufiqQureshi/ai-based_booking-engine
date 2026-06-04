@@ -98,7 +98,7 @@ export function RoomCard({ room, onEdit, onDelete, formatCurrency }: RoomCardPro
                     <div className="w-1 h-1 rounded-full bg-border" />
                     <div className="flex items-center gap-1.5">
                         <BedDouble className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{room.bed_type || 'Double'}</span>
+                        <span>{room.bed_type || 'Not set'}</span>
                     </div>
                 </div>
 

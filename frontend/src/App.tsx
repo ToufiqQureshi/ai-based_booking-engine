@@ -62,11 +62,11 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,     // Optimized: Cache data for 5 minutes to reduce API calls
+      staleTime: 1000 * 60 * 2,     // 2 min fresh window — reduces API calls while keeping UI snappy
       gcTime: 1000 * 60 * 15,       // Keep in memory for 15 minutes
       retry: 1,                      // Fail fast (1 retry only)
       refetchOnWindowFocus: false,   // Don't re-fetch on every tab switch
-      refetchOnMount: false,         // Don't refetch if data is already fresh
+      // refetchOnMount defaults to true — ensures stale data refetches when navigating between pages
     },
   },
 });

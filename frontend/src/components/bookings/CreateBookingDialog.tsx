@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format, differenceInDays, addDays } from 'date-fns';
@@ -16,7 +17,6 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
-import { Lock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
     Form,
@@ -78,8 +78,14 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
     const { hotel, user } = useAuth();
     const isLocked = hotel?.feature_new_booking === false && user?.role !== 'SUPER_ADMIN';
     const [open, setOpen] = useState(false);
-    const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
     const { toast } = useToast();
+    const queryClient = useQueryClient();
+
+    const { data: roomTypes = [] } = useQuery<RoomType[]>({
+        queryKey: ['rooms'],
+        queryFn: () => apiClient.get<RoomType[]>('/rooms'),
+        enabled: open,
+    });
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -95,12 +101,6 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
             specialRequests: '',
         },
     });
-
-    useEffect(() => {
-        if (open) {
-            apiClient.get<RoomType[]>('/rooms').then(setRoomTypes).catch(console.error);
-        }
-    }, [open]);
 
     const handleRoomTypeChange = (id: string) => {
         const room = roomTypes.find(r => r.id === id);
@@ -122,6 +122,7 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
 
             const selectedRoom = roomTypes.find(r => r.id === values.roomTypeId);
 
+            const roomTotal = values.pricePerNight * nights;
             const payload = {
                 check_in: format(values.checkIn, 'yyyy-MM-dd'),
                 check_out: format(values.checkOut, 'yyyy-MM-dd'),
@@ -136,15 +137,22 @@ export function CreateBookingDialog({ onSuccess }: CreateBookingDialogProps) {
                         room_type_id: values.roomTypeId,
                         room_type_name: selectedRoom?.name || 'Unknown',
                         guests: 2,
+                        children: 0,
                         price_per_night: values.pricePerNight,
-                        total_price: values.pricePerNight * nights,
+                        total_price: roomTotal,
                     }
                 ],
+                total_amount: roomTotal,
                 source: values.source,
                 special_requests: values.specialRequests || '',
             };
 
             await apiClient.post('/bookings', payload);
+
+            // Invalidate bookings cache so all consumers see the new booking immediately
+            queryClient.invalidateQueries({ queryKey: ['bookings'] });
+            queryClient.invalidateQueries({ queryKey: ['recentBookings'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
 
             toast({
                 title: '✅ Booking Created',
