@@ -44,10 +44,10 @@ export function DashboardPage() {
   const { hotel, user } = useAuth();
 
   // 1. Fetch Stats
-  const { data: stats, isLoading: isStatsLoading } = useQuery<DashboardStats>({
+  const { data: stats, isLoading: isStatsLoading, isError: isStatsError } = useQuery<DashboardStats>({
     queryKey: ['dashboardStats'],
     queryFn: () => apiClient.get<DashboardStats>('/dashboard/stats'),
-    staleTime: 1000 * 60 * 5, // 5 minutes — matches server-side cache TTL
+    staleTime: 1000 * 60 * 2,
   });
 
   // 2. Fetch Recent Bookings
@@ -90,6 +90,17 @@ export function DashboardPage() {
       <div className="mt-1">
         <WelcomeCard message="Have a productive day managing your hotel! 👋" />
       </div>
+
+      {/* Stats fetch error */}
+      {isStatsError && (
+        <Alert className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertTitle className="text-red-800 dark:text-red-400 font-semibold">Could not load dashboard stats</AlertTitle>
+          <AlertDescription className="text-red-700 dark:text-red-500 text-sm">
+            Check your network connection and refresh the page.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* AI Configuration Alert */}
       {aiNotConfigured && (

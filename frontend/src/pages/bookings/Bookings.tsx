@@ -1,9 +1,10 @@
 // Bookings Page - Real API Integration
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   Plus, Search, Filter, Eye, Edit, X, MoreHorizontal, Loader2,
-  CalendarDays, Download, MessageSquare, Phone, Globe, Building2
+  CalendarDays, Download, MessageSquare, Phone, Globe, Building2,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { CreateBookingDialog } from '@/components/bookings/CreateBookingDialog';
 import { BookingDetailsDialog } from '@/components/bookings/BookingDetailsDialog';
@@ -30,6 +31,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { PageShell } from '@/components/layout/PageShell';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const PAGE_SIZE = 20;
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -127,6 +131,9 @@ export function BookingsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [leadsSearch, setLeadsSearch] = useState('');
   const [leadsStatusFilter, setLeadsStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const resetPage = () => setCurrentPage(1);
   const queryClient = useQueryClient();
 
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
@@ -204,7 +211,7 @@ export function BookingsPage() {
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 
   // ── Filter bookings ──
-  const filteredBookings = bookings.filter(b => {
+  const filteredBookings = useMemo(() => bookings.filter(b => {
     const matchesSearch =
       b.guest?.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.guest?.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -213,7 +220,10 @@ export function BookingsPage() {
       b.guest?.phone?.includes(searchQuery);
     const matchesSource = sourceFilter === 'all' || b.source === sourceFilter;
     return matchesSearch && matchesSource;
-  });
+  }), [bookings, searchQuery, sourceFilter]);
+
+  const totalPages = Math.ceil(filteredBookings.length / PAGE_SIZE);
+  const pagedBookings = filteredBookings.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // ── Filter leads ──
   const filteredLeads = leads.filter(l => {
@@ -260,14 +270,6 @@ export function BookingsPage() {
     toast({ title: '✅ Export Successful', description: `${rows.length} leads exported to CSV.` });
   };
 
-  if (isLoading && !isPlaceholderData) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading bookings...</span>
-      </div>
-    );
-  }
 
   return (
     <TooltipProvider>
@@ -312,12 +314,12 @@ export function BookingsPage() {
                   placeholder="Search name, booking ID, email, phone..."
                   className="pl-10"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); resetPage(); }}
                 />
               </div>
 
               {/* Status Filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); resetPage(); }}>
                 <SelectTrigger className="w-[145px]">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
@@ -333,7 +335,7 @@ export function BookingsPage() {
               </Select>
 
               {/* Source Filter */}
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); resetPage(); }}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="All Sources" />
                 </SelectTrigger>
@@ -375,7 +377,36 @@ export function BookingsPage() {
               {sourceFilter !== 'all' && ` · Source: ${sourceLabels[sourceFilter]?.label || sourceFilter}`}
             </p>
 
-            {filteredBookings.length === 0 ? (
+            {isLoading && !isPlaceholderData ? (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {['Booking ID','Guest','Room','Check In','Check Out','Source','Status','Total',''].map(h => (
+                          <TableHead key={h}><Skeleton className="h-4 w-16" /></TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-7 w-7 rounded" /></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ) : filteredBookings.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <CalendarDays className="h-12 w-12 text-muted-foreground mb-4" />
@@ -388,92 +419,123 @@ export function BookingsPage() {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Booking ID</TableHead>
-                        <TableHead>Guest</TableHead>
-                        <TableHead>Room</TableHead>
-                        <TableHead>Check In</TableHead>
-                        <TableHead>Check Out</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredBookings.map((booking) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-mono text-xs font-medium">{booking.booking_number}</TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{booking.guest?.first_name} {booking.guest?.last_name}</p>
-                              <p className="text-xs text-muted-foreground">{booking.guest?.email}</p>
-                              {booking.guest?.phone && (
-                                <p className="text-xs text-muted-foreground">{booking.guest.phone}</p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>{booking.rooms?.[0]?.room_type_name || 'N/A'}</TableCell>
-                          <TableCell className="text-sm">{booking.check_in}</TableCell>
-                          <TableCell className="text-sm">{booking.check_out}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              {sourceLabels[booking.source]?.icon}
-                              <span>{sourceLabels[booking.source]?.label || booking.source || 'Direct'}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={statusConfig[booking.status]?.variant || 'default'}
-                              className={statusConfig[booking.status]?.className}
-                            >
-                              {statusConfig[booking.status]?.label || booking.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(booking.total_amount)}
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => { setSelectedBooking(booking); setIsDetailsOpen(true); }}>
-                                  <Eye className="mr-2 h-4 w-4" />View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setSelectedBooking(booking); setIsEditOpen(true); }}>
-                                  <Edit className="mr-2 h-4 w-4" />Edit Booking
-                                </DropdownMenuItem>
-                                {booking.status !== 'cancelled' && (
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    disabled={isCancelling === booking.id}
-                                    onClick={() => handleCancelBooking(booking.id)}
-                                  >
-                                    {isCancelling === booking.id ? (
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <X className="mr-2 h-4 w-4" />
-                                    )}
-                                    Cancel Booking
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
+              <>
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Booking ID</TableHead>
+                          <TableHead>Guest</TableHead>
+                          <TableHead>Room</TableHead>
+                          <TableHead>Check In</TableHead>
+                          <TableHead>Check Out</TableHead>
+                          <TableHead>Source</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {pagedBookings.map((booking) => (
+                          <TableRow key={booking.id}>
+                            <TableCell className="font-mono text-xs font-medium">{booking.booking_number}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{booking.guest?.first_name} {booking.guest?.last_name}</p>
+                                <p className="text-xs text-muted-foreground">{booking.guest?.email}</p>
+                                {booking.guest?.phone && (
+                                  <p className="text-xs text-muted-foreground">{booking.guest.phone}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>{booking.rooms?.[0]?.room_type_name || 'N/A'}</TableCell>
+                            <TableCell className="text-sm">{booking.check_in}</TableCell>
+                            <TableCell className="text-sm">{booking.check_out}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                {sourceLabels[booking.source]?.icon}
+                                <span>{sourceLabels[booking.source]?.label || booking.source || 'Direct'}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={statusConfig[booking.status]?.variant || 'default'}
+                                className={statusConfig[booking.status]?.className}
+                              >
+                                {statusConfig[booking.status]?.label || booking.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(booking.total_amount)}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => { setSelectedBooking(booking); setIsDetailsOpen(true); }}>
+                                    <Eye className="mr-2 h-4 w-4" />View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => { setSelectedBooking(booking); setIsEditOpen(true); }}>
+                                    <Edit className="mr-2 h-4 w-4" />Edit Booking
+                                  </DropdownMenuItem>
+                                  {booking.status !== 'cancelled' && (
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      disabled={isCancelling === booking.id}
+                                      onClick={() => handleCancelBooking(booking.id)}
+                                    >
+                                      {isCancelling === booking.id ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <X className="mr-2 h-4 w-4" />
+                                      )}
+                                      Cancel Booking
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
+                    <span>
+                      Page {currentPage} of {totalPages} · {filteredBookings.length} bookings
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 

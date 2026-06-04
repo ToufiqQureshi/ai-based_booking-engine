@@ -1,5 +1,5 @@
 ﻿// Rooms Page - Management with Clean & Professional UI
-import { Plus, Search, Grid, List, Bed, Loader2, Package } from 'lucide-react';
+import { Plus, Search, Grid, List, Bed, Package } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { RoomType, RatePlan } from '@/types/api';
 import { RoomCard } from '@/components/rooms/RoomCard';
 import { RoomListItem } from '@/components/rooms/RoomListItem';
 import { PageShell } from '@/components/layout/PageShell';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy load dialog components
 const RoomDialog = lazy(() => import('@/components/rooms/RoomDialog').then(m => ({ default: m.RoomDialog })));
@@ -188,9 +189,21 @@ export function RoomsPage() {
 
       {/* Content Area */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-          <p className="text-muted-foreground text-sm font-medium">Loading content...</p>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border overflow-hidden">
+              <Skeleton className="aspect-[16/10] w-full rounded-none" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-2/3" />
+                <div className="pt-2 flex justify-between items-center border-t border-border">
+                  <Skeleton className="h-7 w-20" />
+                  <Skeleton className="h-8 w-14 rounded-md" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : displayItems.length === 0 ? (
         <div className="text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border">
