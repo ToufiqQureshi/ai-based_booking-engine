@@ -30,6 +30,7 @@ class BookingSource(str, Enum):
     DIRECT = "direct"
     BOOKING_ENGINE = "booking_engine"
     MANUAL = "manual"
+    AI_AGENT = "ai_agent"
 
 
 class GuestBase(SQLModel):

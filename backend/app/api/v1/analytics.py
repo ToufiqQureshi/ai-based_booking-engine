@@ -321,30 +321,17 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         # Resolution Rate: Conversions / Engagements
         res_rate = round((ai_bookings_count / ai_engagement_count * 100), 2) if ai_engagement_count > 0 else 0
         
-        # Popular Inquiries (Extract from Lead summaries if available)
-        keywords = {}
-        stop_words = {"the", "a", "is", "of", "to", "in", "and", "i", "how", "want", "book", "for", "with", "this", "that"}
-        
-        # Source 1: Analytics Events
-        for s in ai_engaged_sessions:
-            for e in s.events:
-                if e.event_type == "ai_inquiry" and e.metadata_json:
-                    words = e.metadata_json.lower().split()
-                    for w in words:
-                        w_c = ''.join(c for c in w if c.isalnum())
-                        if len(w_c) > 3 and w_c not in stop_words:
-                            keywords[w_c] = keywords.get(w_c, 0) + 1
-        
-        # Source 2: Lead Summaries
+        # Popular Inquiries — count which rooms guests enquired about most
+        room_interest: dict = {}
         for l in leads:
-            if l.ai_conversation_summary:
-                words = l.ai_conversation_summary.lower().split()
-                for w in words:
-                    w_c = ''.join(c for c in w if c.isalnum())
-                    if len(w_c) > 3 and w_c not in stop_words:
-                        keywords[w_c] = keywords.get(w_c, 0) + 1
-                        
-        popular_questions = [{"text": k.capitalize(), "value": v} for k, v in sorted(keywords.items(), key=lambda x: x[1], reverse=True)[:10]]
+            if l.room_type_preference:
+                key = l.room_type_preference.strip()
+                room_interest[key] = room_interest.get(key, 0) + 1
+
+        popular_questions = [
+            {"text": k, "value": v}
+            for k, v in sorted(room_interest.items(), key=lambda x: x[1], reverse=True)[:10]
+        ]
 
         # 10. Geo Stats
         COUNTRY_CODES = {
