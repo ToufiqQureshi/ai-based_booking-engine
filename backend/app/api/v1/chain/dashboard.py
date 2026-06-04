@@ -1,15 +1,15 @@
 import logging
-from typing import List, Dict, Any
-from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import select, and_, func
+from typing import List, Dict, Any, Optional
+from datetime import datetime, timedelta, date
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlmodel import select, and_, func, or_
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.hotel import Hotel
-from app.models.booking import Booking
+from app.models.booking import Booking, BookingStatus, Guest
+from app.models.room import RoomType
 from app.models.user import User
 from app.models.chain import Chain
-from app.core.cache import cache_response
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chain", tags=["Chain Management"])
@@ -25,87 +25,259 @@ async def get_chain_admin(current_user: CurrentUser) -> User:
     return current_user
 
 
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _resolve_date_range(period: str) -> tuple[date, date, date, date]:
+    """
+    Returns (start, end, prev_start, prev_end) for the requested period.
+    Periods: 7d, 30d, 90d, 365d, all
+    """
+    today = date.today()
+    if period == "7d":
+        days = 7
+    elif period == "30d":
+        days = 30
+    elif period == "90d":
+        days = 90
+    elif period == "365d":
+        days = 365
+    else:  # all
+        return (date(2000, 1, 1), today, date(2000, 1, 1), date(2000, 1, 1))
+
+    start = today - timedelta(days=days)
+    prev_end = start
+    prev_start = start - timedelta(days=days)
+    return (start, today, prev_start, prev_end)
+
+
+def _pct_change(curr: float, prev: float) -> float:
+    if prev == 0:
+        return 100.0 if curr > 0 else 0.0
+    return round(((curr - prev) / prev) * 100, 1)
+
+
+# ── Analytics ──────────────────────────────────────────────────────────────────
+
 @router.get("/analytics", response_model=Dict[str, Any])
-@cache_response(expire=600, key_prefix="chain_analytics")
 async def get_chain_analytics(
     session: DbSession,
-    current_user: User = Depends(get_chain_admin)
+    period: str = Query("30d", description="Date range: 7d, 30d, 90d, 365d, all"),
+    current_user: User = Depends(get_chain_admin),
 ):
-    """
-    Get consolidated brand/chain analytics across all owned properties.
-    """
+    """Consolidated brand/chain analytics with real occupancy and period comparison."""
     chain_id = current_user.chain_id
-    
-    # 1. Fetch all hotels in the chain
+    start, end, prev_start, prev_end = _resolve_date_range(period)
+
+    # 1. Hotels in chain
     hotels = (await session.execute(
         select(Hotel).where(Hotel.chain_id == chain_id, Hotel.is_active == True)
     )).scalars().all()
-    
+
     if not hotels:
         return {
+            "period": period,
             "total_properties": 0,
             "total_revenue": 0.0,
             "average_occupancy": 0.0,
             "total_bookings": 0,
-            "revenue_by_hotel": []
+            "total_guests": 0,
+            "revenue_change_pct": 0,
+            "bookings_change_pct": 0,
+            "revenue_by_hotel": [],
+            "recent_bookings": [],
+            "top_performer": None,
+            "needs_attention": None,
         }
-        
+
     hotel_ids = [h.id for h in hotels]
-    
-    # 2. Fetch all bookings for these hotels
-    bookings_res = await session.execute(
-        select(Booking).where(Booking.hotel_id.in_(hotel_ids), Booking.status != "cancelled")
+
+    # 2. Total room inventory per hotel (real occupancy basis)
+    room_inv = await session.execute(
+        select(RoomType.hotel_id, func.sum(RoomType.total_inventory))
+        .where(RoomType.hotel_id.in_(hotel_ids))
+        .group_by(RoomType.hotel_id)
     )
-    bookings = bookings_res.scalars().all()
-    
-    # 3. Calculate consolidated metrics
-    total_revenue = sum(b.total_amount for b in bookings if b.total_amount)
+    inventory_map = {row[0]: int(row[1] or 0) for row in room_inv.all()}
+
+    # 3. Bookings in current period
+    booking_query = select(Booking).where(
+        Booking.hotel_id.in_(hotel_ids),
+        Booking.status != BookingStatus.CANCELLED,
+    )
+    if period != "all":
+        booking_query = booking_query.where(Booking.check_in >= start, Booking.check_in <= end)
+
+    bookings = (await session.execute(booking_query)).scalars().all()
+
+    # 4. Previous period bookings (for comparison)
+    prev_bookings = []
+    if period != "all":
+        prev_q = select(Booking).where(
+            Booking.hotel_id.in_(hotel_ids),
+            Booking.status != BookingStatus.CANCELLED,
+            Booking.check_in >= prev_start,
+            Booking.check_in <= prev_end,
+        )
+        prev_bookings = (await session.execute(prev_q)).scalars().all()
+
+    # 5. Aggregate metrics
+    total_revenue = sum(b.total_amount or 0 for b in bookings)
+    prev_revenue = sum(b.total_amount or 0 for b in prev_bookings)
     total_bookings = len(bookings)
-    
-    # 4. Generate comparison grid data
+    unique_guest_ids = {b.guest_id for b in bookings if b.guest_id}
+    total_guests = len(unique_guest_ids)
+
+    # Period length for occupancy denominator
+    days_in_period = (end - start).days if period != "all" else 365
+
+    # 6. Per-hotel breakdown with REAL occupancy
     revenue_by_hotel = []
     for h in hotels:
         h_bookings = [b for b in bookings if b.hotel_id == h.id]
-        h_revenue = sum(b.total_amount for b in h_bookings if b.total_amount)
+        h_revenue = sum(b.total_amount or 0 for b in h_bookings)
         h_bookings_count = len(h_bookings)
-        
-        # Simple simulated occupancy index (ADR)
+
+        # Real occupancy = (nights sold / (total_rooms * period_days)) * 100
+        room_nights_sold = 0
+        for b in h_bookings:
+            try:
+                nights = (b.check_out - b.check_in).days
+                rooms_in_booking = len(b.rooms) if b.rooms else 1
+                room_nights_sold += nights * rooms_in_booking
+            except Exception:
+                continue
+
+        total_inv = inventory_map.get(h.id, 0)
+        available_room_nights = total_inv * days_in_period if total_inv > 0 else 1
+        occupancy = round(min(100.0, (room_nights_sold / available_room_nights) * 100), 1) if available_room_nights > 0 else 0
+
+        # ADR = revenue / room nights sold
+        adr = round(h_revenue / room_nights_sold, 0) if room_nights_sold > 0 else 0
+
         revenue_by_hotel.append({
             "hotel_id": h.id,
             "name": h.name,
             "slug": h.slug,
+            "logo_url": h.logo_url,
             "revenue": h_revenue,
             "bookings_count": h_bookings_count,
-            "occupancy_rate": 65 + (hash(h.id) % 25)  # Deterministic simulated occupancy
+            "occupancy_rate": occupancy,
+            "adr": adr,
+            "total_rooms": total_inv,
+            "room_nights_sold": room_nights_sold,
         })
-        
-    # Sort by revenue descending
+
     revenue_by_hotel.sort(key=lambda x: x["revenue"], reverse=True)
-    
-    # Calculate average portfolio occupancy rate
-    avg_occupancy = sum(item["occupancy_rate"] for item in revenue_by_hotel) / len(revenue_by_hotel)
-    
-    # Recent bookings across all properties (max 10)
-    recent_bookings = []
-    # Sort bookings by created_at or check_in
+
+    avg_occupancy = round(
+        sum(item["occupancy_rate"] for item in revenue_by_hotel) / len(revenue_by_hotel), 1
+    ) if revenue_by_hotel else 0
+
+    # 7. Top performer & needs-attention
+    top_performer = revenue_by_hotel[0] if revenue_by_hotel else None
+    needs_attention = None
+    if len(revenue_by_hotel) > 1:
+        # Lowest occupancy hotel
+        needs_attention = min(revenue_by_hotel, key=lambda x: x["occupancy_rate"])
+
+    # 8. Recent bookings
     sorted_bookings = sorted(bookings, key=lambda x: x.created_at or datetime.utcnow(), reverse=True)[:10]
+    recent_bookings = []
     for b in sorted_bookings:
         h = next((hotel for hotel in hotels if hotel.id == b.hotel_id), None)
+        guest_name = "N/A"
+        if b.guest_id:
+            g = await session.get(Guest, b.guest_id)
+            if g:
+                guest_name = f"{g.first_name} {g.last_name}".strip()
         recent_bookings.append({
             "id": b.id,
             "hotel_name": h.name if h else "Unknown Hotel",
-            "guest_name": b.guest_name or "N/A",
+            "hotel_id": b.hotel_id,
+            "guest_name": guest_name,
             "check_in": b.check_in.isoformat() if hasattr(b.check_in, "isoformat") else str(b.check_in),
             "check_out": b.check_out.isoformat() if hasattr(b.check_out, "isoformat") else str(b.check_out),
             "total_amount": b.total_amount or 0.0,
-            "status": b.status
+            "status": b.status,
         })
 
     return {
+        "period": period,
         "total_properties": len(hotels),
         "total_revenue": total_revenue,
-        "average_occupancy": round(avg_occupancy, 1),
+        "average_occupancy": avg_occupancy,
         "total_bookings": total_bookings,
+        "total_guests": total_guests,
+        "revenue_change_pct": _pct_change(total_revenue, prev_revenue) if period != "all" else 0,
+        "bookings_change_pct": _pct_change(total_bookings, len(prev_bookings)) if period != "all" else 0,
         "revenue_by_hotel": revenue_by_hotel,
-        "recent_bookings": recent_bookings
+        "recent_bookings": recent_bookings,
+        "top_performer": top_performer,
+        "needs_attention": needs_attention,
+    }
+
+
+# ── Chain-Wide Guest Insights ──────────────────────────────────────────────────
+
+@router.get("/guests", response_model=Dict[str, Any])
+async def get_chain_guests(
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """
+    Returns chain-wide guest insights: total guests, repeat guests (stayed at multiple
+    properties), top guests by spend, and cross-property booking patterns.
+    """
+    chain_id = current_user.chain_id
+
+    hotels = (await session.execute(
+        select(Hotel.id).where(Hotel.chain_id == chain_id, Hotel.is_active == True)
+    )).scalars().all()
+
+    if not hotels:
+        return {"total_guests": 0, "cross_property_guests": 0, "top_guests": []}
+
+    bookings = (await session.execute(
+        select(Booking).where(
+            Booking.hotel_id.in_(hotels),
+            Booking.status != BookingStatus.CANCELLED,
+        )
+    )).scalars().all()
+
+    # Aggregate per guest_id
+    guest_stats: Dict[str, Dict[str, Any]] = {}
+    for b in bookings:
+        if not b.guest_id:
+            continue
+        s = guest_stats.setdefault(b.guest_id, {
+            "guest_id": b.guest_id,
+            "total_bookings": 0,
+            "total_spend": 0.0,
+            "hotels_visited": set(),
+            "last_booking": None,
+        })
+        s["total_bookings"] += 1
+        s["total_spend"] += b.total_amount or 0
+        s["hotels_visited"].add(b.hotel_id)
+        if not s["last_booking"] or (b.created_at and b.created_at > s["last_booking"]):
+            s["last_booking"] = b.created_at
+
+    # Enrich with guest names (top 10 only — keep query light)
+    sorted_guests = sorted(guest_stats.values(), key=lambda x: x["total_spend"], reverse=True)
+    top_10 = sorted_guests[:10]
+    for g in top_10:
+        guest = await session.get(Guest, g["guest_id"])
+        g["name"] = f"{guest.first_name} {guest.last_name}".strip() if guest else "Unknown"
+        g["email"] = guest.email if guest else ""
+        g["hotels_count"] = len(g["hotels_visited"])
+        g["hotels_visited"] = list(g["hotels_visited"])
+        g["last_booking"] = g["last_booking"].isoformat() if g["last_booking"] else None
+
+    cross_property = sum(1 for g in guest_stats.values() if len(g["hotels_visited"]) > 1)
+
+    return {
+        "total_guests": len(guest_stats),
+        "cross_property_guests": cross_property,
+        "cross_property_pct": round((cross_property / len(guest_stats) * 100), 1) if guest_stats else 0,
+        "top_guests": top_10,
     }
