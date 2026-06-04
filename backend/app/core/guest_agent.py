@@ -88,6 +88,7 @@ Ask for ONLY:
 1. First name + Last name
 2. Mobile number
 Then call `prepare_booking` immediately. Do NOT ask for email (optional).
+Always set `inquiry_summary` to a single sentence describing the guest's stay, e.g. "Couple seeking a romantic getaway for 2 nights in June" or "Family of 4 looking for a deluxe room with pool view".
 
 ━━━━━━━━━━━━━━━━━━
 HARD RULES
@@ -442,7 +443,7 @@ async def create_guest_agent_graph(
             check_out=check_out,
             num_adults=adults_int,
             num_children=children_int,
-            ai_conversation_summary=inquiry_summary or f"Interested in {room['name']}",
+            ai_conversation_summary=inquiry_summary or f"Enquired about {room['name']} for {adults_int} adult(s), {check_in} → {check_out}",
         )
         session.add(lead)
         await session.commit()

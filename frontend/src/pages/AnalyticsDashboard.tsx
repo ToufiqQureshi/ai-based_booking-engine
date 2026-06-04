@@ -195,7 +195,7 @@ export const AnalyticsDashboard: React.FC = () => {
                  e.event === 'search' ? '🔍 Searching availability' :
                  e.event === 'room_view' ? '👁 Viewing room details' : '📄 New page visit',
         timestamp: new Date(e.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-        amount: e.metadata?.total_amount,
+        amount: e.metadata ? (() => { try { return JSON.parse(e.metadata).total_amount; } catch { return undefined; } })() : undefined,
       })));
     } catch (err) {
       console.error('Live feed poll failed', err);
@@ -767,27 +767,36 @@ export const AnalyticsDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Top Guest Inquiries */}
+              {/* Most Enquired Rooms */}
               <SectionCard
-                title="Top Guest Inquiries"
-                subtitle="What guests ask the AI most often"
-                icon={<MessageCircle className="w-4 h-4" />}
+                title="Most Enquired Rooms"
+                subtitle="Which rooms guests ask the AI about most"
+                icon={<Bed className="w-4 h-4" />}
                 className="lg:col-span-2"
               >
                 {data.popular_questions && data.popular_questions.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {data.popular_questions.map((q, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 px-3 py-2 bg-muted border border-border rounded-xl hover:bg-indigo-50 hover:border-indigo-200 dark:hover:bg-indigo-900/20 transition-colors cursor-default"
-                      >
-                        <span className="text-xs font-bold text-foreground">{q.text}</span>
-                        <span className="text-[10px] font-black bg-card border border-border text-muted-foreground px-1.5 py-0.5 rounded-lg shadow-sm">{q.value}</span>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {data.popular_questions.map((q, idx) => {
+                      const max = data.popular_questions?.[0]?.value || 1;
+                      const pct = Math.round((q.value / max) * 100);
+                      return (
+                        <div key={idx} className="flex items-center gap-3">
+                          <span className="text-xs font-black text-slate-300 w-4 shrink-0">#{idx + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-xs font-bold text-foreground truncate pr-2">{q.text}</span>
+                              <span className="text-xs font-black text-indigo-600 shrink-0">{q.value} leads</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-1.5">
+                              <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <EmptyState message="AI hasn't collected enough inquiries yet to show patterns." />
+                  <EmptyState message="No AI leads yet. Enquiries appear here when guests chat via AI Concierge." />
                 )}
               </SectionCard>
             </div>

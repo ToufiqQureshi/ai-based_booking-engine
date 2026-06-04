@@ -92,6 +92,7 @@ const sourceLabels: Record<string, { label: string; icon: JSX.Element }> = {
   whatsapp:     { label: 'WhatsApp',      icon: <MessageSquare className="h-3 w-3" /> },
   manual:       { label: 'Manual',        icon: <Plus className="h-3 w-3" /> },
   direct:       { label: 'Direct',        icon: <Globe className="h-3 w-3" /> },
+  ai_agent:     { label: 'AI Agent',      icon: <MessageSquare className="h-3 w-3" /> },
 };
 
 // ─── CSV Export Helper ────────────────────────────────────────────────────────
@@ -535,8 +536,15 @@ export function BookingsPage() {
                             <TableCell className="text-sm">
                               {lead.guest_email || <span className="text-muted-foreground">—</span>}
                             </TableCell>
-                            <TableCell className="text-sm">
-                              {lead.room_type_preference || <span className="text-muted-foreground">Not specified</span>}
+                            <TableCell className="text-sm max-w-[160px]">
+                              {lead.room_type_preference ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="block truncate cursor-default">{lead.room_type_preference}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs text-xs">{lead.room_type_preference}</TooltipContent>
+                                </Tooltip>
+                              ) : <span className="text-muted-foreground">Not specified</span>}
                             </TableCell>
                             <TableCell className="text-sm whitespace-nowrap">
                               {lead.check_in && lead.check_out
