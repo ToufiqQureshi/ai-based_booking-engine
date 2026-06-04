@@ -210,3 +210,50 @@ async def test_booking_stores_guest_email(
     res = await auth_client.post("/api/v1/bookings", json=payload)
     assert res.status_code == 201
     assert res.json()["guest"]["email"] == "unique_guest@test.com"
+
+
+# ---------------------------------------------------------------------------
+# Booking source attribution (regression guard for the source-chain fix)
+# ---------------------------------------------------------------------------
+
+async def test_create_booking_persists_source(
+    auth_client: AsyncClient, seeded_room, seeded_rate_plan
+):
+    """A source sent by the client must be stored, not silently dropped."""
+    payload = _booking_payload(seeded_room.id, seeded_rate_plan.id)
+    payload["source"] = "phone"
+    res = await auth_client.post("/api/v1/bookings", json=payload)
+    assert res.status_code == 201
+    assert res.json()["source"] == "phone"
+
+
+async def test_create_booking_default_source_is_manual(
+    auth_client: AsyncClient, seeded_room, seeded_rate_plan
+):
+    """Omitting source falls back to 'manual' for hotelier-created bookings."""
+    payload = _booking_payload(seeded_room.id, seeded_rate_plan.id)
+    payload.pop("source", None)
+    res = await auth_client.post("/api/v1/bookings", json=payload)
+    assert res.status_code == 201
+    assert res.json()["source"] == "manual"
+
+
+async def test_bookings_source_filter(
+    auth_client: AsyncClient, seeded_room, seeded_rate_plan
+):
+    """GET /bookings?source=X returns only bookings from that source."""
+    payload = _booking_payload(seeded_room.id, seeded_rate_plan.id)
+    payload["source"] = "ai_agent"
+    create_res = await auth_client.post("/api/v1/bookings", json=payload)
+    assert create_res.status_code == 201
+    ai_booking_id = create_res.json()["id"]
+
+    # ai_agent filter must include it
+    matched = await auth_client.get("/api/v1/bookings?source=ai_agent")
+    assert matched.status_code == 200
+    assert ai_booking_id in [b["id"] for b in matched.json()]
+
+    # an unrelated source filter must exclude it
+    others = await auth_client.get("/api/v1/bookings?source=walk_in")
+    assert others.status_code == 200
+    assert ai_booking_id not in [b["id"] for b in others.json()]

@@ -430,6 +430,9 @@ async def create_guest_agent_graph(
                 "email": email,
                 "phone": phone,
             },
+            # Attribution marker — booking engine forwards this so the completed
+            # booking is tagged source=ai_agent (powers AI Performance analytics)
+            "source": "ai_agent",
         }
 
         from app.models.lead import Lead

@@ -26,11 +26,24 @@ class BookingStatus(str, Enum):
 
 
 class BookingSource(str, Enum):
-    """Booking sources"""
+    """Booking sources / acquisition channels — must stay in sync with the
+    frontend BOOKING_SOURCES list (CreateBookingDialog) and sourceLabels (Bookings page)."""
     DIRECT = "direct"
     BOOKING_ENGINE = "booking_engine"
     MANUAL = "manual"
     AI_AGENT = "ai_agent"
+    # Acquisition channels selectable when a hotelier records a booking manually
+    WALK_IN = "walk_in"
+    PHONE = "phone"
+    ONLINE = "online"
+    BOOKING_COM = "booking_com"
+    AGODA = "agoda"
+    AIRBNB = "airbnb"
+    GOIBIBO = "goibibo"
+    MAKEMYTRIP = "makemytrip"
+    TRAVEL_AGENT = "travel_agent"
+    CORPORATE = "corporate"
+    WHATSAPP = "whatsapp"
 
 
 class GuestBase(SQLModel):
@@ -137,6 +150,7 @@ class BookingCreate(SQLModel):
     addons: List[dict] = []
     special_requests: Optional[str] = None
     promo_code: Optional[str] = None
+    source: BookingSource = BookingSource.MANUAL
 
 
 class BookingRead(BookingBase):

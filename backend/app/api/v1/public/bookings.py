@@ -9,7 +9,7 @@ import logging
 from app.api.deps import DbSession
 from app.models.hotel import Hotel
 from app.models.room import RoomType, RoomTypeRead, RoomBlock
-from app.models.booking import Booking, BookingStatus, Guest
+from app.models.booking import Booking, BookingStatus, BookingSource, Guest
 from app.models.rates import RatePlan, RoomRate
 from app.models.promo import PromoCode
 from app.models.loyalty import LoyaltyProgram, GuestLoyalty
@@ -76,6 +76,8 @@ class PublicBookingCreate(BaseModel):
     special_requests: Optional[str] = None
     promo_code: Optional[str] = None
     payment_method: Optional[str] = None
+    # "ai_agent" when the guest arrived via an AI-concierge booking link, else booking_engine
+    source: Optional[str] = None
 
 class PublicBookingResponse(BaseModel):
     id: str
@@ -429,7 +431,8 @@ async def create_public_booking(
             tax_amount=tax_amount,
             discount_amount=discount_amount,
             tax_details=tax_details,
-            status=BookingStatus.PENDING
+            status=BookingStatus.PENDING,
+            source=BookingSource.AI_AGENT if booking_data.source == "ai_agent" else BookingSource.BOOKING_ENGINE,
         )
         session.add(booking)
         await session.commit()

@@ -15,7 +15,7 @@ from app.core.cache import cache_response, invalidate_cache
 from app.models.timeline import BookingTimeline
 from app.models.booking import (
     Booking, BookingCreate, BookingRead, BookingUpdate,
-    Guest, GuestCreate, GuestRead, BookingStatus,
+    Guest, GuestCreate, GuestRead, BookingStatus, BookingSource,
 )
 from app.models.room import RoomType
 from app.api.v1.availability import clear_availability_cache
@@ -53,17 +53,21 @@ async def get_bookings(
     current_user: CurrentUser,
     session: DbSession,
     status_filter: Optional[BookingStatus] = Query(None, alias="status"),
+    source_filter: Optional[BookingSource] = Query(None, alias="source"),
     limit: int = Query(50, le=100),
     offset: int = Query(0, ge=0)
 ):
     """
     Hotel ki saari bookings get karo.
-    Optional status filter ke saath.
+    Optional status / source filter ke saath.
     """
     query = select(Booking).where(Booking.hotel_id == current_user.hotel_id)
-    
+
     if status_filter:
         query = query.where(Booking.status == status_filter)
+
+    if source_filter:
+        query = query.where(Booking.source == source_filter)
     
     query = query.offset(offset).limit(limit).order_by(Booking.created_at.desc())
     
@@ -285,7 +289,8 @@ async def create_booking(
         tax_amount=tax_amount,
         discount_amount=discount_amount,
         tax_details=tax_details,
-        status=BookingStatus.PENDING
+        status=BookingStatus.PENDING,
+        source=booking_data.source,
     )
     session.add(booking)
     await session.flush() # Get booking ID
