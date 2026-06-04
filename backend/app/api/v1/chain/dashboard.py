@@ -180,16 +180,20 @@ async def get_chain_analytics(
         # Lowest occupancy hotel
         needs_attention = min(revenue_by_hotel, key=lambda x: x["occupancy_rate"])
 
-    # 8. Recent bookings
+    # 8. Recent bookings — bulk-fetch guests in 1 query (fixes N+1)
     sorted_bookings = sorted(bookings, key=lambda x: x.created_at or datetime.utcnow(), reverse=True)[:10]
+    recent_guest_ids = list({b.guest_id for b in sorted_bookings if b.guest_id})
+    guest_map: Dict[str, Guest] = {}
+    if recent_guest_ids:
+        gres = await session.execute(select(Guest).where(Guest.id.in_(recent_guest_ids)))
+        guest_map = {g.id: g for g in gres.scalars().all()}
+    hotel_map = {h.id: h for h in hotels}
+
     recent_bookings = []
     for b in sorted_bookings:
-        h = next((hotel for hotel in hotels if hotel.id == b.hotel_id), None)
-        guest_name = "N/A"
-        if b.guest_id:
-            g = await session.get(Guest, b.guest_id)
-            if g:
-                guest_name = f"{g.first_name} {g.last_name}".strip()
+        h = hotel_map.get(b.hotel_id)
+        g = guest_map.get(b.guest_id or "")
+        guest_name = f"{g.first_name} {g.last_name}".strip() if g else "Guest"
         recent_bookings.append({
             "id": b.id,
             "hotel_name": h.name if h else "Unknown Hotel",
@@ -262,11 +266,17 @@ async def get_chain_guests(
         if not s["last_booking"] or (b.created_at and b.created_at > s["last_booking"]):
             s["last_booking"] = b.created_at
 
-    # Enrich with guest names (top 10 only — keep query light)
+    # Enrich top 10 guests with names — single bulk query (fixes N+1)
     sorted_guests = sorted(guest_stats.values(), key=lambda x: x["total_spend"], reverse=True)
     top_10 = sorted_guests[:10]
+    top_ids = [g["guest_id"] for g in top_10]
+    gmap = {}
+    if top_ids:
+        gres = await session.execute(select(Guest).where(Guest.id.in_(top_ids)))
+        gmap = {gu.id: gu for gu in gres.scalars().all()}
+
     for g in top_10:
-        guest = await session.get(Guest, g["guest_id"])
+        guest = gmap.get(g["guest_id"])
         g["name"] = f"{guest.first_name} {guest.last_name}".strip() if guest else "Unknown"
         g["email"] = guest.email if guest else ""
         g["hotels_count"] = len(g["hotels_visited"])

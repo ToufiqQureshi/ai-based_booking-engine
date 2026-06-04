@@ -36,9 +36,13 @@ def cache_response(
                     # If we can't find the user but need it, skip cache (safety first)
                     return await func(*args, **kwargs)
 
-            # Combine path and query params for the key
+            # Combine path + sorted query params → consistent cache key regardless of param order
             path = request.url.path if request else func.__name__
-            query = str(request.url.query) if request and request.url.query else ""
+            if request and request.url.query:
+                params = sorted(request.url.query.split("&"))
+                query = "&".join(params)
+            else:
+                query = ""
 
             cache_key = f"{key_prefix}{tenant_id}:{path}:{query}"
 
