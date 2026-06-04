@@ -12,6 +12,7 @@ from app.models.room import RoomType, RoomTypeRead, RoomBlock
 from app.models.booking import Booking, BookingStatus, Guest
 from app.models.rates import RatePlan, RoomRate
 from app.models.promo import PromoCode
+from app.models.loyalty import LoyaltyProgram, GuestLoyalty
 from app.core.time import utcnow
 from app.core.redis_client import redis_client
 from app.services.email_service import get_email_service
@@ -521,76 +522,147 @@ class LoyaltyCheckResponse(BaseModel):
     message: str
     coupon_code: Optional[str] = None
     discount_text: Optional[str] = None
+    # milestone popup data
+    show_milestone_popup: bool = False
+    milestone_popup_title: Optional[str] = None
+    milestone_popup_message: Optional[str] = None
+    bookings_completed: int = 0
+    bookings_to_reward: int = 0
+    reward_description: Optional[str] = None
+
 
 @router.post("/loyalty-check", response_model=LoyaltyCheckResponse)
-async def check_guest_loyalty(
-    data: LoyaltyCheckRequest,
-    session: DbSession
-):
+async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
     """
-    Checks if the guest has booked at this hotel before.
-    If yes, returns a special AI-powered loyalty discount.
+    Checks guest loyalty status against the hotel's configured loyalty program.
+    Returns reward coupon if milestone reached, or milestone nudge popup if close.
     """
     try:
-        # 1. Check if guest exists for this hotel
-        guest_query = select(Guest).where(
-            Guest.email == data.email,
-            Guest.hotel_id == data.hotel_id
+        # 1. Fetch hotel's loyalty program config
+        prog_result = await session.execute(
+            select(LoyaltyProgram).where(
+                LoyaltyProgram.hotel_id == data.hotel_id,
+                LoyaltyProgram.is_active == True,
+            )
         )
-        result = await session.execute(guest_query)
-        guest = result.scalar_one_or_none()
-        
-        if not guest:
+        program = prog_result.scalar_one_or_none()
+
+        # 2. Find guest
+        guest_result = await session.execute(
+            select(Guest).where(
+                Guest.email == data.email,
+                Guest.hotel_id == data.hotel_id,
+            )
+        )
+        guest = guest_result.scalar_one_or_none()
+
+        # 3. Count completed bookings
+        completed_count = 0
+        first_name = "Guest"
+        if guest:
+            first_name = guest.first_name or "Guest"
+            b_result = await session.execute(
+                select(Booking).where(
+                    Booking.guest_id == guest.id,
+                    or_(
+                        Booking.status == BookingStatus.CONFIRMED,
+                        Booking.status == BookingStatus.CHECKED_OUT,
+                    ),
+                )
+            )
+            completed_count = len(b_result.scalars().all())
+
+        # No program configured — fall back to simple repeat-guest check
+        if not program:
+            if completed_count > 0:
+                return LoyaltyCheckResponse(
+                    is_repeat_guest=True,
+                    message=f"Welcome back, {first_name}! We're delighted to have you again.",
+                    bookings_completed=completed_count,
+                )
             return LoyaltyCheckResponse(
                 is_repeat_guest=False,
-                message="Welcome! We're excited to have you here."
-            )
-        
-        # 2. Check booking count (confirmed or checked out)
-        booking_query = select(Booking).where(
-            Booking.guest_id == guest.id,
-            or_(Booking.status == BookingStatus.CONFIRMED, Booking.status == BookingStatus.CHECKED_OUT)
-        )
-        b_result = await session.execute(booking_query)
-        bookings = b_result.scalars().all()
-        
-        if len(bookings) == 0:
-             return LoyaltyCheckResponse(
-                is_repeat_guest=False,
-                message="Welcome back! We hope to see you stay with us soon."
+                message="Welcome! We're excited to have you here.",
             )
 
-        # 3. Repeat guest found!
-        # Try to find a 'LOYALTY' promo or use a default one
-        promo_query = select(PromoCode).where(
-            PromoCode.hotel_id == data.hotel_id,
-            PromoCode.code.like("%LOYALTY%"),
-            PromoCode.is_active == True
-        )
-        p_result = await session.execute(promo_query)
-        promo = p_result.scalar_one_or_none()
-        
-        # Default loyalty info if no specific promo found
-        coupon_code = promo.code if promo else "LOYALTY10"
-        discount_text = "10% Loyalty Discount"
-        
-        if promo:
-            if promo.discount_type == "percentage":
-                discount_text = f"{int(promo.discount_value)}% Loyalty Discount"
+        milestone = program.milestone_bookings
+        bookings_since_last_reward = completed_count % milestone if milestone > 0 else completed_count
+        remaining = milestone - bookings_since_last_reward
+
+        # 4. Guest has reached or passed a milestone — reward!
+        if completed_count > 0 and bookings_since_last_reward == 0:
+            # Generate/find reward coupon
+            promo_result = await session.execute(
+                select(PromoCode).where(
+                    PromoCode.hotel_id == data.hotel_id,
+                    PromoCode.code.like("%LOYALTY%"),
+                    PromoCode.is_active == True,
+                )
+            )
+            promo = promo_result.scalar_one_or_none()
+            coupon_code = promo.code if promo else "LOYALTY10"
+            if promo:
+                if promo.discount_type == "percentage":
+                    discount_text = f"{int(promo.discount_value)}% Loyalty Discount"
+                else:
+                    discount_text = f"₹{int(promo.discount_value)} Loyalty Reward"
             else:
-                discount_text = f"₹{int(promo.discount_value)} Loyalty Reward"
+                val = program.reward_value
+                discount_text = (
+                    f"{int(val)}% off your stay"
+                    if program.reward_type == "percentage"
+                    else f"₹{int(val)} off your stay"
+                )
+            return LoyaltyCheckResponse(
+                is_repeat_guest=True,
+                message=f"Welcome back, {first_name}! You've unlocked your loyalty reward. Enjoy your stay!",
+                coupon_code=coupon_code,
+                discount_text=discount_text,
+                bookings_completed=completed_count,
+                bookings_to_reward=0,
+                reward_description=program.reward_description,
+            )
+
+        # 5. Guest is close (within 1 booking of milestone) — show nudge popup
+        if completed_count > 0 and remaining == 1:
+            popup_msg = program.popup_message.replace("{remaining}", str(remaining))
+            val = program.reward_value
+            reward_desc = program.reward_description or (
+                f"{int(val)}% off"
+                if program.reward_type == "percentage"
+                else f"₹{int(val)} off"
+            )
+            return LoyaltyCheckResponse(
+                is_repeat_guest=True,
+                message=f"Welcome back, {first_name}!",
+                show_milestone_popup=True,
+                milestone_popup_title=program.popup_title,
+                milestone_popup_message=popup_msg,
+                bookings_completed=completed_count,
+                bookings_to_reward=remaining,
+                reward_description=reward_desc,
+            )
+
+        # 6. Repeat guest, no milestone action needed
+        if completed_count > 0:
+            return LoyaltyCheckResponse(
+                is_repeat_guest=True,
+                message=f"Welcome back, {first_name}! Great to see you again.",
+                bookings_completed=completed_count,
+                bookings_to_reward=remaining,
+            )
 
         return LoyaltyCheckResponse(
-            is_repeat_guest=True,
-            message=f"Welcome back, {guest.first_name}! Our AI system recognized your previous stay. As a valued guest, we've unlocked a special loyalty discount for you.",
-            coupon_code=coupon_code,
-            discount_text=discount_text
+            is_repeat_guest=False,
+            message="Welcome! We're excited to have you here.",
+            bookings_to_reward=milestone,
         )
+
     except Exception as e:
         logger.error(f"Loyalty check error: {str(e)}")
         return LoyaltyCheckResponse(
             is_repeat_guest=False,
-            message="Welcome! Enjoy your booking experience."
+            message="Welcome! Enjoy your booking experience.",
         )
 
 

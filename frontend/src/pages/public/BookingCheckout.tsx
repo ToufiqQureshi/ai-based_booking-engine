@@ -14,7 +14,7 @@ import { AddOn } from '@/types/api';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { BookingStepper } from '@/components/public/BookingStepper';
-import { LoyaltyRewardPopup } from '@/components/public/LoyaltyRewardPopup';
+import { LoyaltyRewardPopup, LoyaltyMilestonePopup } from '@/components/public/LoyaltyRewardPopup';
 import { SocialProofWidget } from '@/components/public/SocialProofWidget';
 import { BookingCheckoutContext } from './BookingCheckoutContext';
 import { CheckoutGuestSection } from '@/components/public/checkout/CheckoutGuestSection';
@@ -96,18 +96,25 @@ function BookingCheckoutInner() {
     const [promoMessage, setPromoMessage] = useState('');
     const [isValidating, setIsValidating] = useState(false);
 
-    // Loyalty AI state
+    // Loyalty state — reward popup (coupon unlocked)
     const [loyaltyData, setLoyaltyData] = useState<{
         isOpen: boolean;
         message: string;
         couponCode: string;
         discountText: string;
-    }>({
-        isOpen: false,
-        message: '',
-        couponCode: '',
-        discountText: ''
-    });
+    }>({ isOpen: false, message: '', couponCode: '', discountText: '' });
+
+    // Loyalty state — milestone nudge popup
+    const [milestoneData, setMilestoneData] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        rewardDescription: string;
+        bookingsCompleted: number;
+        bookingsToReward: number;
+        milestoneTotal: number;
+    }>({ isOpen: false, title: '', message: '', rewardDescription: '', bookingsCompleted: 0, bookingsToReward: 0, milestoneTotal: 5 });
+
     const [hasCheckedLoyalty, setHasCheckedLoyalty] = useState(false);
     const [allAddons, setAllAddons] = useState<AddOn[]>([]);
 
@@ -219,27 +226,38 @@ function BookingCheckoutInner() {
     // Check loyalty when email is entered
     const handleEmailBlur = async () => {
         if (!emailValue || !state || hasCheckedLoyalty) return;
-        
+
         try {
-            // Get hotel ID from first room
             const hotelId = state.rooms[0]?.hotel_id || hotelSlug;
-            
             const response = await apiClient.post<any>('/public/loyalty-check', {
                 email: emailValue,
-                hotel_id: hotelId
+                hotel_id: hotelId,
             });
 
-            if (response.is_repeat_guest) {
+            setHasCheckedLoyalty(true);
+
+            if (response.coupon_code) {
+                // Reward unlocked
                 setLoyaltyData({
                     isOpen: true,
                     message: response.message,
                     couponCode: response.coupon_code,
-                    discountText: response.discount_text
+                    discountText: response.discount_text || '',
                 });
-                setHasCheckedLoyalty(true);
+            } else if (response.show_milestone_popup) {
+                // Nudge: almost at milestone
+                setMilestoneData({
+                    isOpen: true,
+                    title: response.milestone_popup_title || "You're Almost There!",
+                    message: response.milestone_popup_message || '',
+                    rewardDescription: response.reward_description || '',
+                    bookingsCompleted: response.bookings_completed || 0,
+                    bookingsToReward: response.bookings_to_reward || 1,
+                    milestoneTotal: (response.bookings_completed || 0) + (response.bookings_to_reward || 1),
+                });
             }
         } catch (error) {
-            console.error("Loyalty check failed", error);
+            console.error('Loyalty check failed', error);
         }
     };
 
@@ -796,14 +814,27 @@ function BookingCheckoutInner() {
                 </div>
             </div>
 
-            {/* AI Loyalty Reward Popup */}
-            <LoyaltyRewardPopup 
+            {/* Loyalty Reward Popup — coupon unlocked */}
+            <LoyaltyRewardPopup
                 isOpen={loyaltyData.isOpen}
                 onClose={() => setLoyaltyData(prev => ({ ...prev, isOpen: false }))}
                 message={loyaltyData.message}
                 couponCode={loyaltyData.couponCode}
                 discountText={loyaltyData.discountText}
                 onApply={applyLoyaltyCoupon}
+            />
+
+            {/* Loyalty Milestone Nudge Popup — almost there */}
+            <LoyaltyMilestonePopup
+                isOpen={milestoneData.isOpen}
+                onClose={() => setMilestoneData(prev => ({ ...prev, isOpen: false }))}
+                title={milestoneData.title}
+                message={milestoneData.message}
+                rewardDescription={milestoneData.rewardDescription}
+                bookingsCompleted={milestoneData.bookingsCompleted}
+                bookingsToReward={milestoneData.bookingsToReward}
+                milestoneTotal={milestoneData.milestoneTotal}
+                onContinue={() => setMilestoneData(prev => ({ ...prev, isOpen: false }))}
             />
         </div>
         </BookingCheckoutContext.Provider>
