@@ -1,5 +1,5 @@
 ﻿// Rooms Page - Management with Clean & Professional UI
-import { Plus, Search, Grid, List, Bed, Package } from 'lucide-react';
+import { Plus, Search, Grid, List, Bed, Package, Loader2 } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,8 @@ export function RoomsPage() {
   const handleTabChange = (tab: 'room' | 'package') => {
     setActiveTab(tab);
     setSearchQuery('');
+    // Packages don't have a list view — force grid
+    if (tab === 'package') setViewMode('grid');
   };
 
   const handleCreateOpen = () => {
@@ -179,6 +181,8 @@ export function RoomsPage() {
                 size="icon"
                 className={cn("h-7 w-7 rounded-md", viewMode === 'list' && "bg-muted text-indigo-600")}
                 onClick={() => setViewMode('list')}
+                disabled={activeTab === 'package'}
+                title={activeTab === 'package' ? 'List view not available for packages' : undefined}
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -189,22 +193,39 @@ export function RoomsPage() {
 
       {/* Content Area */}
       {isLoading ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-border overflow-hidden">
-              <Skeleton className="aspect-[16/10] w-full rounded-none" />
-              <div className="p-4 space-y-3">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-2/3" />
-                <div className="pt-2 flex justify-between items-center border-t border-border">
-                  <Skeleton className="h-7 w-20" />
-                  <Skeleton className="h-8 w-14 rounded-md" />
+        viewMode === 'list' ? (
+          <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-6 p-4">
+                <Skeleton className="h-14 w-20 rounded-lg shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-64" />
+                </div>
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="h-8 w-8 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border overflow-hidden">
+                <Skeleton className="aspect-[16/10] w-full rounded-none" />
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <div className="pt-2 flex justify-between items-center border-t border-border">
+                    <Skeleton className="h-7 w-20" />
+                    <Skeleton className="h-8 w-14 rounded-md" />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       ) : displayItems.length === 0 ? (
         <div className="text-center py-20 bg-muted/30 rounded-2xl border-2 border-dashed border-border">
           <Bed className="h-12 w-12 text-slate-300 mx-auto mb-4" />
@@ -265,11 +286,7 @@ export function RoomsPage() {
                     formatCurrency={formatCurrency}
                   />
                 ))
-              ) : (
-                <div className="p-10 text-center text-muted-foreground italic text-sm">
-                  List view for packages coming soon. Please use grid view.
-                </div>
-              )}
+              ) : null}
             </div>
           )}
         </>
