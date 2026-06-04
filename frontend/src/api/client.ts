@@ -16,11 +16,17 @@ import { ApiError, AuthTokens } from '@/types/api';
 // Dynamic API URL selection
 const getBaseUrl = () => {
   const hostname = window.location.hostname;
+  if (hostname.includes('staging')) {
+    return 'https://api-staging.staybooker.ai/api/v1';
+  }
   if (hostname.includes('staybooker.ai')) {
     return 'https://api.staybooker.ai/api/v1';
   }
   
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.VITE_API_URL) {
+    const url = import.meta.env.VITE_API_URL;
+    return url.endsWith('/api/v1') ? url : `${url.replace(/\/$/, '')}/api/v1`;
+  }
   
   if (hostname.includes('railway.app')) {
     return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';

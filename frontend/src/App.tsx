@@ -34,6 +34,7 @@ const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
 const SuperAdminDashboard = lazy(() => import("@/pages/superadmin/SuperAdminDashboard"));
 const GoogleReviewsPage = lazy(() => import("@/pages/marketing/GoogleReviews"));
+const LoyaltyProgramPage = lazy(() => import("@/pages/marketing/LoyaltyProgram"));
 const ChainDashboard = lazy(() => import("@/pages/chain/ChainDashboard"));
 
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -122,6 +123,7 @@ const App = () => {
                       <Route path="/integration" element={<IntegrationPage />} />
                       <Route path="/admin" element={<AdminDashboard />} />
                       <Route path="/reviews" element={<GoogleReviewsPage />} />
+                      <Route path="/loyalty" element={<LoyaltyProgramPage />} />
                       <Route path="/agent" element={<AgentPage />} />
                       <Route path="/settings/profile" element={<ProfilePage />} />
                       <Route path="/chain/dashboard" element={<ChainDashboard />} />

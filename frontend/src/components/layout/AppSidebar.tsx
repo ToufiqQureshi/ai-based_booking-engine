@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Bed, IndianRupee, Calendar, BookOpen,
   Users, CreditCard, Settings, LogOut, Building2, Plug,
-  Sparkles, Link2, Coffee, TrendingUp, Bot, LineChart, Percent, Star,
+  Sparkles, Link2, Coffee, TrendingUp, Bot, LineChart, Percent, Star, Gift,
 } from 'lucide-react';
 import { NavLink } from '@/components/layout/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +29,7 @@ const mainNavItems = [
   { title: 'Guests',          url: '/guests',           icon: Users },
   { title: 'Payments',        url: '/payments',         icon: CreditCard },
   { title: 'Experiences & Activities', url: '/addons',  icon: Sparkles },
+  { title: 'Loyalty Program', url: '/loyalty',           icon: Gift },
   { title: 'Google Reviews',  url: '/reviews',           icon: Star },
   { title: 'Channel Manager', url: '/channel-settings', icon: Link2 },
 ];
@@ -40,13 +41,13 @@ const settingsNavItems = [
 
 const DEFAULT_ROLE_PERMISSIONS = {
   OWNER: [
-    "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper", 
+    "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper",
     "/availability", "/bookings", "/taxes", "/guests", "/payments", "/addons",
-    "/reviews", "/channel-settings", "/integration", "/settings"
+    "/loyalty", "/reviews", "/channel-settings", "/integration", "/settings"
   ],
   MANAGER: [
     "/dashboard", "/analytics", "/rooms", "/rates", "/taxes",
-    "/availability", "/bookings", "/guests", "/payments", "/settings"
+    "/availability", "/bookings", "/guests", "/payments", "/loyalty", "/settings"
   ],
   STAFF: [
     "/availability", "/bookings", "/guests"
