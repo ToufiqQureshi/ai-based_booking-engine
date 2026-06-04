@@ -72,7 +72,7 @@ export function PackageCard({ pkg, onEdit, onDelete }: PackageCardProps) {
             <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider mb-0.5">Package Add-on</span>
             <div className="flex items-baseline gap-1">
                 <span className="text-lg font-bold text-blue-600">
-                    +{formatCurrency(pkg.price_adjustment)}
+                    +{formatCurrency(pkg.price_adjustment ?? 0)}
                 </span>
                 <span className="text-[10px] font-medium text-muted-foreground">/night</span>
             </div>
