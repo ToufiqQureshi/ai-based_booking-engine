@@ -92,6 +92,7 @@ const sourceLabels: Record<string, { label: string; icon: JSX.Element }> = {
   whatsapp:     { label: 'WhatsApp',      icon: <MessageSquare className="h-3 w-3" /> },
   manual:       { label: 'Manual',        icon: <Plus className="h-3 w-3" /> },
   direct:       { label: 'Direct',        icon: <Globe className="h-3 w-3" /> },
+  booking_engine: { label: 'Booking Engine', icon: <Globe className="h-3 w-3" /> },
   ai_agent:     { label: 'AI Agent',      icon: <MessageSquare className="h-3 w-3" /> },
 };
 
@@ -175,6 +176,27 @@ export function BookingsPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to cancel booking on server.' });
     } finally {
       setIsCancelling(null);
+    }
+  };
+
+  const [updatingLead, setUpdatingLead] = useState<string | null>(null);
+
+  const handleLeadStatusChange = async (leadId: string, newStatus: string) => {
+    setUpdatingLead(leadId);
+    const previousLeads = queryClient.getQueryData<LeadData[]>(['leads']);
+    // Optimistic update
+    queryClient.setQueryData<LeadData[]>(['leads'], (old) =>
+      old?.map((l) => (l.id === leadId ? { ...l, status: newStatus } : l))
+    );
+    try {
+      await apiClient.patch(`/leads/${leadId}?status=${encodeURIComponent(newStatus)}`);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast({ title: 'Lead Updated', description: `Marked as ${newStatus}.` });
+    } catch {
+      if (previousLeads) queryClient.setQueryData(['leads'], previousLeads);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update lead status.' });
+    } finally {
+      setUpdatingLead(null);
     }
   };
 
@@ -317,6 +339,9 @@ export function BookingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="ai_agent">🤖 AI Agent</SelectItem>
+                  <SelectItem value="direct">Direct</SelectItem>
+                  <SelectItem value="booking_engine">Booking Engine</SelectItem>
                   <SelectItem value="walk_in">Walk-in</SelectItem>
                   <SelectItem value="phone">Phone Call</SelectItem>
                   <SelectItem value="online">Hotel Website</SelectItem>
@@ -569,17 +594,30 @@ export function BookingsPage() {
                               {new Date(lead.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={
-                                  lead.status === 'new' ? 'border-blue-300 text-blue-700 bg-blue-50' :
-                                  lead.status === 'converted' ? 'border-green-300 text-green-700 bg-green-50' :
-                                  lead.status === 'lost' ? 'border-red-300 text-red-700 bg-red-50' :
-                                  'border-amber-300 text-amber-700 bg-amber-50'
-                                }
+                              <Select
+                                value={lead.status || 'new'}
+                                onValueChange={(v) => handleLeadStatusChange(lead.id, v)}
+                                disabled={updatingLead === lead.id}
                               >
-                                {lead.status || 'new'}
-                              </Badge>
+                                <SelectTrigger
+                                  className={`h-7 w-[130px] text-xs font-medium ${
+                                    lead.status === 'new' ? 'border-blue-300 text-blue-700 bg-blue-50' :
+                                    lead.status === 'converted' ? 'border-green-300 text-green-700 bg-green-50' :
+                                    lead.status === 'lost' ? 'border-red-300 text-red-700 bg-red-50' :
+                                    'border-amber-300 text-amber-700 bg-amber-50'
+                                  }`}
+                                >
+                                  {updatingLead === lead.id
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <SelectValue />}
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="new">New</SelectItem>
+                                  <SelectItem value="contacted">Contacted</SelectItem>
+                                  <SelectItem value="converted">Converted</SelectItem>
+                                  <SelectItem value="lost">Lost</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </TableCell>
                           </TableRow>
                         ))

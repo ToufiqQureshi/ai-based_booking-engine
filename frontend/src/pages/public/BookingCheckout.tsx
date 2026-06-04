@@ -56,6 +56,7 @@ interface BookingState {
     rooms: any[];
     totalRoomPrice: number;
     addons?: AddOn[];
+    source?: string; // 'ai_agent' when the checkout was launched from an AI-concierge booking link
 }
 interface CheckoutFormData {
     firstName: string;
@@ -327,6 +328,7 @@ function BookingCheckoutInner() {
                 promo_code: appliedPromo || undefined,
                 special_requests: data.specialRequests,
                 payment_method: paymentMethod === 'property' ? 'pay_at_property' : 'online',
+                source: state.source === 'ai_agent' ? 'ai_agent' : undefined,
                 idempotency_key: idempotencyKeyRef.current,
             };
 

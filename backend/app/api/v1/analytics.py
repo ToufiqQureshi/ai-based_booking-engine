@@ -11,7 +11,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import DbSession, CurrentUser
 from app.models.analytics import AnalyticsSession, AnalyticsEvent, SessionStartRequest, SessionPingRequest, EventTrackRequest
-from app.models.booking import Booking, BookingStatus
+from app.models.booking import Booking, BookingStatus, BookingSource
 from app.core.cache import cache_response
 from app.models.room import RoomType
 
@@ -231,7 +231,7 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         
         # 3. Basic Aggregations
         total_visitors = len(sessions)
-        total_conversions = len([b for b in bookings if b.status != 'cancelled'])
+        total_conversions = len([b for b in bookings if b.status != BookingStatus.CANCELLED])
         conversion_rate = round((total_conversions / total_visitors * 100), 2) if total_visitors > 0 else 0
         avg_time = int(sum(s.time_spent_seconds or 0 for s in sessions) / total_visitors) if total_visitors > 0 else 0
 
@@ -255,7 +255,7 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
             if ds in chart_map: chart_map[ds]["visitors"] += 1
         for b in bookings:
             ds = b.created_at.strftime("%d %b")
-            if b.status != 'cancelled':
+            if b.status != BookingStatus.CANCELLED:
                 if ds in chart_map: chart_map[ds]["revenue"] += float(b.total_amount or 0)
             else:
                 if ds in chart_map: chart_map[ds]["cancellations"] += 1
@@ -298,13 +298,22 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
                 heatmap_list.append({"weekday": wd, "hour": hr, "visitors": heatmap_counts.get(k, 0)})
 
         # 8. Financial Metrics
-        revenue_total = sum(float(b.total_amount or 0) for b in bookings if b.status != 'cancelled')
-        total_rooms_sold = sum(len(b.rooms or []) for b in bookings if b.status != 'cancelled')
-        total_rooms_available = total_inventory * days
-        
-        avg_daily_rate = round(revenue_total / total_rooms_sold, 2) if total_rooms_sold > 0 else 0
+        active_bookings = [b for b in bookings if b.status != BookingStatus.CANCELLED]
+        revenue_total = sum(float(b.total_amount or 0) for b in active_bookings)
+
+        # Room-nights = rooms × nights stayed (NOT just room count). This is what
+        # occupancy, ADR and RevPAR are defined against in hotel revenue management.
+        def _nights(b):
+            try:
+                return max(1, (b.check_out - b.check_in).days)
+            except Exception:
+                return 1
+        total_room_nights = sum(len(b.rooms or []) * _nights(b) for b in active_bookings)
+        total_rooms_available = total_inventory * days  # available room-nights over the period
+
+        avg_daily_rate = round(revenue_total / total_room_nights, 2) if total_room_nights > 0 else 0
         rev_par = round(revenue_total / total_rooms_available, 2) if total_rooms_available > 0 else 0
-        occupancy_rate = round((total_rooms_sold / total_rooms_available * 100), 2) if total_rooms_available > 0 else 0
+        occupancy_rate = round(min(100.0, (total_room_nights / total_rooms_available * 100)), 2) if total_rooms_available > 0 else 0
 
         # 9. AI Efficiency (Deep Integration with Lead table)
         from app.models.lead import Lead
@@ -318,7 +327,7 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         ai_engagement_count = len(ai_engaged_sessions)
         
         # AI Bookings: Source is ai_agent
-        ai_bookings_count = len([b for b in bookings if b.source == 'ai_agent'])
+        ai_bookings_count = len([b for b in bookings if b.source == BookingSource.AI_AGENT])
         
         # Resolution Rate: Conversions / Engagements
         res_rate = round((ai_bookings_count / ai_engagement_count * 100), 2) if ai_engagement_count > 0 else 0
@@ -371,7 +380,7 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
                     room_stats[e.room_type_id]["views"] += 1
         
         for b in bookings:
-            if b.status != 'cancelled':
+            if b.status != BookingStatus.CANCELLED:
                 for rm in b.rooms:
                     rt_id = rm.get("room_type_id")
                     if rt_id in room_stats:
@@ -400,7 +409,8 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         # 14. Booking Window Distribution
         window_buckets = {"0-3 days": 0, "4-7 days": 0, "8-14 days": 0, "15-30 days": 0, "30+ days": 0}
         for b in bookings:
-            days_diff = (b.check_in - b.created_at.date()).days
+            # Clamp to 0 — bookings can occasionally be created after check-in (back-dated/walk-in)
+            days_diff = max(0, (b.check_in - b.created_at.date()).days)
             if days_diff <= 3: window_buckets["0-3 days"] += 1
             elif days_diff <= 7: window_buckets["4-7 days"] += 1
             elif days_diff <= 14: window_buckets["8-14 days"] += 1
@@ -409,13 +419,15 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         booking_window_data = [{"window": k, "count": v} for k, v in window_buckets.items()]
 
         # 15. Occupancy Forecast
-        future_q = select(Booking).where(Booking.hotel_id == hotel_id, Booking.check_out >= datetime.utcnow().date(), Booking.status != "cancelled")
+        future_q = select(Booking).where(Booking.hotel_id == hotel_id, Booking.check_out >= datetime.utcnow().date(), Booking.status != BookingStatus.CANCELLED)
         future_bookings = (await session.execute(future_q)).scalars().all()
         forecast = []
         for i in range(7):
             d = (datetime.utcnow() + timedelta(days=i)).date()
             occupied = sum(len(b.rooms) for b in future_bookings if b.check_in <= d < b.check_out)
-            forecast.append({"date": d.strftime("%m/%d"), "occupancy": round((occupied / total_inventory * 100), 1)})
+            # Clamp at 100% — overbooking shouldn't render as an impossible >100% bar
+            occ_pct = round(min(100.0, (occupied / total_inventory * 100)), 1) if total_inventory > 0 else 0
+            forecast.append({"date": d.strftime("%m/%d"), "occupancy": occ_pct})
 
         # 16. Pickup Stats
         today = datetime.utcnow().date()
@@ -426,7 +438,7 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         # Compute ai_revenue (estimated revenue from AI-assisted bookings)
         ai_revenue = round(sum(
             float(b.total_amount or 0) for b in bookings
-            if b.status != 'cancelled' and b.source == 'ai_agent'
+            if b.status != BookingStatus.CANCELLED and b.source == BookingSource.AI_AGENT
         ), 2)
 
         return {

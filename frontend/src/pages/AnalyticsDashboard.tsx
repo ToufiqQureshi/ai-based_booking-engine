@@ -737,7 +737,7 @@ export const AnalyticsDashboard: React.FC = () => {
                   {/* Legend + note */}
                   <div className="flex items-center justify-between mt-4 gap-4 flex-wrap">
                     <p className="text-[10px] text-muted-foreground italic">
-                      Each row = total visitors across all {['Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays','Sundays'][0]}–Sundays in the last {days} days combined
+                      Each cell = total visitors for that weekday & hour, combined across the last {days} days
                     </p>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] text-muted-foreground font-medium">Low</span>
