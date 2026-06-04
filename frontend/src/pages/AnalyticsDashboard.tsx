@@ -22,7 +22,7 @@ interface AnalyticsData {
   total_conversions: number;
   conversion_rate: number;
   device_stats: { type: string; count: number }[];
-  chart_data: { date: string; visitors: number; revenue?: number; occupancy?: number }[];
+  chart_data: { date: string; visitors: number; revenue?: number; occupancy?: number; cancellations?: number }[];
   funnel_data: { stage: string; count: number }[];
   revenue_total: number;
   avg_daily_rate: number;
@@ -692,43 +692,60 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
 
             {/* Traffic Heatmap */}
-            <SectionCard title="Traffic Heatmap" subtitle="Busiest hours to schedule promotions and campaigns" icon={<Clock className="w-4 h-4" />}>
+            <SectionCard
+              title="Traffic Heatmap"
+              subtitle={`Aggregated visitor traffic by weekday & hour — last ${days} days (hover a cell for exact count)`}
+              icon={<Clock className="w-4 h-4" />}
+            >
               <div className="overflow-x-auto">
                 <div className="min-w-[700px]">
+                  {/* Hour labels with AM/PM markers */}
                   <div style={{ display: 'grid', gridTemplateColumns: '48px repeat(24, minmax(0, 1fr))', gap: '3px' }}>
-                    <div />
+                    <div className="text-[9px] font-bold text-muted-foreground flex items-end pb-1">Day</div>
                     {Array.from({ length: 24 }).map((_, h) => (
-                      <div key={h} className="text-[9px] text-center font-bold text-muted-foreground pb-1">{h}</div>
+                      <div key={h} className="text-[9px] text-center font-bold text-muted-foreground pb-1">
+                        {h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`}
+                      </div>
                     ))}
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, dIdx) => (
-                      <React.Fragment key={day}>
-                        <div className="text-[10px] font-bold text-muted-foreground flex items-center">{day}</div>
-                        {Array.from({ length: 24 }).map((_, hIdx) => {
-                          const cell = data.traffic_heatmap?.find(i => i.weekday === dIdx && i.hour === hIdx);
-                          const count = cell?.visitors || 0;
-                          const max = Math.max(...(data.traffic_heatmap?.map(c => c.visitors) || [1]), 1);
-                          const intensity = count > 0 ? 0.15 + (count / max) * 0.85 : 0;
-                          return (
-                            <div
-                              key={hIdx}
-                              title={`${day} ${hIdx}:00 — ${count} visitors`}
-                              style={{
-                                backgroundColor: count > 0 ? `rgba(99, 102, 241, ${intensity})` : '#f8fafc',
-                                border: '1px solid #f1f5f9'
-                              }}
-                              className="h-7 rounded-md cursor-pointer hover:scale-110 hover:shadow-md transition-transform"
-                            />
-                          );
-                        })}
-                      </React.Fragment>
-                    ))}
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, dIdx) => {
+                      const maxVal = Math.max(...(data.traffic_heatmap?.map(c => c.visitors) || [1]), 1);
+                      return (
+                        <React.Fragment key={day}>
+                          <div className="text-[10px] font-bold text-muted-foreground flex items-center">{day}</div>
+                          {Array.from({ length: 24 }).map((_, hIdx) => {
+                            const cell = data.traffic_heatmap?.find(i => i.weekday === dIdx && i.hour === hIdx);
+                            const count = cell?.visitors || 0;
+                            const intensity = count > 0 ? 0.15 + (count / maxVal) * 0.85 : 0;
+                            const hourLabel = hIdx === 0 ? '12 AM' : hIdx < 12 ? `${hIdx} AM` : hIdx === 12 ? '12 PM' : `${hIdx - 12} PM`;
+                            return (
+                              <div
+                                key={hIdx}
+                                title={`${day} ${hourLabel} — ${count} visitor${count !== 1 ? 's' : ''}`}
+                                style={{
+                                  backgroundColor: count > 0 ? `rgba(99, 102, 241, ${intensity})` : 'hsl(var(--muted))',
+                                  border: '1px solid hsl(var(--border))'
+                                }}
+                                className="h-7 rounded-md cursor-pointer hover:scale-110 hover:shadow-md transition-transform"
+                              />
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
-                  <div className="flex items-center gap-2 mt-4 justify-end">
-                    <span className="text-[10px] text-muted-foreground font-medium">Low</span>
-                    {[0.15, 0.35, 0.55, 0.75, 1].map(v => (
-                      <div key={v} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(99, 102, 241, ${v})` }} />
-                    ))}
-                    <span className="text-[10px] text-muted-foreground font-medium">High</span>
+
+                  {/* Legend + note */}
+                  <div className="flex items-center justify-between mt-4 gap-4 flex-wrap">
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Each row = total visitors across all {['Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays','Sundays'][0]}–Sundays in the last {days} days combined
+                    </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] text-muted-foreground font-medium">Low</span>
+                      {[0.15, 0.35, 0.55, 0.75, 1].map(v => (
+                        <div key={v} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(99, 102, 241, ${v})` }} />
+                      ))}
+                      <span className="text-[10px] text-muted-foreground font-medium">High</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -805,73 +822,113 @@ export const AnalyticsDashboard: React.FC = () => {
           {/* ── CANCELLATIONS TAB ────────────────────────────────────── */}
           <TabsContent value="cancellations" className="space-y-4 focus:outline-none">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <KPICard 
-                label="Total Cancellations" 
-                value={`${data.cancellations_count || 0}`} 
-                sub="Cancelled reservations count" 
-                icon={<XCircle className="w-4 h-4 text-red-500" />} 
+              <KPICard
+                label="Total Cancellations"
+                value={`${data.cancellations_count || 0}`}
+                sub="Cancelled reservations"
+                icon={<XCircle className="w-4 h-4 text-red-500" />}
                 accent="text-red-600"
               />
-              <KPICard 
-                label="Cancellation Rate" 
-                value={`${data.cancellation_rate || 0}%`} 
-                sub="Percent of total bookings" 
-                icon={<AlertCircle className="w-4 h-4 text-amber-500" />} 
-                accent={data.cancellation_rate && data.cancellation_rate > 15 ? 'text-red-500' : 'text-amber-500'} 
+              <KPICard
+                label="Cancellation Rate"
+                value={`${data.cancellation_rate || 0}%`}
+                sub="Of total bookings this period"
+                icon={<AlertCircle className="w-4 h-4 text-amber-500" />}
+                accent={data.cancellation_rate && data.cancellation_rate > 15 ? 'text-red-500' : 'text-amber-500'}
               />
-              <KPICard 
-                label="Lost Revenue" 
-                value={`₹${(data.lost_revenue || 0).toLocaleString('en-IN')}`} 
-                sub="Revenue from cancelled stays" 
-                icon={<TrendingDown className="w-4 h-4 text-red-500" />} 
+              <KPICard
+                label="Lost Revenue"
+                value={`₹${(data.lost_revenue || 0).toLocaleString('en-IN')}`}
+                sub="From cancelled stays"
+                icon={<TrendingDown className="w-4 h-4 text-red-500" />}
                 accent="text-red-600"
               />
-              <KPICard 
-                label="Cancellation Fees" 
-                value={`₹${(data.cancellation_fees_collected || 0).toLocaleString('en-IN')}`} 
-                sub="Retained late cancellation fees" 
-                icon={<DollarSign className="w-4 h-4 text-emerald-500" />} 
+              <KPICard
+                label="Cancellation Fees Retained"
+                value={`₹${(data.cancellation_fees_collected || 0).toLocaleString('en-IN')}`}
+                sub="Late cancellation penalties"
+                icon={<DollarSign className="w-4 h-4 text-emerald-500" />}
                 accent="text-emerald-600"
               />
             </div>
 
+            {/* Cancellation Trend Chart */}
+            {data.chart_data && data.chart_data.some((d: any) => (d.cancellations || 0) > 0) && (
+              <SectionCard title="Cancellation Trend" subtitle={`Daily cancellations over the last ${days} days`} icon={<XCircle className="w-4 h-4 text-red-400" />}>
+                <div className="h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.chart_data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dy={8} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dx={-4} allowDecimals={false} />
+                      <Tooltip
+                        cursor={{ fill: 'hsl(var(--muted))' }}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                      />
+                      <Bar dataKey="cancellations" name="Cancellations" fill="#ef4444" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </SectionCard>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SectionCard title="Cancellation Strategy Recommendations" subtitle="AI suggested optimization rules to reduce cancellation rates" icon={<Zap className="w-4 h-4 text-indigo-500" />}>
-                <div className="space-y-4">
-                  <div className="p-4 bg-muted/40 rounded-xl border border-border">
+              <SectionCard title="Reduce Cancellations" subtitle="Recommended actions based on your current rate" icon={<Zap className="w-4 h-4 text-indigo-500" />}>
+                <div className="space-y-3">
+                  <div className={`p-4 rounded-xl border ${(data.cancellation_rate || 0) > 15 ? 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800' : 'bg-muted/40 border-border'}`}>
                     <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">1. Promote Non-Refundable Rates</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Your current cancellation rate is **{data.cancellation_rate || 0}%**. Offering a slight discount (e.g. 5-10%) on non-refundable rate plans can secure guaranteed bookings early and lower this rate.
+                      Your cancellation rate is <strong className={(data.cancellation_rate || 0) > 15 ? 'text-red-600' : 'text-amber-600'}>{data.cancellation_rate || 0}%</strong>
+                      {(data.cancellation_rate || 0) > 15 ? ' — above healthy threshold of 15%.' : '.'} Offering a 5–10% discount on non-refundable rates can lock in revenue early.
                     </p>
                   </div>
                   <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">2. Expand Cancellation Window</h4>
+                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">2. Tighten Cancellation Window</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      If cancellations are occurring close to the check-in date, consider shifting your standard rate plan window from 24 hours to 48 or 72 hours before arrival, allowing more time to resell rooms.
+                      Shift your standard free-cancellation window from 24 hours to 48–72 hours before arrival. This gives more time to resell rooms and reduces last-minute revenue loss.
                     </p>
                   </div>
                   <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">3. Automated Deposit Checks</h4>
+                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">3. Require Advance Deposit</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Implement a small advance token payment requirement for bookings made during high-occupancy weekends to prevent double-booking or speculative holds.
+                      For weekend and peak bookings, collect a token advance during booking to reduce speculative holds and no-shows.
                     </p>
                   </div>
                 </div>
               </SectionCard>
 
-              <SectionCard title="Policy Fee Breakdown" subtitle="Details of cancellation charges collected" icon={<DollarSign className="w-4 h-4 text-emerald-500" />}>
-                <div className="space-y-4 flex flex-col justify-center h-full pb-6">
-                  <div className="flex justify-between items-center text-sm py-2 border-b border-dashed border-border">
-                    <span className="text-muted-foreground font-medium">Cancellation Fee Income</span>
-                    <span className="font-bold text-emerald-600">₹{(data.cancellation_fees_collected || 0).toLocaleString('en-IN')}</span>
+              <SectionCard title="Revenue Impact Summary" subtitle="Cancellation financial breakdown" icon={<DollarSign className="w-4 h-4 text-emerald-500" />}>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-3 border-b border-dashed border-border">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Gross Lost Revenue</p>
+                      <p className="text-xs text-muted-foreground">Total value of all cancelled bookings</p>
+                    </div>
+                    <span className="font-black text-red-600 text-base">₹{(data.lost_revenue || 0).toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm py-2 border-b border-dashed border-border">
-                    <span className="text-muted-foreground font-medium">Refunded Amount</span>
-                    <span className="font-bold text-slate-800">₹{((data.lost_revenue || 0) - (data.cancellation_fees_collected || 0) > 0 ? (data.lost_revenue || 0) - (data.cancellation_fees_collected || 0) : 0).toLocaleString('en-IN')}</span>
+                  <div className="flex justify-between items-center py-3 border-b border-dashed border-border">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Fees Retained</p>
+                      <p className="text-xs text-muted-foreground">Late cancellation penalties collected</p>
+                    </div>
+                    <span className="font-black text-emerald-600 text-base">₹{(data.cancellation_fees_collected || 0).toLocaleString('en-IN')}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed italic">
-                    Note: Stays cancelled inside the free cancellation window result in a full refund of guest deposits. Late cancellations result in a penalty fee equivalent to 1 night's charge which is retained by the property.
-                  </p>
+                  <div className="flex justify-between items-center py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Net Lost Revenue</p>
+                      <p className="text-xs text-muted-foreground">After deducting fees retained</p>
+                    </div>
+                    <span className="font-black text-slate-700 dark:text-slate-300 text-base">
+                      ₹{Math.max(0, (data.lost_revenue || 0) - (data.cancellation_fees_collected || 0)).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  {(data.cancellation_rate || 0) > 15 && (
+                    <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl">
+                      <p className="text-xs font-bold text-red-700 dark:text-red-400">
+                        ⚠ High cancellation rate detected. Implementing non-refundable rates could recover up to ₹{Math.round((data.lost_revenue || 0) * 0.4).toLocaleString('en-IN')} in revenue.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </SectionCard>
             </div>

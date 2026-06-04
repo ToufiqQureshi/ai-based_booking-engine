@@ -249,15 +249,17 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         device_stats = [{"type": k, "count": v} for k, v in device_counts.items()]
 
         # 5. Chart Data (Grouped by date)
-        chart_map = { (datetime.utcnow() - timedelta(days=i)).strftime("%d %b"): {"visitors": 0, "revenue": 0} for i in range(days) }
+        chart_map = { (datetime.utcnow() - timedelta(days=i)).strftime("%d %b"): {"visitors": 0, "revenue": 0, "cancellations": 0} for i in range(days) }
         for s in sessions:
             ds = s.started_at.strftime("%d %b")
             if ds in chart_map: chart_map[ds]["visitors"] += 1
         for b in bookings:
+            ds = b.created_at.strftime("%d %b")
             if b.status != 'cancelled':
-                ds = b.created_at.strftime("%d %b")
                 if ds in chart_map: chart_map[ds]["revenue"] += float(b.total_amount or 0)
-        
+            else:
+                if ds in chart_map: chart_map[ds]["cancellations"] += 1
+
         chart_data = [{"date": k, **v} for k, v in reversed(chart_map.items())]
 
         # 6. Funnel Data
