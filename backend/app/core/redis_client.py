@@ -50,8 +50,10 @@ class RedisClient:
                 # Ping test to verify connection
                 cls._instance.ping()
             except Exception as e:
-                import logging
-                logging.error(f"Redis Connection Failed. Disabling Redis for this worker. Using Local Memory. Error: {e}")
+                if "PYTEST_CURRENT_TEST" in os.environ:
+                    _logger.warning(f"Redis Connection Failed in test environment. Using Local Memory. Error: {e}")
+                else:
+                    _logger.error(f"Redis Connection Failed. Disabling Redis for this worker. Using Local Memory. Error: {e}")
                 cls._instance = None
                 cls._is_disabled = True
                 
@@ -108,8 +110,7 @@ class RedisClient:
             try:
                 r.delete(key)
             except Exception as e:
-                import logging
-                logging.error(f"Redis delete failed for key {key}: {e}")
+                _logger.warning(f"Redis delete failed for key {key}: {e}")
         if key in cls._local_memory_cache:
             try:
                 del cls._local_memory_cache[key]

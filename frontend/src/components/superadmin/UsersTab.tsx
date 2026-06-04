@@ -19,7 +19,7 @@ export function UsersTab() {
     const [form, setForm] = useState({ name: '', email: '', password: '' });
 
     const addEmployeeMutation = useMutation({
-        mutationFn: () => apiClient.post('/superadmin/employees', form),
+        mutationFn: () => apiClient.post('/superadmin/employees', { ...form, role: 'SUPER_ADMIN' }),
         onSuccess: (res: any) => {
             toast.success(res.message ?? 'Employee added successfully');
             setAddOpen(false);

@@ -81,7 +81,7 @@ async def verify_supabase_token(token: str) -> dict | None:
             return jwt.get_unverified_claims(token)
 
     except Exception as e:
-        logger.error(f"Complete Token Verification failure: {str(e)}")
+        logger.warning(f"Complete Token Verification failure: {str(e)}")
         return None
 
     return None

@@ -40,16 +40,17 @@ async def get_current_user(
     payload = None
     r = redis_client.get_instance()
     try:
-        cached_payload = r.get(cache_key)
-        if cached_payload:
-            payload = json.loads(cached_payload)
+        if r:
+            cached_payload = r.get(cache_key)
+            if cached_payload:
+                payload = json.loads(cached_payload)
     except Exception as e:
         logger.warning(f"Redis cache read failed during auth token verification: {e}")
 
     # Supabase Token verify karo (Returns payload now)
     if not payload:
         payload = await verify_supabase_token(token)
-        if payload:
+        if payload and r:
             try:
                 r.setex(cache_key, 600, json.dumps(payload)) # Cache valid token for 10 minutes
             except Exception as e:
@@ -82,7 +83,7 @@ async def get_current_user(
                 await session.commit()
                 await session.refresh(user)
     # Auto-heal: User exists but missing hotel_id (Multi-property migration)
-    if user and not user.hotel_id:
+    if user and not user.hotel_id and user.role != "SUPER_ADMIN":
         from app.models.links import UserHotelLink
         from app.models.hotel import Hotel
         import uuid

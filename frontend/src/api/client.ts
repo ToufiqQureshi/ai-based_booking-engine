@@ -118,8 +118,28 @@ const handleResponse = async <T>(response: Response, retryRequest?: () => Promis
       }
     }
 
+    let errorMessage = 'Request failed';
+    if (errorData.detail) {
+      if (typeof errorData.detail === 'string') {
+        errorMessage = errorData.detail;
+      } else if (Array.isArray(errorData.detail)) {
+        errorMessage = errorData.detail
+          .map((err: any) => {
+            if (typeof err === 'string') return err;
+            if (err && typeof err === 'object') {
+              const locStr = err.loc ? `${err.loc.join('.')}: ` : '';
+              return `${locStr}${err.msg || JSON.stringify(err)}`;
+            }
+            return String(err);
+          })
+          .join(', ');
+      } else {
+        errorMessage = JSON.stringify(errorData.detail);
+      }
+    }
+
     throw new ApiClientError(
-      errorData.detail || 'Request failed',
+      errorMessage,
       response.status,
       errorData.code,
       errorData.field
