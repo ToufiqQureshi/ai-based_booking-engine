@@ -25,14 +25,14 @@ class SystemBroadcast(SQLModel, table=True):
     type: str = Field(default="info") # info, warning, success, urgent
     is_active: bool = Field(default=True)
 
-    # Scheduling
+    # Scheduling — Optional so existing rows with NULL deserialize cleanly
     scheduled_at: Optional[datetime] = Field(default=None, index=True)
-    expires_at: Optional[datetime] = None
-    is_published: bool = Field(default=True, index=True)  # false if scheduled for future
+    expires_at: Optional[datetime] = Field(default=None)
+    is_published: Optional[bool] = Field(default=True, index=True)
 
-    # Targeting (JSON list of plan names or hotel ids; empty = all)
-    target_plans: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    target_hotel_ids: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    # Targeting — Optional to tolerate NULL in legacy rows
+    target_plans: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    target_hotel_ids: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
 
-    created_by: Optional[str] = None
+    created_by: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
