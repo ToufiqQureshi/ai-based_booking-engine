@@ -258,3 +258,68 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
 
     return masked
 
+
+# ── Public Chain / Multi-Property Widget ──────────────────────────────────────
+
+@router.get("/chain/{chain_slug}")
+@limiter.limit("120/minute")
+async def get_public_chain(request: Request, chain_slug: str, session: DbSession):
+    """
+    Public endpoint — no auth required.
+    Returns chain info + list of all active properties.
+    Used by the ChainBookingWidget (iframe embed) to populate the property selector.
+    """
+    from app.models.chain import Chain
+
+    cache_key = f"public:chain:{chain_slug}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
+    # Fetch chain by slug
+    chain_result = await session.execute(
+        select(Chain).where(Chain.slug == chain_slug)
+    )
+    chain = chain_result.scalar_one_or_none()
+    if not chain:
+        raise HTTPException(status_code=404, detail="Chain not found")
+
+    # Fetch all active hotels in this chain
+    hotels_result = await session.execute(
+        select(Hotel).where(
+            Hotel.chain_id == chain.id,
+            Hotel.is_active == True,
+        )
+    )
+    hotels = hotels_result.scalars().all()
+
+    properties = [
+        {
+            "hotel_id": h.id,
+            "name": h.name,
+            "slug": h.slug,
+            "city": getattr(h, "city", None),
+            "logo_url": h.logo_url,
+            "star_rating": getattr(h, "star_rating", None),
+        }
+        for h in hotels
+    ]
+
+    response = {
+        "id": chain.id,
+        "name": chain.name,
+        "slug": chain.slug,
+        "logo_url": chain.logo_url,
+        "primary_color": None,
+        "properties": properties,
+    }
+
+    try:
+        redis_client.set_value(cache_key, json.dumps(response, default=str), expire=300)
+    except Exception:
+        pass
+
+    return response

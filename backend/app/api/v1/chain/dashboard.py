@@ -25,6 +25,28 @@ async def get_chain_admin(current_user: CurrentUser) -> User:
     return current_user
 
 
+# ── Chain Info ─────────────────────────────────────────────────────────────────
+
+@router.get("/info", response_model=Dict[str, Any])
+async def get_chain_info(
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """
+    Returns basic chain metadata (slug + name) for the authenticated user.
+    Used by the Integration page to generate the chain widget embed code.
+    """
+    chain = await session.get(Chain, current_user.chain_id)
+    if not chain:
+        raise HTTPException(status_code=404, detail="Chain not found")
+    return {
+        "id": chain.id,
+        "slug": chain.slug,
+        "name": chain.name,
+        "logo_url": chain.logo_url,
+    }
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _resolve_date_range(period: str) -> tuple[date, date, date, date]:
