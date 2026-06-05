@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { authApi } from '@/api/auth';
+import { supabase } from '@/lib/supabase';
 
 const resetPasswordSchema = z.object({
     password: z.string()
@@ -26,12 +27,37 @@ type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export function ResetPasswordPage() {
     const [searchParams] = useSearchParams();
-    const token = searchParams.get('token');
+    const token = searchParams.get('token') || searchParams.get('code');
     const navigate = useNavigate();
     const { toast } = useToast();
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [hasActiveSession, setHasActiveSession] = useState(false);
+
+    // Detect recovery/access token in URL hash fragment
+    const hasHashSession = window.location.hash.includes('access_token=') || window.location.hash.includes('type=recovery');
+
+    useEffect(() => {
+        const checkSession = async () => {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+                setHasActiveSession(true);
+            }
+        };
+        checkSession();
+
+        // Listen for auth state change to capture session if it sets asynchronously
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                setHasActiveSession(true);
+            }
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, []);
 
     const {
         register,
@@ -42,39 +68,40 @@ export function ResetPasswordPage() {
     });
 
     const onSubmit = async (data: ResetPasswordFormData) => {
-        if (!token) {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid Link',
-                description: 'Missing reset token. Please try requesting a new link.',
-            });
-            return;
-        }
-
         setIsLoading(true);
         try {
-            await authApi.resetPassword(token, data.password);
+            if (token) {
+                // PKCE or traditional OTP token flow
+                await authApi.resetPassword(token, data.password);
+            } else if (hasHashSession || hasActiveSession) {
+                // Implicit flow / active recovery session established by Supabase
+                const { error: updateError } = await supabase.auth.updateUser({
+                    password: data.password,
+                });
+                if (updateError) throw updateError;
+            } else {
+                throw new Error('Missing reset token or active session. Please request a new link.');
+            }
+
             setIsSuccess(true);
             toast({
                 title: 'Password reset successful',
                 description: 'You can now login with your new password.',
             });
         } catch (error) {
-            // Check if error message is "Invalid or expired reset token"
-            // We can just display the error message from the API or a generic one
-            // Depending on how authApi handles errors (usually implies throwing with message)
             toast({
                 variant: 'destructive',
                 title: 'Reset failed',
-                // Attempt to parse object error or use message
-                description: error instanceof Error ? error.message : (typeof error === 'object' && error !== null && 'detail' in error ? String((error as any).detail) : 'Something went wrong.'),
+                description: error instanceof Error ? error.message : 'Something went wrong.',
             });
         } finally {
             setIsLoading(false);
         }
     };
 
-    if (!token) {
+    const isLinkValid = !!token || hasHashSession || hasActiveSession;
+
+    if (!isLinkValid) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-12">
                 <Card className="w-full max-w-md border-0 shadow-lg">
@@ -87,11 +114,18 @@ export function ResetPasswordPage() {
                             This password reset link is invalid or missing the token.
                         </CardDescription>
                     </CardHeader>
-                    <CardFooter>
+                    <CardFooter className="flex flex-col space-y-4">
                         <Link to="/forgot-password" className="w-full">
                             <Button className="w-full">
                                 Request New Link
                             </Button>
+                        </Link>
+                        <Link
+                            to="/login"
+                            className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back to sign in
                         </Link>
                     </CardFooter>
                 </Card>

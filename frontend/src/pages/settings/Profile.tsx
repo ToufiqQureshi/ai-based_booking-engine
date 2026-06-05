@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
 import { User, Lock, Mail, Phone, Save, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfilePage() {
     const { user, setUser } = useAuth(); // Assuming setUser exists in AuthContext to update local state
@@ -132,10 +133,19 @@ export default function ProfilePage() {
                         onClick={async () => {
                             setIsLoading(true);
                             try {
-                                await apiClient.patch('/users/me/password', {
-                                    current_password: currentPassword,
-                                    new_password: newPassword
+                                // 1. Verify current password by signing in
+                                const { error: signInError } = await supabase.auth.signInWithPassword({
+                                    email: user?.email || '',
+                                    password: currentPassword,
                                 });
+                                if (signInError) throw new Error("Incorrect current password.");
+
+                                // 2. Update with new password
+                                const { error: updateError } = await supabase.auth.updateUser({
+                                    password: newPassword
+                                });
+                                if (updateError) throw updateError;
+
                                 toast({
                                     title: "Password Updated",
                                     description: "Your password has been changed successfully.",
@@ -146,7 +156,7 @@ export default function ProfilePage() {
                                 toast({
                                     variant: "destructive",
                                     title: "Error",
-                                    description: "Failed to update password. Check current password.",
+                                    description: error instanceof Error ? error.message : "Failed to update password.",
                                 });
                             } finally {
                                 setIsLoading(false);

@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         tokenStorage.setTokens({
           access_token: session.access_token,
@@ -140,6 +140,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           token_type: 'Bearer',
           expires_in: session.expires_in || 3600,
         });
+        if (event === 'PASSWORD_RECOVERY') {
+          if (window.location.pathname !== '/reset-password') {
+            window.location.href = '/reset-password';
+          }
+        }
       } else {
         tokenStorage.clearTokens();
         setUser(null);
