@@ -1,90 +1,30 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Sparkles, CreditCard, Activity, BrainCircuit, Bot, Mail } from 'lucide-react';
-import { User, Hotel } from '@/types/api';
+import { MessageCircle, Sparkles, Activity, Mail } from 'lucide-react';
+import { Hotel } from '@/types/api';
 
 interface WhatsappTabProps {
-    isAIEnabled: boolean;
-    isSavingAI: boolean;
-    onToggleAI: (enabled: boolean) => Promise<void>;
-    isGuestBotEnabled: boolean;
-    isSavingGuestBot: boolean;
-    onToggleGuestBot: (enabled: boolean) => Promise<void>;
-    isAIAssistantEnabled: boolean;
-    isSavingAIAssistant: boolean;
-    onToggleAIAssistant: (enabled: boolean) => Promise<void>;
-    user?: User | null;
     hotel?: Hotel | null;
 }
 
-export const WhatsappTab = ({
-    isAIEnabled,
-    isSavingAI,
-    onToggleAI,
-    isGuestBotEnabled,
-    isSavingGuestBot,
-    onToggleGuestBot,
-    isAIAssistantEnabled,
-    isSavingAIAssistant,
-    onToggleAIAssistant,
-    user,
-    hotel,
-}: WhatsappTabProps) => {
-    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-
-    const features = [
-        {
-            key: 'whatsapp',
-            icon: <MessageCircle className="w-5 h-5 text-green-600 dark:text-green-400" />,
-            title: 'WhatsApp AI Agent',
-            description: 'Automatically replies to guest WhatsApp messages, answers availability queries, and sends booking links.',
-            enabled: isAIEnabled,
-            saving: isSavingAI,
-            onToggle: onToggleAI,
-            color: 'green',
-        },
-        {
-            key: 'guest_bot',
-            icon: <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />,
-            title: 'Guest Chat AI Agent',
-            description: 'Powers the chat widget on the booking page — answers guest questions and assists with room selection.',
-            enabled: isGuestBotEnabled,
-            saving: isSavingGuestBot,
-            onToggle: onToggleGuestBot,
-            color: 'indigo',
-        },
-        {
-            key: 'ai_assistant',
-            icon: <BrainCircuit className="w-5 h-5 text-purple-600 dark:text-purple-400" />,
-            title: 'Hotelier AI Assistant',
-            description: 'Internal AI assistant for hotel staff — helps manage bookings, draft responses, and get quick insights.',
-            enabled: isAIAssistantEnabled,
-            saving: isSavingAIAssistant,
-            onToggle: onToggleAIAssistant,
-            color: 'purple',
-        },
-    ];
-
+export const WhatsappTab = ({ hotel }: WhatsappTabProps) => {
     return (
         <div className="space-y-6">
-            {/* Stats Card */}
+            {/* Stats Card — read-only for hotelier */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <MessageCircle className="h-5 w-5 text-primary" />
-                        WhatsApp Business API Configuration
+                        WhatsApp Usage & Credits
                     </CardTitle>
                     <CardDescription>
-                        {isSuperAdmin
-                            ? 'Provide Meta WhatsApp Cloud API credentials to dispatch instant guest confirmations and reservation followups.'
-                            : 'View your WhatsApp messaging stats and credits. Contact Staybooker support to configure or enable WhatsApp for your property.'}
+                        View your WhatsApp messaging stats and credits. Contact Staybooker to configure WhatsApp or add more credits for your property.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-2">
+                        {/* Messages Sent */}
                         <div className="bg-indigo-50 dark:bg-indigo-950/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/30 flex items-center gap-4">
                             <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                 <Activity className="w-5 h-5" />
@@ -92,10 +32,12 @@ export const WhatsappTab = ({
                             <div>
                                 <p className="text-sm font-medium text-indigo-900 dark:text-indigo-300">Messages Sent</p>
                                 <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">
-                                    {hotel?.settings?.total_messages_sent || 0}
+                                    {(hotel?.settings as any)?.total_messages_sent || 0}
                                 </p>
                             </div>
                         </div>
+
+                        {/* Available Credits */}
                         <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -104,7 +46,7 @@ export const WhatsappTab = ({
                                 <div>
                                     <p className="text-sm font-medium text-emerald-900 dark:text-emerald-300">Available Credits</p>
                                     <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                                        {hotel?.settings?.ai_whatsapp_credits ?? 0}
+                                        {(hotel?.settings as any)?.ai_whatsapp_credits ?? 0}
                                     </p>
                                 </div>
                             </div>
@@ -118,76 +60,49 @@ export const WhatsappTab = ({
                             </Button>
                         </div>
                     </div>
+
+                    {/* Active features — read-only badges */}
+                    <div className="border rounded-xl p-4 bg-muted/20 space-y-3">
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Active AI Features</p>
+                        <div className="flex flex-wrap gap-2">
+                            {(hotel as any)?.feature_ai_agent && (
+                                <Badge className="bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-400 border-green-200">
+                                    ✓ WhatsApp AI Agent
+                                </Badge>
+                            )}
+                            {(hotel as any)?.feature_guest_bot && (
+                                <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-400 border-indigo-200">
+                                    ✓ Guest Chat AI
+                                </Badge>
+                            )}
+                            {(hotel as any)?.feature_ai_assistant && (
+                                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-400 border-purple-200">
+                                    ✓ Hotelier AI Assistant
+                                </Badge>
+                            )}
+                            {!(hotel as any)?.feature_ai_agent && !(hotel as any)?.feature_guest_bot && !(hotel as any)?.feature_ai_assistant && (
+                                <p className="text-xs text-muted-foreground">No AI features enabled. Contact Staybooker to activate.</p>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">AI features are managed by Staybooker. Contact support@staybooker.ai to enable or change features.</p>
+                    </div>
                 </CardContent>
             </Card>
 
-            {/* Feature Toggles — SuperAdmin only */}
-            {isSuperAdmin && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base font-bold flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                            AI Feature Controls
-                        </CardTitle>
-                        <CardDescription>
-                            Enable or disable individual AI features for this hotel.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {features.map((f) => (
-                            <div
-                                key={f.key}
-                                className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30"
-                            >
-                                <div className="flex items-start gap-3">
-                                    <div className="mt-0.5">{f.icon}</div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <Label className="text-sm font-semibold cursor-pointer">
-                                                {f.title}
-                                            </Label>
-                                            <Badge
-                                                variant={f.enabled ? 'default' : 'secondary'}
-                                                className={
-                                                    f.enabled
-                                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 text-xs'
-                                                        : 'text-xs'
-                                                }
-                                            >
-                                                {f.enabled ? 'Active' : 'Disabled'}
-                                            </Badge>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
-                                            {f.description}
-                                        </p>
-                                    </div>
-                                </div>
-                                <Switch
-                                    checked={f.enabled}
-                                    onCheckedChange={f.onToggle}
-                                    disabled={f.saving}
-                                    className="shrink-0"
-                                />
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Webhook Info Card */}
+            {/* Webhook Info — for developers */}
             <Card className="border-indigo-100 dark:border-indigo-950/40 bg-gradient-to-tr from-indigo-50/10 to-transparent">
                 <CardHeader>
                     <CardTitle className="text-sm font-bold flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        Enable WhatsApp AI Booking Agent
+                        WhatsApp AI Booking Agent Setup
                     </CardTitle>
                     <CardDescription>
-                        Setup WhatsApp webhooks to let the AI agent answer availability questions and share booking links directly with guests.
+                        Configure WhatsApp webhooks so the AI agent can answer availability questions and share booking links with your guests.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                     <p>
-                        To let guests talk with the AI agent and book rooms, log in to your <strong>Meta for Developers Console</strong>, go to your WhatsApp app setup, and configure Webhooks with the following fields:
+                        Log in to your <strong>Meta for Developers Console</strong>, go to your WhatsApp app setup, and configure Webhooks with the following fields:
                     </p>
                     <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg border space-y-2 font-mono text-[11px] text-slate-800 dark:text-slate-200">
                         <div>

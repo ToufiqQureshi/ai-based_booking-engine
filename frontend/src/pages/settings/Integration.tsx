@@ -43,14 +43,8 @@ interface WidgetCode {
 }
 
 const IntegrationPage = () => {
-    const { hotel, setHotel, user } = useAuth();
+    const { hotel, user } = useAuth();
     const [settings, setSettings] = useState<IntegrationSettings | null>(null);
-    const [isAIEnabled, setIsAIEnabled] = useState(hotel?.feature_ai_agent || false);
-    const [isSavingAI, setIsSavingAI] = useState(false);
-    const [isGuestBotEnabled, setIsGuestBotEnabled] = useState(hotel?.feature_guest_bot || false);
-    const [isSavingGuestBot, setIsSavingGuestBot] = useState(false);
-    const [isAIAssistantEnabled, setIsAIAssistantEnabled] = useState(hotel?.feature_ai_assistant || false);
-    const [isSavingAIAssistant, setIsSavingAIAssistant] = useState(false);
     const [activeHotelSlug, setActiveHotelSlug] = useState<string>('');
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
     const [widgetCode, setWidgetCode] = useState<WidgetCode | null>(null);
@@ -129,54 +123,6 @@ const IntegrationPage = () => {
         }
     };
 
-    const handleToggleAI = async (enabled: boolean) => {
-        if (isSavingAI) return;
-        setIsAIEnabled(enabled);
-        try {
-            setIsSavingAI(true);
-            const updatedHotel = await apiClient.patch<any>('/hotels/me', { feature_ai_agent: enabled });
-            setHotel(updatedHotel);
-            toast.success(enabled ? 'WhatsApp AI Agent is now active!' : 'WhatsApp AI Agent disabled.');
-        } catch (error) {
-            setIsAIEnabled(!enabled);
-            toast.error('Failed to change WhatsApp AI Agent status.');
-        } finally {
-            setIsSavingAI(false);
-        }
-    };
-
-    const handleToggleGuestBot = async (enabled: boolean) => {
-        if (isSavingGuestBot) return;
-        setIsGuestBotEnabled(enabled);
-        try {
-            setIsSavingGuestBot(true);
-            const updatedHotel = await apiClient.patch<any>('/hotels/me', { feature_guest_bot: enabled });
-            setHotel(updatedHotel);
-            toast.success(enabled ? 'Guest Chat AI Agent is now active!' : 'Guest Chat AI Agent disabled.');
-        } catch (error) {
-            setIsGuestBotEnabled(!enabled);
-            toast.error('Failed to change Guest Chat AI Agent status.');
-        } finally {
-            setIsSavingGuestBot(false);
-        }
-    };
-
-    const handleToggleAIAssistant = async (enabled: boolean) => {
-        if (isSavingAIAssistant) return;
-        setIsAIAssistantEnabled(enabled);
-        try {
-            setIsSavingAIAssistant(true);
-            const updatedHotel = await apiClient.patch<any>('/hotels/me', { feature_ai_assistant: enabled });
-            setHotel(updatedHotel);
-            toast.success(enabled ? 'Hotelier AI Assistant is now active!' : 'Hotelier AI Assistant disabled.');
-        } catch (error) {
-            setIsAIAssistantEnabled(!enabled);
-            toast.error('Failed to change Hotelier AI Assistant status.');
-        } finally {
-            setIsSavingAIAssistant(false);
-        }
-    };
-
     const createAPIKey = async (name: string) => {
         try {
             const data = await apiClient.post<any>('/integration/api-keys', { name });
@@ -225,8 +171,8 @@ const IntegrationPage = () => {
                     <TabsTrigger value="search-widget" className="gap-2"><Search className="w-4 h-4" />Search Widget</TabsTrigger>
                     <TabsTrigger value="chat-widget" className="gap-2"><MessageCircle className="w-4 h-4" />Chat Widget</TabsTrigger>
                     <TabsTrigger value="api-keys" className="gap-2"><Key className="w-4 h-4" />API Keys</TabsTrigger>
+                    <TabsTrigger value="whatsapp" className="gap-2"><MessageCircle className="w-4 h-4" />WhatsApp</TabsTrigger>
                     {isSuperAdmin && <TabsTrigger value="settings" className="gap-2"><Globe className="w-4 h-4" />External Services</TabsTrigger>}
-                    {isSuperAdmin && <TabsTrigger value="whatsapp" className="gap-2"><MessageCircle className="w-4 h-4" />WhatsApp</TabsTrigger>}
                     {!isSuperAdmin && <TabsTrigger value="usage" className="gap-2"><BarChart3 className="w-4 h-4" />Usage</TabsTrigger>}
                 </TabsList>
 
@@ -262,23 +208,9 @@ const IntegrationPage = () => {
                     </TabsContent>
                 )}
 
-                {isSuperAdmin && (
-                    <TabsContent value="whatsapp">
-                        <WhatsappTab
-                        user={user}
-                        hotel={hotel}
-                        isAIEnabled={isAIEnabled}
-                        isSavingAI={isSavingAI}
-                        onToggleAI={handleToggleAI}
-                        isGuestBotEnabled={isGuestBotEnabled}
-                        isSavingGuestBot={isSavingGuestBot}
-                        onToggleGuestBot={handleToggleGuestBot}
-                        isAIAssistantEnabled={isAIAssistantEnabled}
-                        isSavingAIAssistant={isSavingAIAssistant}
-                        onToggleAIAssistant={handleToggleAIAssistant}
-                    />
-                    </TabsContent>
-                )}
+                <TabsContent value="whatsapp">
+                    <WhatsappTab hotel={hotel} />
+                </TabsContent>
 
                 {!isSuperAdmin && (
                     <TabsContent value="usage">
