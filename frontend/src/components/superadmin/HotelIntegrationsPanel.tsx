@@ -149,7 +149,7 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
                 <CardContent className="space-y-3">
                     <div>
                         <Label className="text-xs">Access Token (leave blank to keep existing)</Label>
-                        <Input type="password" placeholder="EAAGz..." value={form.whatsapp_api_key} onChange={e => setForm(p => ({ ...p, whatsapp_api_key: e.target.value }))} />
+                        <Input type="password" placeholder="EAAGz..." autoComplete="new-password" value={form.whatsapp_api_key} onChange={e => setForm(p => ({ ...p, whatsapp_api_key: e.target.value }))} />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -193,7 +193,7 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
                     </div>
                     <div>
                         <Label className="text-xs">API Key (leave blank to keep existing)</Label>
-                        <Input type="password" placeholder="sk-..." value={form.ai_api_key} onChange={e => setForm(p => ({ ...p, ai_api_key: e.target.value }))} />
+                        <Input type="password" placeholder="sk-..." autoComplete="new-password" value={form.ai_api_key} onChange={e => setForm(p => ({ ...p, ai_api_key: e.target.value }))} />
                     </div>
                     <div>
                         <Label className="text-xs">Base URL</Label>
