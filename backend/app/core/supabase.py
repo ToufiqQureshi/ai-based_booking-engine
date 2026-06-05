@@ -61,24 +61,29 @@ async def verify_supabase_token(token: str) -> dict | None:
             except Exception as e:
                 logger.warning(f"JWKS verification failed, trying fallback: {str(e)}")
 
-        # 3. Fallback to Secret (Industry Standard for local dev or if JWKS is flaky)
-        for secret in [settings.SUPABASE_JWT_SECRET, settings.SECRET_KEY]:
-            if secret:
-                try:
-                    payload = jwt.decode(
-                        token,
-                        secret,
-                        algorithms=["HS256"],
-                        options={"verify_aud": False, "verify_signature": True}
-                    )
-                    return payload
-                except Exception as e:
-                    logger.debug(f"Secret verification failed for a key: {str(e)}")
+        # 3. Fallback to the Supabase HS256 JWT secret. We deliberately do NOT
+        #    fall back to the app's own SECRET_KEY here: SECRET_KEY signs our
+        #    internally-minted tokens, and mixing it into the Supabase
+        #    verification path widens the forgery surface (a leaked SECRET_KEY
+        #    would let an attacker mint "Supabase" identities). Supabase tokens
+        #    must verify against Supabase keys only.
+        if settings.SUPABASE_JWT_SECRET:
+            try:
+                payload = jwt.decode(
+                    token,
+                    settings.SUPABASE_JWT_SECRET,
+                    algorithms=["HS256"],
+                    # require=["exp"] ensures a token without an expiry is rejected.
+                    options={"verify_aud": False, "verify_signature": True, "require": ["exp"]},
+                )
+                return payload
+            except Exception as e:
+                logger.debug(f"Supabase secret verification failed: {str(e)}")
 
-        # 4. Emergency: Unverified payload (ONLY for debugging, remove in production!)
-        if settings.DEBUG:
-            logger.warning("Returning UNVERIFIED payload for debugging!")
-            return jwt.get_unverified_claims(token)
+        # NOTE: There is intentionally NO "unverified claims" debug fallback.
+        # Returning unverified claims (even gated on DEBUG) is a complete auth
+        # bypass if DEBUG ever leaks into production — any forged token, incl.
+        # role=SUPER_ADMIN, would be accepted. Removed for safety.
 
     except Exception as e:
         logger.warning(f"Complete Token Verification failure: {str(e)}")

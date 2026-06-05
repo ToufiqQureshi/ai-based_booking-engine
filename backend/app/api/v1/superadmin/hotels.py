@@ -367,11 +367,19 @@ async def impersonate_hotel(
     target_user = next((u for u in users if u.role == UserRole.OWNER), users[0])
     settings = get_settings()
     secret = settings.SUPABASE_JWT_SECRET or settings.SECRET_KEY
+    # SECURITY: impersonation tokens MUST be short-lived. Without an `exp` a
+    # leaked impersonation token would be a permanent owner-level credential.
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
     payload = {
         "sub": target_user.supabase_id or target_user.id,
         "email": target_user.email,
         "role": target_user.role.value if hasattr(target_user.role, "value") else str(target_user.role),
         "type": "access",
+        "impersonation": True,
+        "impersonated_by": super_admin.email,
+        "iat": now,
+        "exp": now + timedelta(minutes=30),
         "user_metadata": {"name": target_user.name, "hotel_name": hotel.name, "impersonated_by": super_admin.email},
     }
     token = jwt.encode(payload, secret, algorithm="HS256")
