@@ -19,6 +19,47 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# ---------------------------------------------------------------------------
+# Signed OAuth state (TEN-04)
+# ---------------------------------------------------------------------------
+# The OAuth `state` round-trips through Google and comes back attacker-
+# influenceable. Previously it was the raw hotel_id, so an attacker could
+# complete OAuth with their own Google account and replay the callback with
+# state=<victim_hotel_id> to write THEIR tokens onto the victim's hotel.
+# We HMAC-sign (hotel_id, issued_at) so the callback only trusts a state we
+# minted, valid for a short window.
+import hmac
+import hashlib
+import time
+
+_STATE_TTL_SECONDS = 600  # 10 minutes to complete the consent flow
+
+
+def _sign_oauth_state(hotel_id: str) -> str:
+    ts = str(int(time.time()))
+    msg = f"{hotel_id}:{ts}"
+    secret = get_settings().SECRET_KEY.encode()
+    sig = hmac.new(secret, msg.encode(), hashlib.sha256).hexdigest()
+    return f"{msg}:{sig}"
+
+
+def _verify_oauth_state(state: str) -> Optional[str]:
+    try:
+        hotel_id, ts, sig = state.rsplit(":", 2)
+    except ValueError:
+        return None
+    secret = get_settings().SECRET_KEY.encode()
+    expected = hmac.new(secret, f"{hotel_id}:{ts}".encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, sig):
+        return None
+    try:
+        if int(time.time()) - int(ts) > _STATE_TTL_SECONDS:
+            return None
+    except ValueError:
+        return None
+    return hotel_id
+
+
 async def _refresh_google_token(settings: IntegrationSettings) -> str | None:
     """Refresh Google access token. Returns new access token or None."""
     if not settings.google_business_refresh_token:
@@ -56,7 +97,7 @@ async def google_oauth_connect(current_user: CurrentUser):
         f"redirect_uri={redirect_uri}&"
         "response_type=code&"
         "scope=https://www.googleapis.com/auth/business.manage&"
-        f"state={current_user.hotel_id}&"
+        f"state={_sign_oauth_state(current_user.hotel_id)}&"
         "access_type=offline&prompt=consent"
     )
     return {"auth_url": google_auth_url}
@@ -83,10 +124,15 @@ async def google_oauth_callback(code: str, state: str, session: DbSession):
             if response.status_code != 200:
                 return RedirectResponse(url=f"{frontend_redirect}?google_status=error&message=Failed+to+retrieve+token")
 
+            # SECURITY (TEN-04): only trust a state we signed ourselves.
+            hotel_id = _verify_oauth_state(state)
+            if not hotel_id:
+                return RedirectResponse(url=f"{frontend_redirect}?google_status=error&message=Invalid+or+expired+state")
+
             token_data = response.json()
-            query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == state)
+            query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
             result = await session.execute(query)
-            int_settings = result.scalar_one_or_none() or IntegrationSettings(hotel_id=state)
+            int_settings = result.scalar_one_or_none() or IntegrationSettings(hotel_id=hotel_id)
 
             int_settings.google_business_access_token = token_data.get("access_token")
             if token_data.get("refresh_token"):

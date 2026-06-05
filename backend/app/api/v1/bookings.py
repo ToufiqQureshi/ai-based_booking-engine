@@ -136,11 +136,17 @@ async def create_booking(
 
     for room_req in booking_data.rooms:
         rt_id = room_req.get("room_type_id")
-        # Lock this room type for the duration of this transaction
-        rt_query = select(RoomType).where(RoomType.id == rt_id).with_for_update()
+        # Lock this room type for the duration of this transaction.
+        # SECURITY (TEN-02): scope to the caller's hotel so a foreign
+        # room_type_id can't disclose another tenant's policy config or
+        # lock another tenant's inventory row.
+        rt_query = select(RoomType).where(
+            RoomType.id == rt_id,
+            RoomType.hotel_id == current_user.hotel_id,
+        ).with_for_update()
         rt_result = await session.execute(rt_query)
         room_type = rt_result.scalar_one_or_none()
-        
+
         if not room_type:
              raise HTTPException(status_code=404, detail=f"Room type {rt_id} not found")
              
@@ -158,8 +164,9 @@ async def create_booking(
             plan_override = overrides.get(rp_id) or {} if isinstance(overrides, dict) else {}
 
         if rp_id:
+            # SECURITY (TEN-02): only honour a rate plan owned by this hotel.
             rp = await session.get(RatePlan, rp_id)
-            if rp:
+            if rp and rp.hotel_id == current_user.hotel_id:
                 is_refundable = plan_override.get("is_refundable", rp.is_refundable)
                 cancellation_hours = plan_override.get("cancellation_hours", rp.cancellation_hours)
                 
