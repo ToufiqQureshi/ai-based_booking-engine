@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Ticket, AlertTriangle, Inbox, CheckCircle2, RefreshCw, Send, UserCheck, Lock } from 'lucide-react';
+import { Ticket, AlertTriangle, Inbox, CheckCircle2, RefreshCw, Send, UserCheck, Lock, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -91,6 +91,17 @@ export function TicketsTab({ hotels = [], admins = [] }: { hotels?: any[]; admin
             qc.invalidateQueries({ queryKey: ['ticket-detail'] });
             qc.invalidateQueries({ queryKey: ['tickets'] });
         },
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (ticketId: string) => apiClient.delete(`/superadmin/tickets/${ticketId}`),
+        onSuccess: () => {
+            toast.success('Ticket deleted');
+            setOpenTicketId(null);
+            qc.invalidateQueries({ queryKey: ['tickets'] });
+            qc.invalidateQueries({ queryKey: ['tickets-summary'] });
+        },
+        onError: (err: any) => toast.error(err?.message || 'Could not delete ticket'),
     });
 
     const createMutation = useMutation({
@@ -295,9 +306,24 @@ export function TicketsTab({ hotels = [], admins = [] }: { hotels?: any[]; admin
                                     <label className="flex items-center gap-2 text-xs">
                                         <Switch checked={isInternal} onCheckedChange={setIsInternal} /> Internal note (not sent to hotelier)
                                     </label>
-                                    <Button size="sm" onClick={() => replyMutation.mutate()} disabled={!reply.trim()} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5">
-                                        <Send className="w-3.5 h-3.5" /> Send
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                                if (window.confirm(`Delete ticket ${detail.ticket.ticket_number}? This permanently removes it and its messages.`)) {
+                                                    deleteMutation.mutate(detail.ticket.id);
+                                                }
+                                            }}
+                                            disabled={deleteMutation.isPending}
+                                            className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                                        </Button>
+                                        <Button size="sm" onClick={() => replyMutation.mutate()} disabled={!reply.trim()} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5">
+                                            <Send className="w-3.5 h-3.5" /> Send
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </>

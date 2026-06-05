@@ -45,6 +45,77 @@ async def get_super_admin(current_user: CurrentUser):
     return current_user
 
 
+async def get_effective_permissions(user: User, session) -> dict:
+    """Resolve a super admin's effective sub-role and permission list.
+
+    Founders / platform owners have no SuperAdminRole record and get full
+    ("*") access — this keeps existing super admins unrestricted. Employees
+    granted a limited sub-role (finance/support/ops/viewer) are confined to
+    that tier's permissions.
+    """
+    from app.models.platform import SuperAdminRole
+
+    role = (await session.execute(
+        select(SuperAdminRole).where(SuperAdminRole.user_id == user.id)
+    )).scalar_one_or_none()
+
+    if not role or not role.is_active:
+        return {"tier": "owner", "permissions": ["*"], "is_owner": True}
+
+    perms = role.permissions or []
+    is_owner = role.role_tier == "owner" or "*" in perms
+    return {"tier": role.role_tier, "permissions": perms, "is_owner": is_owner}
+
+
+def permission_granted(permissions: list[str], required: str) -> bool:
+    """Check if a permission list satisfies a required permission.
+
+    Supports full wildcard ("*"), exact match, and category wildcards such
+    as "superadmin.hotels.*" granting "superadmin.hotels.read".
+    """
+    if not required:
+        return True
+    if "*" in permissions or required in permissions:
+        return True
+    parts = required.split(".")
+    for i in range(len(parts) - 1, 0, -1):
+        if ".".join(parts[:i] + ["*"]) in permissions:
+            return True
+    return False
+
+
+def require_permission(required: str):
+    """Dependency factory: enforce a specific super-admin permission."""
+    async def _checker(
+        session: DbSession,
+        super_admin: User = Depends(get_super_admin),
+    ) -> User:
+        eff = await get_effective_permissions(super_admin, session)
+        if not permission_granted(eff["permissions"], required):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Your admin role does not permit this action ({required})",
+            )
+        return super_admin
+    return _checker
+
+
+@router.get("/me/access")
+async def my_access(session: DbSession, super_admin: User = Depends(get_super_admin)):
+    """Return the current admin's effective sub-role + allowed nav tabs.
+
+    The frontend uses this to hide tabs an employee should not see.
+    """
+    from app.models.platform import TAB_PERMISSIONS
+
+    eff = await get_effective_permissions(super_admin, session)
+    allowed_tabs = [
+        tab for tab, perm in TAB_PERMISSIONS.items()
+        if permission_granted(eff["permissions"], perm)
+    ]
+    return {**eff, "allowed_tabs": allowed_tabs}
+
+
 def load_plan_features() -> dict:
     try:
         with open(PLAN_FEATURES_PATH, "r") as f:
@@ -205,7 +276,7 @@ async def update_hotel_status(
 @router.delete("/hotels/{hotel_id}")
 async def delete_hotel(
     hotel_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Permanently delete a hotel and all associated data."""
     from sqlalchemy import text

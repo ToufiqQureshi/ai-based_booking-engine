@@ -71,6 +71,21 @@ export default function SuperAdminDashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
+    // Effective sub-role + allowed nav tabs for this admin.
+    // Founders (no sub-role) come back as is_owner=true → see everything.
+    const { data: access } = useQuery<{ tier: string; is_owner: boolean; allowed_tabs: string[] }>({
+        queryKey: ['superadmin-my-access'],
+        queryFn: () => apiClient.get('/superadmin/me/access'),
+        staleTime: 1000 * 60 * 5,
+        enabled: !!user && user.role === 'SUPER_ADMIN',
+    });
+
+    const isOwnerAdmin = access?.is_owner ?? true;
+    const allowedTabs = access?.allowed_tabs ?? [];
+    const canView = (tab: string) =>
+        tab === 'overview' || isOwnerAdmin || allowedTabs.includes(tab);
+    const visibleNavItems = NAV_ITEMS.filter(n => canView(n.id));
+
     const { data: hotels = [], isLoading, refetch } = useQuery<any[]>({
         queryKey: ['superadmin-hotels'],
         queryFn: () => apiClient.get('/superadmin/hotels'),
@@ -178,7 +193,8 @@ export default function SuperAdminDashboard() {
                         {/* Nav */}
                         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
                             {(['main', 'finance', 'support', 'insights', 'system'] as const).map(group => {
-                                const items = NAV_ITEMS.filter(n => n.group === group);
+                                const items = visibleNavItems.filter(n => n.group === group);
+                                if (items.length === 0) return null;
                                 const groupLabel = group === 'main' ? 'Management'
                                     : group === 'finance' ? 'Finance'
                                     : group === 'support' ? 'Support'
@@ -268,8 +284,19 @@ export default function SuperAdminDashboard() {
                 <main className="flex-1 overflow-y-auto">
                     <div className="max-w-[1400px] mx-auto p-6 space-y-6">
 
-                        {/* Hotel Workspace (drills into a hotel) */}
-                        {selectedHotel ? (
+                        {/* Block direct-URL access to a tab this admin's role can't see */}
+                        {!canView(activeSection) ? (
+                            <div className="p-8 text-center border border-amber-200 dark:border-amber-900 rounded-2xl bg-amber-50 dark:bg-amber-950/20">
+                                <ShieldCheck className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+                                <p className="font-black text-amber-700 dark:text-amber-400 text-lg">Restricted</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Your admin role ({access?.tier}) does not have access to this section.
+                                </p>
+                                <Button variant="outline" size="sm" className="mt-4 rounded-xl" onClick={() => navigate('/overview')}>
+                                    Back to Overview
+                                </Button>
+                            </div>
+                        ) : selectedHotel ? (
                             <HotelWorkspace
                                 hotel={selectedHotel}
                                 users={users}

@@ -119,9 +119,11 @@ DEFAULT_PERMISSIONS_BY_TIER = {
         "superadmin.payouts.read", "superadmin.payouts.execute",
         "superadmin.invoices.read", "superadmin.invoices.write",
         "superadmin.hotels.read",
+        "superadmin.audit.read",
     ],
     "support": [
-        "superadmin.tickets.read", "superadmin.tickets.write", "superadmin.tickets.assign",
+        "superadmin.tickets.read", "superadmin.tickets.write",
+        "superadmin.tickets.assign", "superadmin.tickets.delete",
         "superadmin.hotels.read", "superadmin.users.read",
         "superadmin.broadcasts.read",
     ],
@@ -129,7 +131,9 @@ DEFAULT_PERMISSIONS_BY_TIER = {
         "superadmin.hotels.read", "superadmin.hotels.write",
         "superadmin.kyc.read", "superadmin.kyc.approve",
         "superadmin.integrations.read", "superadmin.integrations.write",
-        "superadmin.cache.flush",
+        "superadmin.health.read",
+        "superadmin.cache.read", "superadmin.cache.flush",
+        "superadmin.audit.read",
     ],
     "viewer": [
         "superadmin.hotels.read",
@@ -137,4 +141,27 @@ DEFAULT_PERMISSIONS_BY_TIER = {
         "superadmin.users.read",
         "superadmin.audit.read",
     ],
+}
+
+# Canonical "read" permission required to view each super-admin nav tab.
+# Used by the frontend (via GET /superadmin/me/access) to hide tabs an
+# employee's sub-role should not see. 'overview' is always allowed.
+TAB_PERMISSIONS = {
+    "overview": None,
+    "hotels": "superadmin.hotels.read",
+    "users": "superadmin.users.read",
+    "brands": "superadmin.hotels.read",
+    "plans": "superadmin.hotels.read",
+    "kyc": "superadmin.kyc.read",
+    "commissions": "superadmin.commissions.read",
+    "payouts": "superadmin.payouts.read",
+    "tickets": "superadmin.tickets.read",
+    "analytics": "superadmin.revenue.read",
+    "revenue": "superadmin.revenue.read",
+    "health": "superadmin.health.read",
+    "broadcasts": "superadmin.broadcasts.read",
+    "audit": "superadmin.audit.read",
+    "sessions": "superadmin.sessions.read",
+    "cache": "superadmin.cache.read",
+    "platform": "superadmin.platform.read",
 }

@@ -13,7 +13,7 @@ from app.models.audit import AuditLog
 from app.models.ticket import SupportTicket, TicketMessage
 from app.models.hotel import Hotel
 from app.models.user import User
-from .hotels import get_super_admin, _get_client_ip
+from .hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -225,6 +225,33 @@ async def update_ticket(
     ))
     await session.commit()
     return ticket
+
+
+@router.delete("/tickets/{ticket_id}")
+async def delete_ticket(
+    ticket_id: str, request: Request, session: DbSession,
+    super_admin: User = Depends(require_permission("superadmin.tickets.delete")),
+):
+    """Permanently delete a ticket and its message thread."""
+    ticket = await session.get(SupportTicket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, "Ticket not found")
+
+    messages = (await session.execute(
+        select(TicketMessage).where(TicketMessage.ticket_id == ticket_id)
+    )).scalars().all()
+    for m in messages:
+        await session.delete(m)
+
+    session.add(AuditLog(
+        user_id=super_admin.id, user_email=super_admin.email, hotel_id=ticket.hotel_id,
+        action="TICKET_DELETE",
+        description=f"Deleted ticket {ticket.ticket_number}: {ticket.subject}",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.delete(ticket)
+    await session.commit()
+    return {"message": "Deleted"}
 
 
 @router.post("/tickets/{ticket_id}/assign")
