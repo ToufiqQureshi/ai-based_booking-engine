@@ -15,7 +15,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { StatsGrid } from '@/components/superadmin/StatsGrid';
 import { HotelsTab } from '@/components/superadmin/HotelsTab';
 import { HotelWorkspace } from '@/components/superadmin/HotelWorkspace';
-import { HotelIntegrationsPanel } from '@/components/superadmin/HotelIntegrationsPanel';
 import { AnalyticsTab } from '@/components/superadmin/AnalyticsTab';
 import { BroadcastsTab } from '@/components/superadmin/BroadcastsTab';
 import { UsersTab } from '@/components/superadmin/UsersTab';
@@ -65,7 +64,6 @@ export default function SuperAdminDashboard() {
     const { theme, toggleTheme } = useTheme();
     const [activeSection, setActiveSection] = useState<NavSection>('overview');
     const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
-    const [selectedIntegrationHotel, setSelectedIntegrationHotel] = useState<{id: string, name: string} | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -302,7 +300,6 @@ export default function SuperAdminDashboard() {
                                                 onSelectHotel={handleSelectHotel}
                                                 onImpersonate={(id) => impersonateMutation.mutate(id)}
                                                 isImpersonating={impersonateMutation.isPending}
-                                                onOpenIntegrations={(hotel) => setSelectedIntegrationHotel({ id: hotel.id, name: hotel.name })}
                                             />
                                         </div>
                                     </div>
@@ -335,7 +332,6 @@ export default function SuperAdminDashboard() {
                                             onSelectHotel={handleSelectHotel}
                                             onImpersonate={(id) => impersonateMutation.mutate(id)}
                                             isImpersonating={impersonateMutation.isPending}
-                                            onOpenIntegrations={(hotel) => setSelectedIntegrationHotel({ id: hotel.id, name: hotel.name })}
                                         />
                                     </div>
                                 )}
@@ -361,18 +357,6 @@ export default function SuperAdminDashboard() {
                 </main>
             </div>
 
-            {/* Hotel Integrations Modal */}
-            {selectedIntegrationHotel && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedIntegrationHotel(null)}>
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
-                        <HotelIntegrationsPanel
-                            hotelId={selectedIntegrationHotel.id}
-                            hotelName={selectedIntegrationHotel.name}
-                            onClose={() => setSelectedIntegrationHotel(null)}
-                        />
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

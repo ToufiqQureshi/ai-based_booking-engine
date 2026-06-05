@@ -28,7 +28,6 @@ interface HotelsTabProps {
     onSelectHotel: (hotel: Hotel) => void;
     onImpersonate: (id: string) => void;
     isImpersonating: boolean;
-    onOpenIntegrations?: (hotel: Hotel) => void;
 }
 
 type SortKey = 'name' | 'plan' | 'status' | 'users';
@@ -40,7 +39,7 @@ const PLAN_COLORS: Record<string, string> = {
     free:       'bg-muted text-muted-foreground border-border',
 };
 
-export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImpersonating, onOpenIntegrations }: HotelsTabProps) => {
+export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImpersonating }: HotelsTabProps) => {
     const [sortKey, setSortKey] = useState<SortKey>('name');
     const [sortAsc, setSortAsc] = useState(true);
     const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -285,16 +284,6 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                                             >
                                                 <Settings className="w-3 h-3 mr-1" /> Manage
                                             </Button>
-                                            {onOpenIntegrations && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-7 text-[11px] px-3 rounded-lg font-bold border-border hidden sm:flex"
-                                                    onClick={() => onOpenIntegrations(hotel)}
-                                                >
-                                                    <Settings className="w-3 h-3 mr-1" /> Integrations
-                                                </Button>
-                                            )}
                                         </div>
                                     </td>
                                 </tr>
