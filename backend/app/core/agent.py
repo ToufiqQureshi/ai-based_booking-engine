@@ -717,6 +717,12 @@ async def create_agent_executor(session: AsyncSession, user: User):
         2048
     )
 
+    target_provider = (
+        getattr(int_settings, 'ai_provider', None) or 
+        getattr(user.hotel, 'ai_provider', None) or 
+        ""
+    )
+
     target_api_key = (
         getattr(int_settings, 'ai_api_key', None) or 
         getattr(user.hotel, 'ai_api_key', None) or 
@@ -732,14 +738,38 @@ async def create_agent_executor(session: AsyncSession, user: User):
         hotel_city = user.hotel.address.get("city", "Unknown City")
 
     from agno.agent import Agent
-    from agno.models.openai import OpenAILike
 
-    llm_model = OpenAILike(
-        id=target_model,
-        api_key=target_api_key,
-        base_url=target_base_url,
-        max_tokens=target_max_tokens,
-    )
+    effective_provider = (target_provider or "").lower().strip()
+    if not effective_provider:
+        if target_api_key.startswith("gsk_"):
+            effective_provider = "groq"
+        elif target_api_key.startswith("sk-"):
+            effective_provider = "openai"
+        elif target_api_key.startswith("AIza"):
+            effective_provider = "gemini"
+
+    if effective_provider in ("gemini", "google"):
+        from agno.models.google import Gemini
+        llm_model = Gemini(
+            id=target_model or "gemini-1.5-flash",
+            api_key=target_api_key,
+            max_output_tokens=target_max_tokens or 2048,
+        )
+    elif effective_provider == "deepseek":
+        from agno.models.deepseek import DeepSeek
+        llm_model = DeepSeek(
+            id=target_model or "deepseek-chat",
+            api_key=target_api_key,
+            max_tokens=target_max_tokens or 2048,
+        )
+    else:
+        from agno.models.openai import OpenAILike
+        llm_model = OpenAILike(
+            id=target_model,
+            api_key=target_api_key,
+            base_url=target_base_url,
+            max_tokens=target_max_tokens or 2048,
+        )
 
     agent = Agent(
         model=llm_model,

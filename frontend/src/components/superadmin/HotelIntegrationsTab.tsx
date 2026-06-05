@@ -219,6 +219,20 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                     <CardDescription>Groq, OpenAI, Anthropic, or any OpenAI-compatible endpoint.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    <div className="flex gap-2 flex-wrap mb-4">
+                        <Button type="button" variant="outline" size="sm" onClick={() => { setAiProvider('groq'); setAiModel('llama-3.3-70b-versatile'); setAiBaseUrl('https://api.groq.com/openai/v1'); }} className="rounded-xl">
+                            Auto-Config Groq
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => { setAiProvider('openai'); setAiModel('gpt-4o-mini'); setAiBaseUrl(''); }} className="rounded-xl">
+                            OpenAI GPT-4o mini
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => { setAiProvider('gemini'); setAiModel('gemini-2.5-flash'); setAiBaseUrl(''); }} className="rounded-xl">
+                            Gemini 2.5 Flash
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => { setAiProvider('deepseek'); setAiModel('deepseek-chat'); setAiBaseUrl('https://api.deepseek.com'); }} className="rounded-xl">
+                            DeepSeek Chat
+                        </Button>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                             <Label className="text-xs font-bold text-foreground/80">Provider</Label>

@@ -243,26 +243,48 @@ async def chat_with_guest_ai(
             logger.warning(f"Guest agent failed for hotel {hotel.id}, retrying without tools: {invoke_err}")
             try:
                 from agno.agent import Agent
-                from agno.models.openai import OpenAILike
                 from app.core.guest_agent import get_guest_system_prompt_content
 
-                effective_provider = (getattr(integration_settings, 'ai_provider', None) or getattr(hotel, 'ai_provider', None))
+                effective_provider = (getattr(integration_settings, 'ai_provider', None) or getattr(hotel, 'ai_provider', None) or "")
                 target_api_key = (getattr(integration_settings, 'ai_api_key', None) or getattr(hotel, 'ai_api_key', None))
                 ai_model_name = (getattr(integration_settings, 'ai_model', None) or getattr(hotel, 'ai_model', None))
                 ai_base_url_val = (getattr(integration_settings, 'ai_base_url', None) or getattr(hotel, 'ai_base_url', None))
                 fallback_max_tokens = _max_tokens or 1024
 
-                if not effective_provider and target_api_key and target_api_key.startswith("gsk_"):
-                    effective_provider = "groq"
-                default_base = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
+                effective_provider = (effective_provider or "").lower().strip()
+                if not effective_provider:
+                    if target_api_key.startswith("gsk_"):
+                        effective_provider = "groq"
+                    elif target_api_key.startswith("sk-"):
+                        effective_provider = "openai"
+                    elif target_api_key.startswith("AIza"):
+                        effective_provider = "gemini"
+
+                if effective_provider in ("gemini", "google"):
+                    from agno.models.google import Gemini
+                    fallback_llm = Gemini(
+                        id=ai_model_name or "gemini-1.5-flash",
+                        api_key=target_api_key,
+                        max_output_tokens=fallback_max_tokens or 1024,
+                    )
+                elif effective_provider == "deepseek":
+                    from agno.models.deepseek import DeepSeek
+                    fallback_llm = DeepSeek(
+                        id=ai_model_name or "deepseek-chat",
+                        api_key=target_api_key,
+                        max_tokens=fallback_max_tokens or 1024,
+                    )
+                else:
+                    from agno.models.openai import OpenAILike
+                    default_base = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
+                    fallback_llm = OpenAILike(
+                        id=ai_model_name or ("llama-3.3-70b-versatile" if effective_provider == "groq" else "gpt-4o-mini"),
+                        api_key=target_api_key,
+                        base_url=ai_base_url_val or default_base,
+                        max_tokens=fallback_max_tokens,
+                    )
 
                 system_prompt_str = await get_guest_system_prompt_content(session, hotel.id, hotel.name)
-                fallback_llm = OpenAILike(
-                    id=ai_model_name,
-                    api_key=target_api_key,
-                    base_url=ai_base_url_val or default_base,
-                    max_tokens=fallback_max_tokens,
-                )
                 fallback_agent = Agent(model=fallback_llm, instructions=system_prompt_str)
                 # Pass full conversation so context isn't lost
                 fallback_result = await fallback_agent.arun(messages)

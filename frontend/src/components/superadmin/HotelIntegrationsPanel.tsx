@@ -181,12 +181,18 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
                     {data?.has_ai_api_key && <CardDescription className="text-xs">Current key: {data.ai_api_key_preview}</CardDescription>}
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap mb-2">
                         <Button variant="outline" size="sm" onClick={() => setForm(p => ({ ...p, ai_provider: 'groq', ai_model: 'llama-3.3-70b-versatile', ai_base_url: 'https://api.groq.com/openai/v1' }))}>
                             Auto-Config Groq
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => setForm(p => ({ ...p, ai_provider: 'openai', ai_model: 'gpt-4o-mini', ai_base_url: '' }))}>
                             OpenAI GPT-4o mini
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setForm(p => ({ ...p, ai_provider: 'gemini', ai_model: 'gemini-2.5-flash', ai_base_url: '' }))}>
+                            Gemini 2.5 Flash
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setForm(p => ({ ...p, ai_provider: 'deepseek', ai_model: 'deepseek-chat', ai_base_url: 'https://api.deepseek.com' }))}>
+                            DeepSeek Chat
                         </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">

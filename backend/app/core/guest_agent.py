@@ -480,19 +480,39 @@ async def create_guest_agent_graph(
 
     try:
         from agno.agent import Agent
-        from agno.models.openai import OpenAILike
 
-        effective_provider = ai_provider
-        if not effective_provider and ai_api_key.startswith("gsk_"):
-            effective_provider = "groq"
-        default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
+        effective_provider = (ai_provider or "").lower().strip()
+        if not effective_provider:
+            if ai_api_key.startswith("gsk_"):
+                effective_provider = "groq"
+            elif ai_api_key.startswith("sk-"):
+                effective_provider = "openai"
+            elif ai_api_key.startswith("AIza"):
+                effective_provider = "gemini"
 
-        llm_model = OpenAILike(
-            id=ai_model,
-            api_key=ai_api_key,
-            base_url=ai_base_url or default_base_url,
-            max_tokens=ai_max_tokens or 1024,
-        )
+        if effective_provider in ("gemini", "google"):
+            from agno.models.google import Gemini
+            llm_model = Gemini(
+                id=ai_model or "gemini-1.5-flash",
+                api_key=ai_api_key,
+                max_output_tokens=ai_max_tokens or 1024,
+            )
+        elif effective_provider == "deepseek":
+            from agno.models.deepseek import DeepSeek
+            llm_model = DeepSeek(
+                id=ai_model or "deepseek-chat",
+                api_key=ai_api_key,
+                max_tokens=ai_max_tokens or 1024,
+            )
+        else:
+            from agno.models.openai import OpenAILike
+            default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
+            llm_model = OpenAILike(
+                id=ai_model or ("llama-3.3-70b-versatile" if effective_provider == "groq" else "gpt-4o-mini"),
+                api_key=ai_api_key,
+                base_url=ai_base_url or default_base_url,
+                max_tokens=ai_max_tokens or 1024,
+            )
 
         formatted_prompt = _build_formatted_prompt(data, hotel_name)
 

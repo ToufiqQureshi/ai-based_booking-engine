@@ -1,0 +1,43 @@
+import pytest
+from app.core.guest_agent import create_guest_agent_graph
+from agno.models.google import Gemini
+from agno.models.deepseek import DeepSeek
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import engine
+from app.models.hotel import Hotel
+
+@pytest.mark.asyncio
+async def test_guest_agent_gemini_model_instantiation(seeded_hotel: Hotel):
+    async with AsyncSession(engine) as session:
+        agent = await create_guest_agent_graph(
+            session=session,
+            hotel_id=seeded_hotel.id,
+            ai_provider="gemini",
+            ai_api_key="AIza_test_key",
+            ai_model="gemini-1.5-flash",
+            ai_base_url=None,
+            hotel_name="Test Hotel",
+        )
+        assert agent is not None
+        assert isinstance(agent.model, Gemini)
+        assert agent.model.id == "gemini-1.5-flash"
+        assert agent.model.api_key == "AIza_test_key"
+        assert agent.model.max_output_tokens == 1024
+
+@pytest.mark.asyncio
+async def test_guest_agent_deepseek_model_instantiation(seeded_hotel: Hotel):
+    async with AsyncSession(engine) as session:
+        agent = await create_guest_agent_graph(
+            session=session,
+            hotel_id=seeded_hotel.id,
+            ai_provider="deepseek",
+            ai_api_key="sk-test-key",
+            ai_model="deepseek-chat",
+            ai_base_url=None,
+            hotel_name="Test Hotel",
+        )
+        assert agent is not None
+        assert isinstance(agent.model, DeepSeek)
+        assert agent.model.id == "deepseek-chat"
+        assert agent.model.api_key == "sk-test-key"
+        assert agent.model.max_tokens == 1024
