@@ -39,7 +39,7 @@ interface Property {
 }
 
 export function AppHeader() {
-  const { user, hotel, logout } = useAuth();
+  const { user, hotel, logout, refreshHotel } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -67,10 +67,11 @@ export function AppHeader() {
     setSwitchingId(hotelId);
     try {
       await apiClient.post(`/properties/switch/${hotelId}`, {});
-      // Clear ALL cached queries so no Hotel A data leaks into Hotel B view
-      queryClient.clear();
-      // Hard navigate to dashboard with fresh context
-      window.location.href = '/dashboard';
+      // Refresh user + hotel context without a full page reload
+      await refreshHotel();
+      // Invalidate all queries so fresh data loads for the new property
+      await queryClient.invalidateQueries();
+      navigate('/dashboard');
     } catch (error) {
       setSwitchingId(null);
       toast({
@@ -78,6 +79,8 @@ export function AppHeader() {
         title: 'Could not switch property',
         description: `Failed to switch to ${hotelName}. Please try again.`,
       });
+    } finally {
+      setSwitchingId(null);
     }
   };
 
@@ -89,8 +92,10 @@ export function AppHeader() {
         name: newPropName,
         slug: newPropSlug
       });
-      queryClient.clear();
-      window.location.href = '/dashboard';
+      await refreshHotel();
+      await queryClient.invalidateQueries();
+      setIsAddPropertyOpen(false);
+      navigate('/dashboard');
     } catch (error) {
       setIsCreating(false);
       toast({

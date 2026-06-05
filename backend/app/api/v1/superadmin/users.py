@@ -14,7 +14,7 @@ from app.api.deps import DbSession
 from app.models.audit import AuditLog
 from app.models.hotel import Hotel
 from app.models.user import User, UserRole
-from .hotels import get_super_admin, _get_client_ip
+from .hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -102,7 +102,7 @@ async def update_user_status(
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.users.write")),
 ):
     user = await session.get(User, user_id)
     if not user:
