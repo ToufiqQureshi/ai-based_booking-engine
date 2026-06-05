@@ -46,6 +46,7 @@ const BookingCheckout = lazy(() => import("@/pages/public/BookingCheckout"));
 const BookingConfirmation = lazy(() => import("@/pages/public/BookingConfirmation"));
 const BookingCancel = lazy(() => import("@/pages/public/BookingCancel"));
 const BookingWidget = lazy(() => import("@/pages/public/BookingWidget"));
+const ChainBookingWidget = lazy(() => import("@/pages/public/ChainBookingWidget"));
 const ChatEmbed = lazy(() => import("@/pages/public/ChatEmbed"));
 const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
 
@@ -140,7 +141,9 @@ const App = () => {
                       <Route path="cancel" element={<BookingCancel />} />
                     </Route>
 
-                    {/* Standalone Widget Route */}
+                    {/* Standalone Widget Routes */}
+                    {/* Chain widget must be before :hotelSlug to avoid slug matching "chain" */}
+                    <Route path="/book/chain/:chainSlug/widget" element={<ChainBookingWidget />} />
                     <Route path="/book/:hotelSlug/widget" element={<BookingWidget />} />
                     <Route path="/book/:hotelSlug/chat" element={<ChatEmbed />} />
 

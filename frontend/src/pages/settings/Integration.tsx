@@ -57,6 +57,9 @@ const IntegrationPage = () => {
     const [loading, setLoading] = useState(true);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
+    // Chain info — populated only if user belongs to a chain
+    const [chainSlug, setChainSlug] = useState<string>('');
+    const [chainName, setChainName] = useState<string>('');
 
     useEffect(() => {
         fetchData();
@@ -73,6 +76,16 @@ const IntegrationPage = () => {
 
             const currentProp = properties.find((p: any) => p.is_current) || properties[0];
             if (currentProp) setActiveHotelSlug(currentProp.slug);
+
+            // Fetch chain info if user is part of a chain (non-blocking)
+            if (user?.chain_id) {
+                apiClient.get<{ slug: string; name: string }>('/chain/info')
+                    .then(info => {
+                        if (info?.slug) setChainSlug(info.slug);
+                        if (info?.name) setChainName(info.name);
+                    })
+                    .catch(() => {}); // Chain info is non-critical
+            }
 
             setSettings(settingsData);
             setApiKeys(keysData);
@@ -226,7 +239,17 @@ const IntegrationPage = () => {
                 </TabsContent>
 
                 <TabsContent value="search-widget">
-                    <SearchWidgetTab settings={settings} hotel={hotel} activeHotelSlug={activeHotelSlug} isDirty={isDirty} isSavingSettings={isSavingSettings} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} />
+                    <SearchWidgetTab
+                        settings={settings}
+                        hotel={hotel}
+                        activeHotelSlug={activeHotelSlug}
+                        isDirty={isDirty}
+                        isSavingSettings={isSavingSettings}
+                        onUpdateSettings={updateSettings}
+                        onSaveSettings={handleSaveSettings}
+                        chainSlug={chainSlug || undefined}
+                        chainName={chainName || undefined}
+                    />
                 </TabsContent>
 
                 <TabsContent value="chat-widget">

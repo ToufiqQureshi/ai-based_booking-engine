@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Lock, CheckCircle2, Loader2, Save } from 'lucide-react';
+import { Lock, CheckCircle2, Loader2, Save, Building2, Hotel } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+import { ChainWidgetTab } from '@/components/integration/ChainWidgetTab';
 
 interface IntegrationSettings {
     widget_enabled: boolean;
@@ -22,6 +24,9 @@ interface SearchWidgetTabProps {
     isSavingSettings: boolean;
     onUpdateSettings: (updates: Partial<IntegrationSettings>) => void;
     onSaveSettings: () => Promise<void>;
+    // Chain props — only provided when user belongs to a chain
+    chainSlug?: string;
+    chainName?: string;
 }
 
 export const SearchWidgetTab = ({
@@ -31,9 +36,13 @@ export const SearchWidgetTab = ({
     isDirty,
     isSavingSettings,
     onUpdateSettings,
-    onSaveSettings
+    onSaveSettings,
+    chainSlug,
+    chainName,
 }: SearchWidgetTabProps) => {
     const [previewHeight, setPreviewHeight] = useState(160);
+    const isChainUser = !!chainSlug;
+    const [widgetMode, setWidgetMode] = useState<'single' | 'chain'>('single');
 
     useEffect(() => {
         const handleResize = (event: MessageEvent) => {
@@ -55,6 +64,91 @@ export const SearchWidgetTab = ({
     ];
 
     return (
+        <div className="space-y-4">
+            {/* ── Widget Type Selector (only shown to chain users) ────────── */}
+            {isChainUser && (
+                <Card>
+                    <CardHeader className="border-b px-6 py-4">
+                        <CardTitle className="text-sm font-bold">Widget Type</CardTitle>
+                        <CardDescription className="text-xs">
+                            Choose which widget to embed on your website
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                                onClick={() => setWidgetMode('single')}
+                                className={cn(
+                                    'flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all',
+                                    widgetMode === 'single'
+                                        ? 'border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/30'
+                                        : 'border-border hover:border-indigo-200'
+                                )}
+                            >
+                                <div className={cn(
+                                    'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5',
+                                    widgetMode === 'single' ? 'bg-indigo-100 dark:bg-indigo-900/60' : 'bg-muted'
+                                )}>
+                                    <Hotel className={cn('w-4 h-4', widgetMode === 'single' ? 'text-indigo-600' : 'text-muted-foreground')} />
+                                </div>
+                                <div>
+                                    <p className={cn('font-bold text-sm', widgetMode === 'single' ? 'text-indigo-700 dark:text-indigo-400' : 'text-foreground')}>
+                                        Single Hotel Widget
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                        Current hotel ki rooms directly dikhao. Best for individual property website.
+                                    </p>
+                                    {widgetMode === 'single' && (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 mt-2">
+                                            <CheckCircle2 className="w-3 h-3" /> Selected
+                                        </span>
+                                    )}
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => setWidgetMode('chain')}
+                                className={cn(
+                                    'flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all',
+                                    widgetMode === 'chain'
+                                        ? 'border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/30'
+                                        : 'border-border hover:border-indigo-200'
+                                )}
+                            >
+                                <div className={cn(
+                                    'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5',
+                                    widgetMode === 'chain' ? 'bg-indigo-100 dark:bg-indigo-900/60' : 'bg-muted'
+                                )}>
+                                    <Building2 className={cn('w-4 h-4', widgetMode === 'chain' ? 'text-indigo-600' : 'text-muted-foreground')} />
+                                </div>
+                                <div>
+                                    <p className={cn('font-bold text-sm', widgetMode === 'chain' ? 'text-indigo-700 dark:text-indigo-400' : 'text-foreground')}>
+                                        Chain Widget
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                        Guest koi bhi property select kare — ek widget se sab hotels. Best for brand website.
+                                    </p>
+                                    {widgetMode === 'chain' && (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 mt-2">
+                                            <CheckCircle2 className="w-3 h-3" /> Selected
+                                        </span>
+                                    )}
+                                </div>
+                            </button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* ── Chain Widget Tab Content ─────────────────────────────── */}
+            {widgetMode === 'chain' && isChainUser ? (
+                <ChainWidgetTab
+                    chainSlug={chainSlug!}
+                    chainName={chainName || 'Your Brand'}
+                    isChainOwner
+                    primaryColor={settings?.widget_primary_color}
+                />
+            ) : (
         <Card>
             <CardHeader>
                 <CardTitle>Widget Appearance</CardTitle>
@@ -161,5 +255,7 @@ export const SearchWidgetTab = ({
                 </div>
             </CardContent>
         </Card>
+            )}
+        </div>
     );
 };
