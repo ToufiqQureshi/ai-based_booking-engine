@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Sparkles, CreditCard, Activity, BrainCircuit, Bot } from 'lucide-react';
+import { MessageCircle, Sparkles, CreditCard, Activity, BrainCircuit, Bot, Mail } from 'lucide-react';
 import { User, Hotel } from '@/types/api';
 
 interface WhatsappTabProps {
@@ -111,10 +111,10 @@ export const WhatsappTab = ({
                             <Button
                                 variant="default"
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-                                onClick={() => window.location.href = 'mailto:billing@staybooker.ai?subject=Add%20Staybooker%20Credits'}
+                                onClick={() => window.open('mailto:support@staybooker.ai?subject=Request%20More%20WhatsApp%20Credits', '_blank')}
                             >
-                                <CreditCard className="w-4 h-4" />
-                                Add Credit
+                                <Mail className="w-4 h-4" />
+                                Request Credits
                             </Button>
                         </div>
                     </div>
