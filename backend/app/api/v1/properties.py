@@ -22,7 +22,6 @@ class PropertyCreate(SQLModel):
     email: Optional[str] = None
 
 @router.get("", response_model=List[PropertyRead])
-@cache_response(expire=300, key_prefix="properties")
 async def list_properties(request: Request, current_user: CurrentUser, session: DbSession):
     """
     List all properties accessible by the current user.

@@ -25,8 +25,8 @@ from app.core.redis_client import redis_client as _redis
 def _clear_booking_caches(hotel_id: str):
     """Clear all booking-related caches when bookings change."""
     try:
-        _redis.delete_value(f"dashboard_stats:{hotel_id}")
-        _redis.delete_value(f"dashboard_recent_bookings:{hotel_id}")
+        _redis.delete_pattern(f"dashboard_stats:{hotel_id}:*")
+        _redis.delete_pattern(f"dashboard_recent_bookings:{hotel_id}:*")
         _redis.delete_pattern(f"bookings:{hotel_id}:*")
         _redis.delete_pattern(f"reports_dashboard:{hotel_id}:*")
         _redis.delete_pattern(f"reports_occupancy:{hotel_id}:*")

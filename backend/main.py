@@ -138,20 +138,10 @@ async def add_security_and_cache_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
 
-    # Cacheable read-only endpoints (60 seconds)
-    cacheable_prefixes = [
-        "/api/v1/dashboard",
-        "/api/v1/rooms",
-        "/api/v1/reports",
-        "/api/v1/analytics",
-        "/api/v1/amenities",
-    ]
-    is_cacheable = any(path.startswith(p) for p in cacheable_prefixes)
-
-    if request.method == "GET" and is_cacheable and response.status_code == 200:
-        response.headers["Cache-Control"] = "private, max-age=60"
-    elif path.startswith("/api/v1/auth") or path.startswith("/api/v1/users"):
-        response.headers["Cache-Control"] = "no-store"
+    # Disable browser-side caching for all API endpoints to prevent stale data / tenant leakage on property switch.
+    # Backend-side caching is still handled via @cache_response decorators.
+    if path.startswith("/api/v1"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
 
     return response
 
