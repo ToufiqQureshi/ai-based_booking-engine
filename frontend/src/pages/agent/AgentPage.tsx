@@ -249,23 +249,35 @@ const AgentPage = () => {
             <Card className="flex-1 flex flex-col shadow-lg border-2 overflow-hidden">
                 {/* Header */}
                 <CardHeader className="border-b bg-muted/20 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border-2 border-primary">
-                            <AvatarFallback className="bg-primary text-primary-foreground">
-                                <Bot size={22} />
-                            </AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <CardTitle className="flex items-center gap-2">
-                                Hotelier AI Assistant
-                                <span className="inline-flex items-center gap-1 text-xs font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 px-2 py-0.5 rounded-full">
-                                    <Sparkles size={11} /> Advanced
-                                </span>
-                            </CardTitle>
-                            <CardDescription>
-                                Revenue trends, forecasts, VIP guests, upsell, alerts — ask anything.
-                            </CardDescription>
+                    <div className="flex items-center justify-between gap-3 w-full">
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 border-2 border-primary">
+                                <AvatarFallback className="bg-primary text-primary-foreground">
+                                    <Bot size={22} />
+                                </AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    Hotelier AI Assistant
+                                    <span className="inline-flex items-center gap-1 text-xs font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 px-2 py-0.5 rounded-full">
+                                        <Sparkles size={11} /> Advanced
+                                    </span>
+                                </CardTitle>
+                                <CardDescription>
+                                    Revenue trends, forecasts, VIP guests, upsell, alerts — ask anything.
+                                </CardDescription>
+                            </div>
                         </div>
+                        {hotel?.settings && (
+                            <div className="hidden sm:flex items-center gap-3 text-xs">
+                                <div className="bg-slate-100 dark:bg-slate-800 border px-3 py-1.5 rounded-xl text-muted-foreground">
+                                    Used: <span className="font-bold text-foreground">{(hotel.settings as any).total_messages_sent || 0}</span>
+                                </div>
+                                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 px-3 py-1.5 rounded-xl text-emerald-800 dark:text-emerald-300 font-medium">
+                                    Remaining: <span className="font-bold text-emerald-600 dark:text-emerald-400">{(hotel.settings as any).ai_whatsapp_credits ?? 0} credits</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </CardHeader>
 
