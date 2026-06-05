@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut, Moon, Sun } from 'lucide-react';
+import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut, Moon, Sun, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -28,36 +29,55 @@ import { NotificationPopover } from '@/components/notifications/NotificationPopo
 import { ChatWidget } from '@/components/support/ChatWidget';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
+import { apiClient } from '@/api/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface Property {
+  id: string;
+  name: string;
+  is_current: boolean;
+}
 
 export function AppHeader() {
   const { user, hotel, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [properties, setProperties] = React.useState<any[]>([]);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [isAddPropertyOpen, setIsAddPropertyOpen] = React.useState(false);
   const [isHelpOpen, setIsHelpOpen] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [newPropName, setNewPropName] = React.useState('');
   const [newPropSlug, setNewPropSlug] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
+  const [switchingId, setSwitchingId] = React.useState<string | null>(null);
   const navigate = useNavigate();
 
-  React.useEffect(() => {
-    if (user) {
-      import('@/api/client').then(({ apiClient }) => {
-        apiClient.get('/properties')
-          .then((data: any) => setProperties(data))
-          .catch(err => console.error("Failed to fetch properties", err));
-      });
-    }
-  }, [user]);
+  const { data: properties = [] } = useQuery<Property[]>({
+    queryKey: ['properties'],
+    queryFn: () => apiClient.get<Property[]>('/properties'),
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,
+  });
 
-  const handleSwitchProperty = async (hotelId: string) => {
+  const handleSwitchProperty = async (hotelId: string, hotelName: string) => {
+    if (switchingId) return;
+    const target = properties.find(p => p.id === hotelId);
+    if (target?.is_current) return;
+
+    setSwitchingId(hotelId);
     try {
-      const { apiClient } = await import('@/api/client');
       await apiClient.post(`/properties/switch/${hotelId}`, {});
-      window.location.reload();
+      // Clear ALL cached queries so no Hotel A data leaks into Hotel B view
+      queryClient.clear();
+      // Hard navigate to dashboard with fresh context
+      window.location.href = '/dashboard';
     } catch (error) {
-      console.error("Failed to switch property", error);
+      setSwitchingId(null);
+      toast({
+        variant: 'destructive',
+        title: 'Could not switch property',
+        description: `Failed to switch to ${hotelName}. Please try again.`,
+      });
     }
   };
 
@@ -65,14 +85,19 @@ export function AppHeader() {
     if (!newPropName || !newPropSlug) return;
     setIsCreating(true);
     try {
-      const { apiClient } = await import('@/api/client');
       await apiClient.post('/properties', {
         name: newPropName,
         slug: newPropSlug
       });
-      window.location.reload();
+      queryClient.clear();
+      window.location.href = '/dashboard';
     } catch (error) {
       setIsCreating(false);
+      toast({
+        variant: 'destructive',
+        title: 'Could not create property',
+        description: 'Please check the details and try again.',
+      });
     }
   };
 
@@ -83,9 +108,23 @@ export function AppHeader() {
     .toUpperCase()
     .slice(0, 2) || 'U';
 
+  const switchingHotelName = switchingId ? properties.find(p => p.id === switchingId)?.name : null;
+
   return (
+    <>
+    {switchingId && (
+      <div className="fixed inset-0 z-[200] bg-background/85 backdrop-blur-sm flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 px-8 py-6 bg-card rounded-2xl border border-border shadow-xl">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm font-semibold text-foreground">
+            Switching to {switchingHotelName || 'property'}...
+          </p>
+          <p className="text-xs text-muted-foreground">Loading fresh data</p>
+        </div>
+      </div>
+    )}
     <header className="sticky top-0 z-40 flex h-14 items-center gap-3 bg-background dark:bg-slate-900 px-6 border-b border-border dark:border-slate-800">
-      
+
       {/* Sidebar Trigger */}
       <SidebarTrigger className="-ml-2 h-9 w-9 rounded-lg hover:bg-muted/30 transition-colors">
         <Menu className="h-5 w-5 text-muted-foreground" />
@@ -112,23 +151,33 @@ export function AppHeader() {
           <DropdownMenuSeparator className="bg-muted" />
 
           <div className="max-h-[300px] overflow-y-auto space-y-0.5 my-1">
-            {properties.map(p => (
-                <DropdownMenuItem key={p.id} className={cn(
+            {properties.map(p => {
+              const isThisSwitching = switchingId === p.id;
+              return (
+                <DropdownMenuItem
+                  key={p.id}
+                  disabled={!!switchingId}
+                  className={cn(
                     "flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all",
-                    p.is_current ? "bg-blue-50 text-blue-700" : "hover:bg-muted/30 text-muted-foreground"
-                )} onClick={() => handleSwitchProperty(p.id)}>
-                <div className={cn(
-                    "h-7 w-7 rounded-md flex items-center justify-center font-bold text-xs",
-                    p.is_current ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground"
-                )}>
-                    {p.name[0]}
-                </div>
-                <div className="flex flex-col">
-                    <span className="font-semibold text-sm">{p.name}</span>
-                    {p.is_current && <span className="text-[9px] font-bold uppercase text-blue-500">Current</span>}
-                </div>
+                    p.is_current ? "bg-blue-50 text-blue-700" : "hover:bg-muted/30 text-muted-foreground",
+                    switchingId && !isThisSwitching && "opacity-50",
+                  )}
+                  onSelect={(e) => { e.preventDefault(); handleSwitchProperty(p.id, p.name); }}
+                >
+                  <div className={cn(
+                      "h-7 w-7 rounded-md flex items-center justify-center font-bold text-xs",
+                      p.is_current ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground"
+                  )}>
+                      {p.name[0]}
+                  </div>
+                  <div className="flex flex-col flex-1">
+                      <span className="font-semibold text-sm">{p.name}</span>
+                      {p.is_current && <span className="text-[9px] font-bold uppercase text-blue-500">Current</span>}
+                  </div>
+                  {isThisSwitching && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
                 </DropdownMenuItem>
-            ))}
+              );
+            })}
           </div>
 
           <DropdownMenuSeparator className="bg-muted" />
@@ -282,6 +331,7 @@ export function AppHeader() {
 
       <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </header>
+    </>
   );
 }
 
