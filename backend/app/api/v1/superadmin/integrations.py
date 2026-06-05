@@ -141,22 +141,39 @@ async def update_hotel_integrations(
     if not hotel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hotel not found")
 
+    from app.models.integration import IntegrationSettings
+    int_settings = (await session.execute(
+        select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
+    )).scalar_one_or_none()
+
+    if not int_settings:
+        int_settings = IntegrationSettings(hotel_id=hotel_id)
+        session.add(int_settings)
+
     updated: list[str] = []
 
     for field in ("ai_provider", "ai_model", "feature_ai_agent", "feature_guest_bot", "feature_ai_assistant"):
         val = getattr(payload, field)
         if val is not None:
             setattr(hotel, field, val)
+            if field in ("ai_provider", "ai_model"):
+                setattr(int_settings, field, val)
             updated.append(field)
 
     if payload.ai_base_url is not None:
-        hotel.ai_base_url = payload.ai_base_url or None
+        val = payload.ai_base_url or None
+        hotel.ai_base_url = val
+        int_settings.ai_base_url = val
         updated.append("ai_base_url")
     if payload.ai_max_tokens is not None:
-        hotel.ai_max_tokens = payload.ai_max_tokens if payload.ai_max_tokens > 0 else None
+        val = payload.ai_max_tokens if payload.ai_max_tokens > 0 else None
+        hotel.ai_max_tokens = val
+        int_settings.ai_max_tokens = val
         updated.append("ai_max_tokens")
     if payload.ai_api_key is not None:
-        hotel.ai_api_key = payload.ai_api_key or None
+        val = payload.ai_api_key or None
+        hotel.ai_api_key = val
+        int_settings.ai_api_key = val
         updated.append("ai_api_key")
     if payload.is_paused is not None:
         from app.core.feature_flags import set_pause
@@ -187,10 +204,14 @@ async def update_hotel_integrations(
         hotel.settings = settings
 
     from app.core.time import utcnow
-    hotel.updated_at = utcnow()
+    now = utcnow()
+    hotel.updated_at = now
+    int_settings.updated_at = now
     session.add(hotel)
+    session.add(int_settings)
     await session.commit()
     await session.refresh(hotel)
+    await session.refresh(int_settings)
 
     try:
         from app.core.redis_client import redis_client
