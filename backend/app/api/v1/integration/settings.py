@@ -267,14 +267,21 @@ async def test_ai_connection(current_user: CurrentUser, session: DbSession):
     res = await session.execute(query)
     settings = res.scalar_one_or_none()
 
-    if not settings or not settings.ai_api_key:
+    hotel = await session.get(Hotel, current_user.hotel_id)
+
+    effective_provider = (getattr(settings, "ai_provider", None) or getattr(hotel, "ai_provider", None))
+    effective_api_key = (getattr(settings, "ai_api_key", None) or getattr(hotel, "ai_api_key", None))
+    effective_model = (getattr(settings, "ai_model", None) or getattr(hotel, "ai_model", None))
+    effective_base_url = (getattr(settings, "ai_base_url", None) or getattr(hotel, "ai_base_url", None))
+
+    if not effective_api_key:
         return {"status": "error", "message": "API Key is missing."}
 
     try:
         agent = await create_guest_agent_graph(
             session, current_user.hotel_id,
-            settings.ai_provider, settings.ai_api_key,
-            settings.ai_model, settings.ai_base_url,
+            effective_provider, effective_api_key,
+            effective_model, effective_base_url,
             "Test Hotel",
         )
         if not agent:

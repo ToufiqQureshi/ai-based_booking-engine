@@ -106,21 +106,11 @@ class EmailService:
                 cc_emails=cc_emails
             )
         
-        # 2. Custom Brevo
-        custom_brevo_key = hotel_settings.get("brevo_api_key")
+        # 2. Platform Brevo with Reply-To (all hotels send mail using platform's Brevo account)
         reply_to_email = hotel_settings.get("email_reply_to")
         sender_name = hotel_settings.get("email_sender_name")
         
-        if custom_brevo_key:
-            client = AsyncBrevo(api_key=custom_brevo_key)
-            sender = self._get_sender(custom_name=sender_name) # Will likely fail if domain not verified, but hotel choice
-            # If using custom brevo, they should have verified domain, so we can try using their reply-to as sender email if it exists
-            if reply_to_email:
-                sender.email = reply_to_email
-            return await self._send_email(to_emails, subject, html_content, sender, cc_emails, custom_client=client)
-
-        # 3. Fallback to Platform Brevo with Reply-To
-        sender = self._get_sender(custom_name=sender_name) # Uses noreply@staybooker.ai
+        sender = self._get_sender(custom_name=sender_name) # Uses platform default BREVO_SENDER_EMAIL
         return await self._send_email(to_emails, subject, html_content, sender, cc_emails, reply_to=reply_to_email)
 
 

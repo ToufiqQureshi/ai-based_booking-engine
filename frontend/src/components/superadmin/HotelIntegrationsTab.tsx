@@ -23,12 +23,16 @@ interface HotelIntegrationsRead {
     whatsapp_api_key_preview?: string;
     has_whatsapp_phone_id: boolean;
     has_whatsapp_business_id: boolean;
+    whatsapp_phone_number_id?: string;
+    whatsapp_business_account_id?: string;
     has_brevo_key: boolean;
     brevo_key_preview?: string;
     has_smtp_password: boolean;
     has_smtp_config: boolean;
     smtp_host?: string;
     smtp_from_email?: string;
+    smtp_username?: string;
+    smtp_port?: number;
     ai_whatsapp_credits: number;
     total_messages_sent: number;
     is_paused: boolean;
@@ -56,7 +60,6 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
     const [waApiKey, setWaApiKey] = useState('');
     const [waPhoneId, setWaPhoneId] = useState('');
     const [waBusinessId, setWaBusinessId] = useState('');
-    const [brevoKey, setBrevoKey] = useState('');
     const [smtpHost, setSmtpHost] = useState('');
     const [smtpPort, setSmtpPort] = useState('');
     const [smtpUsername, setSmtpUsername] = useState('');
@@ -69,7 +72,6 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
     // Show / hide password fields
     const [showAiKey, setShowAiKey] = useState(false);
     const [showWaKey, setShowWaKey] = useState(false);
-    const [showBrevo, setShowBrevo] = useState(false);
     const [showSmtp, setShowSmtp] = useState(false);
 
     useEffect(() => {
@@ -87,12 +89,11 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             setAiBaseUrl(res.ai_base_url || '');
             setAiMaxTokens(res.ai_max_tokens ? String(res.ai_max_tokens) : '');
             setWaApiKey(''); // never populate the actual secret — admin must re-enter
-            setWaPhoneId('');
-            setWaBusinessId('');
-            setBrevoKey('');
+            setWaPhoneId(res.whatsapp_phone_number_id || '');
+            setWaBusinessId(res.whatsapp_business_account_id || '');
             setSmtpHost(res.smtp_host || '');
-            setSmtpPort('');
-            setSmtpUsername('');
+            setSmtpPort(res.smtp_port ? String(res.smtp_port) : '');
+            setSmtpUsername(res.smtp_username || '');
             setSmtpPassword('');
             setSmtpFromEmail(res.smtp_from_email || '');
             setWaCredits(String(res.ai_whatsapp_credits || 1000));
@@ -109,7 +110,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
         try {
             setIsSaving(true);
             const payload: any = {};
-            // Only send fields that the admin actually changed (non-empty)
+            // Only send fields that the admin actually changed
             // Empty strings mean "clear this field"
             if (aiProvider !== (data?.ai_provider || '')) payload.ai_provider = aiProvider;
             if (aiModel !== (data?.ai_model || '')) payload.ai_model = aiModel;
@@ -119,12 +120,15 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             if (parsedMaxTokens !== existingMaxTokens) payload.ai_max_tokens = parsedMaxTokens ?? 0;
             if (aiApiKey) payload.ai_api_key = aiApiKey;
             if (waApiKey) payload.whatsapp_api_key = waApiKey;
-            if (waPhoneId) payload.whatsapp_phone_number_id = waPhoneId;
-            if (waBusinessId) payload.whatsapp_business_account_id = waBusinessId;
-            if (brevoKey) payload.brevo_api_key = brevoKey;
+            if (waPhoneId !== (data?.whatsapp_phone_number_id || '')) payload.whatsapp_phone_number_id = waPhoneId;
+            if (waBusinessId !== (data?.whatsapp_business_account_id || '')) payload.whatsapp_business_account_id = waBusinessId;
             if (smtpHost !== (data?.smtp_host || '')) payload.smtp_host = smtpHost;
-            if (smtpPort) payload.smtp_port = parseInt(smtpPort, 10);
-            if (smtpUsername) payload.smtp_username = smtpUsername;
+            
+            const parsedSmtpPort = smtpPort ? parseInt(smtpPort, 10) : null;
+            const existingSmtpPort = data?.smtp_port ?? null;
+            if (parsedSmtpPort !== existingSmtpPort) payload.smtp_port = parsedSmtpPort;
+
+            if (smtpUsername !== (data?.smtp_username || '')) payload.smtp_username = smtpUsername;
             if (smtpPassword) payload.smtp_password = smtpPassword;
             if (smtpFromEmail !== (data?.smtp_from_email || '')) payload.smtp_from_email = smtpFromEmail;
             if (Number(waCredits) !== data?.ai_whatsapp_credits) payload.ai_whatsapp_credits = Number(waCredits);
@@ -141,8 +145,8 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             }
             const res = await apiClient.put<{ message: string; fields_updated: string[] }>(`/superadmin/hotels/${hotel.id}/integrations`, payload);
             toast({ title: 'Saved', description: res.message });
-            // Clear the password fields after save so they don't sit in memory
-            setAiApiKey(''); setWaApiKey(''); setBrevoKey(''); setSmtpPassword(''); setAiMaxTokens('');
+            // Clear the password fields after save so they don't sit in memory (do not clear aiMaxTokens)
+            setAiApiKey(''); setWaApiKey(''); setSmtpPassword('');
             loadData();
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Save failed', description: error?.response?.data?.detail || error?.message });
@@ -293,23 +297,9 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             <Card className="border-border bg-card dark:border-white/10 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl shadow-sm">
                 <CardHeader>
                     <CardTitle className="text-foreground flex items-center gap-2"><Mail className="w-4 h-4 text-amber-500" /> Email Provider</CardTitle>
-                    <CardDescription>Brevo is the recommended option. SMTP is the fallback for direct-send setups.</CardDescription>
+                    <CardDescription>Brevo is the platform default. SMTP is the custom fallback for direct-send setups.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* Brevo */}
-                    <div className="space-y-2">
-                        <Label className="text-xs font-bold text-foreground/80 flex items-center gap-2">
-                            Brevo API Key
-                            {data?.brevo_key_preview && <span className="text-muted-foreground font-normal">current: {data.brevo_key_preview}</span>}
-                        </Label>
-                        <div className="relative">
-                            <Input type={showBrevo ? 'text' : 'password'} value={brevoKey} onChange={e => setBrevoKey(e.target.value)} placeholder="xkeysib-..." className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
-                            <button type="button" onClick={() => setShowBrevo(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                                {showBrevo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                        </div>
-                    </div>
-                    <Separator className="bg-border dark:bg-white/5" />
                     {/* SMTP */}
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">

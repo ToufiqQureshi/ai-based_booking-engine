@@ -154,6 +154,75 @@ async def init_db():
         except Exception:
             pass
 
+    # Auto-heal: Sync AI fields from hotels table to integration_settings table if missing or not set
+    try:
+        async with engine.begin() as conn:
+            import secrets
+            from datetime import datetime
+            
+            # Select all hotels that have an AI key set
+            result = await conn.execute(
+                text("SELECT id, ai_provider, ai_api_key, ai_model, ai_base_url, ai_max_tokens FROM hotels WHERE ai_api_key IS NOT NULL")
+            )
+            hotels_with_keys = result.fetchall()
+            for row in hotels_with_keys:
+                hotel_id, ai_prov, ai_key, ai_mod, ai_base, ai_max = row
+                
+                # Check if integration settings exist for this hotel
+                sett_res = await conn.execute(
+                    text("SELECT id, ai_api_key FROM integration_settings WHERE hotel_id = :h_id"),
+                    {"h_id": hotel_id}
+                )
+                sett_row = sett_res.fetchone()
+                
+                if not sett_row:
+                    # Create new IntegrationSettings row
+                    new_id = secrets.token_urlsafe(8)
+                    await conn.execute(
+                        text(
+                            "INSERT INTO integration_settings (id, hotel_id, ai_provider, ai_api_key, ai_model, ai_base_url, ai_max_tokens, created_at, updated_at) "
+                            "VALUES (:id, :hotel_id, :ai_provider, :ai_api_key, :ai_model, :ai_base_url, :ai_max_tokens, :now, :now)"
+                        ),
+                        {
+                            "id": new_id,
+                            "hotel_id": hotel_id,
+                            "ai_provider": ai_prov or "groq",
+                            "ai_api_key": ai_key,
+                            "ai_model": ai_mod or "llama-3.1-70b-versatile",
+                            "ai_base_url": ai_base,
+                            "ai_max_tokens": ai_max,
+                            "now": datetime.utcnow()
+                        }
+                    )
+                else:
+                    sett_id, sett_key = sett_row
+                    if not sett_key:
+                        # Update existing IntegrationSettings with hotel's AI config
+                        await conn.execute(
+                            text(
+                                "UPDATE integration_settings SET "
+                                "ai_provider = COALESCE(ai_provider, :ai_provider), "
+                                "ai_api_key = :ai_api_key, "
+                                "ai_model = COALESCE(ai_model, :ai_model), "
+                                "ai_base_url = COALESCE(ai_base_url, :ai_base_url), "
+                                "ai_max_tokens = COALESCE(ai_max_tokens, :ai_max_tokens), "
+                                "updated_at = :now "
+                                "WHERE id = :id"
+                            ),
+                            {
+                                "id": sett_id,
+                                "ai_provider": ai_prov or "groq",
+                                "ai_api_key": ai_key,
+                                "ai_model": ai_mod or "llama-3.1-70b-versatile",
+                                "ai_base_url": ai_base,
+                                "ai_max_tokens": ai_max,
+                                "now": datetime.utcnow()
+                            }
+                        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Database auto-heal for AI integration settings failed: {e}")
+
 
 
 async def get_session() -> AsyncSession:

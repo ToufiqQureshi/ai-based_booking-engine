@@ -19,6 +19,7 @@ import { apiClient, tokenStorage } from '@/api/client';
 import { toast } from 'sonner';
 import { HotelIntegrationsTab } from './HotelIntegrationsTab';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
 
@@ -32,6 +33,7 @@ interface HotelWorkspaceProps {
 const FEATURE_FLAGS = [
     { id: 'feature_ai_agent',       label: 'AI Agent',           desc: 'AI booking assistant on WhatsApp & chat',  icon: BrainCircuit, color: 'text-purple-600 bg-purple-50' },
     { id: 'feature_guest_bot',      label: 'Guest Bot',          desc: 'Automated guest messaging & responses',    icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
+    { id: 'feature_ai_assistant',   label: 'AI Assistant',       desc: 'Dashboard AI assistant for hotel staff',   icon: BrainCircuit, color: 'text-indigo-600 bg-indigo-50' },
     { id: 'feature_rate_shopper',   label: 'Rate Shopper',       desc: 'Competitor rate tracking & analysis',      icon: BarChart3,    color: 'text-emerald-600 bg-emerald-50' },
     { id: 'feature_new_booking',    label: 'Booking Engine',     desc: 'Public booking page & widget',             icon: Globe,        color: 'text-indigo-600 bg-indigo-50' },
     { id: 'feature_color_palette',  label: 'Color Palette',      desc: 'Custom brand colors on booking page',      icon: Palette,      color: 'text-pink-600 bg-pink-50' },
@@ -96,6 +98,29 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
             qc.invalidateQueries({ queryKey: ['superadmin-hotels'] });
         },
         onError: () => toast.error('Failed to update role permissions'),
+    });
+
+    // Add User Dialog State & Mutation
+    const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+    const [addUserName, setAddUserName] = useState('');
+    const [addUserEmail, setAddUserEmail] = useState('');
+    const [addUserPassword, setAddUserPassword] = useState('');
+    const [addUserRole, setAddUserRole] = useState('STAFF');
+
+    const addUserMutation = useMutation({
+        mutationFn: (data: any) => apiClient.post(`/superadmin/hotels/${hotel.id}/users`, data),
+        onSuccess: () => {
+            toast.success('Employee account created successfully');
+            qc.invalidateQueries({ queryKey: ['superadmin-users'] });
+            setIsAddUserOpen(false);
+            setAddUserName('');
+            setAddUserEmail('');
+            setAddUserPassword('');
+            setAddUserRole('STAFF');
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || err?.message || 'Failed to create employee account');
+        }
     });
 
     // Hotel health
@@ -459,6 +484,13 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                     <div className="border border-border rounded-2xl bg-background overflow-hidden">
                         <div className="p-4 border-b border-border flex items-center justify-between">
                             <h3 className="text-sm font-black text-foreground">Hotel Users ({hotelUsers.length})</h3>
+                            <Button
+                                size="sm"
+                                className="rounded-xl bg-indigo-600 hover:bg-indigo-750 text-white font-bold h-8 px-4"
+                                onClick={() => setIsAddUserOpen(true)}
+                            >
+                                Add Employee
+                            </Button>
                         </div>
                         {hotelUsers.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
@@ -495,6 +527,101 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                             </table>
                         )}
                     </div>
+
+                    <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                        <DialogContent className="rounded-3xl border border-border bg-background shadow-2xl p-6 max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Add Employee Account</DialogTitle>
+                                <DialogDescription className="text-xs text-muted-foreground font-medium mt-1">
+                                    Create a new login credential directly registered under {hotel.name}.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                                        Full Name
+                                    </Label>
+                                    <Input
+                                        placeholder="John Doe"
+                                        className="h-11 bg-muted/20 border-border rounded-xl font-medium text-foreground"
+                                        value={addUserName}
+                                        onChange={(e) => setAddUserName(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                                        Email Address
+                                    </Label>
+                                    <Input
+                                        type="email"
+                                        placeholder="john@example.com"
+                                        className="h-11 bg-muted/20 border-border rounded-xl font-medium text-foreground"
+                                        value={addUserEmail}
+                                        onChange={(e) => setAddUserEmail(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                                        Password
+                                    </Label>
+                                    <Input
+                                        type="password"
+                                        placeholder="Min 6 characters"
+                                        className="h-11 bg-muted/20 border-border rounded-xl font-medium text-foreground"
+                                        value={addUserPassword}
+                                        onChange={(e) => setAddUserPassword(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
+                                        Role / Privilege Level
+                                    </Label>
+                                    <Select value={addUserRole} onValueChange={setAddUserRole}>
+                                        <SelectTrigger className="h-11 rounded-xl border-border bg-muted/20 font-bold text-foreground">
+                                            <SelectValue placeholder="Select Role" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-border bg-background">
+                                            <SelectItem value="OWNER">Owner / General Manager</SelectItem>
+                                            <SelectItem value="MANAGER">Manager / Department Head</SelectItem>
+                                            <SelectItem value="STAFF">Basic Staff Member</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <DialogFooter className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 rounded-xl h-11 font-bold hover:bg-muted/30"
+                                    onClick={() => setIsAddUserOpen(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    className="bg-indigo-600 hover:bg-indigo-750 text-white font-bold h-11 px-6 rounded-xl flex-1 transition-all"
+                                    disabled={addUserMutation.isPending}
+                                    onClick={() => {
+                                        if (!addUserEmail || !addUserName || !addUserPassword) {
+                                            toast.error('Please fill in all employee fields.');
+                                            return;
+                                        }
+                                        addUserMutation.mutate({
+                                            email: addUserEmail,
+                                            name: addUserName,
+                                            password: addUserPassword,
+                                            role: addUserRole
+                                        });
+                                    }}
+                                >
+                                    {addUserMutation.isPending ? 'Creating…' : 'Create Account'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </TabsContent>
 
                 {/* ── EXPORTS ── */}

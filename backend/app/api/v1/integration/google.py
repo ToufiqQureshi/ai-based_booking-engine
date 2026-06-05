@@ -280,11 +280,16 @@ Reply:"""
         from app.core.guest_agent import create_guest_agent_graph
         from agno.agent import Message
 
-        if settings and settings.ai_api_key:
+        effective_provider = (getattr(settings, "ai_provider", None) or getattr(hotel, "ai_provider", None))
+        effective_api_key = (getattr(settings, "ai_api_key", None) or getattr(hotel, "ai_api_key", None))
+        effective_model = (getattr(settings, "ai_model", None) or getattr(hotel, "ai_model", None))
+        effective_base_url = (getattr(settings, "ai_base_url", None) or getattr(hotel, "ai_base_url", None))
+
+        if effective_api_key:
             agent = await create_guest_agent_graph(
                 session, current_user.hotel_id,
-                settings.ai_provider, settings.ai_api_key,
-                settings.ai_model, settings.ai_base_url,
+                effective_provider, effective_api_key,
+                effective_model, effective_base_url,
                 hotel_name,
             )
             if agent:

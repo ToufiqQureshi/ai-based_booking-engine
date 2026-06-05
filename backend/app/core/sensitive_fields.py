@@ -78,7 +78,8 @@ def _mask_settings_for_hotelier(settings: Optional[Dict[str, Any]]) -> Dict[str,
             elif k == "whatsapp_business_account_id":
                 masked["has_whatsapp_business_id"] = bool(v)
             elif k == "brevo_api_key":
-                masked["has_brevo_key"] = bool(v)
+                # Deprecated per-hotel key; platform global key is checked below.
+                pass
             elif k == "smtp_password":
                 masked["has_smtp_password"] = bool(v)
             elif k in ("smtp_host", "smtp_port", "smtp_username"):
@@ -91,6 +92,11 @@ def _mask_settings_for_hotelier(settings: Optional[Dict[str, Any]]) -> Dict[str,
             # drop the actual secret
         else:
             masked[k] = v
+
+    # Platform-wide Brevo configuration is the default email option for all hotels.
+    from app.core.config import get_settings
+    masked["has_brevo_key"] = bool(get_settings().BREVO_API_KEY)
+    
     return masked
 
 

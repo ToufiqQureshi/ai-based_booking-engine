@@ -120,6 +120,8 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_
             "feature_color_palette": getattr(hotel, "feature_color_palette", True),
             "feature_custom_logo": getattr(hotel, "feature_custom_logo", True),
             "feature_custom_widget": getattr(hotel, "feature_custom_widget", True),
+            "feature_google_ads": getattr(hotel, "feature_google_ads", False),
+            "feature_ai_assistant": getattr(hotel, "feature_ai_assistant", False),
             "role_permissions": settings_dict.get("role_permissions", DEFAULT_ROLE_PERMISSIONS),
             "subscription": {
                 "plan": sub.plan_name if sub else "None",

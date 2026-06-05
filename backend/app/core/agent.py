@@ -66,7 +66,7 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 - Hotel Location: {city}
 """
 
-def create_agent_executor(session: AsyncSession, user: User):
+async def create_agent_executor(session: AsyncSession, user: User):
     """
     Creates an Agent Graph instance with tools bound to the current user and database session.
     """
@@ -689,14 +689,39 @@ def create_agent_executor(session: AsyncSession, user: User):
         get_upsell_opportunities,
     ]
 
-    # Resolve dynamic config from hotel relation
-    target_api_key = settings.GROQ_API_KEY
-    target_model = getattr(user.hotel, 'ai_model', None) or "llama-3.3-70b-versatile"
-    target_base_url = getattr(user.hotel, 'ai_base_url', None) or "https://api.groq.com/openai/v1"
-    target_max_tokens = getattr(user.hotel, 'ai_max_tokens', None) or 2048
+    # Resolve dynamic config from integration settings or hotel relation
+    from app.models.integration import IntegrationSettings
+    int_settings = None
+    if user.hotel_id:
+        try:
+            int_res = await session.execute(
+                select(IntegrationSettings).where(IntegrationSettings.hotel_id == user.hotel_id)
+            )
+            int_settings = int_res.scalar_one_or_none()
+        except Exception as exc:
+            logger.warning(f"Failed to fetch integration settings for assistant: {exc}")
 
-    if user.hotel and getattr(user.hotel, 'ai_api_key', None):
-        target_api_key = user.hotel.ai_api_key
+    target_model = (
+        getattr(int_settings, 'ai_model', None) or 
+        getattr(user.hotel, 'ai_model', None) or 
+        "llama-3.3-70b-versatile"
+    )
+    target_base_url = (
+        getattr(int_settings, 'ai_base_url', None) or 
+        getattr(user.hotel, 'ai_base_url', None) or 
+        "https://api.groq.com/openai/v1"
+    )
+    target_max_tokens = (
+        getattr(int_settings, 'ai_max_tokens', None) or 
+        getattr(user.hotel, 'ai_max_tokens', None) or 
+        2048
+    )
+
+    target_api_key = (
+        getattr(int_settings, 'ai_api_key', None) or 
+        getattr(user.hotel, 'ai_api_key', None) or 
+        settings.GROQ_API_KEY
+    )
 
     if not target_api_key:
         raise ValueError("No valid GROQ_API_KEY available for this hotel.")

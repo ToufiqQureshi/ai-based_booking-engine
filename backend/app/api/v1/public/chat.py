@@ -218,15 +218,15 @@ async def chat_with_guest_ai(
         # 3. Initialize Agent
         from app.core.guest_agent import create_guest_agent_graph
         _max_tokens = (
-            getattr(integration_settings, 'ai_max_tokens', None) if integration_settings else None
-        ) or getattr(hotel, 'ai_max_tokens', None)
+            getattr(integration_settings, 'ai_max_tokens', None) or getattr(hotel, 'ai_max_tokens', None)
+        )
         agent = await create_guest_agent_graph(
             session,
             hotel.id,
-            getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None),
-            getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None),
-            getattr(integration_settings, 'ai_model', None) if integration_settings else None,
-            getattr(integration_settings, 'ai_base_url', None) if integration_settings else None,
+            (getattr(integration_settings, 'ai_provider', None) or getattr(hotel, 'ai_provider', None)),
+            (getattr(integration_settings, 'ai_api_key', None) or getattr(hotel, 'ai_api_key', None)),
+            (getattr(integration_settings, 'ai_model', None) or getattr(hotel, 'ai_model', None)),
+            (getattr(integration_settings, 'ai_base_url', None) or getattr(hotel, 'ai_base_url', None)),
             hotel.name,
             _max_tokens,
         )
@@ -246,10 +246,10 @@ async def chat_with_guest_ai(
                 from agno.models.openai import OpenAILike
                 from app.core.guest_agent import get_guest_system_prompt_content
 
-                effective_provider = getattr(integration_settings, 'ai_provider', None) if integration_settings else getattr(hotel, 'ai_provider', None)
-                target_api_key = getattr(integration_settings, 'ai_api_key', None) if integration_settings else getattr(hotel, 'ai_api_key', None)
-                ai_model_name = getattr(integration_settings, 'ai_model', None) if integration_settings else getattr(hotel, 'ai_model', None)
-                ai_base_url_val = getattr(integration_settings, 'ai_base_url', None) if integration_settings else None
+                effective_provider = (getattr(integration_settings, 'ai_provider', None) or getattr(hotel, 'ai_provider', None))
+                target_api_key = (getattr(integration_settings, 'ai_api_key', None) or getattr(hotel, 'ai_api_key', None))
+                ai_model_name = (getattr(integration_settings, 'ai_model', None) or getattr(hotel, 'ai_model', None))
+                ai_base_url_val = (getattr(integration_settings, 'ai_base_url', None) or getattr(hotel, 'ai_base_url', None))
                 fallback_max_tokens = _max_tokens or 1024
 
                 if not effective_provider and target_api_key and target_api_key.startswith("gsk_"):
@@ -342,15 +342,15 @@ async def stream_guest_ai(
 
         from app.core.guest_agent import create_guest_agent_graph
         _stream_max_tokens = (
-            getattr(integration_settings, "ai_max_tokens", None) if integration_settings else None
-        ) or getattr(hotel, "ai_max_tokens", None)
+            getattr(integration_settings, "ai_max_tokens", None) or getattr(hotel, "ai_max_tokens", None)
+        )
         agent = await create_guest_agent_graph(
             session,
             hotel.id,
-            getattr(integration_settings, "ai_provider", None) if integration_settings else None,
-            getattr(integration_settings, "ai_api_key", None) if integration_settings else None,
-            getattr(integration_settings, "ai_model", None) if integration_settings else None,
-            getattr(integration_settings, "ai_base_url", None) if integration_settings else None,
+            (getattr(integration_settings, "ai_provider", None) or getattr(hotel, "ai_provider", None)),
+            (getattr(integration_settings, "ai_api_key", None) or getattr(hotel, "ai_api_key", None)),
+            (getattr(integration_settings, "ai_model", None) or getattr(hotel, "ai_model", None)),
+            (getattr(integration_settings, "ai_base_url", None) or getattr(hotel, "ai_base_url", None)),
             hotel.name,
             _stream_max_tokens,
         )

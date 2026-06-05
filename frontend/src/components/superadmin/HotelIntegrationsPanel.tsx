@@ -15,6 +15,8 @@ interface HotelIntegrationsData {
     whatsapp_api_key_preview?: string;
     has_whatsapp_phone_id: boolean;
     has_whatsapp_business_id: boolean;
+    whatsapp_phone_number_id?: string;
+    whatsapp_business_account_id?: string;
     has_ai_api_key: boolean;
     ai_api_key_preview?: string;
     ai_provider?: string;
@@ -58,6 +60,8 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
             setData(res);
             setForm(prev => ({
                 ...prev,
+                whatsapp_phone_number_id: res.whatsapp_phone_number_id || '',
+                whatsapp_business_account_id: res.whatsapp_business_account_id || '',
                 ai_provider: res.ai_provider || 'groq',
                 ai_model: res.ai_model || 'llama-3.3-70b-versatile',
                 ai_base_url: res.ai_base_url || 'https://api.groq.com/openai/v1',
@@ -75,8 +79,12 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
         try {
             const payload: any = {};
             if (form.whatsapp_api_key) payload.whatsapp_api_key = form.whatsapp_api_key;
-            if (form.whatsapp_phone_number_id) payload.whatsapp_phone_number_id = form.whatsapp_phone_number_id;
-            if (form.whatsapp_business_account_id) payload.whatsapp_business_account_id = form.whatsapp_business_account_id;
+            if (form.whatsapp_phone_number_id !== (data?.whatsapp_phone_number_id || '')) {
+                payload.whatsapp_phone_number_id = form.whatsapp_phone_number_id;
+            }
+            if (form.whatsapp_business_account_id !== (data?.whatsapp_business_account_id || '')) {
+                payload.whatsapp_business_account_id = form.whatsapp_business_account_id;
+            }
             if (form.ai_api_key) payload.ai_api_key = form.ai_api_key;
             if (form.ai_provider) payload.ai_provider = form.ai_provider;
             if (form.ai_model) payload.ai_model = form.ai_model;
@@ -88,7 +96,7 @@ export function HotelIntegrationsPanel({ hotelId, hotelName, onClose }: Props) {
             await apiClient.put(`/superadmin/hotels/${hotelId}/integrations`, payload);
             toast.success('Integration settings saved');
             await loadData();
-            setForm(prev => ({ ...prev, whatsapp_api_key: '', whatsapp_phone_number_id: '', whatsapp_business_account_id: '', ai_api_key: '', credit_topup: 0 }));
+            setForm(prev => ({ ...prev, whatsapp_api_key: '', ai_api_key: '', credit_topup: 0 }));
         } catch (e) {
             toast.error('Failed to save settings');
         } finally {

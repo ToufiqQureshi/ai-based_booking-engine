@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlmodel import select
 
 from app.api.deps import DbSession
+from app.core.config import get_settings
 from app.models.audit import AuditLog
 from app.models.hotel import Hotel
 from app.models.user import User
@@ -38,6 +39,10 @@ class HotelIntegrationsRead(BaseModel):
     has_smtp_config: bool = False
     smtp_host: Optional[str] = None
     smtp_from_email: Optional[str] = None
+    smtp_username: Optional[str] = None
+    smtp_port: Optional[int] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
     ai_whatsapp_credits: int = 0
     total_messages_sent: int = 0
     is_paused: bool = False
@@ -57,7 +62,6 @@ class HotelIntegrationsUpdate(BaseModel):
     whatsapp_api_key: Optional[str] = None
     whatsapp_phone_number_id: Optional[str] = None
     whatsapp_business_account_id: Optional[str] = None
-    brevo_api_key: Optional[str] = None
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
     smtp_username: Optional[str] = None
@@ -111,12 +115,16 @@ async def get_hotel_integrations(
         whatsapp_api_key_preview=_preview_secret(s.get("whatsapp_api_key")),
         has_whatsapp_phone_id=bool(s.get("whatsapp_phone_number_id")),
         has_whatsapp_business_id=bool(s.get("whatsapp_business_account_id")),
-        has_brevo_key=bool(s.get("brevo_api_key")),
-        brevo_key_preview=_preview_secret(s.get("brevo_api_key")),
+        has_brevo_key=bool(get_settings().BREVO_API_KEY),
+        brevo_key_preview=_preview_secret(get_settings().BREVO_API_KEY) if get_settings().BREVO_API_KEY else None,
         has_smtp_password=bool(s.get("smtp_password")),
         has_smtp_config=bool(s.get("smtp_host") and s.get("smtp_username")),
         smtp_host=s.get("smtp_host"),
         smtp_from_email=s.get("smtp_from_email"),
+        smtp_username=s.get("smtp_username"),
+        smtp_port=s.get("smtp_port"),
+        whatsapp_phone_number_id=s.get("whatsapp_phone_number_id"),
+        whatsapp_business_account_id=s.get("whatsapp_business_account_id"),
         ai_whatsapp_credits=int(s.get("ai_whatsapp_credits", 0) or 0),
         total_messages_sent=int(s.get("total_messages_sent", 0) or 0),
         is_paused=hotel.is_paused,
@@ -187,7 +195,7 @@ async def update_hotel_integrations(
     changed = False
     for json_field in (
         "whatsapp_api_key", "whatsapp_phone_number_id", "whatsapp_business_account_id",
-        "brevo_api_key", "smtp_host", "smtp_username", "smtp_password",
+        "smtp_host", "smtp_username", "smtp_password",
         "smtp_from_email", "ai_whatsapp_credits",
     ):
         val = getattr(payload, json_field, None)
@@ -196,7 +204,7 @@ async def update_hotel_integrations(
         settings[json_field] = val or None
         changed = True
         updated.append(json_field)
-    if payload.smtp_port is not None:
+    if "smtp_port" in payload.model_fields_set:
         settings["smtp_port"] = payload.smtp_port
         changed = True
         updated.append("smtp_port")

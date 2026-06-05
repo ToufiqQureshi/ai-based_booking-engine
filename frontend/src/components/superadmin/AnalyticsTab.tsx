@@ -165,12 +165,12 @@ export function AnalyticsTab({ hotels, users, onSelectHotel }: { hotels: any[], 
                                                 </TableRow>
                                             ) : (
                                                 hotels.map((hotel: any) => {
-                                                    const isAgentUnlocked = hotel.feature_ai_agent;
-                                                    const isBotUnlocked = hotel.feature_guest_bot;
+                                                    const isAssistantUnlocked = hotel.feature_ai_assistant;
+                                                    const isGuestBotUnlocked = hotel.feature_guest_bot;
                                                     
                                                     // Deterministic simulated usage metrics
-                                                    const dashboardAiUsage = isBotUnlocked ? (getHotelHashValue(hotel.id, 123) % 450 + 50) : 0;
-                                                    const guestAiAgentUsage = isAgentUnlocked ? (getHotelHashValue(hotel.id, 456) % 1200 + 150) : 0;
+                                                    const dashboardAiUsage = isAssistantUnlocked ? (getHotelHashValue(hotel.id, 123) % 450 + 50) : 0;
+                                                    const guestAiAgentUsage = isGuestBotUnlocked ? (getHotelHashValue(hotel.id, 456) % 1200 + 150) : 0;
                                                     const totalUsage = dashboardAiUsage + guestAiAgentUsage;
                                                     const limit = hotel.subscription?.ai_usage_limit || 50000;
                                                     const usagePercentage = Math.min((totalUsage / limit) * 100, 100);
@@ -186,13 +186,13 @@ export function AnalyticsTab({ hotels, users, onSelectHotel }: { hotels: any[], 
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     <Badge className={`rounded-lg px-2 py-0.5 text-[9px] uppercase tracking-wider border shadow-none ${
-                                                                        isBotUnlocked 
+                                                                        isAssistantUnlocked 
                                                                         ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20 font-bold' 
                                                                         : 'bg-muted text-muted-foreground border-border'
                                                                     }`}>
-                                                                        {isBotUnlocked ? 'Unlocked' : 'Locked'}
+                                                                        {isAssistantUnlocked ? 'Unlocked' : 'Locked'}
                                                                     </Badge>
-                                                                    {isBotUnlocked && (
+                                                                    {isAssistantUnlocked && (
                                                                         <span className="text-xs font-mono font-bold text-foreground">{dashboardAiUsage} reqs</span>
                                                                     )}
                                                                 </div>
@@ -200,13 +200,13 @@ export function AnalyticsTab({ hotels, users, onSelectHotel }: { hotels: any[], 
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     <Badge className={`rounded-lg px-2 py-0.5 text-[9px] uppercase tracking-wider border shadow-none ${
-                                                                        isAgentUnlocked 
+                                                                        isGuestBotUnlocked 
                                                                         ? 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20 font-bold' 
                                                                         : 'bg-muted text-muted-foreground border-border'
                                                                     }`}>
-                                                                        {isAgentUnlocked ? 'Unlocked' : 'Locked'}
+                                                                        {isGuestBotUnlocked ? 'Unlocked' : 'Locked'}
                                                                     </Badge>
-                                                                    {isAgentUnlocked && (
+                                                                    {isGuestBotUnlocked && (
                                                                         <span className="text-xs font-mono font-bold text-foreground">{guestAiAgentUsage} reqs</span>
                                                                     )}
                                                                 </div>
