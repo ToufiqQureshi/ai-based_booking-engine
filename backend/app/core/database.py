@@ -125,6 +125,35 @@ async def init_db():
         except Exception:
             pass
 
+    # SystemBroadcast scheduling + targeting columns
+    # JSON DEFAULT must be cast for Postgres ('[]'::json), but SQLite tolerates plain '[]'.
+    json_default = "'[]'::json" if not is_sqlite else "'[]'"
+    for col, col_type in [
+        ("scheduled_at", "TIMESTAMP"),
+        ("expires_at", "TIMESTAMP"),
+        ("is_published", "BOOLEAN DEFAULT TRUE"),
+        ("target_plans", f"JSON DEFAULT {json_default}"),
+        ("target_hotel_ids", f"JSON DEFAULT {json_default}"),
+        ("created_by", "VARCHAR(255)"),
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE system_broadcasts ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
+    # Backfill any NULL values left over from a partial earlier ALTER attempt.
+    for sql in [
+        "UPDATE system_broadcasts SET is_published = TRUE WHERE is_published IS NULL",
+        "UPDATE system_broadcasts SET target_plans = " + json_default + " WHERE target_plans IS NULL",
+        "UPDATE system_broadcasts SET target_hotel_ids = " + json_default + " WHERE target_hotel_ids IS NULL",
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(sql))
+        except Exception:
+            pass
+
 
 
 async def get_session() -> AsyncSession:

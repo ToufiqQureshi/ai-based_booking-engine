@@ -24,6 +24,8 @@ export function BroadcastsTab() {
     const [broadcastTitle, setBroadcastTitle] = useState('');
     const [broadcastMessage, setBroadcastMessage] = useState('');
     const [broadcastType, setBroadcastType] = useState('info');
+    const [scheduledAt, setScheduledAt] = useState('');
+    const [expiresAt, setExpiresAt] = useState('');
 
     const { data: broadcasts = [], isLoading: isLoadingBroadcasts, refetch: refetchBroadcasts } = useQuery<any[]>({
         queryKey: ['broadcasts'],
@@ -35,14 +37,24 @@ export function BroadcastsTab() {
 
     const createBroadcastMutation = useMutation({
         mutationFn: (data: any) => apiClient.post('/superadmin/broadcasts', data),
-        onSuccess: () => {
-            toast.success("Platform broadcast published successfully!");
+        onSuccess: (_data: any, variables: any) => {
+            toast.success(variables?.scheduled_at ? "Broadcast scheduled successfully!" : "Platform broadcast published successfully!");
             setBroadcastTitle('');
             setBroadcastMessage('');
+            setScheduledAt('');
+            setExpiresAt('');
             queryClient.invalidateQueries({ queryKey: ['broadcasts'] });
         },
         onError: (err: any) => {
             toast.error(err.response?.data?.detail || "Failed to publish broadcast.");
+        }
+    });
+
+    const publishDueMutation = useMutation({
+        mutationFn: () => apiClient.post('/superadmin/broadcasts/publish-due', {}),
+        onSuccess: (data: any) => {
+            toast.success(`${data.published} scheduled broadcast(s) published`);
+            queryClient.invalidateQueries({ queryKey: ['broadcasts'] });
         }
     });
 
@@ -182,16 +194,38 @@ export function BroadcastsTab() {
                                          )}
                                      </div>
 
+                                     <div className="grid grid-cols-2 gap-3">
+                                         <div>
+                                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Schedule At (optional)</label>
+                                             <Input type="datetime-local" value={scheduledAt} onChange={(e: any) => setScheduledAt(e.target.value)} className="h-10 bg-muted/30 border-border rounded-xl text-xs" />
+                                         </div>
+                                         <div>
+                                             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2">Expires At (optional)</label>
+                                             <Input type="datetime-local" value={expiresAt} onChange={(e: any) => setExpiresAt(e.target.value)} className="h-10 bg-muted/30 border-border rounded-xl text-xs" />
+                                         </div>
+                                     </div>
+
                                      <Button
                                          className="w-full bg-primary hover:bg-primary/95 text-primary-foreground font-bold h-12 rounded-xl shadow-lg shadow-primary/5 dark:shadow-none transition-all gap-2"
                                          disabled={!broadcastTitle || !broadcastMessage || createBroadcastMutation.isPending}
                                          onClick={() => createBroadcastMutation.mutate({
                                              title: broadcastTitle,
                                              message: broadcastMessage,
-                                             type: broadcastType
+                                             type: broadcastType,
+                                             scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+                                             expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
                                          })}
                                      >
-                                         <Send className="w-4 h-4" /> Publish Global Broadcast
+                                         <Send className="w-4 h-4" /> {scheduledAt ? 'Schedule Broadcast' : 'Publish Global Broadcast'}
+                                     </Button>
+
+                                     <Button
+                                         variant="outline"
+                                         className="w-full rounded-xl h-9 text-xs font-bold gap-1.5"
+                                         disabled={publishDueMutation.isPending}
+                                         onClick={() => publishDueMutation.mutate()}
+                                     >
+                                         <RefreshCw className={`w-3.5 h-3.5 ${publishDueMutation.isPending ? 'animate-spin' : ''}`} /> Publish Due Scheduled
                                      </Button>
                                  </div>
                              </Card>
