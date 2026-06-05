@@ -3,9 +3,9 @@ Rates Router — Rate Plan CRUD.
 """
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.api.v1.availability import clear_availability_cache
 from app.core.redis_client import redis_client
 from app.core.guest_agent import invalidate_guest_agent_cache
@@ -33,7 +33,7 @@ async def get_rate_plans(current_user: CurrentUser, session: DbSession):
     return result.scalars().all()
 
 
-@router.patch("/plans/{plan_id}", response_model=RatePlanRead)
+@router.patch("/plans/{plan_id}", response_model=RatePlanRead, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def update_rate_plan(
     plan_id: str,
     plan_update: RatePlanCreate,
@@ -56,7 +56,7 @@ async def update_rate_plan(
     return rate_plan
 
 
-@router.post("/plans", response_model=RatePlanRead)
+@router.post("/plans", response_model=RatePlanRead, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def create_rate_plan(plan_data: RatePlanCreate, current_user: CurrentUser, session: DbSession):
     rate_plan = RatePlan(**plan_data.model_dump(), hotel_id=current_user.hotel_id)
     session.add(rate_plan)
@@ -66,7 +66,7 @@ async def create_rate_plan(plan_data: RatePlanCreate, current_user: CurrentUser,
     return rate_plan
 
 
-@router.delete("/plans/{plan_id}")
+@router.delete("/plans/{plan_id}", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def delete_rate_plan(plan_id: str, current_user: CurrentUser, session: DbSession):
     result = await session.execute(
         select(RatePlan).where(RatePlan.id == plan_id, RatePlan.hotel_id == current_user.hotel_id)

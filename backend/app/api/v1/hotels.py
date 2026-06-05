@@ -7,7 +7,7 @@ from app.services.email_service import get_email_service
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.models.hotel import Hotel, HotelRead, HotelUpdate
 from app.core.sensitive_fields import (
     mask_hotel_for_hotelier,
@@ -55,7 +55,7 @@ async def get_my_hotel(current_user: CurrentUser, session: DbSession):
     return mask_hotel_for_hotelier(hotel)
 
 
-@router.patch("/me")
+@router.patch("/me", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def update_my_hotel(
     hotel_update: HotelUpdate,
     current_user: CurrentUser,

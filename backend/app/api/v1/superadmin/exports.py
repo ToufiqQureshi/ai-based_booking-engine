@@ -16,7 +16,7 @@ from app.models.hotel import Hotel
 from app.models.payment import Payment
 from app.models.user import User
 from app.models.audit import AuditLog
-from .hotels import get_super_admin, _get_client_ip
+from .hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -40,7 +40,7 @@ async def export_bookings(
     hotel_id: str,
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.exports.read")),
 ):
     """Export all bookings for a hotel as CSV."""
     hotel = await session.get(Hotel, hotel_id)
@@ -98,7 +98,7 @@ async def export_guests(
     hotel_id: str,
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.exports.read")),
 ):
     """Export guest list for a hotel as CSV."""
     hotel = await session.get(Hotel, hotel_id)
@@ -134,7 +134,7 @@ async def export_payments(
     hotel_id: str,
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.exports.read")),
 ):
     """Export payment records for a hotel as CSV."""
     hotel = await session.get(Hotel, hotel_id)
@@ -172,7 +172,7 @@ async def export_payments(
 async def export_all_hotels(
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.exports.read")),
 ):
     """Export platform-wide hotel summary as CSV."""
     from app.models.subscription import Subscription

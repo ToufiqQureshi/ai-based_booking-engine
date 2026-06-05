@@ -2,13 +2,13 @@
 Payments Router
 """
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import Depends, APIRouter, HTTPException, status, Request
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 import logging
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.models.payment import Payment, PaymentCreate, PaymentRead
 from app.models.booking import Booking, BookingStatus, Guest
 from app.models.hotel import Hotel
@@ -49,7 +49,7 @@ async def get_payments(current_user: CurrentUser, session: DbSession):
         
     return enriched_payments
 
-@router.post("", response_model=PaymentRead)
+@router.post("", response_model=PaymentRead, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def create_payment(
     payment_data: PaymentCreate,
     current_user: CurrentUser,
@@ -100,7 +100,7 @@ class RefundRequest(BaseModel):
     reason: str = "requested_by_customer"
 
 
-@router.post("/refund")
+@router.post("/refund", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def create_razorpay_refund(
     data: RefundRequest,
     current_user: CurrentUser,

@@ -8,6 +8,7 @@ import logging
 from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.feature_flags import require_feature
 from app.models.competitor import Competitor, CompetitorRate, CompetitorSource
 from app.models.hotel import Hotel
 from app.models.room import RoomType
@@ -60,7 +61,7 @@ async def add_competitor(comp_data: Competitor, current_user: CurrentUser, sessi
     
     return comp_data
 
-@router.post("/{comp_id}/scrape")
+@router.post("/{comp_id}/scrape", dependencies=[Depends(require_feature("feature_rate_shopper"))])
 async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSession, background_tasks: BackgroundTasks):
     """Manually trigger a scrape"""
     check_rate_shopper_feature(current_user)
@@ -113,7 +114,7 @@ class MarketAnalysisResult(BaseModel):
     market_position: str # "Premium", "Budget", "Average"
     suggestion: str
 
-@router.get("/analysis", response_model=List[MarketAnalysisResult])
+@router.get("/analysis", response_model=List[MarketAnalysisResult], dependencies=[Depends(require_feature("feature_rate_shopper"))])
 async def get_market_analysis(
     current_user: CurrentUser,
     session: DbSession,
@@ -248,7 +249,7 @@ async def get_market_analysis(
     return results
 
 
-@router.get("/rates/comparison")
+@router.get("/rates/comparison", dependencies=[Depends(require_feature("feature_rate_shopper"))])
 async def get_rate_comparison(current_user: CurrentUser, session: DbSession, start_date: date = None):
     check_rate_shopper_feature(current_user)
     """
@@ -490,10 +491,24 @@ class CheckFreshnessResponse(BaseModel):
     cached_count: int
 
 @router.post("/check_freshness", response_model=CheckFreshnessResponse)
-async def check_scrape_freshness(jobs: List[ScrapeJobItem], session: DbSession):
+async def check_scrape_freshness(jobs: List[ScrapeJobItem], current_user: CurrentUser, session: DbSession):
     """
     Check if rates already exist in PostgreSQL (Supabase) instead of Redis.
     """
+    # SECURITY (TEN-03): authenticate and scope to the caller's own competitors.
+    # Previously anonymous + unscoped, which let anyone probe another tenant's
+    # rate-shopping activity by guessing competitor ids.
+    requested_ids = {job.competitor_id for job in jobs}
+    if requested_ids:
+        owned = (await session.execute(
+            select(Competitor.id).where(
+                Competitor.id.in_(requested_ids),
+                Competitor.hotel_id == current_user.hotel_id,
+            )
+        )).scalars().all()
+        owned_ids = set(owned)
+        jobs = [j for j in jobs if j.competitor_id in owned_ids]
+
     to_scrape = []
     cached_hits = 0
     

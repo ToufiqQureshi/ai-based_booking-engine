@@ -13,7 +13,7 @@ from app.models.audit import AuditLog
 from app.models.hotel import Hotel
 from app.models.kyc import KycDocument, KycProfile
 from app.models.user import User
-from .hotels import get_super_admin, _get_client_ip
+from .hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -71,7 +71,7 @@ async def _refresh_profile_counts(session, hotel_id: str) -> KycProfile:
 @router.get("/kyc/overview")
 async def kyc_overview(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
 ):
     """Aggregate KYC numbers for the platform dashboard."""
     profiles = (await session.execute(select(KycProfile))).scalars().all()
@@ -95,7 +95,7 @@ async def kyc_overview(
 async def list_kyc_profiles(
     session: DbSession,
     status_filter: Optional[str] = None,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
 ):
     q = select(KycProfile, Hotel).join(Hotel, Hotel.id == KycProfile.hotel_id)
     if status_filter:
@@ -115,7 +115,7 @@ async def list_kyc_profiles(
 @router.get("/kyc/hotels/{hotel_id}")
 async def get_kyc_for_hotel(
     hotel_id: str, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
 ):
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
@@ -131,7 +131,7 @@ async def get_kyc_for_hotel(
 @router.patch("/kyc/hotels/{hotel_id}/profile")
 async def update_kyc_profile(
     hotel_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
 ):
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
@@ -159,7 +159,7 @@ async def update_kyc_profile(
 @router.post("/kyc/hotels/{hotel_id}/documents")
 async def add_kyc_document(
     hotel_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
 ):
     """Super admin can attach a document on behalf of hotelier."""
     hotel = await session.get(Hotel, hotel_id)
@@ -193,7 +193,7 @@ async def add_kyc_document(
 @router.post("/kyc/documents/{doc_id}/approve")
 async def approve_document(
     doc_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
 ):
     doc = await session.get(KycDocument, doc_id)
     if not doc:
@@ -220,7 +220,7 @@ async def approve_document(
 @router.post("/kyc/documents/{doc_id}/reject")
 async def reject_document(
     doc_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
 ):
     doc = await session.get(KycDocument, doc_id)
     if not doc:
@@ -247,7 +247,7 @@ async def reject_document(
 @router.delete("/kyc/documents/{doc_id}")
 async def delete_document(
     doc_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
 ):
     doc = await session.get(KycDocument, doc_id)
     if not doc:

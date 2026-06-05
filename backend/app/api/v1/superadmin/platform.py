@@ -22,7 +22,7 @@ from app.models.platform import (
 )
 from app.models.subscription import Subscription
 from app.models.user import User, UserRole
-from .hotels import get_super_admin, _get_client_ip
+from .hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -42,7 +42,7 @@ def _generate_api_key() -> tuple[str, str, str]:
 async def list_api_keys(
     session: DbSession,
     hotel_id: Optional[str] = None,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     q = select(HotelierApiKey)
     if hotel_id:
@@ -54,7 +54,7 @@ async def list_api_keys(
 @router.post("/api-keys")
 async def create_api_key(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     if not data.get("hotel_id") or not data.get("label"):
         raise HTTPException(400, "hotel_id and label are required")
@@ -86,7 +86,7 @@ async def create_api_key(
 @router.post("/api-keys/{key_id}/revoke")
 async def revoke_api_key(
     key_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     key = await session.get(HotelierApiKey, key_id)
     if not key:
@@ -108,7 +108,7 @@ async def revoke_api_key(
 @router.delete("/api-keys/{key_id}")
 async def delete_api_key(
     key_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     key = await session.get(HotelierApiKey, key_id)
     if not key:
@@ -130,7 +130,7 @@ async def delete_api_key(
 async def list_domains(
     session: DbSession,
     hotel_id: Optional[str] = None,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     q = select(CustomDomain)
     if hotel_id:
@@ -142,7 +142,7 @@ async def list_domains(
 @router.post("/domains")
 async def create_domain(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     if not data.get("hotel_id") or not data.get("domain"):
         raise HTTPException(400, "hotel_id and domain required")
@@ -178,7 +178,7 @@ async def create_domain(
 @router.post("/domains/{domain_id}/verify")
 async def verify_domain(
     domain_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     dom = await session.get(CustomDomain, domain_id)
     if not dom:
@@ -203,7 +203,7 @@ async def verify_domain(
 @router.delete("/domains/{domain_id}")
 async def delete_domain(
     domain_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     dom = await session.get(CustomDomain, domain_id)
     if not dom:
@@ -225,7 +225,7 @@ async def delete_domain(
 async def list_templates(
     session: DbSession,
     hotel_id: Optional[str] = None,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     q = select(EmailTemplate)
     if hotel_id:
@@ -237,7 +237,7 @@ async def list_templates(
 @router.post("/email-templates")
 async def upsert_template(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     tmpl_id = data.get("id")
     tmpl = await session.get(EmailTemplate, tmpl_id) if tmpl_id else None
@@ -268,7 +268,7 @@ async def upsert_template(
 @router.delete("/email-templates/{tmpl_id}")
 async def delete_template(
     tmpl_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     tmpl = await session.get(EmailTemplate, tmpl_id)
     if not tmpl:
@@ -289,7 +289,7 @@ async def delete_template(
 @router.get("/admin-roles")
 async def list_admin_roles(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     rows = (await session.execute(select(SuperAdminRole).order_by(SuperAdminRole.created_at.desc()))).scalars().all()
     return rows
@@ -297,7 +297,7 @@ async def list_admin_roles(
 
 @router.get("/admin-roles/tiers")
 async def list_role_tiers(
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     return [
         {"tier": tier, "permissions": perms}
@@ -308,7 +308,7 @@ async def list_role_tiers(
 @router.post("/admin-roles")
 async def upsert_admin_role(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     if not data.get("user_id"):
         raise HTTPException(400, "user_id required")
@@ -351,7 +351,7 @@ async def upsert_admin_role(
 @router.delete("/admin-roles/{role_id}")
 async def delete_admin_role(
     role_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     role = await session.get(SuperAdminRole, role_id)
     if not role:
@@ -381,7 +381,7 @@ async def list_invoices(
     hotel_id: Optional[str] = None,
     status_filter: Optional[str] = None,
     limit: int = 100,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.invoices.read")),
 ):
     q = select(PlatformInvoice)
     if hotel_id:
@@ -395,7 +395,7 @@ async def list_invoices(
 @router.post("/invoices/bulk-generate")
 async def bulk_generate_invoices(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.invoices.read")),
 ):
     """Generate subscription invoices for all active hotels for a billing period."""
     plan_filter = data.get("plan_name")
@@ -447,7 +447,7 @@ async def bulk_generate_invoices(
 @router.post("/invoices/{invoice_id}/mark-paid")
 async def mark_invoice_paid(
     invoice_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.invoices.read")),
 ):
     inv = await session.get(PlatformInvoice, invoice_id)
     if not inv:
@@ -469,7 +469,7 @@ async def mark_invoice_paid(
 @router.delete("/invoices/{invoice_id}")
 async def delete_invoice(
     invoice_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.invoices.read")),
 ):
     inv = await session.get(PlatformInvoice, invoice_id)
     if not inv:
@@ -492,7 +492,7 @@ async def delete_invoice(
 @router.post("/subscriptions/{hotel_id}/auto-renew")
 async def toggle_auto_renew(
     hotel_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.platform.read")),
 ):
     sub = (await session.execute(
         select(Subscription).where(Subscription.hotel_id == hotel_id)

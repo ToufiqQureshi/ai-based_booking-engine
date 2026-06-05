@@ -243,3 +243,27 @@ async def get_current_active_user(
 # Type alias for cleaner route signatures
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
 DbSession = Annotated[AsyncSession, Depends(get_session)]
+
+
+def require_hotel_role(*allowed_roles: str):
+    """Dependency factory enforcing intra-tenant role tiers (OWNER/MANAGER/STAFF).
+
+    Without this, any authenticated hotel user — including STAFF — could perform
+    full hotel-admin actions via the API (the frontend sidebar was the only gate).
+    SUPER_ADMIN (including impersonation) is always allowed. Use on mutating
+    config endpoints, e.g.:
+
+        @router.post("/", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
+    """
+    allowed = {r.upper() for r in allowed_roles}
+
+    async def _dep(current_user: CurrentUser) -> User:
+        role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+        if role == "SUPER_ADMIN" or role in allowed:
+            return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"This action requires one of roles: {sorted(allowed)}",
+        )
+
+    return _dep

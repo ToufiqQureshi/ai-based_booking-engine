@@ -1,10 +1,10 @@
 
 from typing import List
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import Depends, APIRouter, HTTPException, status, Request
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.models.addon import AddOn, AddOnCreate, AddOnUpdate
 from app.core.cache import cache_response, invalidate_cache
 
@@ -20,7 +20,7 @@ async def get_addons(request: Request, current_user: CurrentUser, session: DbSes
     result = await session.execute(query)
     return result.scalars().all()
 
-@router.post("", response_model=AddOn, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=AddOn, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def create_addon(
     addon_data: AddOnCreate,
     current_user: CurrentUser,
@@ -39,7 +39,7 @@ async def create_addon(
     invalidate_cache(f"addons:{current_user.hotel_id}:*")
     return addon
 
-@router.patch("/{addon_id}", response_model=AddOn)
+@router.patch("/{addon_id}", response_model=AddOn, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def update_addon(
     addon_id: str,
     addon_update: AddOnUpdate,
@@ -73,7 +73,7 @@ async def update_addon(
     invalidate_cache(f"addons:{current_user.hotel_id}:*")
     return addon
 
-@router.delete("/{addon_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{addon_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def delete_addon(
     addon_id: str,
     current_user: CurrentUser,

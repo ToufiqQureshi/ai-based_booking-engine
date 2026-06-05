@@ -11,7 +11,7 @@ from app.api.deps import DbSession
 from app.models.hotel import Hotel
 from app.models.subscription import Subscription
 from app.models.user import User
-from .hotels import get_super_admin, load_plan_features
+from .hotels import get_super_admin, load_plan_features, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,7 +33,7 @@ def _plan_price(plan_name: str) -> int:
 @router.get("/revenue")
 async def revenue_analytics(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.revenue.read")),
 ):
     """MRR, ARR, plan distribution, new signups, churn."""
     now = datetime.utcnow()

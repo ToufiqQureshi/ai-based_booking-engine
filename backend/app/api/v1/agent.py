@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from pydantic import BaseModel
 import logging
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.feature_flags import require_feature
 from app.core.agent import create_agent_executor
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class ChatResponse(BaseModel):
 from fastapi import Request
 from app.core.limiter import limiter
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_feature("feature_ai_agent"))])
 @limiter.limit("15/minute")
 async def chat_with_agent(
     request: Request,

@@ -5,10 +5,10 @@ Rooms page ke liye endpoints.
 """
 from typing import List
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.models.room import RoomType, RoomTypeCreate, RoomTypeRead, RoomTypeUpdate, RoomBlock
 from app.models.amenity import Amenity, RoomAmenityLink
 from app.models.rates import RoomRate
@@ -35,7 +35,7 @@ async def get_rooms(request: Request, current_user: CurrentUser, session: DbSess
     return rooms
 
 
-@router.post("", response_model=RoomTypeRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RoomTypeRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def create_room(
     room_data: RoomTypeCreate,
     current_user: CurrentUser,
@@ -110,7 +110,7 @@ async def get_room(room_id: str, request: Request, current_user: CurrentUser, se
     return room
 
 
-@router.patch("/{room_id}", response_model=RoomTypeRead)
+@router.patch("/{room_id}", response_model=RoomTypeRead, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def update_room(
     room_id: str,
     room_update: RoomTypeUpdate,
@@ -177,7 +177,7 @@ async def update_room(
     return room
 
 
-@router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def delete_room(room_id: str, current_user: CurrentUser, session: DbSession):
     """Room type delete karo"""
     result = await session.execute(
