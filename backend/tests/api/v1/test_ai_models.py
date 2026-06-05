@@ -1,4 +1,11 @@
 import pytest
+
+# These tests exercise the Gemini provider, whose underlying `google-genai`
+# package is an optional dependency the app imports lazily at call time.
+# When it isn't installed (e.g. in CI), skip the whole module rather than
+# failing collection for the entire test suite.
+pytest.importorskip("google.genai", reason="google-genai not installed")
+
 from app.core.guest_agent import create_guest_agent_graph
 from agno.models.google import Gemini
 from agno.models.deepseek import DeepSeek
