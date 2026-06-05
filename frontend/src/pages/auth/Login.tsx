@@ -68,7 +68,7 @@ export function LoginPage() {
       });
 
       // Redirect based on entry point
-      navigate(isSuperAdmin ? '/superadmin' : '/dashboard');
+      navigate(isSuperAdmin ? '/' : '/dashboard');
     } catch (error) {
       // 4. Agar error aaya (jaise galat password)
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
     LogOut, Sun, Moon, ShieldCheck, Building2, Users, LayoutGrid,
     Radio, ClipboardList, BarChart3, RefreshCw, ChevronRight, Menu, X,
@@ -62,7 +63,10 @@ const NAV_ITEMS: { id: NavSection; label: string; icon: any; group?: string }[] 
 export default function SuperAdminDashboard() {
     const { user, logout, isLoading: authLoading } = useAuth();
     const { theme, toggleTheme } = useTheme();
-    const [activeSection, setActiveSection] = useState<NavSection>('overview');
+    const { section = 'overview' } = useParams<{ section?: string }>();
+    const activeSection = section as NavSection;
+    const navigate = useNavigate();
+
     const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -71,7 +75,8 @@ export default function SuperAdminDashboard() {
         queryKey: ['superadmin-hotels'],
         queryFn: () => apiClient.get('/superadmin/hotels'),
         staleTime: 1000 * 60 * 2,
-        enabled: !!user && user.role === 'SUPER_ADMIN',
+        enabled: !!user && user.role === 'SUPER_ADMIN' && 
+            ['overview', 'hotels', 'brands', 'analytics', 'cache', 'commissions', 'payouts', 'tickets', 'platform'].includes(activeSection),
     });
 
     const selectedHotel = hotels.find((h: any) => h.id === selectedHotelId) || null;
@@ -81,7 +86,8 @@ export default function SuperAdminDashboard() {
         queryKey: ['superadmin-users'],
         queryFn: () => apiClient.get('/superadmin/users'),
         staleTime: 1000 * 60 * 2,
-        enabled: !!user && user.role === 'SUPER_ADMIN',
+        enabled: !!user && user.role === 'SUPER_ADMIN' && 
+            ['overview', 'hotels', 'brands', 'analytics', 'tickets', 'platform'].includes(activeSection),
     });
 
     const impersonateMutation = useMutation({
@@ -185,7 +191,7 @@ export default function SuperAdminDashboard() {
                                             {items.map(item => (
                                                 <button
                                                     key={item.id}
-                                                    onClick={() => { setActiveSection(item.id); setSelectedHotelId(null); }}
+                                                    onClick={() => { navigate(`/${item.id}`); setSelectedHotelId(null); }}
                                                     className={cn(
                                                         "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150",
                                                         activeSection === item.id
@@ -290,7 +296,7 @@ export default function SuperAdminDashboard() {
                                         <div>
                                             <div className="flex items-center justify-between mb-4">
                                                 <h2 className="text-sm font-black text-foreground uppercase tracking-wider">Recent Properties</h2>
-                                                <Button variant="ghost" size="sm" className="text-xs h-7 font-semibold text-indigo-600" onClick={() => setActiveSection('hotels')}>
+                                                <Button variant="ghost" size="sm" className="text-xs h-7 font-semibold text-indigo-600" onClick={() => navigate('/hotels')}>
                                                     View all <ChevronRight className="w-3 h-3 ml-1" />
                                                 </Button>
                                             </div>

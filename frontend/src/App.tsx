@@ -99,10 +99,11 @@ const App = () => {
                   <Route path="/">
                     {/* Only login is allowed on superadmin subdomain — no public signup */}
                     <Route path="/login" element={<LoginPage />} />
-                    <Route path="/superadmin" element={<SuperAdminDashboard />} />
-                    <Route index element={<Navigate to="/superadmin" replace />} />
+                    <Route path="/" element={<SuperAdminDashboard />} />
+                    <Route path="/:section" element={<SuperAdminDashboard />} />
+                    <Route index element={<Navigate to="/" replace />} />
                     {/* Everything else (including /signup) redirects to superadmin panel */}
-                    <Route path="*" element={<Navigate to="/superadmin" replace />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>
                 ) : (
                   <>
@@ -113,6 +114,7 @@ const App = () => {
                       <Route path="/rates" element={<RatesPage />} />
                       <Route path="/availability" element={<AvailabilityPage />} />
                       <Route path="/analytics" element={<AnalyticsDashboard />} />
+                      <Route path="/analytics/:tab" element={<AnalyticsDashboard />} />
                       <Route path="/bookings" element={<BookingsPage />} />
                       <Route path="/guests" element={<GuestsPage />} />
                       <Route path="/rate-shopper" element={<RatesShopper />} />
@@ -121,8 +123,11 @@ const App = () => {
                       <Route path="/taxes" element={<TaxesPage />} />
                       <Route path="/channel-settings" element={<ChannelSettings />} />
                       <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/settings/:tab" element={<SettingsPage />} />
                       <Route path="/integration" element={<IntegrationPage />} />
+                      <Route path="/integration/:tab" element={<IntegrationPage />} />
                       <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/admin/:section" element={<AdminDashboard />} />
                       <Route path="/reviews" element={<GoogleReviewsPage />} />
                       <Route path="/loyalty" element={<LoyaltyProgramPage />} />
                       <Route path="/agent" element={<AgentPage />} />

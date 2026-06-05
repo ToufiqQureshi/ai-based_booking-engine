@@ -23,6 +23,7 @@ import { apiClient } from '@/api/client';
 import { Hotel } from '@/types/api';
 
 import { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { PromoManager } from './components/PromoManager';
 import { PropertyGallery } from './components/PropertyGallery';
 
@@ -36,18 +37,25 @@ import { AIAgentTab } from './components/AIAgentTab';
 import { GoogleHotelAdsTab } from './components/GoogleHotelAdsTab';
 
 export function SettingsPage() {
+  const { tab } = useParams<{ tab?: string }>();
+  const navigate = useNavigate();
+  const activeTab = tab || 'hotel';
+
   const { hotel, user, setHotel } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [rooms, setRooms] = useState<any[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
 
   useEffect(() => {
-    if (hotel?.slug) {
+    if (activeTab === 'branding' && hotel?.slug && rooms.length === 0) {
+      setLoadingRooms(true);
       apiClient.get<any[]>(`/public/hotels/${hotel.slug}/rooms`)
         .then(res => setRooms(res || []))
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setLoadingRooms(false));
     }
-  }, [hotel?.slug]);
+  }, [activeTab, hotel?.slug, rooms.length]);
 
   const [formData, setFormData] = useState({
     name: hotel?.name || '',
@@ -161,7 +169,7 @@ export function SettingsPage() {
       subtitle="Manage your hotel profile and preferences"
     >
 
-      <Tabs defaultValue="hotel" orientation="vertical" className="flex flex-col md:flex-row gap-6">
+      <Tabs value={activeTab} onValueChange={(val) => navigate('/settings/' + val)} orientation="vertical" className="flex flex-col md:flex-row gap-6">
         <TabsList className="flex flex-row md:flex-col h-auto md:w-64 justify-start items-stretch gap-1 bg-muted/30 p-2 rounded-xl border">
           <TabsTrigger 
             value="hotel" 
@@ -230,100 +238,127 @@ export function SettingsPage() {
 
         <div className="flex-1">
           {/* Hotel Settings */}
-          <GeneralTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
+          {activeTab === 'hotel' && (
+            <GeneralTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
+          )}
 
           {/* Team Settings */}
-          <TabsContent value="team" className="space-y-6 mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Team Members</CardTitle>
-                <CardDescription>
-                  Manage who has access to this dashboard
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <TeamList />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {activeTab === 'team' && (
+            <TabsContent value="team" className="space-y-6 mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Team Members</CardTitle>
+                  <CardDescription>
+                    Manage who has access to this dashboard
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <TeamList />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Notifications Settings */}
-          <TabsContent value="notifications" className="space-y-6 mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Notifications</CardTitle>
-                <CardDescription>
-                  Choose what emails you want to receive
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {[
-                  { id: 'notify_new_booking', label: 'New Booking', description: 'Get notified when a new booking is made' },
-                  { id: 'notify_cancellation', label: 'Cancellations', description: 'Get notified when a booking is cancelled' },
-                ].map((item) => (
-                  <div key={item.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{item.label}</p>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
+          {activeTab === 'notifications' && (
+            <TabsContent value="notifications" className="space-y-6 mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Email Notifications</CardTitle>
+                  <CardDescription>
+                    Choose what emails you want to receive
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    { id: 'notify_new_booking', label: 'New Booking', description: 'Get notified when a new booking is made' },
+                    { id: 'notify_cancellation', label: 'Cancellations', description: 'Get notified when a booking is cancelled' },
+                  ].map((item) => (
+                    <div key={item.id} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{item.label}</p>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </div>
+                      <Switch
+                        checked={formData.settings[item.id] !== false}
+                        onCheckedChange={(checked) => handleUpdate('settings', item.id, checked)}
+                      />
                     </div>
-                    <Switch
-                      checked={formData.settings[item.id] !== false}
-                      onCheckedChange={(checked) => handleUpdate('settings', item.id, checked)}
-                    />
+                  ))}
+                  <div className="flex justify-end mt-4">
+                    <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      Save Preferences
+                    </Button>
                   </div>
-                ))}
-                <div className="flex justify-end mt-4">
-                  <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save Preferences
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Promotions Settings */}
-          <TabsContent value="promos" className="space-y-6 mt-0">
-            <PromoManager />
-          </TabsContent>
+          {activeTab === 'promos' && (
+            <TabsContent value="promos" className="space-y-6 mt-0">
+              <PromoManager />
+            </TabsContent>
+          )}
 
           {/* Branding Settings */}
-          <BrandingTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} setIsSaving={setIsSaving} hotel={hotel} rooms={rooms} />
-          <EmailTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
+          {activeTab === 'branding' && (
+            loadingRooms ? (
+              <div className="flex items-center justify-center h-48">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <BrandingTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} setIsSaving={setIsSaving} hotel={hotel} rooms={rooms} />
+            )
+          )}
 
+          {/* Email Settings */}
+          {activeTab === 'email' && (
+            <EmailTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
+          )}
 
+          {/* Policies & Privacy */}
+          {activeTab === 'policies' && (
+            <PoliciesTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
+          )}
 
-          <PoliciesTab formData={formData} handleUpdate={handleUpdate} handleSave={handleSave} isSaving={isSaving} hotel={hotel} />
-          <TabsContent value="gallery" className="space-y-6 mt-0">
-            <PropertyGallery 
-              photos={formData.photos} 
-              onChange={(photos) => setFormData(prev => ({ ...prev, photos }))}
-              onSave={async (photos) => {
-                try {
-                  const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
-                    photos: photos
-                  });
-                  setHotel(updatedHotel);
-                  toast({
-                    title: 'Gallery saved',
-                    description: 'Property photos have been updated.',
-                  });
-                } catch (error) {
-                  toast({
-                    variant: 'destructive',
-                    title: 'Error',
-                    description: 'Failed to save gallery.',
-                  });
-                  throw error;
-                }
-              }}
-            />
-          </TabsContent>
+          {/* Gallery */}
+          {activeTab === 'gallery' && (
+            <TabsContent value="gallery" className="space-y-6 mt-0">
+              <PropertyGallery 
+                photos={formData.photos} 
+                onChange={(photos) => setFormData(prev => ({ ...prev, photos }))}
+                onSave={async (photos) => {
+                  try {
+                    const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
+                      photos: photos
+                    });
+                    setHotel(updatedHotel);
+                    toast({
+                      title: 'Gallery saved',
+                      description: 'Property photos have been updated.',
+                    });
+                  } catch (error) {
+                    toast({
+                      variant: 'destructive',
+                      title: 'Error',
+                      description: 'Failed to save gallery.',
+                    });
+                    throw error;
+                  }
+                }}
+              />
+            </TabsContent>
+          )}
 
           {/* Google Hotel Ads Settings */}
-          <GoogleHotelAdsTab hotel={hotel} />
+          {activeTab === 'google-hotel-ads' && (
+            <GoogleHotelAdsTab hotel={hotel} />
+          )}
         </div>
       </Tabs>
     </PageShell>

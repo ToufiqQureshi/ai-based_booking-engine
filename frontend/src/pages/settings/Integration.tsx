@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageShell } from '@/components/layout/PageShell';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ApiKeysTab } from '@/components/integration/ApiKeysTab';
 import { WhatsappTab } from '@/components/integration/WhatsappTab';
 import { ExternalServicesTab } from '@/components/integration/ExternalServicesTab';
@@ -44,60 +45,106 @@ interface WidgetCode {
 
 const IntegrationPage = () => {
     const { hotel, user } = useAuth();
+    const { tab } = useParams<{ tab?: string }>();
+    const navigate = useNavigate();
+    
+    const activeTab = tab || 'widget';
+
     const [settings, setSettings] = useState<IntegrationSettings | null>(null);
     const [activeHotelSlug, setActiveHotelSlug] = useState<string>('');
+    const [properties, setProperties] = useState<any[]>([]);
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
     const [widgetCode, setWidgetCode] = useState<WidgetCode | null>(null);
-    const [loading, setLoading] = useState(true);
+    
+    const [loadingWidget, setLoadingWidget] = useState(false);
+    const [loadingSettings, setLoadingSettings] = useState(false);
+    const [loadingKeys, setLoadingKeys] = useState(false);
+
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
+    
     // Chain info — populated only if user belongs to a chain
     const [chainSlug, setChainSlug] = useState<string>('');
     const [chainName, setChainName] = useState<string>('');
 
+    // Fetch chain info once on mount
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (user?.chain_id) {
+            apiClient.get<{ slug: string; name: string }>('/chain/info')
+                .then(info => {
+                    if (info?.slug) setChainSlug(info.slug);
+                    if (info?.name) setChainName(info.name);
+                })
+                .catch(() => {});
+        }
+    }, [user?.chain_id]);
 
-    const fetchData = async () => {
+    // Lazy load data based on the active tab
+    useEffect(() => {
+        if (activeTab === 'widget' || activeTab === 'search-widget') {
+            loadWidgetData();
+        } else if (activeTab === 'chat-widget' || activeTab === 'settings') {
+            loadSettingsData();
+        } else if (activeTab === 'api-keys' || activeTab === 'usage') {
+            if (apiKeys.length === 0) {
+                loadKeysData();
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
+
+    const loadWidgetData = async () => {
+        if (properties.length > 0 && widgetCode) return;
+        setLoadingWidget(true);
         try {
-            const [properties, settingsData, keysData, widgetData] = await Promise.all([
+            const [propertiesRes, widgetRes] = await Promise.all([
                 apiClient.get<any[]>('/properties').catch(() => []),
-                apiClient.get<IntegrationSettings>('/integration/settings'),
-                apiClient.get<ApiKey[]>('/integration/api-keys').catch(() => []),
                 apiClient.get<WidgetCode>('/integration/widget-code').catch(() => null),
             ]);
-
-            const currentProp = properties.find((p: any) => p.is_current) || properties[0];
+            setProperties(propertiesRes);
+            const currentProp = propertiesRes.find((p: any) => p.is_current) || propertiesRes[0];
             if (currentProp) setActiveHotelSlug(currentProp.slug);
 
-            // Fetch chain info if user is part of a chain (non-blocking)
-            if (user?.chain_id) {
-                apiClient.get<{ slug: string; name: string }>('/chain/info')
-                    .then(info => {
-                        if (info?.slug) setChainSlug(info.slug);
-                        if (info?.name) setChainName(info.name);
-                    })
-                    .catch(() => {}); // Chain info is non-critical
-            }
-
-            setSettings(settingsData);
-            setApiKeys(keysData);
-
-            if (widgetData) {
+            if (widgetRes) {
                 const currentOrigin = window.location.origin;
                 const urlRegex = /(http:\/\/localhost:8080|https:\/\/app\.gadget4me\.in|https:\/\/api\.hotelierhub\.com|https:\/\/book\.hotelierhub\.com)/g;
-                widgetData.html_code = widgetData.html_code?.replace(urlRegex, currentOrigin);
-                widgetData.javascript_code = widgetData.javascript_code?.replace(urlRegex, currentOrigin);
-                widgetData.instructions = widgetData.instructions?.replace(urlRegex, currentOrigin);
-                setWidgetCode(widgetData);
+                widgetRes.html_code = widgetRes.html_code?.replace(urlRegex, currentOrigin);
+                widgetRes.javascript_code = widgetRes.javascript_code?.replace(urlRegex, currentOrigin);
+                widgetRes.instructions = widgetRes.instructions?.replace(urlRegex, currentOrigin);
+                setWidgetCode(widgetRes);
             }
-
-            setLoading(false);
         } catch (error) {
-            console.error('Error fetching integration data:', error);
+            console.error('Error fetching widget integration data:', error);
+            toast.error('Failed to load widget integration details');
+        } finally {
+            setLoadingWidget(false);
+        }
+    };
+
+    const loadSettingsData = async () => {
+        if (settings) return;
+        setLoadingSettings(true);
+        try {
+            const settingsData = await apiClient.get<IntegrationSettings>('/integration/settings');
+            setSettings(settingsData);
+        } catch (error) {
+            console.error('Error fetching settings:', error);
             toast.error('Failed to load integration settings');
-            setLoading(false);
+        } finally {
+            setLoadingSettings(false);
+        }
+    };
+
+    const loadKeysData = async () => {
+        setLoadingKeys(true);
+        try {
+            const keysData = await apiClient.get<ApiKey[]>('/integration/api-keys').catch(() => []);
+            setApiKeys(keysData);
+        } catch (error) {
+            console.error('Error fetching API keys:', error);
+            toast.error('Failed to load API keys');
+        } finally {
+            setLoadingKeys(false);
         }
     };
 
@@ -126,7 +173,7 @@ const IntegrationPage = () => {
     const createAPIKey = async (name: string) => {
         try {
             const data = await apiClient.post<any>('/integration/api-keys', { name });
-            fetchData();
+            loadKeysData();
             toast.success('API key created successfully');
             return data;
         } catch (error) {
@@ -140,7 +187,7 @@ const IntegrationPage = () => {
         }
         try {
             await apiClient.delete(`/integration/api-keys/${keyId}`);
-            fetchData();
+            loadKeysData();
             toast.success('API key deleted');
         } catch (error) {
             toast.error('Failed to delete API key');
@@ -152,69 +199,99 @@ const IntegrationPage = () => {
         toast.success('Copied to clipboard');
     };
 
-    if (loading) {
-        return <div className="flex items-center justify-center h-96">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>;
-    }
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-        const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-
-        return (
+    return (
         <PageShell
             title="Integration"
             subtitle="Connect your hotel website and manage API access"
         >
-            <Tabs defaultValue="widget" className="space-y-6">
+            <Tabs value={activeTab} onValueChange={(val) => navigate(`/integration/${val}`)} className="space-y-6">
                 <TabsList className="bg-muted/50 p-1">
                     <TabsTrigger value="widget" className="gap-2"><Code className="w-4 h-4" />Full Page Link</TabsTrigger>
                     <TabsTrigger value="search-widget" className="gap-2"><Search className="w-4 h-4" />Search Widget</TabsTrigger>
                     <TabsTrigger value="chat-widget" className="gap-2"><MessageCircle className="w-4 h-4" />Chat Widget</TabsTrigger>
                     <TabsTrigger value="api-keys" className="gap-2"><Key className="w-4 h-4" />API Keys</TabsTrigger>
-                    <TabsTrigger value="whatsapp" className="gap-2"><MessageCircle className="w-4 h-4" />WhatsApp</TabsTrigger>
+                    <TabsTrigger value="ai-usage" className="gap-2"><Sparkles className="w-4 h-4" />AI Usage</TabsTrigger>
                     {isSuperAdmin && <TabsTrigger value="settings" className="gap-2"><Globe className="w-4 h-4" />External Services</TabsTrigger>}
                     {!isSuperAdmin && <TabsTrigger value="usage" className="gap-2"><BarChart3 className="w-4 h-4" />Usage</TabsTrigger>}
                 </TabsList>
 
-                <TabsContent value="widget">
-                    <BookingWidgetTab widgetCode={widgetCode} hotel={hotel} activeHotelSlug={activeHotelSlug} copyToClipboard={copyToClipboard} />
+                <TabsContent value="widget" className="mt-0">
+                    {loadingWidget ? (
+                        <div className="flex items-center justify-center h-48">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <BookingWidgetTab widgetCode={widgetCode} hotel={hotel} activeHotelSlug={activeHotelSlug} copyToClipboard={copyToClipboard} />
+                    )}
                 </TabsContent>
 
-                <TabsContent value="api-keys">
-                    <ApiKeysTab apiKeys={apiKeys} onCreateKey={createAPIKey} onDeleteKey={deleteAPIKey} copyToClipboard={copyToClipboard} />
+                <TabsContent value="api-keys" className="mt-0">
+                    {loadingKeys ? (
+                        <div className="flex items-center justify-center h-48">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <ApiKeysTab apiKeys={apiKeys} onCreateKey={createAPIKey} onDeleteKey={deleteAPIKey} copyToClipboard={copyToClipboard} />
+                    )}
                 </TabsContent>
 
-                <TabsContent value="search-widget">
-                    <SearchWidgetTab
-                        settings={settings}
-                        hotel={hotel}
-                        activeHotelSlug={activeHotelSlug}
-                        isDirty={isDirty}
-                        isSavingSettings={isSavingSettings}
-                        onUpdateSettings={updateSettings}
-                        onSaveSettings={handleSaveSettings}
-                        chainSlug={chainSlug || undefined}
-                        chainName={chainName || undefined}
-                    />
+                <TabsContent value="search-widget" className="mt-0">
+                    {loadingWidget ? (
+                        <div className="flex items-center justify-center h-48">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <SearchWidgetTab
+                            settings={settings}
+                            hotel={hotel}
+                            activeHotelSlug={activeHotelSlug}
+                            isDirty={isDirty}
+                            isSavingSettings={isSavingSettings}
+                            onUpdateSettings={updateSettings}
+                            onSaveSettings={handleSaveSettings}
+                            chainSlug={chainSlug || undefined}
+                            chainName={chainName || undefined}
+                        />
+                    )}
                 </TabsContent>
 
-                <TabsContent value="chat-widget">
-                    <ChatWidgetTab hotel={hotel} activeHotelSlug={activeHotelSlug} copyToClipboard={copyToClipboard} />
+                <TabsContent value="chat-widget" className="mt-0">
+                    {loadingSettings ? (
+                        <div className="flex items-center justify-center h-48">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <ChatWidgetTab hotel={hotel} activeHotelSlug={activeHotelSlug} copyToClipboard={copyToClipboard} />
+                    )}
                 </TabsContent>
 
                 {isSuperAdmin && (
-                    <TabsContent value="settings">
-                        <ExternalServicesTab settings={settings} isDirty={isDirty} isSavingSettings={isSavingSettings} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} />
+                    <TabsContent value="settings" className="mt-0">
+                        {loadingSettings ? (
+                            <div className="flex items-center justify-center h-48">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            </div>
+                        ) : (
+                            <ExternalServicesTab settings={settings} isDirty={isDirty} isSavingSettings={isSavingSettings} onUpdateSettings={updateSettings} onSaveSettings={handleSaveSettings} />
+                        )}
                     </TabsContent>
                 )}
 
-                <TabsContent value="whatsapp">
+                <TabsContent value="ai-usage" className="mt-0">
                     <WhatsappTab hotel={hotel} />
                 </TabsContent>
 
                 {!isSuperAdmin && (
-                    <TabsContent value="usage">
-                        <UsageTab hotel={hotel} />
+                    <TabsContent value="usage" className="mt-0">
+                        {loadingKeys ? (
+                            <div className="flex items-center justify-center h-48">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            </div>
+                        ) : (
+                            <UsageTab hotel={hotel} />
+                        )}
                     </TabsContent>
                 )}
             </Tabs>

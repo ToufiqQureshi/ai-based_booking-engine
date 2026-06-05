@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useVisibilityInterval } from '@/hooks/useVisibilityInterval';
 import { 
@@ -164,21 +165,71 @@ export const AnalyticsDashboard: React.FC = () => {
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const [activeUsers, setActiveUsers] = useState<number>(0);
 
-  // Main analytics — React Query handles caching, deduplication, and background refresh
+  const { tab: activeTab = 'overview' } = useParams<{ tab?: string }>();
+  const navigate = useNavigate();
+
+  // 1. KPI stats (always load on mount, depends on `days`)
   const {
-    data,
-    isLoading: loading,
-    isFetching: switching,
-    error: queryError,
-    refetch,
-  } = useQuery<AnalyticsData>({
-    queryKey: ['analyticsDashboard', days],
-    queryFn: () => api.get<AnalyticsData>(`/analytics/dashboard?days=${days}`),
-    staleTime: 1000 * 60 * 10, // 10 minutes — matches backend 600s cache
-    gcTime: 1000 * 60 * 30,   // keep all 3 tab variants in memory for 30 min
+    data: kpis,
+    isLoading: isKpisLoading,
+    isFetching: isKpisFetching,
+    error: kpisError,
+  } = useQuery<any>({
+    queryKey: ['analyticsKpis', days],
+    queryFn: () => api.get<any>(`/analytics/dashboard/kpis?days=${days}`),
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
   });
 
-  const error = queryError ? (queryError as any).message || 'Failed to load analytics data.' : null;
+  // 2. Tab-specific queries (lazy loaded using `enabled`)
+  const { data: overviewData, isLoading: isOverviewLoading, error: overviewError } = useQuery<any>({
+    queryKey: ['analyticsOverview', days],
+    queryFn: () => api.get<any>(`/analytics/dashboard/overview?days=${days}`),
+    enabled: activeTab === 'overview',
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
+
+  const { data: revenueData, isLoading: isRevenueLoading, error: revenueError } = useQuery<any>({
+    queryKey: ['analyticsRevenue', days],
+    queryFn: () => api.get<any>(`/analytics/dashboard/revenue?days=${days}`),
+    enabled: activeTab === 'revenue',
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
+
+  const { data: trafficData, isLoading: isTrafficLoading, error: trafficError } = useQuery<any>({
+    queryKey: ['analyticsTraffic', days],
+    queryFn: () => api.get<any>(`/analytics/dashboard/traffic?days=${days}`),
+    enabled: activeTab === 'traffic',
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
+
+  const { data: aiData, isLoading: isAiLoading, error: aiError } = useQuery<any>({
+    queryKey: ['analyticsAi', days],
+    queryFn: () => api.get<any>(`/analytics/dashboard/ai?days=${days}`),
+    enabled: activeTab === 'ai',
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
+
+  const { data: cancellationsData, isLoading: isCancellationsLoading, error: cancellationsError } = useQuery<any>({
+    queryKey: ['analyticsCancellations', days],
+    queryFn: () => api.get<any>(`/analytics/dashboard/cancellations?days=${days}`),
+    enabled: activeTab === 'cancellations',
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
+
+  // Get active query error if any
+  const error = kpisError ? (kpisError as any).message || 'Failed to load KPIs.' :
+                (activeTab === 'overview' && overviewError) ? (overviewError as any).message || 'Failed to load overview.' :
+                (activeTab === 'revenue' && revenueError) ? (revenueError as any).message || 'Failed to load revenue.' :
+                (activeTab === 'traffic' && trafficError) ? (trafficError as any).message || 'Failed to load traffic.' :
+                (activeTab === 'ai' && aiError) ? (aiError as any).message || 'Failed to load AI performance.' :
+                (activeTab === 'cancellations' && cancellationsError) ? (cancellationsError as any).message || 'Failed to load cancellations.' :
+                null;
 
   // Live stats polling — visibility-aware, pauses when tab is hidden
   const fetchLiveStats = useCallback(async () => {
@@ -206,66 +257,75 @@ export const AnalyticsDashboard: React.FC = () => {
   useVisibilityInterval(fetchLiveStats, 30000);
 
   const handleExport = () => {
-    if (!data) return;
-    const rows = [
-      ['Metric', 'Value'],
-      ['Total Visitors', data.total_visitors],
-      ['Total Bookings (Conversions)', data.total_conversions],
-      ['Conversion Rate (%)', data.conversion_rate],
-      ['Total Revenue (INR)', data.revenue_total],
-      ['Avg Daily Rate (ADR)', data.avg_daily_rate],
-      ['RevPAR', data.rev_par],
-      ['Occupancy Rate (%)', data.occupancy_rate],
-      ['AI Assisted Revenue', data.ai_revenue ?? 0],
-      ['Total AI Leads', data.total_leads ?? 0],
-      ['Commission Saved', data.commission_saved ?? 0],
-      ['Total Cancellations', data.cancellations_count ?? 0],
-      ['Cancellation Rate (%)', data.cancellation_rate ?? 0],
-      ['Lost Revenue (INR)', data.lost_revenue ?? 0],
-      ['Cancellation Fees Collected (INR)', data.cancellation_fees_collected ?? 0],
-    ];
-    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
-    const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csvContent));
-    link.setAttribute('download', `analytics_${days}d.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Analytics exported successfully');
+    toast.promise(
+      api.get<AnalyticsData>(`/analytics/dashboard?days=${days}`).then(fullData => {
+        const rows = [
+          ['Metric', 'Value'],
+          ['Total Visitors', fullData.total_visitors],
+          ['Total Bookings (Conversions)', fullData.total_conversions],
+          ['Conversion Rate (%)', fullData.conversion_rate],
+          ['Total Revenue (INR)', fullData.revenue_total],
+          ['Avg Daily Rate (ADR)', fullData.avg_daily_rate],
+          ['RevPAR', fullData.rev_par],
+          ['Occupancy Rate (%)', fullData.occupancy_rate],
+          ['AI Assisted Revenue', fullData.ai_revenue ?? 0],
+          ['Total AI Leads', fullData.total_leads ?? 0],
+          ['Commission Saved', fullData.commission_saved ?? 0],
+          ['Total Cancellations', fullData.cancellations_count ?? 0],
+          ['Cancellation Rate (%)', fullData.cancellation_rate ?? 0],
+          ['Lost Revenue (INR)', fullData.lost_revenue ?? 0],
+          ['Cancellation Fees Collected (INR)', fullData.cancellation_fees_collected ?? 0],
+        ];
+        const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
+        const link = document.createElement('a');
+        link.setAttribute('href', encodeURI(csvContent));
+        link.setAttribute('download', `analytics_${days}d.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }),
+      {
+        loading: 'Preparing CSV export...',
+        success: 'Analytics exported successfully',
+        error: 'Failed to export analytics',
+      }
+    );
   };
 
   const handleDaysChange = (d: number) => {
-    setDays(d); // queryKey changes → React Query fetches automatically
+    setDays(d);
   };
 
-  // ── Loading / Error States ─────────────────────────────────────────────
-  if (loading) return (
-    <div className="h-screen w-full flex flex-col justify-center items-center gap-4">
+  const TabLoading = () => (
+    <div className="flex flex-col justify-center items-center py-20 gap-3">
       <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm font-medium text-muted-foreground">Loading analytics…</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest animate-pulse">Fetching Tab Details...</p>
     </div>
   );
 
-  if (error) return (
+  const deviceData = useMemo(() => {
+    return (overviewData?.device_stats || []).map((d: any) => ({
+      ...d,
+      name: d.type.charAt(0).toUpperCase() + d.type.slice(1)
+    }));
+  }, [overviewData]);
+
+  if (isKpisLoading) return (
+    <div className="h-screen w-full flex flex-col justify-center items-center gap-4">
+      <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm font-medium text-muted-foreground">Loading dashboard…</p>
+    </div>
+  );
+
+  if (error && !kpis) return (
     <div className="m-8 p-6 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-4">
       <AlertCircle className="w-6 h-6 text-red-500 shrink-0" />
       <div>
         <p className="font-bold text-red-700">Failed to load analytics</p>
         <p className="text-sm text-red-500 mt-1">{error}</p>
       </div>
-      <button onClick={() => refetch()}
-        className="ml-auto flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl text-sm font-bold transition-colors">
-        <RefreshCw className="w-4 h-4" /> Retry
-      </button>
     </div>
   );
-
-  if (!data) return <EmptyState message="No analytics data received from server." />;
-
-  const deviceData = (data.device_stats || []).map(d => ({
-    ...d,
-    name: d.type.charAt(0).toUpperCase() + d.type.slice(1)
-  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -323,7 +383,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </motion.div>
 
         {/* ── KPI Bar ───────────────────────────────────────────────────── */}
-        {switching ? (
+        {isKpisFetching ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-muted border border-border rounded-2xl p-5 h-28 animate-pulse" />
@@ -338,29 +398,29 @@ export const AnalyticsDashboard: React.FC = () => {
           >
             <KPICard
               label="Total Revenue"
-              value={`₹${(data.revenue_total || 0).toLocaleString('en-IN')}`}
-              sub={`ADR: ₹${(data.avg_daily_rate || 0).toLocaleString('en-IN')}`}
+              value={`₹${(kpis?.revenue_total || 0).toLocaleString('en-IN')}`}
+              sub={`ADR: ₹${(kpis?.avg_daily_rate || 0).toLocaleString('en-IN')}`}
               icon={<DollarSign className="w-4 h-4" />}
               accent="text-indigo-700"
             />
             <KPICard
               label="Total Bookings"
-              value={`${data.total_conversions || 0}`}
-              sub={`From ${data.total_visitors || 0} visitors`}
+              value={`${kpis?.total_conversions || 0}`}
+              sub={`From ${kpis?.total_visitors || 0} visitors`}
               icon={<Calendar className="w-4 h-4" />}
               accent="text-foreground"
             />
             <KPICard
               label="Conversion Rate"
-              value={`${data.conversion_rate || 0}%`}
+              value={`${kpis?.conversion_rate || 0}%`}
               sub="Look-to-book ratio"
               icon={<Zap className="w-4 h-4" />}
-              accent={data.conversion_rate > 2 ? 'text-emerald-600' : 'text-amber-600'}
+              accent={kpis?.conversion_rate > 2 ? 'text-emerald-600' : 'text-amber-600'}
             />
             <KPICard
               label="Occupancy Rate"
-              value={`${data.occupancy_rate || 0}%`}
-              sub={`RevPAR: ₹${(data.rev_par || 0).toLocaleString('en-IN')}`}
+              value={`${kpis?.occupancy_rate || 0}%`}
+              sub={`RevPAR: ₹${(kpis?.rev_par || 0).toLocaleString('en-IN')}`}
               icon={<Bed className="w-4 h-4" />}
               accent="text-foreground"
             />
@@ -368,7 +428,7 @@ export const AnalyticsDashboard: React.FC = () => {
         )}
 
         {/* ── Tabs ──────────────────────────────────────────────────────── */}
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(val) => navigate(`/analytics/${val}`)} className="space-y-6">
           <TabsList className="bg-muted border border-border p-0.5 rounded-xl inline-flex gap-0.5">
             {[
               { value: 'overview', label: 'Overview' },
@@ -389,551 +449,578 @@ export const AnalyticsDashboard: React.FC = () => {
 
           {/* ── OVERVIEW TAB ─────────────────────────────────────────── */}
           <TabsContent value="overview" className="space-y-4 focus:outline-none">
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-              
-              {/* Revenue + Visitor Chart */}
-              <SectionCard
-                title="Revenue & Visitor Trend"
-                subtitle="Daily traffic vs direct revenue"
-                className="xl:col-span-2"
-              >
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data.chart_data || []} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="gVisitors" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.15} />
-                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
-                          <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dy={8} />
-                      <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dx={-4} />
-                      <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dx={4} />
-                      <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                      <Area yAxisId="left" type="monotone" name="Visitors" dataKey="visitors" stroke="#6366f1" strokeWidth={2.5} fill="url(#gVisitors)" dot={false} />
-                      <Area yAxisId="right" type="monotone" name="Revenue (₹)" dataKey="revenue" stroke="#10b981" strokeWidth={2.5} fill="url(#gRevenue)" dot={false} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex items-center gap-6 mt-3 pt-3 border-t border-border">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                    <span className="w-3 h-0.5 rounded-full bg-indigo-500 inline-block" /> Visitors
+            {isOverviewLoading || !overviewData ? (
+              <TabLoading />
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                
+                {/* Revenue + Visitor Chart */}
+                <SectionCard
+                  title="Revenue & Visitor Trend"
+                  subtitle="Daily traffic vs direct revenue"
+                  className="xl:col-span-2"
+                >
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={overviewData.chart_data || []} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="gVisitors" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity={0.15} />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dy={8} />
+                        <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dx={-4} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dx={4} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                        <Area yAxisId="left" type="monotone" name="Visitors" dataKey="visitors" stroke="#6366f1" strokeWidth={2.5} fill="url(#gVisitors)" dot={false} />
+                        <Area yAxisId="right" type="monotone" name="Revenue (₹)" dataKey="revenue" stroke="#10b981" strokeWidth={2.5} fill="url(#gRevenue)" dot={false} />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                    <span className="w-3 h-0.5 rounded-full bg-emerald-500 inline-block" /> Revenue
+                  <div className="flex items-center gap-6 mt-3 pt-3 border-t border-border">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <span className="w-3 h-0.5 rounded-full bg-indigo-500 inline-block" /> Visitors
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <span className="w-3 h-0.5 rounded-full bg-emerald-500 inline-block" /> Revenue
+                    </div>
                   </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
 
-              {/* Booking Funnel */}
-              <SectionCard title="Booking Funnel" subtitle="Direct booking conversion path" icon={<Layout className="w-4 h-4" />}>
-                {data.funnel_data && data.funnel_data.length > 0 ? (
-                  <div className="space-y-5">
-                    {data.funnel_data.map((stage, idx) => {
-                      const top = data.funnel_data?.[0]?.count || 1;
-                      const pct = Math.round((stage.count / top) * 100);
-                      return (
-                        <div key={stage.stage}>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold text-muted-foreground">{getStageLabel(stage.stage)}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-black text-foreground">{stage.count.toLocaleString()}</span>
-                              <span className="text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">{pct}%</span>
+                {/* Booking Funnel */}
+                <SectionCard title="Booking Funnel" subtitle="Direct booking conversion path" icon={<Layout className="w-4 h-4" />}>
+                  {overviewData.funnel_data && overviewData.funnel_data.length > 0 ? (
+                    <div className="space-y-5">
+                      {overviewData.funnel_data.map((stage: any, idx: number) => {
+                        const top = overviewData.funnel_data?.[0]?.count || 1;
+                        const pct = Math.round((stage.count / top) * 100);
+                        return (
+                          <div key={stage.stage}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-bold text-muted-foreground">{getStageLabel(stage.stage)}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-foreground">{stage.count.toLocaleString()}</span>
+                                <span className="text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">{pct}%</span>
+                              </div>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.8, delay: idx * 0.1 }}
+                                className="h-full rounded-full"
+                                style={{ backgroundColor: FUNNEL_COLORS[idx] }}
+                              />
                             </div>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${pct}%` }}
-                              transition={{ duration: 0.8, delay: idx * 0.1 }}
-                              className="h-full rounded-full"
-                              style={{ backgroundColor: FUNNEL_COLORS[idx] }}
-                            />
+                        );
+                      })}
+
+                      {overviewData.funnel_dropoffs && overviewData.funnel_dropoffs.length > 0 && (
+                        <div className="pt-4 border-t border-border">
+                          <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-3">Drop-off Points</p>
+                          <div className="space-y-2">
+                            {overviewData.funnel_dropoffs.map((d: any) => (
+                              <div key={d.stage} className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground font-medium">After {getStageLabel(d.stage)}</span>
+                                <span className={`font-bold px-2 py-0.5 rounded-lg ${d.drop_percentage > 50 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+                                  -{d.drop_percentage}%
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      );
-                    })}
+                      )}
+                    </div>
+                  ) : <EmptyState message="No funnel data available yet." />}
+                </SectionCard>
+              </div>
+            )}
 
-                    {data.funnel_dropoffs && data.funnel_dropoffs.length > 0 && (
-                      <div className="pt-4 border-t border-border">
-                        <p className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest mb-3">Drop-off Points</p>
-                        <div className="space-y-2">
-                          {data.funnel_dropoffs.map(d => (
-                            <div key={d.stage} className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground font-medium">After {getStageLabel(d.stage)}</span>
-                              <span className={`font-bold px-2 py-0.5 rounded-lg ${d.drop_percentage > 50 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
-                                -{d.drop_percentage}%
-                              </span>
+            {/* Live Feed + Devices side by side */}
+            {!(isOverviewLoading || !overviewData) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+
+                {/* Live Activity Feed */}
+                <SectionCard title="Live Activity Feed" subtitle="Real-time visitor events on your site" icon={<Activity className="w-4 h-4" />}>
+                  {liveEvents.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {liveEvents.map((ev) => (
+                        <motion.div
+                          key={ev.id}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex items-center justify-between py-2.5 py-3 bg-muted rounded-xl border border-border text-xs"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${
+                              ev.type === 'booking' ? 'bg-emerald-500' :
+                              ev.type === 'search' ? 'bg-blue-500' : 'bg-slate-400'
+                            }`} />
+                            <span className="font-semibold text-foreground">{ev.message}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            {ev.amount && <span className="font-black text-emerald-600">₹{ev.amount.toLocaleString()}</span>}
+                            <span className="text-muted-foreground font-medium">{ev.timestamp}</span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState message="No live events in the last few minutes." />
+                  )}
+                </SectionCard>
+
+                {/* Device Breakdown */}
+                <SectionCard title="Device Breakdown" subtitle="What devices your visitors use" icon={<Monitor className="w-4 h-4" />}>
+                  {deviceData.length > 0 ? (
+                    <div className="flex items-center gap-6">
+                      <div className="w-36 h-36 shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={deviceData} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={3} stroke="none">
+                              {deviceData.map((_, idx) => (
+                                <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v: number, n: string) => [v, n]} contentStyle={{ borderRadius: '12px', fontSize: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)' }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="space-y-3 flex-1">
+                        {deviceData.map((d: any, idx: number) => {
+                          const total = deviceData.reduce((a, b) => a + b.count, 0) || 1;
+                          const pct = Math.round((d.count / total) * 100);
+                          const DevIcon = d.type === 'mobile' ? Smartphone : d.type === 'tablet' ? Tablet : Monitor;
+                          return (
+                            <div key={d.type} className="flex items-center gap-3">
+                              <DevIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                              <div className="flex-1">
+                                <div className="flex justify-between mb-1">
+                                  <span className="text-xs font-bold text-muted-foreground">{d.name}</span>
+                                  <span className="text-xs font-black text-foreground">{pct}%</span>
+                                </div>
+                                <div className="w-full bg-muted rounded-full h-1.5">
+                                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : <EmptyState message="No device data recorded yet." />}
+                </SectionCard>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ── REVENUE & ROOMS TAB ───────────────────────────────────── */}
+          <TabsContent value="revenue" className="space-y-4 focus:outline-none">
+            {isRevenueLoading || !revenueData ? (
+              <TabLoading />
+            ) : (
+              <>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <KPICard label="RevPAR" value={`₹${(revenueData.rev_par || 0).toLocaleString('en-IN')}`} sub="Revenue per available room" icon={<Bed className="w-4 h-4" />} />
+                  <KPICard label="Avg Occupancy" value={`${revenueData.occupancy_rate || 0}%`} sub="Rooms booked vs total capacity" icon={<PieIcon className="w-4 h-4" />} accent={revenueData.occupancy_rate > 60 ? 'text-emerald-600' : 'text-amber-600'} />
+                  <KPICard label="Commission Saved" value={`₹${(revenueData.commission_saved || 0).toLocaleString('en-IN')}`} sub="vs 15% OTA commission" icon={<TrendingUp className="w-4 h-4" />} accent="text-emerald-600" />
+                  <KPICard
+                    label="Daily Pace"
+                    value={`${revenueData.pickup_stats?.today || 0} bookings`}
+                    sub={`Yesterday: ${revenueData.pickup_stats?.yesterday || 0}`}
+                    icon={revenueData.pickup_stats?.trend === 'up' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                    accent={revenueData.pickup_stats?.trend === 'up' ? 'text-emerald-600' : 'text-red-500'}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Revenue by Room Type */}
+                  <SectionCard title="Revenue Mix by Room Type" subtitle="Which room types are earning most" icon={<PieIcon className="w-4 h-4" />}>
+                    <div className="h-64 w-full flex items-center justify-center">
+                      {revenueData.revenue_by_room_type && revenueData.revenue_by_room_type.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={revenueData.revenue_by_room_type} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={4} dataKey="value" stroke="none">
+                              {revenueData.revenue_by_room_type.map((_: any, idx: number) => (
+                                <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v: number) => [`₹${v.toLocaleString()}`, 'Revenue']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
+                            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px', fontWeight: 600 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : <EmptyState message="Not enough booking data to show revenue mix." />}
+                    </div>
+                  </SectionCard>
+
+                  {/* 7-Day Occupancy Forecast */}
+                  <SectionCard title="7-Day Occupancy Forecast" subtitle="Predicted occupancy for upcoming week" icon={<Calendar className="w-4 h-4" />}>
+                    <div className="h-64 w-full">
+                      {revenueData.occupancy_forecast && revenueData.occupancy_forecast.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={revenueData.occupancy_forecast} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="gOcc" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#6366f1" stopOpacity={0.2} />
+                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dy={8} />
+                            <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} dx={-4} domain={[0, 100]} />
+                            <Tooltip formatter={(v: any) => [`${v}%`, 'Predicted Occupancy']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                            <Area type="monotone" dataKey="occupancy" stroke="#6366f1" strokeWidth={2.5} fill="url(#gOcc)" dot={{ fill: '#6366f1', r: 3, strokeWidth: 0 }} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      ) : <EmptyState message="No forecast data available." />}
+                    </div>
+                  </SectionCard>
+                </div>
+
+                {/* Most & Least Booked Rooms */}
+                {(revenueData.most_booked_rooms?.length || 0) > 0 && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <SectionCard title="Most Booked Rooms" subtitle="Top performing room types this period" icon={<TrendingUp className="w-4 h-4" />}>
+                      <div className="space-y-3">
+                        {revenueData.most_booked_rooms?.slice(0, 5).map((r: any, idx: number) => (
+                          <div key={r.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-black text-slate-300 w-4">#{idx + 1}</span>
+                              <span className="text-sm font-semibold text-foreground">{r.name || 'Room'}</span>
+                            </div>
+                            <span className="text-sm font-black text-indigo-600">{r.count} bookings</span>
+                          </div>
+                        ))}
+                      </div>
+                    </SectionCard>
+
+                    {revenueData.promo_stats && revenueData.promo_stats.length > 0 && (
+                      <SectionCard title="Promo Code Performance" subtitle="Which coupon codes are being used" icon={<Zap className="w-4 h-4" />}>
+                        <div className="space-y-3">
+                          {revenueData.promo_stats.map((p: any) => (
+                            <div key={p.code} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                              <span className="text-sm font-bold text-foreground font-mono bg-muted px-2 py-0.5 rounded-md">{p.code}</span>
+                              <span className="text-sm font-black text-indigo-600">{p.bookings} used</span>
                             </div>
                           ))}
                         </div>
-                      </div>
+                      </SectionCard>
                     )}
                   </div>
-                ) : <EmptyState message="No funnel data available yet." />}
-              </SectionCard>
-            </div>
-
-            {/* Live Feed + Devices side by side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-              {/* Live Activity Feed */}
-              <SectionCard title="Live Activity Feed" subtitle="Real-time visitor events on your site" icon={<Activity className="w-4 h-4" />}>
-                {liveEvents.length > 0 ? (
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {liveEvents.map((ev) => (
-                      <motion.div
-                        key={ev.id}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center justify-between py-2.5 px-3 bg-muted rounded-xl border border-border text-xs"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${
-                            ev.type === 'booking' ? 'bg-emerald-500' :
-                            ev.type === 'search' ? 'bg-blue-500' : 'bg-slate-400'
-                          }`} />
-                          <span className="font-semibold text-foreground">{ev.message}</span>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 ml-2">
-                          {ev.amount && <span className="font-black text-emerald-600">₹{ev.amount.toLocaleString()}</span>}
-                          <span className="text-muted-foreground font-medium">{ev.timestamp}</span>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState message="No live events in the last few minutes." />
                 )}
-              </SectionCard>
+              </>
+            )}
+          </TabsContent>
 
-              {/* Device Breakdown */}
-              <SectionCard title="Device Breakdown" subtitle="What devices your visitors use" icon={<Monitor className="w-4 h-4" />}>
-                {deviceData.length > 0 ? (
-                  <div className="flex items-center gap-6">
-                    <div className="w-36 h-36 shrink-0">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={deviceData} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={3} stroke="none">
-                            {deviceData.map((_, idx) => (
-                              <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(v: number, n: string) => [v, n]} contentStyle={{ borderRadius: '12px', fontSize: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
+          {/* ── TRAFFIC TAB ───────────────────────────────────────────── */}
+          <TabsContent value="traffic" className="space-y-4 focus:outline-none">
+            {isTrafficLoading || !trafficData ? (
+              <TabLoading />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Booking Window */}
+                  <SectionCard title="Booking Lead Time" subtitle="How far in advance guests book" icon={<Clock className="w-4 h-4" />}>
+                    <div className="h-64 w-full">
+                      {trafficData.booking_window_data && trafficData.booking_window_data.some((b: any) => b.count > 0) ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={trafficData.booking_window_data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                            <XAxis dataKey="window" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dy={8} />
+                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dx={-4} />
+                            <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
+                            <Bar dataKey="count" name="Bookings" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={56} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : <EmptyState message="No booking window data yet. Needs at least a few bookings." />}
                     </div>
-                    <div className="space-y-3 flex-1">
-                      {deviceData.map((d, idx) => {
-                        const total = deviceData.reduce((a, b) => a + b.count, 0) || 1;
-                        const pct = Math.round((d.count / total) * 100);
-                        const DevIcon = d.type === 'mobile' ? Smartphone : d.type === 'tablet' ? Tablet : Monitor;
-                        return (
-                          <div key={d.type} className="flex items-center gap-3">
-                            <DevIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                            <div className="flex-1">
-                              <div className="flex justify-between mb-1">
-                                <span className="text-xs font-bold text-muted-foreground">{d.name}</span>
-                                <span className="text-xs font-black text-foreground">{pct}%</span>
+                  </SectionCard>
+
+                  {/* Geo Stats */}
+                  <SectionCard title="Visitor Origins" subtitle="Where your guests are coming from" icon={<Globe className="w-4 h-4" />}>
+                    {trafficData.geo_stats && trafficData.geo_stats.length > 0 ? (
+                      <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
+                        {trafficData.geo_stats.map((item: any) => (
+                          <div key={item.country} className="flex items-center gap-3">
+                            <span className="text-xl leading-none w-8 text-center shrink-0">{countryFlag(item.code)}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between mb-1.5">
+                                <span className="text-xs font-bold text-foreground truncate">{item.country}</span>
+                                <span className="text-xs font-black text-foreground ml-2 shrink-0">{item.visitors}</span>
                               </div>
                               <div className="w-full bg-muted rounded-full h-1.5">
-                                <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                                <div className="bg-indigo-500 h-full rounded-full transition-all" style={{ width: `${item.percentage}%` }} />
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold text-muted-foreground w-8 text-right shrink-0">{item.percentage}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <EmptyState message="No geographic data recorded yet. Needs real visitor traffic." />}
+                  </SectionCard>
+                </div>
+
+                {/* Traffic Heatmap */}
+                <SectionCard
+                  title="Traffic Heatmap"
+                  subtitle={`Aggregated visitor traffic by weekday & hour — last ${days} days (hover a cell for exact count)`}
+                  icon={<Clock className="w-4 h-4" />}
+                >
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[700px]">
+                      {/* Hour labels with AM/PM markers */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '48px repeat(24, minmax(0, 1fr))', gap: '3px' }}>
+                        <div className="text-[9px] font-bold text-muted-foreground flex items-end pb-1">Day</div>
+                        {Array.from({ length: 24 }).map((_, h) => (
+                          <div key={h} className="text-[9px] text-center font-bold text-muted-foreground pb-1">
+                            {h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`}
+                          </div>
+                        ))}
+                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, dIdx) => {
+                          const maxVal = Math.max(...(trafficData.traffic_heatmap?.map((c: any) => c.visitors) || [1]), 1);
+                          return (
+                            <React.Fragment key={day}>
+                              <div className="text-[10px] font-bold text-muted-foreground flex items-center">{day}</div>
+                              {Array.from({ length: 24 }).map((_, hIdx) => {
+                                const cell = trafficData.traffic_heatmap?.find((i: any) => i.weekday === dIdx && i.hour === hIdx);
+                                const count = cell?.visitors || 0;
+                                const intensity = count > 0 ? 0.15 + (count / maxVal) * 0.85 : 0;
+                                const hourLabel = hIdx === 0 ? '12 AM' : hIdx < 12 ? `${hIdx} AM` : hIdx === 12 ? '12 PM' : `${hIdx - 12} PM`;
+                                return (
+                                  <div
+                                    key={hIdx}
+                                    title={`${day} ${hourLabel} — ${count} visitor${count !== 1 ? 's' : ''}`}
+                                    style={{
+                                      backgroundColor: count > 0 ? `rgba(99, 102, 241, ${intensity})` : 'hsl(var(--muted))',
+                                      border: '1px solid hsl(var(--border))'
+                                    }}
+                                    className="h-7 rounded-md cursor-pointer hover:scale-110 hover:shadow-md transition-transform"
+                                  />
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
+
+                      {/* Legend + note */}
+                      <div className="flex items-center justify-between mt-4 gap-4 flex-wrap">
+                        <p className="text-[10px] text-muted-foreground italic">
+                          Each cell = total visitors for that weekday & hour, combined across the last {days} days
+                        </p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] text-muted-foreground font-medium">Low</span>
+                          {[0.15, 0.35, 0.55, 0.75, 1].map(v => (
+                            <div key={v} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(99, 102, 241, ${v})` }} />
+                          ))}
+                          <span className="text-[10px] text-muted-foreground font-medium">High</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </SectionCard>
+              </>
+            )}
+          </TabsContent>
+
+          {/* ── AI PERFORMANCE TAB ────────────────────────────────────── */}
+          <TabsContent value="ai" className="space-y-4 focus:outline-none">
+            {isAiLoading || !aiData ? (
+              <TabLoading />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                {/* AI Metrics */}
+                <div className="space-y-4">
+                  <div className="bg-slate-900 rounded-2xl p-6 text-white">
+                    <div className="flex items-center gap-2 mb-4">
+                      <BotIcon className="w-5 h-5 text-indigo-400" />
+                      <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wide">AI Agent</h2>
+                    </div>
+                    <div className="text-center py-4">
+                      <span className="text-5xl font-black text-white">{aiData.ai_resolution_rate ?? 0}%</span>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-2">Chat → Booking Rate</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div className="bg-background/5 rounded-xl p-3 border border-white/10">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Leads</p>
+                        <p className="text-xl font-black text-white mt-1">{aiData.total_leads || 0}</p>
+                      </div>
+                      <div className="bg-indigo-600/30 rounded-xl p-3 border border-indigo-500/30">
+                        <p className="text-[10px] font-bold text-indigo-300 uppercase">AI Bookings</p>
+                        <p className="text-xl font-black text-indigo-400 mt-1">{aiData.ai_assisted_bookings || 0}</p>
+                      </div>
+                      <div className="bg-emerald-600/20 rounded-xl p-3 border border-emerald-500/20 col-span-2">
+                        <p className="text-[10px] font-bold text-emerald-300 uppercase">AI Revenue Generated</p>
+                        <p className="text-xl font-black text-emerald-400 mt-1">₹{(aiData.ai_revenue || 0).toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Most Enquired Rooms */}
+                <SectionCard
+                  title="Most Enquired Rooms"
+                  subtitle="Which rooms guests ask the AI about most"
+                  icon={<Bed className="w-4 h-4" />}
+                  className="lg:col-span-2"
+                >
+                  {aiData.popular_questions && aiData.popular_questions.length > 0 ? (
+                    <div className="space-y-3">
+                      {aiData.popular_questions.map((q: any, idx: number) => {
+                        const max = aiData.popular_questions?.[0]?.value || 1;
+                        const pct = Math.round((q.value / max) * 100);
+                        return (
+                          <div key={idx} className="flex items-center gap-3">
+                            <span className="text-xs font-black text-slate-300 w-4 shrink-0">#{idx + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between mb-1">
+                                <span className="text-xs font-bold text-foreground truncate pr-2">{q.text}</span>
+                                <span className="text-xs font-black text-indigo-600 shrink-0">{q.value} leads</span>
+                              </div>
+                              <div className="w-full bg-muted rounded-full h-1.5">
+                                <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
                               </div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                ) : <EmptyState message="No device data recorded yet." />}
-              </SectionCard>
-            </div>
-          </TabsContent>
-
-          {/* ── REVENUE & ROOMS TAB ───────────────────────────────────── */}
-          <TabsContent value="revenue" className="space-y-4 focus:outline-none">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <KPICard label="RevPAR" value={`₹${(data.rev_par || 0).toLocaleString('en-IN')}`} sub="Revenue per available room" icon={<Bed className="w-4 h-4" />} />
-              <KPICard label="Avg Occupancy" value={`${data.occupancy_rate || 0}%`} sub="Rooms booked vs total capacity" icon={<PieIcon className="w-4 h-4" />} accent={data.occupancy_rate > 60 ? 'text-emerald-600' : 'text-amber-600'} />
-              <KPICard label="Commission Saved" value={`₹${(data.commission_saved || 0).toLocaleString('en-IN')}`} sub="vs 15% OTA commission" icon={<TrendingUp className="w-4 h-4" />} accent="text-emerald-600" />
-              <KPICard
-                label="Daily Pace"
-                value={`${data.pickup_stats?.today || 0} bookings`}
-                sub={`Yesterday: ${data.pickup_stats?.yesterday || 0}`}
-                icon={data.pickup_stats?.trend === 'up' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                accent={data.pickup_stats?.trend === 'up' ? 'text-emerald-600' : 'text-red-500'}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Revenue by Room Type */}
-              <SectionCard title="Revenue Mix by Room Type" subtitle="Which room types are earning most" icon={<PieIcon className="w-4 h-4" />}>
-                <div className="h-64 w-full flex items-center justify-center">
-                  {data.revenue_by_room_type && data.revenue_by_room_type.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={data.revenue_by_room_type} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={4} dataKey="value" stroke="none">
-                          {data.revenue_by_room_type.map((_, idx) => (
-                            <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(v: number) => [`₹${v.toLocaleString()}`, 'Revenue']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
-                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px', fontWeight: 600 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : <EmptyState message="Not enough booking data to show revenue mix." />}
-                </div>
-              </SectionCard>
-
-              {/* 7-Day Occupancy Forecast */}
-              <SectionCard title="7-Day Occupancy Forecast" subtitle="Predicted occupancy for upcoming week" icon={<Calendar className="w-4 h-4" />}>
-                <div className="h-64 w-full">
-                  {data.occupancy_forecast && data.occupancy_forecast.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={data.occupancy_forecast} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="gOcc" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#6366f1" stopOpacity={0.2} />
-                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} dy={8} />
-                        <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} dx={-4} domain={[0, 100]} />
-                        <Tooltip formatter={(v: any) => [`${v}%`, 'Predicted Occupancy']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }} cursor={{ stroke: '#e2e8f0', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                        <Area type="monotone" dataKey="occupancy" stroke="#6366f1" strokeWidth={2.5} fill="url(#gOcc)" dot={{ fill: '#6366f1', r: 3, strokeWidth: 0 }} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  ) : <EmptyState message="No forecast data available." />}
-                </div>
-              </SectionCard>
-            </div>
-
-            {/* Most & Least Booked Rooms */}
-            {(data.most_booked_rooms?.length || 0) > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <SectionCard title="Most Booked Rooms" subtitle="Top performing room types this period" icon={<TrendingUp className="w-4 h-4" />}>
-                  <div className="space-y-3">
-                    {data.most_booked_rooms?.slice(0, 5).map((r, idx) => (
-                      <div key={r.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-black text-slate-300 w-4">#{idx + 1}</span>
-                          <span className="text-sm font-semibold text-foreground">{r.name || 'Room'}</span>
-                        </div>
-                        <span className="text-sm font-black text-indigo-600">{r.count} bookings</span>
-                      </div>
-                    ))}
-                  </div>
+                  ) : (
+                    <EmptyState message="No AI leads yet. Enquiries appear here when guests chat via AI Concierge." />
+                  )}
                 </SectionCard>
-
-                {data.promo_stats && data.promo_stats.length > 0 && (
-                  <SectionCard title="Promo Code Performance" subtitle="Which coupon codes are being used" icon={<Zap className="w-4 h-4" />}>
-                    <div className="space-y-3">
-                      {data.promo_stats.map(p => (
-                        <div key={p.code} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                          <span className="text-sm font-bold text-foreground font-mono bg-muted px-2 py-0.5 rounded-md">{p.code}</span>
-                          <span className="text-sm font-black text-indigo-600">{p.bookings} used</span>
-                        </div>
-                      ))}
-                    </div>
-                  </SectionCard>
-                )}
               </div>
             )}
-          </TabsContent>
-
-          {/* ── TRAFFIC TAB ───────────────────────────────────────────── */}
-          <TabsContent value="traffic" className="space-y-4 focus:outline-none">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Booking Window */}
-              <SectionCard title="Booking Lead Time" subtitle="How far in advance guests book" icon={<Clock className="w-4 h-4" />}>
-                <div className="h-64 w-full">
-                  {data.booking_window_data && data.booking_window_data.some(b => b.count > 0) ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data.booking_window_data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                        <XAxis dataKey="window" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dy={8} />
-                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dx={-4} />
-                        <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }} />
-                        <Bar dataKey="count" name="Bookings" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={56} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : <EmptyState message="No booking window data yet. Needs at least a few bookings." />}
-                </div>
-              </SectionCard>
-
-              {/* Geo Stats */}
-              <SectionCard title="Visitor Origins" subtitle="Where your guests are coming from" icon={<Globe className="w-4 h-4" />}>
-                {data.geo_stats && data.geo_stats.length > 0 ? (
-                  <div className="space-y-4 max-h-64 overflow-y-auto pr-1">
-                    {data.geo_stats.map(item => (
-                      <div key={item.country} className="flex items-center gap-3">
-                        <span className="text-xl leading-none w-8 text-center shrink-0">{countryFlag(item.code)}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between mb-1.5">
-                            <span className="text-xs font-bold text-foreground truncate">{item.country}</span>
-                            <span className="text-xs font-black text-foreground ml-2 shrink-0">{item.visitors}</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-1.5">
-                            <div className="bg-indigo-500 h-full rounded-full transition-all" style={{ width: `${item.percentage}%` }} />
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold text-muted-foreground w-8 text-right shrink-0">{item.percentage}%</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : <EmptyState message="No geographic data recorded yet. Needs real visitor traffic." />}
-              </SectionCard>
-            </div>
-
-            {/* Traffic Heatmap */}
-            <SectionCard
-              title="Traffic Heatmap"
-              subtitle={`Aggregated visitor traffic by weekday & hour — last ${days} days (hover a cell for exact count)`}
-              icon={<Clock className="w-4 h-4" />}
-            >
-              <div className="overflow-x-auto">
-                <div className="min-w-[700px]">
-                  {/* Hour labels with AM/PM markers */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '48px repeat(24, minmax(0, 1fr))', gap: '3px' }}>
-                    <div className="text-[9px] font-bold text-muted-foreground flex items-end pb-1">Day</div>
-                    {Array.from({ length: 24 }).map((_, h) => (
-                      <div key={h} className="text-[9px] text-center font-bold text-muted-foreground pb-1">
-                        {h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`}
-                      </div>
-                    ))}
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, dIdx) => {
-                      const maxVal = Math.max(...(data.traffic_heatmap?.map(c => c.visitors) || [1]), 1);
-                      return (
-                        <React.Fragment key={day}>
-                          <div className="text-[10px] font-bold text-muted-foreground flex items-center">{day}</div>
-                          {Array.from({ length: 24 }).map((_, hIdx) => {
-                            const cell = data.traffic_heatmap?.find(i => i.weekday === dIdx && i.hour === hIdx);
-                            const count = cell?.visitors || 0;
-                            const intensity = count > 0 ? 0.15 + (count / maxVal) * 0.85 : 0;
-                            const hourLabel = hIdx === 0 ? '12 AM' : hIdx < 12 ? `${hIdx} AM` : hIdx === 12 ? '12 PM' : `${hIdx - 12} PM`;
-                            return (
-                              <div
-                                key={hIdx}
-                                title={`${day} ${hourLabel} — ${count} visitor${count !== 1 ? 's' : ''}`}
-                                style={{
-                                  backgroundColor: count > 0 ? `rgba(99, 102, 241, ${intensity})` : 'hsl(var(--muted))',
-                                  border: '1px solid hsl(var(--border))'
-                                }}
-                                className="h-7 rounded-md cursor-pointer hover:scale-110 hover:shadow-md transition-transform"
-                              />
-                            );
-                          })}
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-
-                  {/* Legend + note */}
-                  <div className="flex items-center justify-between mt-4 gap-4 flex-wrap">
-                    <p className="text-[10px] text-muted-foreground italic">
-                      Each cell = total visitors for that weekday & hour, combined across the last {days} days
-                    </p>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] text-muted-foreground font-medium">Low</span>
-                      {[0.15, 0.35, 0.55, 0.75, 1].map(v => (
-                        <div key={v} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(99, 102, 241, ${v})` }} />
-                      ))}
-                      <span className="text-[10px] text-muted-foreground font-medium">High</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
-          </TabsContent>
-
-          {/* ── AI PERFORMANCE TAB ────────────────────────────────────── */}
-          <TabsContent value="ai" className="space-y-4 focus:outline-none">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-              {/* AI Metrics */}
-              <div className="space-y-4">
-                <div className="bg-slate-900 rounded-2xl p-6 text-white">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BotIcon className="w-5 h-5 text-indigo-400" />
-                    <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wide">AI Agent</h2>
-                  </div>
-                  <div className="text-center py-4">
-                    <span className="text-5xl font-black text-white">{data.ai_resolution_rate ?? 0}%</span>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-2">Chat → Booking Rate</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <div className="bg-background/5 rounded-xl p-3 border border-white/10">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase">Total Leads</p>
-                      <p className="text-xl font-black text-white mt-1">{data.total_leads || 0}</p>
-                    </div>
-                    <div className="bg-indigo-600/30 rounded-xl p-3 border border-indigo-500/30">
-                      <p className="text-[10px] font-bold text-indigo-300 uppercase">AI Bookings</p>
-                      <p className="text-xl font-black text-indigo-400 mt-1">{data.ai_assisted_bookings || 0}</p>
-                    </div>
-                    <div className="bg-emerald-600/20 rounded-xl p-3 border border-emerald-500/20 col-span-2">
-                      <p className="text-[10px] font-bold text-emerald-300 uppercase">AI Revenue Generated</p>
-                      <p className="text-xl font-black text-emerald-400 mt-1">₹{(data.ai_revenue || 0).toLocaleString('en-IN')}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Most Enquired Rooms */}
-              <SectionCard
-                title="Most Enquired Rooms"
-                subtitle="Which rooms guests ask the AI about most"
-                icon={<Bed className="w-4 h-4" />}
-                className="lg:col-span-2"
-              >
-                {data.popular_questions && data.popular_questions.length > 0 ? (
-                  <div className="space-y-3">
-                    {data.popular_questions.map((q, idx) => {
-                      const max = data.popular_questions?.[0]?.value || 1;
-                      const pct = Math.round((q.value / max) * 100);
-                      return (
-                        <div key={idx} className="flex items-center gap-3">
-                          <span className="text-xs font-black text-slate-300 w-4 shrink-0">#{idx + 1}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between mb-1">
-                              <span className="text-xs font-bold text-foreground truncate pr-2">{q.text}</span>
-                              <span className="text-xs font-black text-indigo-600 shrink-0">{q.value} leads</span>
-                            </div>
-                            <div className="w-full bg-muted rounded-full h-1.5">
-                              <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <EmptyState message="No AI leads yet. Enquiries appear here when guests chat via AI Concierge." />
-                )}
-              </SectionCard>
-            </div>
           </TabsContent>
 
           {/* ── CANCELLATIONS TAB ────────────────────────────────────── */}
           <TabsContent value="cancellations" className="space-y-4 focus:outline-none">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <KPICard
-                label="Total Cancellations"
-                value={`${data.cancellations_count || 0}`}
-                sub="Cancelled reservations"
-                icon={<XCircle className="w-4 h-4 text-red-500" />}
-                accent="text-red-600"
-              />
-              <KPICard
-                label="Cancellation Rate"
-                value={`${data.cancellation_rate || 0}%`}
-                sub="Of total bookings this period"
-                icon={<AlertCircle className="w-4 h-4 text-amber-500" />}
-                accent={data.cancellation_rate && data.cancellation_rate > 15 ? 'text-red-500' : 'text-amber-500'}
-              />
-              <KPICard
-                label="Lost Revenue"
-                value={`₹${(data.lost_revenue || 0).toLocaleString('en-IN')}`}
-                sub="From cancelled stays"
-                icon={<TrendingDown className="w-4 h-4 text-red-500" />}
-                accent="text-red-600"
-              />
-              <KPICard
-                label="Cancellation Fees Retained"
-                value={`₹${(data.cancellation_fees_collected || 0).toLocaleString('en-IN')}`}
-                sub="Late cancellation penalties"
-                icon={<DollarSign className="w-4 h-4 text-emerald-500" />}
-                accent="text-emerald-600"
-              />
-            </div>
-
-            {/* Cancellation Trend Chart */}
-            {data.chart_data && data.chart_data.some((d: any) => (d.cancellations || 0) > 0) && (
-              <SectionCard title="Cancellation Trend" subtitle={`Daily cancellations over the last ${days} days`} icon={<XCircle className="w-4 h-4 text-red-400" />}>
-                <div className="h-56 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.chart_data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dy={8} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dx={-4} allowDecimals={false} />
-                      <Tooltip
-                        cursor={{ fill: 'hsl(var(--muted))' }}
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
-                      />
-                      <Bar dataKey="cancellations" name="Cancellations" fill="#ef4444" radius={[6, 6, 0, 0]} maxBarSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
+            {isCancellationsLoading || !cancellationsData ? (
+              <TabLoading />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <KPICard
+                    label="Total Cancellations"
+                    value={`${cancellationsData.cancellations_count || 0}`}
+                    sub="Cancelled reservations"
+                    icon={<XCircle className="w-4 h-4 text-red-500" />}
+                    accent="text-red-600"
+                  />
+                  <KPICard
+                    label="Cancellation Rate"
+                    value={`${cancellationsData.cancellation_rate || 0}%`}
+                    sub="Of total bookings this period"
+                    icon={<AlertCircle className="w-4 h-4 text-amber-500" />}
+                    accent={cancellationsData.cancellation_rate && cancellationsData.cancellation_rate > 15 ? 'text-red-500' : 'text-amber-500'}
+                  />
+                  <KPICard
+                    label="Lost Revenue"
+                    value={`₹${(cancellationsData.lost_revenue || 0).toLocaleString('en-IN')}`}
+                    sub="From cancelled stays"
+                    icon={<TrendingDown className="w-4 h-4 text-red-500" />}
+                    accent="text-red-600"
+                  />
+                  <KPICard
+                    label="Cancellation Fees Retained"
+                    value={`₹${(cancellationsData.cancellation_fees_collected || 0).toLocaleString('en-IN')}`}
+                    sub="Late cancellation penalties"
+                    icon={<DollarSign className="w-4 h-4 text-emerald-500" />}
+                    accent="text-emerald-600"
+                  />
                 </div>
-              </SectionCard>
+
+                {/* Cancellation Trend Chart */}
+                {cancellationsData.chart_data && cancellationsData.chart_data.some((d: any) => (d.cancellations || 0) > 0) && (
+                  <SectionCard title="Cancellation Trend" subtitle={`Daily cancellations over the last ${days} days`} icon={<XCircle className="w-4 h-4 text-red-400" />}>
+                    <div className="h-56 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={cancellationsData.chart_data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dy={8} />
+                          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} dx={-4} allowDecimals={false} />
+                          <Tooltip
+                            cursor={{ fill: 'hsl(var(--muted))' }}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                          />
+                          <Bar dataKey="cancellations" name="Cancellations" fill="#ef4444" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </SectionCard>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <SectionCard title="Reduce Cancellations" subtitle="Recommended actions based on your current rate" icon={<Zap className="w-4 h-4 text-indigo-500" />}>
+                    <div className="space-y-3">
+                      <div className={`p-4 rounded-xl border ${(cancellationsData.cancellation_rate || 0) > 15 ? 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800' : 'bg-muted/40 border-border'}`}>
+                        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">1. Promote Non-Refundable Rates</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Your cancellation rate is <strong className={(cancellationsData.cancellation_rate || 0) > 15 ? 'text-red-600' : 'text-amber-600'}>{cancellationsData.cancellation_rate || 0}%</strong>
+                          {(cancellationsData.cancellation_rate || 0) > 15 ? ' — above healthy threshold of 15%.' : '.'} Offering a 5–10% discount on non-refundable rates can lock in revenue early.
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">2. Tighten Cancellation Window</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Shift your standard free-cancellation window from 24 hours to 48–72 hours before arrival. This gives more time to resell rooms and reduces last-minute revenue loss.
+                        </p>
+                      </div>
+                      <div className="p-4 bg-muted/40 rounded-xl border border-border">
+                        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">3. Require Advance Deposit</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          For weekend and peak bookings, collect a token advance during booking to reduce speculative holds and no-shows.
+                        </p>
+                      </div>
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard title="Revenue Impact Summary" subtitle="Cancellation financial breakdown" icon={<DollarSign className="w-4 h-4 text-emerald-500" />}>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center py-3 border-b border-dashed border-border">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Gross Lost Revenue</p>
+                          <p className="text-xs text-muted-foreground">Total value of all cancelled bookings</p>
+                        </div>
+                        <span className="font-black text-red-600 text-base">₹{(cancellationsData.lost_revenue || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-3 border-b border-dashed border-border">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Fees Retained</p>
+                          <p className="text-xs text-muted-foreground">Late cancellation penalties collected</p>
+                        </div>
+                        <span className="font-black text-emerald-600 text-base">₹{(cancellationsData.cancellation_fees_collected || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-3">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Net Lost Revenue</p>
+                          <p className="text-xs text-muted-foreground">After deducting fees retained</p>
+                        </div>
+                        <span className="font-black text-slate-700 dark:text-slate-300 text-base">
+                          ₹{Math.max(0, (cancellationsData.lost_revenue || 0) - (cancellationsData.cancellation_fees_collected || 0)).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      {(cancellationsData.cancellation_rate || 0) > 15 && (
+                        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl">
+                          <p className="text-xs font-bold text-red-700 dark:text-red-400">
+                            ⚠ High cancellation rate detected. Implementing non-refundable rates could recover up to ₹{Math.round((cancellationsData.lost_revenue || 0) * 0.4).toLocaleString('en-IN')} in revenue.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </SectionCard>
+                </div>
+              </>
             )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SectionCard title="Reduce Cancellations" subtitle="Recommended actions based on your current rate" icon={<Zap className="w-4 h-4 text-indigo-500" />}>
-                <div className="space-y-3">
-                  <div className={`p-4 rounded-xl border ${(data.cancellation_rate || 0) > 15 ? 'bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800' : 'bg-muted/40 border-border'}`}>
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">1. Promote Non-Refundable Rates</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Your cancellation rate is <strong className={(data.cancellation_rate || 0) > 15 ? 'text-red-600' : 'text-amber-600'}>{data.cancellation_rate || 0}%</strong>
-                      {(data.cancellation_rate || 0) > 15 ? ' — above healthy threshold of 15%.' : '.'} Offering a 5–10% discount on non-refundable rates can lock in revenue early.
-                    </p>
-                  </div>
-                  <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">2. Tighten Cancellation Window</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Shift your standard free-cancellation window from 24 hours to 48–72 hours before arrival. This gives more time to resell rooms and reduces last-minute revenue loss.
-                    </p>
-                  </div>
-                  <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">3. Require Advance Deposit</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      For weekend and peak bookings, collect a token advance during booking to reduce speculative holds and no-shows.
-                    </p>
-                  </div>
-                </div>
-              </SectionCard>
-
-              <SectionCard title="Revenue Impact Summary" subtitle="Cancellation financial breakdown" icon={<DollarSign className="w-4 h-4 text-emerald-500" />}>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-3 border-b border-dashed border-border">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Gross Lost Revenue</p>
-                      <p className="text-xs text-muted-foreground">Total value of all cancelled bookings</p>
-                    </div>
-                    <span className="font-black text-red-600 text-base">₹{(data.lost_revenue || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-dashed border-border">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Fees Retained</p>
-                      <p className="text-xs text-muted-foreground">Late cancellation penalties collected</p>
-                    </div>
-                    <span className="font-black text-emerald-600 text-base">₹{(data.cancellation_fees_collected || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">Net Lost Revenue</p>
-                      <p className="text-xs text-muted-foreground">After deducting fees retained</p>
-                    </div>
-                    <span className="font-black text-slate-700 dark:text-slate-300 text-base">
-                      ₹{Math.max(0, (data.lost_revenue || 0) - (data.cancellation_fees_collected || 0)).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  {(data.cancellation_rate || 0) > 15 && (
-                    <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl">
-                      <p className="text-xs font-bold text-red-700 dark:text-red-400">
-                        ⚠ High cancellation rate detected. Implementing non-refundable rates could recover up to ₹{Math.round((data.lost_revenue || 0) * 0.4).toLocaleString('en-IN')} in revenue.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </SectionCard>
-            </div>
           </TabsContent>
-
         </Tabs>
       </div>
     </div>
