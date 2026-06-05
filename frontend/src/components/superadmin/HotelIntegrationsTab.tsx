@@ -257,6 +257,11 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 placeholder={`default (guest: 1024 / assistant: 2048)`}
                                 className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11"
                             />
+                            {aiMaxTokens && parseInt(aiMaxTokens, 10) < 1024 && (
+                                <p className="text-[10px] text-amber-500 font-medium mt-1">
+                                    ⚠️ Warning: Setting Max Tokens below 1024 may truncate detailed dashboard assistant responses (charts/tables).
+                                </p>
+                            )}
                             <p className="text-[10px] text-muted-foreground">Controls response length for all AI agents. Leave blank to use defaults.</p>
                         </div>
                         <div className="space-y-2 md:col-span-2">

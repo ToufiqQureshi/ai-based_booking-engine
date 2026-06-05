@@ -66,7 +66,7 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 - Hotel Location: {city}
 """
 
-async def create_agent_executor(session: AsyncSession, user: User):
+async def create_agent_executor(session: AsyncSession, user: User, user_query: Optional[str] = None):
     """
     Creates an Agent Graph instance with tools bound to the current user and database session.
     """
@@ -689,6 +689,113 @@ async def create_agent_executor(session: AsyncSession, user: User):
         get_upsell_opportunities,
     ]
 
+    # --- SMART TOOL CALLING (DYNAMIC TOOL SELECTION) ---
+    # To reduce token overhead and prevent tool clutter, we filter the tools
+    # passed to the model based on the user's message query.
+    q = (user_query or "").lower().strip()
+    if q:
+        selected_tools = []
+        
+        # 1. Weather
+        if any(w in q for w in ["weather", "forecast", "rain", "temp", "temperature", "climate", "mausam"]):
+            selected_tools.append(get_weather_forecast)
+            
+        # 2. Events
+        if any(w in q for w in ["event", "concert", "festival", "holiday", "local event", "show", "gig", "tyohar"]):
+            selected_tools.append(get_local_events)
+            
+        # 3. PDF/Reports
+        if any(w in q for w in ["pdf", "download", "export", "report"]):
+            selected_tools.append(generate_pdf_report)
+            
+        # 4. Web Search
+        if any(w in q for w in ["web", "search", "google", "news", "internet"]):
+            selected_tools.append(search_web)
+            
+        # 5. Price Updates & Competitiveness
+        if any(w in q for w in ["price", "rate", "update", "change", "set", "promo", "discount", "coupon", "code", "competit", "competitor"]):
+            selected_tools.extend([
+                update_room_price,
+                create_promo_code,
+                analyze_rate_competitiveness,
+                get_room_inventory
+            ])
+            
+        # 6. Booking Search / Creation / Details / Cancel
+        if any(w in q for w in ["booking", "book", "reserve", "quick", "create", "details", "cancel", "void", "delete", "room"]):
+            selected_tools.extend([
+                create_quick_booking,
+                search_bookings,
+                get_booking_details,
+                cancel_booking,
+                check_availability_matrix
+            ])
+            
+        # 7. Occupancy / Block dates
+        if any(w in q for w in ["occupancy", "occupy", "full", "vacant", "block", "date", "maintenance"]):
+            selected_tools.extend([
+                get_occupancy_trend,
+                block_room_dates,
+                check_availability_matrix
+            ])
+            
+        # 8. Payments / Due
+        if any(w in q for w in ["payment", "due", "owe", "collect", "pending payment", "transaction", "paisa", "rupay", "rupee"]):
+            selected_tools.append(get_pending_payments)
+            
+        # 9. Arrivals
+        if any(w in q for w in ["arrival", "arrive", "checkin", "check-in", "reception", "coming"]):
+            selected_tools.append(get_todays_arrivals)
+            
+        # 10. Departures
+        if any(w in q for w in ["departure", "depart", "checkout", "check-out", "leaving"]):
+            selected_tools.append(get_todays_departures)
+            
+        # 11. Guest / Customer / VIP
+        if any(w in q for w in ["guest", "customer", "vip", "find guest", "phone", "email"]):
+            selected_tools.extend([
+                find_guest,
+                get_vip_guests
+            ])
+            
+        # 12. Pending Approvals
+        if any(w in q for w in ["pending", "approve", "confirm", "waiting"]):
+            selected_tools.append(get_pending_approvals)
+            
+        # 13. Analytics & Charts
+        if any(w in q for w in ["revenue", "rev", "trend", "sales", "chart", "graph", "source", "ota", "direct", "performance", "forecast", "revpar", "adr", "alert", "analytics", "upsell", "risk", "lost", "growth", "summary", "report", "weekly", "daily"]):
+            selected_tools.extend([
+                get_revenue_trend,
+                get_occupancy_trend,
+                get_booking_source_breakdown,
+                get_room_performance,
+                get_revpar_analysis,
+                get_revenue_forecast,
+                get_smart_alerts,
+                get_at_risk_bookings,
+                get_upsell_opportunities,
+                get_dashboard_stats,
+                get_daily_revenue
+            ])
+            
+        # Keep unique tools while preserving order
+        unique_tools = []
+        for t in selected_tools:
+            if t not in unique_tools:
+                unique_tools.append(t)
+                
+        # Fallback to general core tools if query doesn't match any specific keywords
+        if not unique_tools:
+            unique_tools = [
+                get_dashboard_stats,
+                get_room_inventory,
+                get_pending_approvals,
+                get_todays_arrivals
+            ]
+            
+        tools = unique_tools
+        logger.info(f"Smart Tool Selector: Loaded {len(tools)} tools for query '{user_query}'")
+
     # Resolve dynamic config from integration settings or hotel relation
     from app.models.integration import IntegrationSettings
     int_settings = None
@@ -716,6 +823,11 @@ async def create_agent_executor(session: AsyncSession, user: User):
         getattr(user.hotel, 'ai_max_tokens', None) or 
         2048
     )
+
+    # For Hotelier AI Assistant (dashboard), we enforce a floor of 1536 tokens
+    # so that detailed reports and JSON charts do not get truncated mid-generation,
+    # even if a smaller limit was set for guest-facing WhatsApp endpoints.
+    effective_max_tokens = max(target_max_tokens or 2048, 1536)
 
     target_provider = (
         getattr(int_settings, 'ai_provider', None) or 
@@ -753,14 +865,14 @@ async def create_agent_executor(session: AsyncSession, user: User):
         llm_model = Gemini(
             id=target_model or "gemini-1.5-flash",
             api_key=target_api_key,
-            max_output_tokens=target_max_tokens or 2048,
+            max_output_tokens=effective_max_tokens,
         )
     elif effective_provider == "deepseek":
         from agno.models.deepseek import DeepSeek
         llm_model = DeepSeek(
             id=target_model or "deepseek-chat",
             api_key=target_api_key,
-            max_tokens=target_max_tokens or 2048,
+            max_tokens=effective_max_tokens,
         )
     else:
         from agno.models.openai import OpenAILike
@@ -768,7 +880,7 @@ async def create_agent_executor(session: AsyncSession, user: User):
             id=target_model,
             api_key=target_api_key,
             base_url=target_base_url,
-            max_tokens=target_max_tokens or 2048,
+            max_tokens=effective_max_tokens,
         )
 
     agent = Agent(
@@ -779,5 +891,7 @@ async def create_agent_executor(session: AsyncSession, user: User):
             city=hotel_city
         ),
         markdown=True,
+        max_tool_calls_from_history=3,  # Optimizes history context token usage
+        tool_call_limit=6,              # Prevents runaway loops / excessive calls
     )
     return agent

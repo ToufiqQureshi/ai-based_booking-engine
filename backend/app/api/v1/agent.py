@@ -37,7 +37,7 @@ async def chat_with_agent(
 
     try:
         # 1. Initialize Agent
-        agent = await create_agent_executor(session, current_user)
+        agent = await create_agent_executor(session, current_user, user_query=payload.message)
 
         # 2. Build history as Agno Messages (limit last 20)
         from agno.agent import Message
