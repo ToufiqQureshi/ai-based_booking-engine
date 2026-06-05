@@ -3,7 +3,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import {
     LogOut, Sun, Moon, ShieldCheck, Building2, Users, LayoutGrid,
     Radio, ClipboardList, BarChart3, RefreshCw, ChevronRight, Menu, X,
-    Zap, Crown, Heart, DollarSign, Database, Shield, Download, Network
+    Zap, Crown, Heart, DollarSign, Database, Shield, Download, Network,
+    Percent, Banknote, Ticket, Settings2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient, tokenStorage } from '@/api/client';
@@ -25,27 +26,38 @@ import { RevenueTab } from '@/components/superadmin/RevenueTab';
 import { CacheTab } from '@/components/superadmin/CacheTab';
 import { SessionsTab } from '@/components/superadmin/SessionsTab';
 import { BrandsTab } from '@/components/superadmin/BrandsTab';
+import { KycTab } from '@/components/superadmin/KycTab';
+import { CommissionsTab } from '@/components/superadmin/CommissionsTab';
+import { PayoutsTab } from '@/components/superadmin/PayoutsTab';
+import { TicketsTab } from '@/components/superadmin/TicketsTab';
+import { PlatformTab } from '@/components/superadmin/PlatformTab';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
 
 type NavSection = 'overview' | 'hotels' | 'users' | 'plans' | 'analytics' |
-    'broadcasts' | 'audit' | 'health' | 'revenue' | 'cache' | 'sessions' | 'brands';
+    'broadcasts' | 'audit' | 'health' | 'revenue' | 'cache' | 'sessions' | 'brands' |
+    'kyc' | 'commissions' | 'payouts' | 'tickets' | 'platform';
 
 const NAV_ITEMS: { id: NavSection; label: string; icon: any; group?: string }[] = [
-    { id: 'overview',   label: 'Overview',       icon: LayoutGrid,  group: 'main' },
-    { id: 'hotels',     label: 'Properties',      icon: Building2,   group: 'main' },
-    { id: 'users',      label: 'Users',           icon: Users,       group: 'main' },
-    { id: 'brands',     label: 'Brand Groups',    icon: Network,     group: 'main' },
-    { id: 'plans',      label: 'Plan Features',   icon: Crown,       group: 'main' },
-    { id: 'analytics',  label: 'Analytics',       icon: BarChart3,   group: 'insights' },
-    { id: 'revenue',    label: 'Revenue',         icon: DollarSign,  group: 'insights' },
-    { id: 'health',     label: 'Health Monitor',  icon: Heart,       group: 'insights' },
-    { id: 'broadcasts', label: 'Broadcasts',      icon: Radio,       group: 'system' },
-    { id: 'audit',      label: 'Audit Trail',     icon: ClipboardList, group: 'system' },
-    { id: 'sessions',   label: 'Sessions',        icon: Shield,      group: 'system' },
-    { id: 'cache',      label: 'Cache',           icon: Database,    group: 'system' },
+    { id: 'overview',    label: 'Overview',        icon: LayoutGrid,    group: 'main' },
+    { id: 'hotels',      label: 'Properties',      icon: Building2,     group: 'main' },
+    { id: 'users',       label: 'Users',           icon: Users,         group: 'main' },
+    { id: 'brands',      label: 'Brand Groups',    icon: Network,       group: 'main' },
+    { id: 'plans',       label: 'Plan Features',   icon: Crown,         group: 'main' },
+    { id: 'kyc',         label: 'KYC',             icon: ShieldCheck,   group: 'finance' },
+    { id: 'commissions', label: 'Commissions',     icon: Percent,       group: 'finance' },
+    { id: 'payouts',     label: 'Payouts',         icon: Banknote,      group: 'finance' },
+    { id: 'tickets',     label: 'Support Tickets', icon: Ticket,        group: 'support' },
+    { id: 'analytics',   label: 'Analytics',       icon: BarChart3,     group: 'insights' },
+    { id: 'revenue',     label: 'Revenue',         icon: DollarSign,    group: 'insights' },
+    { id: 'health',      label: 'Health Monitor',  icon: Heart,         group: 'insights' },
+    { id: 'broadcasts',  label: 'Broadcasts',      icon: Radio,         group: 'system' },
+    { id: 'audit',       label: 'Audit Trail',     icon: ClipboardList, group: 'system' },
+    { id: 'sessions',    label: 'Sessions',        icon: Shield,        group: 'system' },
+    { id: 'cache',       label: 'Cache',           icon: Database,      group: 'system' },
+    { id: 'platform',    label: 'Platform Settings', icon: Settings2,   group: 'system' },
 ];
 
 export default function SuperAdminDashboard() {
@@ -161,9 +173,13 @@ export default function SuperAdminDashboard() {
 
                         {/* Nav */}
                         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
-                            {(['main', 'insights', 'system'] as const).map(group => {
+                            {(['main', 'finance', 'support', 'insights', 'system'] as const).map(group => {
                                 const items = NAV_ITEMS.filter(n => n.group === group);
-                                const groupLabel = group === 'main' ? 'Management' : group === 'insights' ? 'Insights' : 'System';
+                                const groupLabel = group === 'main' ? 'Management'
+                                    : group === 'finance' ? 'Finance'
+                                    : group === 'support' ? 'Support'
+                                    : group === 'insights' ? 'Insights'
+                                    : 'System';
                                 return (
                                     <div key={group}>
                                         <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-3 mb-1">{groupLabel}</p>
@@ -333,7 +349,12 @@ export default function SuperAdminDashboard() {
                                 {activeSection === 'broadcasts' && <BroadcastsTab />}
                                 {activeSection === 'audit' && <AuditLogsTab />}
                                 {activeSection === 'sessions' && <SessionsTab />}
-                                                {activeSection === 'cache' && <CacheTab hotels={hotels} />}
+                                {activeSection === 'cache' && <CacheTab hotels={hotels} />}
+                                {activeSection === 'kyc' && <KycTab />}
+                                {activeSection === 'commissions' && <CommissionsTab hotels={hotels} />}
+                                {activeSection === 'payouts' && <PayoutsTab hotels={hotels} />}
+                                {activeSection === 'tickets' && <TicketsTab hotels={hotels} admins={users} />}
+                                {activeSection === 'platform' && <PlatformTab hotels={hotels} admins={users} />}
                             </>
                         )}
                     </div>

@@ -11,6 +11,11 @@ from .bulk import router as bulk_router
 from .cache_mgmt import router as cache_router
 from .sessions import router as sessions_router
 from .exports import router as exports_router
+from .kyc import router as kyc_router
+from .commissions import router as commissions_router
+from .payouts import router as payouts_router
+from .tickets import router as tickets_router
+from .platform import router as platform_router
 
 router = APIRouter(prefix="/superadmin", tags=["Super Admin"])
 router.include_router(hotels_router)
@@ -24,6 +29,11 @@ router.include_router(bulk_router)
 router.include_router(cache_router)
 router.include_router(sessions_router)
 router.include_router(exports_router)
+router.include_router(kyc_router)
+router.include_router(commissions_router)
+router.include_router(payouts_router)
+router.include_router(tickets_router)
+router.include_router(platform_router)
 
 
 # Cron-triggered subscription expiry check

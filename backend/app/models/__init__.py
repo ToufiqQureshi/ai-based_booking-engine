@@ -20,6 +20,15 @@ from app.models.social_proof import (
     HotelSocialProofSettingsUpdate,
     PublicSocialProofResponse,
 )
+from app.models.kyc import KycDocument, KycProfile
+from app.models.commission import (
+    CommissionRule, CommissionLedger, BankAccount, Payout, PlatformInvoice,
+)
+from app.models.ticket import SupportTicket, TicketMessage
+from app.models.platform import (
+    ApiKey, CustomDomain, EmailTemplate, SuperAdminRole,
+    DEFAULT_PERMISSIONS_BY_TIER,
+)
 
 __all__ = [
     "User", "UserRole",
@@ -40,6 +49,11 @@ __all__ = [
     "HotelSocialProofSettingsRead",
     "HotelSocialProofSettingsUpdate",
     "PublicSocialProofResponse",
+    "KycDocument", "KycProfile",
+    "CommissionRule", "CommissionLedger", "BankAccount", "Payout", "PlatformInvoice",
+    "SupportTicket", "TicketMessage",
+    "ApiKey", "CustomDomain", "EmailTemplate", "SuperAdminRole",
+    "DEFAULT_PERMISSIONS_BY_TIER",
 ]
 from app.models.links import UserHotelLink
 from app.models.chain import Chain

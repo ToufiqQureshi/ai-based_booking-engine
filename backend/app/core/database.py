@@ -125,6 +125,21 @@ async def init_db():
         except Exception:
             pass
 
+    # SystemBroadcast scheduling + targeting columns
+    for col, col_type in [
+        ("scheduled_at", "TIMESTAMP"),
+        ("expires_at", "TIMESTAMP"),
+        ("is_published", "BOOLEAN DEFAULT TRUE"),
+        ("target_plans", "JSON DEFAULT '[]'"),
+        ("target_hotel_ids", "JSON DEFAULT '[]'"),
+        ("created_by", "VARCHAR(255)"),
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE system_broadcasts ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
 
 
 async def get_session() -> AsyncSession:

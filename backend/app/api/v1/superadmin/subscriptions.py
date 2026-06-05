@@ -140,33 +140,112 @@ async def get_audit_logs(
 @router.get("/broadcasts")
 async def get_broadcasts(
     session: DbSession,
+    include_scheduled: bool = True,
     super_admin: User = Depends(get_super_admin),
 ):
-    result = await session.execute(
-        select(SystemBroadcast).where(SystemBroadcast.is_active == True).order_by(SystemBroadcast.created_at.desc())
-    )
+    q = select(SystemBroadcast).where(SystemBroadcast.is_active == True)
+    if not include_scheduled:
+        q = q.where(SystemBroadcast.is_published == True)
+    q = q.order_by(SystemBroadcast.created_at.desc())
+    result = await session.execute(q)
     return result.scalars().all()
 
 
 @router.post("/broadcasts")
 async def create_broadcast(
-    data: dict, session: DbSession,
+    data: dict, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
+    scheduled_at = None
+    if data.get("scheduled_at"):
+        scheduled_at = datetime.fromisoformat(data["scheduled_at"])
+    expires_at = None
+    if data.get("expires_at"):
+        expires_at = datetime.fromisoformat(data["expires_at"])
+    is_published = True
+    if scheduled_at and scheduled_at > datetime.utcnow():
+        is_published = False
+
     broadcast = SystemBroadcast(
         title=data["title"], message=data["message"],
-        type=data.get("type", "info"), is_active=data.get("is_active", True),
+        type=data.get("type", "info"),
+        is_active=data.get("is_active", True),
+        scheduled_at=scheduled_at,
+        expires_at=expires_at,
+        is_published=is_published,
+        target_plans=data.get("target_plans", []),
+        target_hotel_ids=data.get("target_hotel_ids", []),
+        created_by=super_admin.id,
     )
     session.add(broadcast)
     session.add(AuditLog(
         user_id=super_admin.id, user_email=super_admin.email,
         action="CREATE_BROADCAST",
-        description=f"Created system broadcast: '{broadcast.title}'",
+        description=(
+            f"Created broadcast '{broadcast.title}'"
+            + (f" (scheduled for {scheduled_at.isoformat()})" if scheduled_at and not is_published else "")
+        ),
         ip_address=_get_client_ip(request),
     ))
     await session.commit()
     await session.refresh(broadcast)
     return broadcast
+
+
+@router.patch("/broadcasts/{broadcast_id}")
+async def update_broadcast(
+    broadcast_id: str, data: dict, request: Request, session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+):
+    bc = await session.get(SystemBroadcast, broadcast_id)
+    if not bc:
+        raise HTTPException(404, "Broadcast not found")
+    for k in ("title", "message", "type", "is_active", "is_published",
+              "target_plans", "target_hotel_ids"):
+        if k in data:
+            setattr(bc, k, data[k])
+    if "scheduled_at" in data:
+        bc.scheduled_at = datetime.fromisoformat(data["scheduled_at"]) if data["scheduled_at"] else None
+    if "expires_at" in data:
+        bc.expires_at = datetime.fromisoformat(data["expires_at"]) if data["expires_at"] else None
+    session.add(bc)
+    session.add(AuditLog(
+        user_id=super_admin.id, user_email=super_admin.email,
+        action="UPDATE_BROADCAST",
+        description=f"Updated broadcast '{bc.title}'",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+    return bc
+
+
+@router.post("/broadcasts/publish-due")
+async def publish_due_broadcasts(
+    request: Request, session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+):
+    """Publishes any scheduled broadcasts whose scheduled_at has passed."""
+    now = datetime.utcnow()
+    due = (await session.execute(
+        select(SystemBroadcast).where(
+            SystemBroadcast.is_published == False,
+            SystemBroadcast.is_active == True,
+            SystemBroadcast.scheduled_at.is_not(None),
+            SystemBroadcast.scheduled_at <= now,
+        )
+    )).scalars().all()
+    for bc in due:
+        bc.is_published = True
+        session.add(bc)
+    if due:
+        session.add(AuditLog(
+            user_id=super_admin.id, user_email=super_admin.email,
+            action="BROADCAST_AUTO_PUBLISH",
+            description=f"Auto-published {len(due)} scheduled broadcasts",
+            ip_address=_get_client_ip(request),
+        ))
+        await session.commit()
+    return {"published": len(due), "ids": [b.id for b in due]}
 
 
 @router.delete("/broadcasts/{broadcast_id}")
@@ -177,7 +256,7 @@ async def delete_broadcast(
     broadcast = await session.get(SystemBroadcast, broadcast_id)
     if not broadcast:
         raise HTTPException(status_code=404, detail="Broadcast not found")
-    
+
     session.add(AuditLog(
         user_id=super_admin.id,
         user_email=super_admin.email,
