@@ -508,7 +508,9 @@ async def create_guest_agent_graph(
             from agno.models.openai import OpenAILike
             default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
             llm_model = OpenAILike(
-                id=ai_model or ("llama-3.3-70b-versatile" if effective_provider == "groq" else "gpt-4o-mini"),
+                # AI-04: the guest concierge is a scripted sales/booking flow and
+                # does not need a 70B model. Default to the ~10x cheaper 8B model.
+                id=ai_model or ("llama-3.1-8b-instant" if effective_provider == "groq" else "gpt-4o-mini"),
                 api_key=ai_api_key,
                 base_url=ai_base_url or default_base_url,
                 max_tokens=ai_max_tokens or 1024,
@@ -521,6 +523,9 @@ async def create_guest_agent_graph(
             tools=tools,
             instructions=formatted_prompt,
             markdown=True,
+            # AI-02: bound tool-call iterations so a looping model on the
+            # PUBLIC endpoint can't run unbounded billed LLM round-trips.
+            tool_call_limit=4,
         )
     except Exception as exc:
         logger.error("Guest agent error: %s", exc)

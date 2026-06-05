@@ -96,7 +96,8 @@ def create_global_concierge_graph(
         from agno.models.openai import OpenAILike
         default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
         llm_model = OpenAILike(
-            id=ai_model or ("llama-3.3-70b-versatile" if effective_provider == "groq" else "gpt-4o-mini"),
+            # AI-04: cheap 8B model is sufficient for the routing/concierge flow.
+            id=ai_model or ("llama-3.1-8b-instant" if effective_provider == "groq" else "gpt-4o-mini"),
             api_key=ai_api_key,
             base_url=ai_base_url or default_base_url,
         )
@@ -108,5 +109,7 @@ def create_global_concierge_graph(
         tools=tools,
         instructions=formatted_prompt,
         markdown=True,
+        # AI-02: bound tool-call iterations to prevent unbounded LLM spend.
+        tool_call_limit=4,
     )
     return agent
