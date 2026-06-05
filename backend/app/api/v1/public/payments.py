@@ -199,11 +199,19 @@ async def create_razorpay_order(
         redis_client.delete_value(lock_key)
         raise HTTPException(status_code=500, detail="Razorpay is not configured for this property")
 
+    # SECURITY: Never trust the client-supplied amount. A guest could request an
+    # order for ₹1 and the booking would still be marked fully paid by the
+    # /verify + webhook flow. Always charge the server-computed booking total.
+    server_amount = float(booking.total_amount or 0)
+    if server_amount <= 0:
+        redis_client.delete_value(lock_key)
+        raise HTTPException(status_code=400, detail="Booking has no payable amount")
+
     client = razorpay.Client(auth=(key_id, key_secret))
 
     try:
         # Razorpay expects amount in smallest currency unit (paise for INR)
-        amount_in_paise = int(data.amount * 100)
+        amount_in_paise = int(round(server_amount * 100))
 
         order_data = {
             "amount": amount_in_paise,

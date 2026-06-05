@@ -43,10 +43,28 @@ HOTEL_SETTINGS_SENSITIVE_KEYS: Set[str] = {
     "smtp_username",
     "smtp_host",
     "smtp_port",
+    # Payment-gateway SECRET — a full gateway-compromise primitive if leaked,
+    # it MUST never reach the public booking page or the hotelier read view.
+    # NOTE: `razorpay_key_id` is the *publishable* key (sent to the browser by
+    # Razorpay Checkout) and is intentionally NOT masked.
+    "razorpay_key_secret",
     # Internal counters / quotas — hotelier sees the value but can't edit.
     "ai_whatsapp_credits",
     "total_messages_sent",
 }
+
+# Defense-in-depth: any settings key whose name contains one of these
+# substrings is treated as a secret and masked, even if it isn't listed
+# above. This prevents a *future* secret stored in `settings` from silently
+# leaking through the denylist (the bug that exposed razorpay_key_secret).
+_SENSITIVE_KEY_SUBSTRINGS = ("secret", "password", "passwd", "token", "api_key", "apikey", "private")
+
+
+def _is_sensitive_settings_key(key: str) -> bool:
+    k = key.lower()
+    if key in HOTEL_SETTINGS_SENSITIVE_KEYS:
+        return True
+    return any(sub in k for sub in _SENSITIVE_KEY_SUBSTRINGS)
 
 # Fields that hotelier can READ but cannot PATCH.
 HOTELIER_READ_ONLY: Set[str] = {
@@ -69,7 +87,7 @@ def _mask_settings_for_hotelier(settings: Optional[Dict[str, Any]]) -> Dict[str,
         return {}
     masked: Dict[str, Any] = {}
     for k, v in settings.items():
-        if k in HOTEL_SETTINGS_SENSITIVE_KEYS:
+        if _is_sensitive_settings_key(k):
             # Replace secret with a presence flag.
             if k == "whatsapp_api_key":
                 masked["has_whatsapp_api_key"] = bool(v)
@@ -89,6 +107,10 @@ def _mask_settings_for_hotelier(settings: Optional[Dict[str, Any]]) -> Dict[str,
                 masked["ai_whatsapp_credits"] = int(v) if isinstance(v, (int, float)) else 0
             elif k == "total_messages_sent":
                 masked["total_messages_sent"] = int(v) if isinstance(v, (int, float)) else 0
+            elif k == "razorpay_key_secret":
+                # Expose only a presence flag so the UI can show "configured".
+                masked["has_razorpay_secret"] = bool(v)
+            # else: heuristic-matched secret — drop it entirely (no presence flag).
             # drop the actual secret
         else:
             masked[k] = v
@@ -199,7 +221,7 @@ def strip_sensitive_from_update(
             cleaned_v = {
                 sk: sv
                 for sk, sv in v.items()
-                if sk not in HOTEL_SETTINGS_SENSITIVE_KEYS
+                if not _is_sensitive_settings_key(sk)
             }
             stripped_settings = set(v.keys()) - set(cleaned_v.keys())
             stripped.update(stripped_settings)

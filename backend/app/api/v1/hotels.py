@@ -155,8 +155,17 @@ class TestEmailRequest(BaseModel):
 async def test_email_connection(
     hotel_id: str,
     request: TestEmailRequest,
+    current_user: CurrentUser,
     email_service=Depends(get_email_service)
 ):
+    # SECURITY: This endpoint dispatches an email through caller-supplied SMTP
+    # settings. It MUST be authenticated and scoped to the caller's own hotel,
+    # otherwise it is an open mail relay / SMTP-credential-probe / SSRF primitive.
+    if hotel_id != current_user.hotel_id and current_user.role != "SUPER_ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only test email settings for your own property",
+        )
     try:
         from app.services.email_service import EmailService
         
