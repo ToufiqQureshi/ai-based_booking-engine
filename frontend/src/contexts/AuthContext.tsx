@@ -16,6 +16,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   setHotel: (hotel: Hotel) => void;
   setUser: (user: User | null) => void;
+  refreshHotel: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -268,6 +269,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
 
+  const refreshHotel = useCallback(async () => {
+    try {
+      const currentUser = await authApi.getCurrentUser();
+      setUser(currentUser);
+      const hotelData = await apiClient.get<Hotel>('/hotels/me');
+      setHotel(hotelData);
+    } catch {
+      // silently fail
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -294,6 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         setHotel,
         setUser,
+        refreshHotel,
       }}
     >
       {children}

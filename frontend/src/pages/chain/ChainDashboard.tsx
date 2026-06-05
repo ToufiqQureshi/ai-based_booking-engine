@@ -6,7 +6,9 @@ import {
   ChevronRight, Download, BarChart3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
@@ -91,6 +93,9 @@ const PERIODS = [
 ];
 
 export function ChainDashboard() {
+  const { refreshHotel } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const [period, setPeriod] = useState('30d');
   const [activeTab, setActiveTab] = useState<'overview' | 'guests'>('overview');
@@ -112,8 +117,9 @@ export function ChainDashboard() {
     try {
       setSwitchingId(hotelId);
       await apiClient.post(`/properties/switch/${hotelId}`, {});
-      // Brief visual feedback before navigation
-      setTimeout(() => { window.location.href = '/dashboard'; }, 600);
+      await refreshHotel();
+      await queryClient.invalidateQueries();
+      navigate('/dashboard');
     } catch {
       setSwitchingId(null);
     }
