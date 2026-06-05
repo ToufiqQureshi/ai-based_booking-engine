@@ -215,6 +215,23 @@ export function SignupPage() {
           </form>
         </Card>
 
+        {/* Compliance Footer */}
+        <footer className="mt-8 text-center text-xs text-muted-foreground w-full max-w-md">
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 mb-2">
+            <Link to="/privacy-policy" className="hover:text-primary hover:underline transition-colors">Privacy Policy</Link>
+            <span className="text-muted-foreground/30">•</span>
+            <Link to="/terms-of-service" className="hover:text-primary hover:underline transition-colors">Terms of Service</Link>
+            <span className="text-muted-foreground/30">•</span>
+            <Link to="/refund-policy" className="hover:text-primary hover:underline transition-colors">Refund Policy</Link>
+            <span className="text-muted-foreground/30">•</span>
+            <Link to="/cookie-policy" className="hover:text-primary hover:underline transition-colors">Cookie Policy</Link>
+            <span className="text-muted-foreground/30">•</span>
+            <Link to="/contact-us" className="hover:text-primary hover:underline transition-colors">Contact Us</Link>
+          </div>
+          <p className="text-[10px] text-muted-foreground/60">
+            © {new Date().getFullYear()} Staybooker by Revmerito. All rights reserved.
+          </p>
+        </footer>
       </div>
     </div>
   );

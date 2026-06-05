@@ -54,6 +54,9 @@ const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
 const PrivacyPolicy = lazy(() => import("@/pages/public/legal/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("@/pages/public/legal/TermsOfService"));
 const DataDeletion = lazy(() => import("@/pages/public/legal/DataDeletion"));
+const RefundPolicy = lazy(() => import("@/pages/public/legal/RefundPolicy"));
+const CookiePolicy = lazy(() => import("@/pages/public/legal/CookiePolicy"));
+const ContactUs = lazy(() => import("@/pages/public/legal/ContactUs"));
 
 // Slim top progress bar — does NOT block the whole screen
 const PageLoader = () => <div className="page-progress" />;
@@ -156,6 +159,10 @@ const App = () => {
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                     <Route path="/terms-of-service" element={<TermsOfService />} />
                     <Route path="/data-deletion" element={<DataDeletion />} />
+                    <Route path="/refund-policy" element={<RefundPolicy />} />
+                    <Route path="/cookie-policy" element={<CookiePolicy />} />
+                    <Route path="/contact-us" element={<ContactUs />} />
+                    <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
 
                     {/* Redirects */}
                     <Route 
