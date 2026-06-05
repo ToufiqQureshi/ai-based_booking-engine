@@ -1,4 +1,5 @@
 ﻿// Dashboard Home Page - Clean & Professional Design
+import { useEffect, useRef } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -21,11 +22,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/api/client';
 import { DashboardStats } from '@/types/api';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { PageShell } from '@/components/layout/PageShell';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 
 interface RecentBooking {
@@ -42,6 +45,9 @@ interface RecentBooking {
 
 export function DashboardPage() {
   const { hotel, user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const aiToastShownFor = useRef<string | null>(null);
 
   // 1. Fetch Stats
   const { data: stats, isLoading: isStatsLoading, isError: isStatsError } = useQuery<DashboardStats>({
@@ -80,7 +86,25 @@ export function DashboardPage() {
     refetchOnWindowFocus: false
   });
 
-  const aiNotConfigured = !integration?.ai_api_key || !integration?.ai_model;
+  const aiNotConfigured = !!integration && (!integration.ai_api_key || !integration.ai_model);
+
+  // Show a single non-blocking toast per hotel session when AI isn't set up.
+  // Replaces the persistent banner with broken "Configure Now" link.
+  useEffect(() => {
+    if (!aiNotConfigured || !hotel?.id) return;
+    if (aiToastShownFor.current === hotel.id) return;
+    aiToastShownFor.current = hotel.id;
+
+    toast({
+      title: 'Integrate AI to improve direct bookings',
+      description: 'Activate the Guest Concierge on your website to capture more leads.',
+      action: (
+        <ToastAction altText="Set up AI" onClick={() => navigate('/integration')}>
+          Set up
+        </ToastAction>
+      ),
+    });
+  }, [aiNotConfigured, hotel?.id, navigate, toast]);
 
   return (
     <PageShell
@@ -98,20 +122,6 @@ export function DashboardPage() {
           <AlertTitle className="text-red-800 dark:text-red-400 font-semibold">Could not load dashboard stats</AlertTitle>
           <AlertDescription className="text-red-700 dark:text-red-500 text-sm">
             Check your network connection and refresh the page.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* AI Configuration Alert */}
-      {aiNotConfigured && (
-        <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-800 dark:text-amber-400 font-semibold">AI Assistant Inactive</AlertTitle>
-          <AlertDescription className="text-amber-700 dark:text-amber-500 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1 text-sm">
-            <span>Configure your AI settings to activate the Guest Concierge on your website.</span>
-            <Button variant="outline" size="sm" className="bg-background hover:bg-amber-100 text-amber-700 border-amber-200 h-8" asChild>
-              <Link to="/settings/integration">Configure Now</Link>
-            </Button>
           </AlertDescription>
         </Alert>
       )}
