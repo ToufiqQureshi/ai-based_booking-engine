@@ -17,7 +17,7 @@ from app.models.audit import AuditLog
 from app.models.commission import PlatformInvoice
 from app.models.hotel import Hotel
 from app.models.platform import (
-    ApiKey, CustomDomain, EmailTemplate, SuperAdminRole,
+    HotelierApiKey, CustomDomain, EmailTemplate, SuperAdminRole,
     DEFAULT_PERMISSIONS_BY_TIER,
 )
 from app.models.subscription import Subscription
@@ -44,10 +44,10 @@ async def list_api_keys(
     hotel_id: Optional[str] = None,
     super_admin: User = Depends(get_super_admin),
 ):
-    q = select(ApiKey)
+    q = select(HotelierApiKey)
     if hotel_id:
-        q = q.where(ApiKey.hotel_id == hotel_id)
-    q = q.order_by(ApiKey.created_at.desc())
+        q = q.where(HotelierApiKey.hotel_id == hotel_id)
+    q = q.order_by(HotelierApiKey.created_at.desc())
     return (await session.execute(q)).scalars().all()
 
 
@@ -62,7 +62,7 @@ async def create_api_key(
     expires_at = None
     if data.get("expires_in_days"):
         expires_at = datetime.utcnow() + timedelta(days=int(data["expires_in_days"]))
-    key = ApiKey(
+    key = HotelierApiKey(
         hotel_id=data["hotel_id"],
         label=data["label"],
         key_prefix=prefix,
@@ -88,7 +88,7 @@ async def revoke_api_key(
     key_id: str, data: dict, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
-    key = await session.get(ApiKey, key_id)
+    key = await session.get(HotelierApiKey, key_id)
     if not key:
         raise HTTPException(404, "Key not found")
     key.is_active = False
@@ -110,7 +110,7 @@ async def delete_api_key(
     key_id: str, request: Request, session: DbSession,
     super_admin: User = Depends(get_super_admin),
 ):
-    key = await session.get(ApiKey, key_id)
+    key = await session.get(HotelierApiKey, key_id)
     if not key:
         raise HTTPException(404, "Key not found")
     session.add(AuditLog(

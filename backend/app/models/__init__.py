@@ -26,7 +26,7 @@ from app.models.commission import (
 )
 from app.models.ticket import SupportTicket, TicketMessage
 from app.models.platform import (
-    ApiKey, CustomDomain, EmailTemplate, SuperAdminRole,
+    HotelierApiKey, CustomDomain, EmailTemplate, SuperAdminRole,
     DEFAULT_PERMISSIONS_BY_TIER,
 )
 
@@ -52,7 +52,7 @@ __all__ = [
     "KycDocument", "KycProfile",
     "CommissionRule", "CommissionLedger", "BankAccount", "Payout", "PlatformInvoice",
     "SupportTicket", "TicketMessage",
-    "ApiKey", "CustomDomain", "EmailTemplate", "SuperAdminRole",
+    "HotelierApiKey", "CustomDomain", "EmailTemplate", "SuperAdminRole",
     "DEFAULT_PERMISSIONS_BY_TIER",
 ]
 from app.models.links import UserHotelLink

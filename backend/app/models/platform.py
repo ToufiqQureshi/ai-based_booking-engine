@@ -1,6 +1,6 @@
 """
 Platform-level Settings Models
-ApiKey, CustomDomain, EmailTemplate, SuperAdminRole.
+HotelierApiKey, CustomDomain, EmailTemplate, SuperAdminRole.
 """
 from sqlmodel import SQLModel, Field, Column
 from sqlalchemy import JSON
@@ -9,9 +9,13 @@ from datetime import datetime
 import uuid
 
 
-class ApiKey(SQLModel, table=True):
-    """API key for hotelier programmatic access."""
-    __tablename__ = "api_keys"
+class HotelierApiKey(SQLModel, table=True):
+    """API key issued to a hotelier for programmatic Staybooker API access.
+
+    Separate from app.models.integration.APIKey (which represents inbound
+    keys from PMS / channel manager integrations).
+    """
+    __tablename__ = "hotelier_api_keys"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     hotel_id: str = Field(foreign_key="hotels.id", index=True)

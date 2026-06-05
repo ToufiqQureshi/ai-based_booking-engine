@@ -223,9 +223,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
     )
 
-    # API Keys
+    # API Keys (renamed: api_keys is owned by app.models.integration)
     op.create_table(
-        'api_keys',
+        'hotelier_api_keys',
         sa.Column('id', sa.String(), nullable=False),
         sa.Column('hotel_id', sa.String(), sa.ForeignKey('hotels.id'), nullable=False),
         sa.Column('label', sa.String(), nullable=False),
@@ -315,7 +315,7 @@ def downgrade() -> None:
         for c in ('created_by', 'target_hotel_ids', 'target_plans', 'is_published', 'expires_at', 'scheduled_at'):
             b.drop_column(c)
     for t in (
-        'super_admin_roles', 'email_templates', 'custom_domains', 'api_keys',
+        'super_admin_roles', 'email_templates', 'custom_domains', 'hotelier_api_keys',
         'ticket_messages', 'support_tickets', 'platform_invoices',
         'commission_ledger', 'payouts', 'bank_accounts', 'commission_rules',
         'kyc_documents', 'kyc_profiles',
