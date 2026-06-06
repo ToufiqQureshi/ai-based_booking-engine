@@ -131,8 +131,9 @@ class Booking(BookingBase, table=True):
     # Addons JSON array mein
     addons: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
     tax_details: dict = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # DB-01: indexed — bookings are routinely sorted/filtered by created_at.
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships

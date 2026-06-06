@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.models.channel_manager import (
     ChannelManagerSettings, ChannelSettingsRead, ChannelSettingsUpdate,
     ChannelRoomMapping, MappingCreate, MappingRead,
@@ -38,7 +38,7 @@ async def get_settings(current_user: CurrentUser, session: DbSession):
         
     return settings
 
-@router.put("/settings", response_model=ChannelSettingsRead)
+@router.put("/settings", response_model=ChannelSettingsRead, dependencies=[Depends(require_hotel_role("OWNER"))])
 async def update_settings(
     update_data: ChannelSettingsUpdate,
     current_user: CurrentUser,
@@ -77,7 +77,7 @@ async def get_mappings(current_user: CurrentUser, session: DbSession):
     result = await session.execute(query)
     return result.scalars().all()
 
-@router.post("/mappings", response_model=MappingRead)
+@router.post("/mappings", response_model=MappingRead, dependencies=[Depends(require_hotel_role("OWNER"))])
 async def create_mapping(
     mapping_data: MappingCreate,
     current_user: CurrentUser,
@@ -127,7 +127,7 @@ async def get_logs(current_user: CurrentUser, session: DbSession):
     result = await session.execute(query)
     return result.scalars().all()
 
-@router.post("/test-connection")
+@router.post("/test-connection", dependencies=[Depends(require_hotel_role("OWNER"))])
 async def test_connection(current_user: CurrentUser, session: DbSession):
     """
     Verify connection to Connectivity Gateway (Channex Staging).

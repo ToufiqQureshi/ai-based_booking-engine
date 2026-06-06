@@ -85,20 +85,31 @@ def create_global_concierge_graph(
         llm_model = Gemini(
             id=ai_model or "gemini-1.5-flash",
             api_key=ai_api_key,
+            max_output_tokens=1024,
+            cache_response=True,
+            cache_ttl=300,
         )
     elif effective_provider == "deepseek":
         from agno.models.deepseek import DeepSeek
         llm_model = DeepSeek(
             id=ai_model or "deepseek-chat",
             api_key=ai_api_key,
+            max_tokens=1024,
+            cache_response=True,
+            cache_ttl=300,
         )
     else:
         from agno.models.openai import OpenAILike
         default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
         llm_model = OpenAILike(
-            id=ai_model or ("llama-3.3-70b-versatile" if effective_provider == "groq" else "gpt-4o-mini"),
+            # AI-04: cheap 8B model is sufficient for the routing/concierge flow.
+            id=ai_model or ("llama-3.1-8b-instant" if effective_provider == "groq" else "gpt-4o-mini"),
             api_key=ai_api_key,
             base_url=ai_base_url or default_base_url,
+            # AI-07: cap output tokens so a runaway response can't balloon cost.
+            max_tokens=1024,
+            cache_response=True,
+            cache_ttl=300,
         )
 
     formatted_prompt = SYSTEM_PROMPT.format(current_date=date.today().isoformat())
@@ -108,5 +119,9 @@ def create_global_concierge_graph(
         tools=tools,
         instructions=formatted_prompt,
         markdown=True,
+        # AI-02: bound tool-call iterations to prevent unbounded LLM spend.
+        tool_call_limit=4,
+        max_tool_calls_from_history=2,  # less history tool context = fewer tokens
+        compress_tool_results=True,     # compress tool outputs to save tokens
     )
     return agent

@@ -52,7 +52,16 @@ async def get_current_user(
         payload = await verify_supabase_token(token)
         if payload and r:
             try:
-                r.setex(cache_key, 600, json.dumps(payload)) # Cache valid token for 10 minutes
+                # SECURITY: cap the cache TTL at the token's own expiry. Caching a
+                # decoded payload bypasses re-verification (incl. the exp check),
+                # so a cached entry must never outlive the token itself.
+                import time as _time
+                exp = payload.get("exp")
+                ttl = 600
+                if isinstance(exp, (int, float)):
+                    ttl = int(min(600, max(0, exp - _time.time())))
+                if ttl > 0:
+                    r.setex(cache_key, ttl, json.dumps(payload))
             except Exception as e:
                 logger.warning(f"Redis cache write failed during auth token cache: {e}")
     if payload is None:
@@ -61,7 +70,9 @@ async def get_current_user(
     
     supabase_id = payload.get("sub")
     email = payload.get("email")
-    logger.info(f"Auth Attempt: supabase_id={supabase_id}, email={email}")
+    # PII (email/supabase_id) is logged at DEBUG only — at INFO this fires on
+    # every authenticated request, leaking PII into logs and inflating egress.
+    logger.debug(f"Auth Attempt: supabase_id={supabase_id}, email={email}")
     
     # 1. User database se fetch karo using supabase_id
     query = select(User).where(User.supabase_id == supabase_id).options(selectinload(User.hotel))
@@ -232,3 +243,27 @@ async def get_current_active_user(
 # Type alias for cleaner route signatures
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
 DbSession = Annotated[AsyncSession, Depends(get_session)]
+
+
+def require_hotel_role(*allowed_roles: str):
+    """Dependency factory enforcing intra-tenant role tiers (OWNER/MANAGER/STAFF).
+
+    Without this, any authenticated hotel user — including STAFF — could perform
+    full hotel-admin actions via the API (the frontend sidebar was the only gate).
+    SUPER_ADMIN (including impersonation) is always allowed. Use on mutating
+    config endpoints, e.g.:
+
+        @router.post("/", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
+    """
+    allowed = {r.upper() for r in allowed_roles}
+
+    async def _dep(current_user: CurrentUser) -> User:
+        role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+        if role == "SUPER_ADMIN" or role in allowed:
+            return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"This action requires one of roles: {sorted(allowed)}",
+        )
+
+    return _dep

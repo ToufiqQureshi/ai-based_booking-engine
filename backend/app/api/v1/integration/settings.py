@@ -8,10 +8,10 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.core.cache import invalidate_cache
 from app.core.config import get_settings
 from app.core.redis_client import redis_client
@@ -69,7 +69,7 @@ async def get_integration_settings(current_user: CurrentUser, session: DbSession
 _AI_ONLY_FIELDS = frozenset({"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_max_tokens"})
 
 
-@router.put("/settings", response_model=IntegrationSettingsRead)
+@router.put("/settings", response_model=IntegrationSettingsRead, dependencies=[Depends(require_hotel_role("OWNER"))])
 async def update_integration_settings(
     settings_update: IntegrationSettingsUpdate,
     current_user: CurrentUser,
@@ -126,7 +126,7 @@ async def list_api_keys(current_user: CurrentUser, session: DbSession):
     return result.scalars().all()
 
 
-@router.post("/api-keys", response_model=APIKeyWithSecret)
+@router.post("/api-keys", response_model=APIKeyWithSecret, dependencies=[Depends(require_hotel_role("OWNER"))])
 async def create_api_key(key_data: APIKeyCreate, current_user: CurrentUser, session: DbSession):
     """The secret key is only returned once at creation time."""
     full_key, prefix, key_hash = generate_api_key()
@@ -150,7 +150,7 @@ async def create_api_key(key_data: APIKeyCreate, current_user: CurrentUser, sess
     return APIKeyWithSecret(**api_key.model_dump(), secret_key=full_key)
 
 
-@router.delete("/api-keys/{key_id}")
+@router.delete("/api-keys/{key_id}", dependencies=[Depends(require_hotel_role("OWNER"))])
 async def delete_api_key(key_id: str, current_user: CurrentUser, session: DbSession):
     query = select(APIKey).where(APIKey.id == key_id, APIKey.hotel_id == current_user.hotel_id)
     result = await session.execute(query)
@@ -164,7 +164,7 @@ async def delete_api_key(key_id: str, current_user: CurrentUser, session: DbSess
     return {"message": "API key deleted successfully"}
 
 
-@router.put("/api-keys/{key_id}/toggle")
+@router.put("/api-keys/{key_id}/toggle", dependencies=[Depends(require_hotel_role("OWNER"))])
 async def toggle_api_key(key_id: str, current_user: CurrentUser, session: DbSession):
     query = select(APIKey).where(APIKey.id == key_id, APIKey.hotel_id == current_user.hotel_id)
     result = await session.execute(query)
@@ -258,7 +258,7 @@ async def get_widget_code(current_user: CurrentUser, session: DbSession):
 # Connection Tests
 # ---------------------------------------------------------------------------
 
-@router.post("/test-ai")
+@router.post("/test-ai", dependencies=[Depends(require_hotel_role("OWNER"))])
 async def test_ai_connection(current_user: CurrentUser, session: DbSession):
     """Test AI credentials by sending a simple prompt."""
     from app.core.guest_agent import create_guest_agent_graph
@@ -294,7 +294,7 @@ async def test_ai_connection(current_user: CurrentUser, session: DbSession):
         return {"status": "error", "message": str(e)}
 
 
-@router.post("/test-whatsapp")
+@router.post("/test-whatsapp", dependencies=[Depends(require_hotel_role("OWNER"))])
 async def test_whatsapp_connection(current_user: CurrentUser, session: DbSession):
     """Test WhatsApp credentials by fetching the phone number profile."""
     query = select(Hotel).where(Hotel.id == current_user.hotel_id)

@@ -81,13 +81,16 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 # process. `exec` so signals reach the worker.
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Default command — 2 workers per CPU is a sane starting point for an
-# async FastAPI app behind a load balancer. Override with CMD if you
-# run under a process manager (systemd, k8s, supervisord, ...).
-CMD ["gunicorn", "main:app", \
-     "-k", "uvicorn.workers.UvicornWorker", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "2", \
-     "--timeout", "120", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-"]
+# Default command. Worker count and port are env-driven (INF-01) so the
+# same image runs on a 1GB box (WEB_CONCURRENCY=1) or a bigger plan
+# (WEB_CONCURRENCY=4) without an image change, and honours Railway's $PORT.
+# Shell form is required to expand the env vars. The DB pool is sized
+# per-worker (see app/core/database.py) — keep WEB_CONCURRENCY × pool_size
+# under the Supabase connection limit.
+CMD gunicorn main:app \
+     -k uvicorn.workers.UvicornWorker \
+     --bind 0.0.0.0:${PORT:-8000} \
+     --workers ${WEB_CONCURRENCY:-2} \
+     --timeout 120 \
+     --access-logfile - \
+     --error-logfile -

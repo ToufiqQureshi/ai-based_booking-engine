@@ -30,6 +30,15 @@ def _clear_booking_caches(hotel_id: str):
         _redis.delete_pattern(f"bookings:{hotel_id}:*")
         _redis.delete_pattern(f"reports_dashboard:{hotel_id}:*")
         _redis.delete_pattern(f"reports_occupancy:{hotel_id}:*")
+        # INF-02: analytics dashboards are cached 600s; bust them too so
+        # revenue/occupancy numbers don't go stale for 10 min after a
+        # booking is created/updated/cancelled.
+        for prefix in (
+            "analytics_dashboard", "analytics_overview", "analytics_revenue",
+            "analytics_traffic", "analytics_ai", "analytics_cancellations",
+            "analytics_kpis",
+        ):
+            _redis.delete_pattern(f"{prefix}:{hotel_id}:*")
     except Exception:
         pass
 
@@ -136,11 +145,17 @@ async def create_booking(
 
     for room_req in booking_data.rooms:
         rt_id = room_req.get("room_type_id")
-        # Lock this room type for the duration of this transaction
-        rt_query = select(RoomType).where(RoomType.id == rt_id).with_for_update()
+        # Lock this room type for the duration of this transaction.
+        # SECURITY (TEN-02): scope to the caller's hotel so a foreign
+        # room_type_id can't disclose another tenant's policy config or
+        # lock another tenant's inventory row.
+        rt_query = select(RoomType).where(
+            RoomType.id == rt_id,
+            RoomType.hotel_id == current_user.hotel_id,
+        ).with_for_update()
         rt_result = await session.execute(rt_query)
         room_type = rt_result.scalar_one_or_none()
-        
+
         if not room_type:
              raise HTTPException(status_code=404, detail=f"Room type {rt_id} not found")
              
@@ -158,8 +173,9 @@ async def create_booking(
             plan_override = overrides.get(rp_id) or {} if isinstance(overrides, dict) else {}
 
         if rp_id:
+            # SECURITY (TEN-02): only honour a rate plan owned by this hotel.
             rp = await session.get(RatePlan, rp_id)
-            if rp:
+            if rp and rp.hotel_id == current_user.hotel_id:
                 is_refundable = plan_override.get("is_refundable", rp.is_refundable)
                 cancellation_hours = plan_override.get("cancellation_hours", rp.cancellation_hours)
                 
@@ -352,10 +368,23 @@ async def create_booking(
 # ============== Guest Endpoints ==============
 
 @router.get("/guests", response_model=List[GuestRead], tags=["Guests"])
-async def get_guests(current_user: CurrentUser, session: DbSession):
-    """Hotel ke saare guests get karo"""
+async def get_guests(
+    current_user: CurrentUser,
+    session: DbSession,
+    limit: int = Query(100, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Hotel ke guests get karo (paginated).
+
+    DB-02: previously returned the entire guest table for the hotel with no
+    limit — an OOM/timeout risk for properties with large guest histories.
+    """
     result = await session.execute(
-        select(Guest).where(Guest.hotel_id == current_user.hotel_id)
+        select(Guest)
+        .where(Guest.hotel_id == current_user.hotel_id)
+        .order_by(Guest.id)
+        .limit(limit)
+        .offset(offset)
     )
     return result.scalars().all()
 

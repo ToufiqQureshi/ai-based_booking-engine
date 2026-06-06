@@ -13,7 +13,7 @@ from app.models.audit import AuditLog
 from app.models.commission import CommissionRule, CommissionLedger
 from app.models.hotel import Hotel
 from app.models.user import User
-from .hotels import get_super_admin, _get_client_ip
+from .hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -22,7 +22,7 @@ router = APIRouter()
 @router.get("/commissions/rules")
 async def list_commission_rules(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
 ):
     rules = (await session.execute(
         select(CommissionRule).order_by(CommissionRule.updated_at.desc())
@@ -33,7 +33,7 @@ async def list_commission_rules(
 @router.post("/commissions/rules")
 async def upsert_commission_rule(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
 ):
     """Create or update commission rule. If id provided, update; else create."""
     rule_id = data.get("id")
@@ -64,7 +64,7 @@ async def upsert_commission_rule(
 @router.delete("/commissions/rules/{rule_id}")
 async def delete_commission_rule(
     rule_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
 ):
     rule = await session.get(CommissionRule, rule_id)
     if not rule:
@@ -86,7 +86,7 @@ async def list_ledger(
     hotel_id: Optional[str] = None,
     status_filter: Optional[str] = None,
     limit: int = 100,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
 ):
     q = select(CommissionLedger)
     if hotel_id:
@@ -100,7 +100,7 @@ async def list_ledger(
 @router.get("/commissions/summary")
 async def commissions_summary(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
 ):
     """Aggregated commission stats for the dashboard."""
     total_take = (await session.execute(select(func.sum(CommissionLedger.platform_take)))).scalar() or 0
@@ -139,7 +139,7 @@ async def commissions_summary(
 @router.post("/commissions/ledger")
 async def add_ledger_entry(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
 ):
     """Manually add a ledger entry (e.g. adjustment, manual booking)."""
     if not data.get("hotel_id") or "booking_amount" not in data:

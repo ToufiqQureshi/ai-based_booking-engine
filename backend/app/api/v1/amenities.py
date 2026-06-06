@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.models.amenity import Amenity, AmenityCreate, AmenityRead, RoomAmenityLink
 from app.core.cache import cache_response, invalidate_cache
 
@@ -16,7 +16,7 @@ async def get_amenities(request: Request, current_user: CurrentUser, session: Db
     result = await session.execute(query)
     return result.scalars().all()
 
-@router.post("", response_model=AmenityRead)
+@router.post("", response_model=AmenityRead, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def create_amenity(
     data: AmenityCreate,
     current_user: CurrentUser,
@@ -33,7 +33,7 @@ async def create_amenity(
     invalidate_cache(f"amenities:{current_user.hotel_id}:*")
     return amenity
 
-@router.delete("/{amenity_id}")
+@router.delete("/{amenity_id}", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def delete_amenity(
     amenity_id: str,
     current_user: CurrentUser,
@@ -50,7 +50,7 @@ async def delete_amenity(
     return {"message": "Deleted successfully"}
 
 # Helper to Initialize Defaults (Optional)
-@router.post("/seed-defaults")
+@router.post("/seed-defaults", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def seed_defaults(current_user: CurrentUser, session: DbSession):
     """Create basic amenities if none exist"""
     existing = await session.execute(select(Amenity).where(Amenity.hotel_id == current_user.hotel_id))

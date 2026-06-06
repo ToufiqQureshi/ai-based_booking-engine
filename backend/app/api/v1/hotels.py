@@ -7,7 +7,7 @@ from app.services.email_service import get_email_service
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.models.hotel import Hotel, HotelRead, HotelUpdate
 from app.core.sensitive_fields import (
     mask_hotel_for_hotelier,
@@ -55,7 +55,7 @@ async def get_my_hotel(current_user: CurrentUser, session: DbSession):
     return mask_hotel_for_hotelier(hotel)
 
 
-@router.patch("/me")
+@router.patch("/me", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def update_my_hotel(
     hotel_update: HotelUpdate,
     current_user: CurrentUser,
@@ -155,8 +155,17 @@ class TestEmailRequest(BaseModel):
 async def test_email_connection(
     hotel_id: str,
     request: TestEmailRequest,
+    current_user: CurrentUser,
     email_service=Depends(get_email_service)
 ):
+    # SECURITY: This endpoint dispatches an email through caller-supplied SMTP
+    # settings. It MUST be authenticated and scoped to the caller's own hotel,
+    # otherwise it is an open mail relay / SMTP-credential-probe / SSRF primitive.
+    if hotel_id != current_user.hotel_id and current_user.role != "SUPER_ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only test email settings for your own property",
+        )
     try:
         from app.services.email_service import EmailService
         

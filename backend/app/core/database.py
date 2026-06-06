@@ -26,10 +26,14 @@ else:
     engine_args = {
         "echo": False,
         "future": True,
-        "pool_size": 20,
-        "max_overflow": 10,
+        # DB-03: keep the per-worker pool small. 20+10 per worker exhausts
+        # Supabase's pooler once you run multiple workers/replicas. Add
+        # pool_recycle so connections behind the pooler/NAT don't go stale.
+        "pool_size": 5,
+        "max_overflow": 5,
         "pool_timeout": 30,
         "pool_pre_ping": True,
+        "pool_recycle": 300,
     }
 
 engine = create_async_engine(
@@ -154,6 +158,23 @@ async def init_db():
         except Exception:
             pass
 
+    # DB-01: composite performance indexes. These live in Alembic migration
+    # 08_performance_indexes.py, but deploys run create_all (not `alembic
+    # upgrade`), so create_all only emits single-column indexes and these
+    # composites were missing in production. CREATE INDEX IF NOT EXISTS applies
+    # them idempotently on every boot until the deploy switches to Alembic.
+    for idx_sql in [
+        "CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings (created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings (hotel_id, check_in, check_out)",
+        "CREATE INDEX IF NOT EXISTS idx_room_rates_lookup ON room_rates (room_type_id, date_from, date_to)",
+        "CREATE INDEX IF NOT EXISTS idx_competitor_rates_lookup ON competitor_rates (competitor_id, check_in_date, fetched_at)",
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(idx_sql))
+        except Exception:
+            pass
+
     # Auto-heal: Sync AI fields from hotels table to integration_settings table if missing or not set
     try:
         async with engine.begin() as conn:
@@ -188,7 +209,7 @@ async def init_db():
                             "hotel_id": hotel_id,
                             "ai_provider": ai_prov or "groq",
                             "ai_api_key": ai_key,
-                            "ai_model": ai_mod or "llama-3.1-70b-versatile",
+                            "ai_model": ai_mod or "llama-3.1-8b-instant",
                             "ai_base_url": ai_base,
                             "ai_max_tokens": ai_max,
                             "now": datetime.utcnow()
@@ -213,7 +234,7 @@ async def init_db():
                                 "id": sett_id,
                                 "ai_provider": ai_prov or "groq",
                                 "ai_api_key": ai_key,
-                                "ai_model": ai_mod or "llama-3.1-70b-versatile",
+                                "ai_model": ai_mod or "llama-3.1-8b-instant",
                                 "ai_base_url": ai_base,
                                 "ai_max_tokens": ai_max,
                                 "now": datetime.utcnow()

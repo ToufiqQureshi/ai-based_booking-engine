@@ -369,12 +369,16 @@ function BookingCheckoutInner() {
                         headers: { 'Idempotency-Key': `order_${bookingId}` },
                     });
                 } catch (orderErr: any) {
+                    // 503 = this property's Razorpay isn't configured (no global
+                    // fallback by design). Tell the guest clearly rather than
+                    // leaving them on a broken payment popup.
+                    const notConfigured = orderErr?.status === 503 || orderErr?.message?.toLowerCase?.().includes('configured');
                     toast({
                         variant: 'destructive',
-                        title: 'Payment Setup Failed',
-                        description: orderErr?.message?.includes('configured')
-                            ? 'Online payment is not configured for this property. Please select "Pay at Property".'
-                            : 'Could not initiate payment. Please try again or choose "Pay at Property".',
+                        title: notConfigured ? 'Online Payment Unavailable' : 'Payment Setup Failed',
+                        description: notConfigured
+                            ? 'This property has not enabled online payment yet. Please choose "Pay at Property" or contact the hotel directly to complete your booking.'
+                            : 'Could not initiate payment. Please try again, or choose "Pay at Property".',
                     });
                     setIsSubmitting(false);
                     submitInFlightRef.current = false;

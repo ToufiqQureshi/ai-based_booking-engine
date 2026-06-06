@@ -29,9 +29,9 @@ class Lead(SQLModel, table=True):
     num_children: int = Field(default=0)
     
     # Status
-    status: str = Field(default="new")  # new, contacted, converted, lost
+    status: str = Field(default="new", index=True)  # new, contacted, converted, lost
     ai_conversation_summary: Optional[str] = None
-    
+
     # Metadata
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

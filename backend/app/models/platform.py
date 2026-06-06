@@ -118,6 +118,7 @@ DEFAULT_PERMISSIONS_BY_TIER = {
         "superadmin.commissions.read", "superadmin.commissions.write",
         "superadmin.payouts.read", "superadmin.payouts.execute",
         "superadmin.invoices.read", "superadmin.invoices.write",
+        "superadmin.exports.read",
         "superadmin.hotels.read",
         "superadmin.audit.read",
     ],

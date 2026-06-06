@@ -19,6 +19,20 @@ from app.core.redis_client import redis_client
 
 logger = logging.getLogger(__name__)
 
+
+async def _assert_room_type_owned(session, room_type_id: str, hotel_id: str) -> None:
+    """TEN-05: ensure a room_type_id belongs to the caller's hotel before
+    writing blocks/rates against it (prevents dangling cross-tenant refs)."""
+    rt = (await session.execute(
+        select(RoomType.id).where(
+            RoomType.id == room_type_id,
+            RoomType.hotel_id == hotel_id,
+        )
+    )).scalar_one_or_none()
+    if not rt:
+        raise HTTPException(status_code=404, detail="Room type not found")
+
+
 def clear_availability_cache(hotel_id: str):
     try:
         redis_client.delete_pattern(f"availability:{hotel_id}:*")
@@ -192,6 +206,7 @@ async def create_block(
     session: DbSession
 ):
     """Block rooms for a date range"""
+    await _assert_room_type_owned(session, block_data.room_type_id, current_user.hotel_id)
     block = RoomBlock(
         **block_data.model_dump(),
         hotel_id=current_user.hotel_id
@@ -252,9 +267,9 @@ async def update_daily_rates(
     Set daily base price for a room type.
     Handles interval splitting to ensure no overlaps.
     """
-    # 1. Verify ownership (via hotel_id)
-    # Ideally check room_type ownership too, but for speed just checking logic
-    
+    # 1. Verify the room type belongs to this hotel (TEN-05).
+    await _assert_room_type_owned(session, rate_data.room_type_id, current_user.hotel_id)
+
     # 2. Find overlapping existing rates (Base Price only -> rate_plan_id is None)
     stmt = select(RoomRate).where(
         RoomRate.hotel_id == current_user.hotel_id,
@@ -493,6 +508,7 @@ async def update_weekends(
     Update pricing and/or availability block count specifically for Saturdays and Sundays
     within the chosen date range. Or reset overrides back to defaults.
     """
+    await _assert_room_type_owned(session, data.room_type_id, current_user.hotel_id)
     curr = data.start_date
     updated_days = 0
     while curr <= data.end_date:

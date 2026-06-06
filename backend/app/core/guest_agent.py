@@ -496,6 +496,8 @@ async def create_guest_agent_graph(
                 id=ai_model or "gemini-1.5-flash",
                 api_key=ai_api_key,
                 max_output_tokens=ai_max_tokens or 1024,
+                cache_response=True,
+                cache_ttl=300,
             )
         elif effective_provider == "deepseek":
             from agno.models.deepseek import DeepSeek
@@ -503,15 +505,25 @@ async def create_guest_agent_graph(
                 id=ai_model or "deepseek-chat",
                 api_key=ai_api_key,
                 max_tokens=ai_max_tokens or 1024,
+                cache_response=True,
+                cache_ttl=300,
             )
         else:
             from agno.models.openai import OpenAILike
             default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
             llm_model = OpenAILike(
-                id=ai_model or ("llama-3.3-70b-versatile" if effective_provider == "groq" else "gpt-4o-mini"),
+                # AI-04: the guest concierge is a scripted sales/booking flow and
+                # does not need a 70B model. Default to the ~10x cheaper 8B model.
+                id=ai_model or ("llama-3.1-8b-instant" if effective_provider == "groq" else "gpt-4o-mini"),
                 api_key=ai_api_key,
                 base_url=ai_base_url or default_base_url,
                 max_tokens=ai_max_tokens or 1024,
+                # AI-05: cache identical requests (e.g. repeated greetings) for a
+                # short window so common messages don't re-hit the LLM. Short TTL
+                # keeps availability answers reasonably fresh (the booking endpoint
+                # re-validates price/availability server-side at checkout anyway).
+                cache_response=True,
+                cache_ttl=300,
             )
 
         formatted_prompt = _build_formatted_prompt(data, hotel_name)
@@ -521,6 +533,11 @@ async def create_guest_agent_graph(
             tools=tools,
             instructions=formatted_prompt,
             markdown=True,
+            # AI-02: bound tool-call iterations so a looping model on the
+            # PUBLIC endpoint can't run unbounded billed LLM round-trips.
+            tool_call_limit=4,
+            max_tool_calls_from_history=2,  # less history tool context = fewer tokens
+            compress_tool_results=True,     # compress tool outputs to save tokens
         )
     except Exception as exc:
         logger.error("Guest agent error: %s", exc)

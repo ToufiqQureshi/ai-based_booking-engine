@@ -1,9 +1,13 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from pydantic import BaseModel
 import logging
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.feature_flags import require_feature
+# NOTE: create_agent_executor is imported lazily inside the handler (INF-01) —
+# importing app.core.agent at module load pulls in pandas + matplotlib (~150MB
+# RSS) into every worker at boot even when the agent is never used.
 from app.core.agent import create_agent_executor
 
 logger = logging.getLogger(__name__)
@@ -20,7 +24,7 @@ class ChatResponse(BaseModel):
 from fastapi import Request
 from app.core.limiter import limiter
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_feature("feature_ai_agent"))])
 @limiter.limit("15/minute")
 async def chat_with_agent(
     request: Request,
@@ -36,7 +40,8 @@ async def chat_with_agent(
         )
 
     try:
-        # 1. Initialize Agent
+        # 1. Initialize Agent (lazy import — see INF-01 note at top of file)
+        from app.core.agent import create_agent_executor
         agent = await create_agent_executor(session, current_user, user_query=payload.message)
 
         # 2. Build history as Agno Messages (limit last 20)
@@ -55,6 +60,9 @@ async def chat_with_agent(
 
         # 4. Run agent
         result = await agent.arun(input_messages)
+        # AI-03: record per-hotel token spend for cost visibility.
+        from app.core.ai_usage import record_ai_usage
+        record_ai_usage(current_user.hotel_id, result)
         return ChatResponse(response=result.content or "")
 
     except ValueError as e:

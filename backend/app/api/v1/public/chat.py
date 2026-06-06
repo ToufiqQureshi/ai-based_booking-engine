@@ -21,6 +21,34 @@ from app.core.time import utcnow
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
 
+# AI-01: hard daily cap on anonymous AI chat requests per hotel. The IP-based
+# slowapi limit is spoofable via X-Forwarded-For, so this per-hotel budget is
+# the real backstop against an attacker burning a hotel's LLM spend.
+AI_CHAT_DAILY_CAP_PER_HOTEL = 1000
+
+
+def _enforce_hotel_ai_quota(hotel_id: str) -> None:
+    """Increment + check a per-hotel, per-day request counter in Redis.
+    Fails open if Redis is unavailable so legitimate guests aren't blocked."""
+    try:
+        r = redis_client.get_instance()
+        if not r:
+            return
+        day = utcnow().strftime("%Y%m%d")
+        key = f"ai_chat_quota:{hotel_id}:{day}"
+        count = r.incr(key)
+        if count == 1:
+            r.expire(key, 86400)
+        if count > AI_CHAT_DAILY_CAP_PER_HOTEL:
+            raise HTTPException(
+                status_code=429,
+                detail="Daily AI chat limit reached for this property. Please try again later.",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        return
+
 class RateOption(BaseModel):
     id: str # rate_plan_id
     name: str # rate_plan_name (e.g. "Room Only", "Breakfast Included")
@@ -197,6 +225,9 @@ async def chat_with_guest_ai(
                 detail="Guest chatbot feature is not enabled for this hotel"
             )
 
+        # AI-01: per-hotel daily budget backstop (IP limit is spoofable).
+        _enforce_hotel_ai_quota(hotel.id)
+
         # Fetch integration settings for dynamic AI provider/keys
         from app.models.integration import IntegrationSettings
         int_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
@@ -236,6 +267,9 @@ async def chat_with_guest_ai(
         # 4. Invoke Agent
         try:
             result = await agent.arun(messages)
+            # AI-03: record per-hotel token spend for cost visibility.
+            from app.core.ai_usage import record_ai_usage
+            record_ai_usage(hotel.id, result)
             ai_response = result.content or ""
             return GuestChatResponse(response=ai_response)
         except Exception as invoke_err:
@@ -346,6 +380,9 @@ async def stream_guest_ai(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Guest chatbot feature is not enabled for this hotel",
             )
+
+        # AI-01: per-hotel daily budget backstop (IP limit is spoofable).
+        _enforce_hotel_ai_quota(hotel.id)
 
         from app.models.integration import IntegrationSettings
         int_res = await session.execute(

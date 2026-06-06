@@ -5,12 +5,16 @@ Production-ready with CORS, lifespan events, security headers.
 """
 from contextlib import asynccontextmanager
 import sys
+import os
 import asyncio
 import logging
 
-# Configure structured logging
+# Configure structured logging. LOG-02: level is configurable via LOG_LEVEL
+# (default INFO) so production can run at WARNING to reduce PII in logs and
+# log-egress cost without a code change.
+_log_level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -62,20 +66,42 @@ async def lifespan(app: FastAPI):
 
 # Initialize Sentry SDK if DSN is provided
 if settings.SENTRY_DSN:
+    def _scrub_sentry_event(event, hint):
+        """LOG-01: strip secrets/PII before events leave for Sentry.
+
+        Request bodies (incl. integration payloads with raw API/payment keys)
+        and Authorization headers can otherwise be shipped to a third party.
+        """
+        try:
+            req = event.get("request") or {}
+            headers = req.get("headers") or {}
+            for h in list(headers):
+                if h.lower() in ("authorization", "cookie", "x-api-key"):
+                    headers[h] = "[scrubbed]"
+            if "data" in req:
+                req["data"] = "[scrubbed]"
+        except Exception:
+            pass
+        return event
+
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
-        send_default_pii=True,
+        send_default_pii=False,  # do not attach user PII/IP/cookies by default
+        before_send=_scrub_sentry_event,
         traces_sample_rate=0.1,  # 10% in production — 1.0 causes performance overhead
         profiles_sample_rate=0.1,
     )
 
 # FastAPI app create karo
+# INF-06: only expose the interactive API docs in DEBUG. In production the
+# full API surface should not be publicly enumerable.
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Multi-tenant Hotel Management API",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan
 )
 

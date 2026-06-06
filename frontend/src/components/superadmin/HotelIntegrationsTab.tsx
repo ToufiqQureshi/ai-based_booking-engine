@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/api/client';
-import { Loader2, Save, Sparkles, MessageSquare, Mail, Server, Key, ShieldOff, ShieldCheck, AlertTriangle, Eye, EyeOff, RefreshCw, Database, Pause, Play } from 'lucide-react';
+import { Loader2, Save, Sparkles, MessageSquare, Mail, Server, Key, ShieldOff, ShieldCheck, AlertTriangle, Eye, EyeOff, RefreshCw, Database, Pause, Play, CreditCard } from 'lucide-react';
 
 interface HotelIntegrationsRead {
     hotel_id: string;
@@ -33,6 +33,8 @@ interface HotelIntegrationsRead {
     smtp_from_email?: string;
     smtp_username?: string;
     smtp_port?: number;
+    razorpay_key_id?: string;
+    has_razorpay_secret: boolean;
     ai_whatsapp_credits: number;
     total_messages_sent: number;
     is_paused: boolean;
@@ -65,6 +67,9 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
     const [smtpUsername, setSmtpUsername] = useState('');
     const [smtpPassword, setSmtpPassword] = useState('');
     const [smtpFromEmail, setSmtpFromEmail] = useState('');
+    const [razorpayKeyId, setRazorpayKeyId] = useState('');
+    const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
+    const [showRzpSecret, setShowRzpSecret] = useState(false);
     const [waCredits, setWaCredits] = useState('1000');
     const [isPaused, setIsPaused] = useState(false);
     const [pauseReason, setPauseReason] = useState('');
@@ -96,6 +101,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             setSmtpUsername(res.smtp_username || '');
             setSmtpPassword('');
             setSmtpFromEmail(res.smtp_from_email || '');
+            setRazorpayKeyId(res.razorpay_key_id || '');
             setWaCredits(String(res.ai_whatsapp_credits || 1000));
             setIsPaused(res.is_paused || false);
             setPauseReason(res.pause_reason || '');
@@ -131,6 +137,8 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             if (smtpUsername !== (data?.smtp_username || '')) payload.smtp_username = smtpUsername;
             if (smtpPassword) payload.smtp_password = smtpPassword;
             if (smtpFromEmail !== (data?.smtp_from_email || '')) payload.smtp_from_email = smtpFromEmail;
+            if (razorpayKeyId !== (data?.razorpay_key_id || '')) payload.razorpay_key_id = razorpayKeyId;
+            if (razorpayKeySecret) payload.razorpay_key_secret = razorpayKeySecret;
             if (Number(waCredits) !== data?.ai_whatsapp_credits) payload.ai_whatsapp_credits = Number(waCredits);
             if (isPaused !== data?.is_paused) {
                 payload.is_paused = isPaused;
@@ -146,7 +154,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             const res = await apiClient.put<{ message: string; fields_updated: string[] }>(`/superadmin/hotels/${hotel.id}/integrations`, payload);
             toast({ title: 'Saved', description: res.message });
             // Clear the password fields after save so they don't sit in memory (do not clear aiMaxTokens)
-            setAiApiKey(''); setWaApiKey(''); setSmtpPassword('');
+            setAiApiKey(''); setWaApiKey(''); setSmtpPassword(''); setRazorpayKeySecret('');
             loadData();
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Save failed', description: error?.response?.data?.detail || error?.message });
@@ -203,6 +211,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                         <StatusPill label="WhatsApp" isOn={data?.has_whatsapp_api_key} preview={data?.whatsapp_api_key_preview} />
                         <StatusPill label="Brevo" isOn={data?.has_brevo_key} preview={data?.brevo_key_preview} />
                         <StatusPill label="SMTP" isOn={data?.has_smtp_config} preview={undefined} />
+                        <StatusPill label="Razorpay" isOn={!!data?.razorpay_key_id && data?.has_razorpay_secret} preview={undefined} />
                     </div>
                     <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
                         <span>Credits used: <strong className="text-foreground">{data?.total_messages_sent || 0}</strong></span>
@@ -347,6 +356,35 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                             </div>
                         </div>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Razorpay (per-hotel payment gateway) */}
+            <Card className="border-border bg-card dark:border-white/10 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-foreground flex items-center gap-2"><CreditCard className="w-4 h-4 text-blue-500" /> Razorpay (Payments)</CardTitle>
+                    <CardDescription>Per-property Razorpay account. Payments settle directly into this hotel's account. Both fields are required for online payments to work.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-foreground/80">Key ID</Label>
+                            <Input value={razorpayKeyId} onChange={e => setRazorpayKeyId(e.target.value)} placeholder="rzp_live_xxxxxxxx" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-foreground/80 flex items-center gap-2">
+                                Key Secret
+                                {data?.has_razorpay_secret && <span className="text-emerald-500 inline-flex items-center gap-1 text-[10px]"><ShieldCheck className="w-3 h-3" /> configured</span>}
+                            </Label>
+                            <div className="relative">
+                                <Input type={showRzpSecret ? 'text' : 'password'} value={razorpayKeySecret} onChange={e => setRazorpayKeySecret(e.target.value)} placeholder={data?.has_razorpay_secret ? 'Leave blank to keep existing' : 'Enter key secret'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <button type="button" onClick={() => setShowRzpSecret(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                    {showRzpSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">The Key Secret is write-only — for security it is never sent back to the browser, only a "configured" indicator.</p>
                 </CardContent>
             </Card>
 
