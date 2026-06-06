@@ -189,15 +189,15 @@ async def create_razorpay_order(
     hotel_key_id = h_settings.get("razorpay_key_id")
     hotel_key_secret = h_settings.get("razorpay_key_secret")
 
-    settings = get_settings()
-
-    # Use hotel-specific keys or platform fallback
-    key_id = hotel_key_id or settings.RAZORPAY_KEY_ID
-    key_secret = hotel_key_secret or settings.RAZORPAY_KEY_SECRET
+    # Strict per-hotel: each property must configure its own Razorpay keys
+    # (set via Super Admin → Hotel Integrations). No platform-global fallback,
+    # so each hotel's payments settle into its own Razorpay account.
+    key_id = hotel_key_id
+    key_secret = hotel_key_secret
 
     if not key_id or not key_secret:
         redis_client.delete_value(lock_key)
-        raise HTTPException(status_code=500, detail="Razorpay is not configured for this property")
+        raise HTTPException(status_code=503, detail="Online payment is not configured for this property")
 
     # SECURITY: Never trust the client-supplied amount. A guest could request an
     # order for ₹1 and the booking would still be marked fully paid by the
@@ -266,13 +266,13 @@ async def verify_razorpay_payment(
     hotel_key_id = h_settings.get("razorpay_key_id")
     hotel_key_secret = h_settings.get("razorpay_key_secret")
 
-    settings = get_settings()
-    key_id = hotel_key_id or settings.RAZORPAY_KEY_ID
-    key_secret = hotel_key_secret or settings.RAZORPAY_KEY_SECRET
+    # Strict per-hotel keys (no platform-global fallback).
+    key_id = hotel_key_id
+    key_secret = hotel_key_secret
 
     if not key_id or not key_secret:
         redis_client.delete_value(lock_key)
-        raise HTTPException(status_code=500, detail="Razorpay is not configured for this property")
+        raise HTTPException(status_code=503, detail="Online payment is not configured for this property")
 
     client = razorpay.Client(auth=(key_id, key_secret))
 

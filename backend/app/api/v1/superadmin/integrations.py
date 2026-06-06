@@ -45,6 +45,10 @@ class HotelIntegrationsRead(BaseModel):
     whatsapp_business_account_id: Optional[str] = None
     ai_whatsapp_credits: int = 0
     total_messages_sent: int = 0
+    # Razorpay (per-hotel). key_id is publishable so we return it; the secret
+    # is write-only and never returned — only a presence flag.
+    razorpay_key_id: Optional[str] = None
+    has_razorpay_secret: bool = False
     is_paused: bool = False
     pause_reason: Optional[str] = None
     paused_at: Optional[datetime] = None
@@ -68,6 +72,8 @@ class HotelIntegrationsUpdate(BaseModel):
     smtp_password: Optional[str] = None
     smtp_from_email: Optional[str] = None
     ai_whatsapp_credits: Optional[int] = None
+    razorpay_key_id: Optional[str] = None
+    razorpay_key_secret: Optional[str] = None
     is_paused: Optional[bool] = None
     pause_reason: Optional[str] = None
     feature_ai_agent: Optional[bool] = None
@@ -127,6 +133,8 @@ async def get_hotel_integrations(
         whatsapp_business_account_id=s.get("whatsapp_business_account_id"),
         ai_whatsapp_credits=int(s.get("ai_whatsapp_credits", 0) or 0),
         total_messages_sent=int(s.get("total_messages_sent", 0) or 0),
+        razorpay_key_id=s.get("razorpay_key_id"),
+        has_razorpay_secret=bool(s.get("razorpay_key_secret")),
         is_paused=hotel.is_paused,
         pause_reason=hotel.pause_reason,
         paused_at=hotel.paused_at,
@@ -197,6 +205,7 @@ async def update_hotel_integrations(
         "whatsapp_api_key", "whatsapp_phone_number_id", "whatsapp_business_account_id",
         "smtp_host", "smtp_username", "smtp_password",
         "smtp_from_email", "ai_whatsapp_credits",
+        "razorpay_key_id", "razorpay_key_secret",
     ):
         val = getattr(payload, json_field, None)
         if val is None:

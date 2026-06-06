@@ -133,12 +133,12 @@ async def create_razorpay_refund(
     hotel = await session.get(Hotel, booking.hotel_id)
     h_settings = hotel.settings if hotel and hotel.settings else {}
 
-    settings = get_settings()
-    key_id = h_settings.get("razorpay_key_id") or settings.RAZORPAY_KEY_ID
-    key_secret = h_settings.get("razorpay_key_secret") or settings.RAZORPAY_KEY_SECRET
+    # Strict per-hotel keys (no platform-global fallback).
+    key_id = h_settings.get("razorpay_key_id")
+    key_secret = h_settings.get("razorpay_key_secret")
 
     if not key_id or not key_secret:
-        raise HTTPException(status_code=500, detail="Razorpay not configured for this property")
+        raise HTTPException(status_code=503, detail="Razorpay not configured for this property")
 
     # Patch Razorpay User-Agent (same as in public/payments.py)
     def _patched_update_user_agent_header(self, options):
