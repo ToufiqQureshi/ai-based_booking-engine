@@ -60,6 +60,9 @@ async def chat_with_agent(
 
         # 4. Run agent
         result = await agent.arun(input_messages)
+        # AI-03: record per-hotel token spend for cost visibility.
+        from app.core.ai_usage import record_ai_usage
+        record_ai_usage(current_user.hotel_id, result)
         return ChatResponse(response=result.content or "")
 
     except ValueError as e:

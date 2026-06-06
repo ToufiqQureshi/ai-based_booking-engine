@@ -893,5 +893,6 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         markdown=True,
         max_tool_calls_from_history=3,  # Optimizes history context token usage
         tool_call_limit=6,              # Prevents runaway loops / excessive calls
+        compress_tool_results=True,     # Compress large tool outputs to save tokens
     )
     return agent

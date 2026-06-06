@@ -267,6 +267,9 @@ async def chat_with_guest_ai(
         # 4. Invoke Agent
         try:
             result = await agent.arun(messages)
+            # AI-03: record per-hotel token spend for cost visibility.
+            from app.core.ai_usage import record_ai_usage
+            record_ai_usage(hotel.id, result)
             ai_response = result.content or ""
             return GuestChatResponse(response=ai_response)
         except Exception as invoke_err:

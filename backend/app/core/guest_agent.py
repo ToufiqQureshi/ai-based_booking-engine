@@ -496,6 +496,8 @@ async def create_guest_agent_graph(
                 id=ai_model or "gemini-1.5-flash",
                 api_key=ai_api_key,
                 max_output_tokens=ai_max_tokens or 1024,
+                cache_response=True,
+                cache_ttl=300,
             )
         elif effective_provider == "deepseek":
             from agno.models.deepseek import DeepSeek
@@ -503,6 +505,8 @@ async def create_guest_agent_graph(
                 id=ai_model or "deepseek-chat",
                 api_key=ai_api_key,
                 max_tokens=ai_max_tokens or 1024,
+                cache_response=True,
+                cache_ttl=300,
             )
         else:
             from agno.models.openai import OpenAILike
@@ -514,6 +518,12 @@ async def create_guest_agent_graph(
                 api_key=ai_api_key,
                 base_url=ai_base_url or default_base_url,
                 max_tokens=ai_max_tokens or 1024,
+                # AI-05: cache identical requests (e.g. repeated greetings) for a
+                # short window so common messages don't re-hit the LLM. Short TTL
+                # keeps availability answers reasonably fresh (the booking endpoint
+                # re-validates price/availability server-side at checkout anyway).
+                cache_response=True,
+                cache_ttl=300,
             )
 
         formatted_prompt = _build_formatted_prompt(data, hotel_name)
@@ -526,6 +536,8 @@ async def create_guest_agent_graph(
             # AI-02: bound tool-call iterations so a looping model on the
             # PUBLIC endpoint can't run unbounded billed LLM round-trips.
             tool_call_limit=4,
+            max_tool_calls_from_history=2,  # less history tool context = fewer tokens
+            compress_tool_results=True,     # compress tool outputs to save tokens
         )
     except Exception as exc:
         logger.error("Guest agent error: %s", exc)
