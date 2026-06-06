@@ -481,4 +481,37 @@ Landing · `/book/:slug` (rooms/checkout/confirmation/cancel) · `/book/:slug/wi
 
 ---
 
+---
+
+## 6. Remediation Status (implemented in this branch)
+
+The following fixes were implemented, tested (113 backend tests green), and
+committed on `claude/project-security-audit-jH1Jc`. Items marked ⚠️ need an
+operational follow-up beyond code.
+
+| ID | Status | Notes |
+|---|---|---|
+| SEC-01 | ✅ Fixed | Razorpay **secret** masked in settings (denylist + secret-substring heuristic); `razorpay_key_id` stays exposed (publishable). ⚠️ **Rotate any live per-hotel Razorpay secrets** and purge `public:hotel-details:*` cache. |
+| SEC-02 | ✅ Fixed | `test-email-connection` now requires auth + own-hotel scope. |
+| PAY-01 | ✅ Fixed | create-order charges server-side `booking.total_amount`. |
+| AUTH-01 | ✅ Fixed | Auth cache TTL capped at token `exp`. |
+| AUTH-02 | ✅ Fixed | Impersonation token gets 30-min `exp`; verifier requires `exp`. |
+| AUTH-03 | ✅ Fixed | DEBUG unverified-claims fallback removed. |
+| AUTH-04 | ✅ Fixed | Supabase verify no longer falls back to `SECRET_KEY`. |
+| AZ-01 | ✅ Fixed | `require_permission` enforced on payouts/revenue/commissions/exports/invoices/kyc/platform. |
+| AZ-02 | ✅ Fixed | `require_hotel_role` on config mutations (rooms/rates/addons/amenities/payments/channel/integration/hotel-settings). |
+| AZ-03 | ✅ Fixed | `feature_ai_agent` gate on AI agent endpoint (competitors already gated inline). |
+| TEN-02/03/04/05 | ✅ Fixed | Booking room/rate ownership; check_freshness auth+scope; signed OAuth state; availability room-type ownership. |
+| AI-01..05, AI-07 | ✅ Fixed | Per-hotel daily quota; `tool_call_limit`; 8B default; Redis-backed limiter; `cache_response`+`compress_tool_results`; output caps; per-hotel token tracking (`app/core/ai_usage.py`). |
+| DB-01/02/03 | ✅ Fixed | Composite indexes via `CREATE INDEX IF NOT EXISTS` + model `index=True`; `/guests` paginated; pool 5+5+recycle. |
+| INF-01/02/04/06 | ✅ Fixed | Lazy heavy imports + env-driven workers; analytics cache busting; SSE lifetime cap; docs gated to DEBUG. |
+| LOG-01/02 | ✅ Fixed | Sentry `send_default_pii=False` + scrubber; `LOG_LEVEL` env; auth PII log → DEBUG. |
+| BUG-01/04 | ✅ Fixed | `safe_background` callable bug; decommissioned model id. |
+| PUB-01/02 | ✅ Fixed | Cancel endpoints rate-limited; upload magic-byte validation + safe content-type. |
+| DEAD-01/03/06 | ✅ Fixed | Removed spent scripts + `remarkable`; real SECURITY.md. |
+| INF-03 | ⚠️ Deferred | No scheduler wired. Recommend external cron hitting existing endpoints, or APScheduler with a Redis lock (avoid per-worker double-run). Not changed to limit risk. |
+| DB-01 (Alembic) | ⚠️ Partial | Indexes now applied at boot; switching deploys to `alembic upgrade head` is still recommended as the long-term fix. |
+| DEAD-02 | ℹ️ Kept | The Chrome extension is the **rate-shopper scraping client** (feeds `/rates/ingest`), so it was intentionally NOT deleted. |
+| AUTH-05 | ℹ️ Note | Open auto-registration is by design; confirm Supabase signup restrictions. |
+
 *End of report.*
