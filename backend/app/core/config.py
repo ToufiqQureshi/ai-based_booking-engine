@@ -13,6 +13,18 @@ class Settings(BaseSettings):
     
     # Database - Supabase (Production Cloud)
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:5433/hotelier_hub"
+
+    # Connection pool sizing (per worker). Keep
+    # DB_POOL_SIZE * WEB_CONCURRENCY * replicas <= Supabase connection limit.
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 5
+    DB_POOL_RECYCLE: int = 300
+    DB_POOL_TIMEOUT: int = 30
+
+    # Background scheduler (APScheduler). Runs periodic jobs (social-proof
+    # refresh, subscription-expiry) guarded by a Redis lock so only one
+    # worker/replica runs each tick. Disable with ENABLE_SCHEDULER=false.
+    ENABLE_SCHEDULER: bool = True
     
     # Supabase Config
     SUPABASE_URL: str = ""

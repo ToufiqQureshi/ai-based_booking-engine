@@ -5,6 +5,7 @@ aiofiles
 aiosmtplib==3.0.1
 aiosqlite
 alembic
+apscheduler
 argon2-cffi
 asyncpg
 brevo-python
