@@ -19,8 +19,7 @@ import { ShieldAlert } from 'lucide-react';
 export default function RatesShopper() {
     const { hotel } = useAuth();
     const queryClient = useQueryClient();
-    const [isScraping, setIsScraping] = useState(false);
-    const [forceRefreshMap, setForceRefreshMap] = useState<Record<string, boolean>>({});
+    const [lastStatuses, setLastStatuses] = useState<Record<string, string>>({});
     const [activeTab, setActiveTab] = useState(() => localStorage.getItem("rateShopperActiveTab") || "ALL");
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [newCompName, setNewCompName] = useState('');
@@ -75,6 +74,40 @@ export default function RatesShopper() {
         return () => window.removeEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
     }, [refetchAll]);
 
+    // Auto-poll if any competitor is currently in 'running' state
+    useEffect(() => {
+        const isAnyRunning = competitors.some((c: any) => c.last_scrape_status === 'running');
+        if (!isAnyRunning) return;
+
+        const interval = setInterval(() => {
+            fetchData();
+        }, 5000); // Poll every 5 seconds to show data dynamically as it is scraped
+
+        return () => clearInterval(interval);
+    }, [competitors, fetchData]);
+
+    // Handle toast notifications based on background status transitions
+    useEffect(() => {
+        if (!competitors.length) return;
+        
+        const newStatuses: Record<string, string> = {};
+        competitors.forEach((comp: any) => {
+            newStatuses[comp.id] = comp.last_scrape_status;
+            
+            const prevStatus = lastStatuses[comp.id];
+            if (comp.last_scrape_status === 'failed' && prevStatus !== 'failed') {
+                toast.error(`Error scraping ${comp.name}: ${comp.last_scrape_error || 'Unknown error'}`);
+            } else if (comp.last_scrape_status === 'success' && prevStatus === 'running') {
+                toast.success(`Successfully updated rates for ${comp.name}!`);
+            }
+        });
+        
+        const hasChanged = Object.keys(newStatuses).some(id => newStatuses[id] !== lastStatuses[id]);
+        if (hasChanged || Object.keys(lastStatuses).length === 0) {
+            setLastStatuses(newStatuses);
+        }
+    }, [competitors, lastStatuses]);
+
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setStartDate(e.target.value);
     };
@@ -106,26 +139,14 @@ export default function RatesShopper() {
         }
     };
 
-    const handleScrape = async (id: string, force: boolean = false) => {
-        setIsScraping(true);
+    const handleScrape = async (id: string) => {
         toast.info("Scraping initiated on the server...");
         try {
             await apiClient.post(`/competitors/${id}/scrape`, {});
             toast.success("Server-side scraping started in the background. Rates will be updated shortly!");
-            
-            // Poll/refetch data after 10 seconds, 25 seconds, and 45 seconds to show updates
-            let count = 0;
-            const timer = setInterval(() => {
-                fetchData();
-                count++;
-                if (count >= 3) {
-                    clearInterval(timer);
-                    setIsScraping(false);
-                }
-            }, 15000);
+            fetchData(); // Refetch to show running state immediately
         } catch (error: any) {
             console.error(error);
-            setIsScraping(false);
             toast.error(error.message || "Failed to initiate scraping");
         }
     };
@@ -334,21 +355,51 @@ export default function RatesShopper() {
                                 <div className="text-xs text-muted-foreground mb-4 truncate" title={comp.url}>
                                     {comp.url}
                                 </div>
+                                
+                                {/* Status Information */}
+                                <div className="text-xs mb-4 flex flex-col gap-1">
+                                    {comp.last_scrape_status === 'running' && (
+                                        <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-medium">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            Scraping rates headlessly...
+                                        </div>
+                                    )}
+                                    {comp.last_scrape_status === 'failed' && (
+                                        <div className="text-destructive font-medium flex flex-col gap-0.5">
+                                            <span className="flex items-center gap-1">❌ Scrape failed</span>
+                                            <span className="text-[10px] text-muted-foreground break-all" title={comp.last_scrape_error}>
+                                                {comp.last_scrape_error && comp.last_scrape_error.length > 60 
+                                                    ? `${comp.last_scrape_error.substring(0, 60)}...` 
+                                                    : comp.last_scrape_error}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {comp.last_scrape_status === 'success' && (
+                                        <div className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                                            ✅ Rates synced (last: {comp.last_scraped_at ? new Date(comp.last_scraped_at).toLocaleTimeString() : 'Just now'})
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex gap-2">
                                     <Button
-                                        variant={forceRefreshMap[comp.id] ? "secondary" : "outline"}
+                                        variant="outline"
                                         size="sm"
                                         className="flex-1"
-                                        disabled={isScraping}
-                                        onClick={() => handleScrape(comp.id, forceRefreshMap[comp.id])}
+                                        disabled={comp.last_scrape_status === 'running'}
+                                        onClick={() => handleScrape(comp.id)}
                                     >
-                                        {isScraping ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                                        {forceRefreshMap[comp.id] ? "Force Scrape" : "Refresh Rates"}
+                                        {comp.last_scrape_status === 'running' ? (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <RefreshCw className="mr-2 h-4 w-4" />
+                                        )}
+                                        {comp.last_scrape_status === 'running' ? "Syncing..." : "Refresh Rates"}
                                     </Button>
                                     <Button
                                         variant="destructive"
                                         size="sm"
-                                        disabled={isScraping}
+                                        disabled={comp.last_scrape_status === 'running'}
                                         onClick={() => handleDeleteCompetitor(comp.id)}
                                     >
                                         <Trash2 className="h-4 w-4" />

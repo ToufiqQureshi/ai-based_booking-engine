@@ -138,6 +138,17 @@ async def init_db():
         except Exception:
             pass
 
+    for col, col_type in [
+        ("last_scrape_status", "VARCHAR(50) DEFAULT NULL"),
+        ("last_scrape_error", "TEXT DEFAULT NULL"),
+        ("last_scraped_at", "TIMESTAMP DEFAULT NULL")
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE competitors ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
     # SystemBroadcast scheduling + targeting columns
     # JSON DEFAULT must be cast for Postgres ('[]'::json), but SQLite tolerates plain '[]'.
     json_default = "'[]'::json" if not is_sqlite else "'[]'"

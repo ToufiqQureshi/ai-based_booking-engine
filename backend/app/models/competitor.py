@@ -24,6 +24,10 @@ class Competitor(SQLModel, table=True):
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
+    last_scrape_status: Optional[str] = Field(default=None)
+    last_scrape_error: Optional[str] = Field(default=None)
+    last_scraped_at: Optional[datetime] = Field(default=None)
+    
     # Relationships
     rates: List["CompetitorRate"] = Relationship(back_populates="competitor")
 

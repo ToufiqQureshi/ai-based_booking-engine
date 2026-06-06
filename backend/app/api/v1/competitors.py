@@ -72,6 +72,25 @@ async def add_competitor(comp_data: Competitor, current_user: CurrentUser, sessi
 async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSession, background_tasks: BackgroundTasks):
     """Manually trigger a scrape"""
     check_rate_shopper_feature(current_user)
+    
+    # Fetch competitor and verify ownership
+    comp = await session.get(Competitor, comp_id)
+    if not comp or comp.hotel_id != current_user.hotel_id:
+        raise HTTPException(status_code=404, detail="Competitor not found")
+        
+    settings = get_settings()
+    if not settings.DECODO_AUTH_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Decodo Scraper API key (DECODO_AUTH_TOKEN) is not configured in environment variables."
+        )
+
+    # Set status to running
+    comp.last_scrape_status = "running"
+    comp.last_scrape_error = None
+    session.add(comp)
+    await session.commit()
+    
     background_tasks.add_task(run_background_scrape, comp_id)
     return {"message": "Scrape started in background"}
 
@@ -176,14 +195,26 @@ async def run_background_scrape(comp_id: str):
                 logger.error(f"Competitor {comp_id} not found for background scrape")
                 return
                 
+            comp.last_scrape_status = "running"
+            comp.last_scrape_error = None
+            session.add(comp)
+            await session.commit()
+            
             url = comp.url
             is_mmt = comp.source == CompetitorSource.MAKEMYTRIP or "makemytrip.com" in url.lower()
             
             if not is_mmt:
+                comp.last_scrape_status = "failed"
+                comp.last_scrape_error = f"Background scrape only supported for MakeMyTrip. Competitor source is {comp.source}."
+                session.add(comp)
+                await session.commit()
                 logger.warning(f"Background scrape only supported for MakeMyTrip. Competitor source: {comp.source}")
                 return
                 
             logger.info(f"Scraping MakeMyTrip URL for competitor: {comp.name} ({comp_id})")
+            
+            has_errors = False
+            last_error_reason = None
             
             # Scrape next 7 days
             for offset in range(7):
@@ -225,21 +256,46 @@ async def run_background_scrape(comp_id: str):
                     
                     await session.commit()
                     logger.info(f"Ingested rate for {comp.name} on {check_in_date_obj.isoformat()}: {price} (Sold out: {is_sold_out})")
+                    
+                    # Clear cache immediately on every iteration so frontend sees updates as they happen
+                    try:
+                        r = redis_client.get_instance()
+                        if r:
+                            keys_to_delete = r.keys(f"rate_comparison:{comp.hotel_id}:*") + r.keys(f"market_analysis:{comp.hotel_id}:*")
+                            if keys_to_delete:
+                                r.delete(*keys_to_delete)
+                    except Exception as cache_err:
+                        logger.warning(f"Failed to clear competitor cache: {cache_err}")
                 else:
-                    logger.warning(f"Failed to scrape rate for {comp.name} on {check_in_date_obj.isoformat()}: {rate_data.get('reason')}")
+                    has_errors = True
+                    last_error_reason = rate_data.get("reason", "Unknown scraping failure")
+                    logger.warning(f"Failed to scrape rate for {comp.name} on {check_in_date_obj.isoformat()}: {last_error_reason}")
             
-            # Clear cache for this hotel
-            try:
-                r = redis_client.get_instance()
-                if r:
-                    keys_to_delete = r.keys(f"rate_comparison:{comp.hotel_id}:*") + r.keys(f"market_analysis:{comp.hotel_id}:*")
-                    if keys_to_delete:
-                        r.delete(*keys_to_delete)
-            except Exception as cache_err:
-                logger.warning(f"Failed to clear competitor cache on scrape completion: {cache_err}")
+            # Update final status
+            comp = await session.get(Competitor, comp_id)
+            if comp:
+                if has_errors:
+                    comp.last_scrape_status = "failed"
+                    comp.last_scrape_error = f"Scraping encountered errors on some dates: {last_error_reason}"
+                else:
+                    comp.last_scrape_status = "success"
+                    comp.last_scrape_error = None
+                    comp.last_scraped_at = datetime.utcnow()
+                session.add(comp)
+                await session.commit()
                 
     except Exception as e:
         logger.error(f"Background Scrape CRASHED for {comp_id}: {e}")
+        try:
+            async with async_session() as session:
+                comp = await session.get(Competitor, comp_id)
+                if comp:
+                    comp.last_scrape_status = "failed"
+                    comp.last_scrape_error = f"Internal system crash: {str(e)}"
+                    session.add(comp)
+                    await session.commit()
+        except Exception as db_err:
+            logger.error(f"Failed to record crash status in database: {db_err}")
 
 @router.delete("/{comp_id}")
 async def delete_competitor(comp_id: str, current_user: CurrentUser, session: DbSession):
