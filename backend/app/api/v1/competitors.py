@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.feature_flags import require_feature
-from app.models.competitor import Competitor, CompetitorRate, CompetitorSource
+from app.models.competitor import Competitor, CompetitorRate, CompetitorSource, ScraperUsage
 from app.models.hotel import Hotel
 from app.models.room import RoomType
 from app.models.rates import RoomRate
@@ -302,6 +302,15 @@ async def run_background_scrape(comp_id: str):
                     comp.last_scrape_status = "failed"
                     comp.last_scrape_error = f"Scraping failed on all dates: {last_error_reason}"
                 session.add(comp)
+                
+                # Log usage
+                usage = ScraperUsage(
+                    hotel_id=comp.hotel_id,
+                    competitor_id=comp_id,
+                    request_count=7,
+                    status="success" if success_count > 0 else "failed"
+                )
+                session.add(usage)
                 await session.commit()
                 
     except Exception as e:
@@ -313,6 +322,15 @@ async def run_background_scrape(comp_id: str):
                     comp.last_scrape_status = "failed"
                     comp.last_scrape_error = f"Internal system crash: {str(e)}"
                     session.add(comp)
+                    
+                    # Log failed usage
+                    usage = ScraperUsage(
+                        hotel_id=comp.hotel_id,
+                        competitor_id=comp_id,
+                        request_count=7,
+                        status="failed"
+                    )
+                    session.add(usage)
                     await session.commit()
         except Exception as db_err:
             logger.error(f"Failed to record crash status in database: {db_err}")
@@ -339,6 +357,22 @@ async def delete_competitor(comp_id: str, current_user: CurrentUser, session: Db
     await session.commit()
     
     return {"message": "Competitor deleted successfully"}
+
+@router.patch("/{comp_id}/schedule", response_model=Competitor)
+async def toggle_competitor_schedule(comp_id: str, payload: Dict[str, bool], current_user: CurrentUser, session: DbSession):
+    """Toggle scheduling (automatic daily refresh) for a competitor"""
+    check_rate_shopper_feature(current_user)
+    
+    comp = await session.get(Competitor, comp_id)
+    if not comp or comp.hotel_id != current_user.hotel_id:
+        raise HTTPException(status_code=404, detail="Competitor not found")
+        
+    comp.is_scheduled = payload.get("is_scheduled", False)
+    session.add(comp)
+    await session.commit()
+    await session.refresh(comp)
+    return comp
+
 
 # --- Market Analysis ---
 

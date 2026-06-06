@@ -62,6 +62,35 @@ async def _tick_subscription_expiry() -> None:
     await _run_locked("subscription_expiry", 3600, _job_subscription_expiry)
 
 
+async def _job_competitor_scraping() -> None:
+    from app.core.database import async_session
+    from app.models.competitor import Competitor
+    from app.api.v1.competitors import run_background_scrape
+    from sqlmodel import select
+    import asyncio
+    import random
+    
+    async with async_session() as session:
+        stmt = select(Competitor).where(
+            Competitor.is_active == True,
+            Competitor.is_scheduled == True
+        )
+        res = await session.execute(stmt)
+        competitors = res.scalars().all()
+        
+    for comp in competitors:
+        try:
+            logger.info(f"Scheduler: starting automatic scrape for competitor {comp.name} ({comp.id})")
+            await run_background_scrape(comp.id)
+            await asyncio.sleep(random.uniform(5, 10))
+        except Exception as e:
+            logger.error(f"Scheduler: failed to scrape competitor {comp.id}: {e}")
+
+
+async def _tick_competitor_scraping() -> None:
+    await _run_locked("competitor_scraping", 14400, _job_competitor_scraping)
+
+
 def start_scheduler() -> None:
     global _scheduler
     if _scheduler is not None:
@@ -71,9 +100,11 @@ def start_scheduler() -> None:
                   id="social_proof", max_instances=1, coalesce=True)
     sched.add_job(_tick_subscription_expiry, "interval", hours=24,
                   id="subscription_expiry", max_instances=1, coalesce=True)
+    sched.add_job(_tick_competitor_scraping, "interval", hours=24,
+                  id="competitor_scraping", max_instances=1, coalesce=True)
     sched.start()
     _scheduler = sched
-    logger.info("Background scheduler started (social_proof=15m, subscription_expiry=24h)")
+    logger.info("Background scheduler started (social_proof=15m, subscription_expiry=24h, competitor_scraping=24h)")
 
 
 def shutdown_scheduler() -> None:

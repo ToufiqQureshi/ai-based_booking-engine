@@ -6,7 +6,7 @@ from app.models.room import RoomType, RoomPhoto, Amenity
 from app.models.booking import Booking, BookingRoom, Guest
 from app.models.payment import Payment
 from app.models.rates import RatePlan, RoomRate
-from app.models.competitor import Competitor, CompetitorRate
+from app.models.competitor import Competitor, CompetitorRate, ScraperUsage
 from app.models.promo import PromoCode
 from app.models.addon import AddOn
 from app.models.notification import Notification
@@ -37,7 +37,8 @@ __all__ = [
     "Booking", "BookingRoom", "Guest",
     "Payment",
     "RatePlan", "RoomRate",
-    "Competitor", "CompetitorRate",
+    "Competitor", "CompetitorRate", "ScraperUsage",
+
     "PromoCode",
     "AddOn",
     "Notification",

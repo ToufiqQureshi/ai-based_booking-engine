@@ -22,6 +22,7 @@ class Competitor(SQLModel, table=True):
     source: CompetitorSource = Field(default=CompetitorSource.BOOKING)
     
     is_active: bool = Field(default=True)
+    is_scheduled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     last_scrape_status: Optional[str] = Field(default=None)
@@ -47,3 +48,16 @@ class CompetitorRate(SQLModel, table=True):
     fetched_at: datetime = Field(default_factory=datetime.utcnow)
     
     competitor: Optional[Competitor] = Relationship(back_populates="rates")
+
+
+class ScraperUsage(SQLModel, table=True):
+    __tablename__ = "scraper_usage"
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    hotel_id: str = Field(foreign_key="hotels.id", index=True)
+    competitor_id: str = Field(foreign_key="competitors.id", index=True)
+    
+    scraped_at: datetime = Field(default_factory=datetime.utcnow)
+    request_count: int = Field(default=7)
+    status: str # "success" or "failed"
+

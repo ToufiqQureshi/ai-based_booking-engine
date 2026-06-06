@@ -141,7 +141,8 @@ async def init_db():
     for col, col_type in [
         ("last_scrape_status", "VARCHAR(50) DEFAULT NULL"),
         ("last_scrape_error", "TEXT DEFAULT NULL"),
-        ("last_scraped_at", "TIMESTAMP DEFAULT NULL")
+        ("last_scraped_at", "TIMESTAMP DEFAULT NULL"),
+        ("is_scheduled", "BOOLEAN DEFAULT FALSE")
     ]:
         try:
             async with engine.begin() as conn:
