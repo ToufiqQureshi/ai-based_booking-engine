@@ -22,6 +22,28 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _db_pool_stats() -> dict:
+    """Live SQLAlchemy connection-pool usage so admins can watch headroom
+    against the Supabase connection limit (the #1 scale crash risk)."""
+    try:
+        from app.core.database import engine
+        pool = engine.pool
+        checked_out = pool.checkedout()
+        size = pool.size()
+        overflow = pool.overflow()
+        capacity = size + max(overflow, 0)
+        return {
+            "pool_size": size,
+            "checked_out": checked_out,
+            "checked_in": pool.checkedin(),
+            "overflow": overflow,
+            "capacity_per_worker": capacity,
+            "utilization_pct": round((checked_out / capacity) * 100, 1) if capacity else 0,
+        }
+    except Exception as e:  # pragma: no cover - telemetry only
+        return {"error": str(e)}
+
+
 async def _hotel_health(session, hotel: Hotel) -> dict:
     """Compute health metrics for a single hotel."""
     now = date.today()
@@ -160,6 +182,7 @@ async def platform_health(
             "incomplete": incomplete,
             "disabled": disabled,
         },
+        "infra": _db_pool_stats(),
         "hotels": sorted(results, key=lambda x: (
             0 if x["health_status"] == "healthy" else
             1 if x["health_status"] == "dormant" else

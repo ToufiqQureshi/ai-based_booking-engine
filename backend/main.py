@@ -59,8 +59,23 @@ async def lifespan(app: FastAPI):
         logger.error(f"CRITICAL: Database connection failed during startup: {e}")
         # We don't re-raise here so the app can at least boot and serve /health
         # If it crashes here, Railway gives 502 Bad Gateway.
+
+    # Start the background scheduler (Redis-lock guarded so it's multi-worker safe)
+    if settings.ENABLE_SCHEDULER:
+        try:
+            from app.core.scheduler import start_scheduler
+            start_scheduler()
+        except Exception as e:
+            logger.error(f"Scheduler failed to start: {e}")
+
     yield
-    # Shutdown: Cleanup if needed
+
+    # Shutdown: stop the scheduler cleanly
+    try:
+        from app.core.scheduler import shutdown_scheduler
+        shutdown_scheduler()
+    except Exception:
+        pass
     logger.info("Shutting down...")
 
 

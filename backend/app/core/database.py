@@ -26,14 +26,14 @@ else:
     engine_args = {
         "echo": False,
         "future": True,
-        # DB-03: keep the per-worker pool small. 20+10 per worker exhausts
-        # Supabase's pooler once you run multiple workers/replicas. Add
-        # pool_recycle so connections behind the pooler/NAT don't go stale.
-        "pool_size": 5,
-        "max_overflow": 5,
-        "pool_timeout": 30,
+        # DB-03: pool sizing is env-driven (DB_POOL_SIZE/DB_MAX_OVERFLOW) so it
+        # can be tuned per Railway plan without a code change. Keep
+        # DB_POOL_SIZE * WEB_CONCURRENCY * replicas <= Supabase connection limit.
+        "pool_size": settings.DB_POOL_SIZE,
+        "max_overflow": settings.DB_MAX_OVERFLOW,
+        "pool_timeout": settings.DB_POOL_TIMEOUT,
         "pool_pre_ping": True,
-        "pool_recycle": 300,
+        "pool_recycle": settings.DB_POOL_RECYCLE,
     }
 
 engine = create_async_engine(
@@ -56,6 +56,15 @@ async def init_db():
     Database tables create karta hai agar exist nahi karte.
     App startup par call hota hai.
     """
+    if not is_sqlite:
+        import logging as _logging
+        _logging.getLogger(__name__).info(
+            "DB pool config: pool_size=%s max_overflow=%s recycle=%ss timeout=%ss "
+            "(keep pool_size * WEB_CONCURRENCY * replicas <= Supabase limit)",
+            settings.DB_POOL_SIZE, settings.DB_MAX_OVERFLOW,
+            settings.DB_POOL_RECYCLE, settings.DB_POOL_TIMEOUT,
+        )
+
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
