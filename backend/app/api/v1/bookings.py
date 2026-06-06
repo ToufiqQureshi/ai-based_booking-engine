@@ -30,6 +30,15 @@ def _clear_booking_caches(hotel_id: str):
         _redis.delete_pattern(f"bookings:{hotel_id}:*")
         _redis.delete_pattern(f"reports_dashboard:{hotel_id}:*")
         _redis.delete_pattern(f"reports_occupancy:{hotel_id}:*")
+        # INF-02: analytics dashboards are cached 600s; bust them too so
+        # revenue/occupancy numbers don't go stale for 10 min after a
+        # booking is created/updated/cancelled.
+        for prefix in (
+            "analytics_dashboard", "analytics_overview", "analytics_revenue",
+            "analytics_traffic", "analytics_ai", "analytics_cancellations",
+            "analytics_kpis",
+        ):
+            _redis.delete_pattern(f"{prefix}:{hotel_id}:*")
     except Exception:
         pass
 
@@ -359,10 +368,23 @@ async def create_booking(
 # ============== Guest Endpoints ==============
 
 @router.get("/guests", response_model=List[GuestRead], tags=["Guests"])
-async def get_guests(current_user: CurrentUser, session: DbSession):
-    """Hotel ke saare guests get karo"""
+async def get_guests(
+    current_user: CurrentUser,
+    session: DbSession,
+    limit: int = Query(100, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Hotel ke guests get karo (paginated).
+
+    DB-02: previously returned the entire guest table for the hotel with no
+    limit — an OOM/timeout risk for properties with large guest histories.
+    """
     result = await session.execute(
-        select(Guest).where(Guest.hotel_id == current_user.hotel_id)
+        select(Guest)
+        .where(Guest.hotel_id == current_user.hotel_id)
+        .order_by(Guest.id)
+        .limit(limit)
+        .offset(offset)
     )
     return result.scalars().all()
 

@@ -26,10 +26,14 @@ else:
     engine_args = {
         "echo": False,
         "future": True,
-        "pool_size": 20,
-        "max_overflow": 10,
+        # DB-03: keep the per-worker pool small. 20+10 per worker exhausts
+        # Supabase's pooler once you run multiple workers/replicas. Add
+        # pool_recycle so connections behind the pooler/NAT don't go stale.
+        "pool_size": 5,
+        "max_overflow": 5,
         "pool_timeout": 30,
         "pool_pre_ping": True,
+        "pool_recycle": 300,
     }
 
 engine = create_async_engine(
@@ -188,7 +192,7 @@ async def init_db():
                             "hotel_id": hotel_id,
                             "ai_provider": ai_prov or "groq",
                             "ai_api_key": ai_key,
-                            "ai_model": ai_mod or "llama-3.1-70b-versatile",
+                            "ai_model": ai_mod or "llama-3.1-8b-instant",
                             "ai_base_url": ai_base,
                             "ai_max_tokens": ai_max,
                             "now": datetime.utcnow()
@@ -213,7 +217,7 @@ async def init_db():
                                 "id": sett_id,
                                 "ai_provider": ai_prov or "groq",
                                 "ai_api_key": ai_key,
-                                "ai_model": ai_mod or "llama-3.1-70b-versatile",
+                                "ai_model": ai_mod or "llama-3.1-8b-instant",
                                 "ai_base_url": ai_base,
                                 "ai_max_tokens": ai_max,
                                 "now": datetime.utcnow()

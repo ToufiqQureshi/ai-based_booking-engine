@@ -67,7 +67,11 @@ def safe_background(
         except Exception:
             logger.exception("Background task '%s' failed", name)
 
-    bg.add_task(_runner())
+    # BUG-01: pass the coroutine FUNCTION, not a called coroutine object.
+    # bg.add_task(_runner()) hands Starlette a coroutine object as the
+    # "callable", which it then fails to invoke — silently breaking every
+    # background task (e.g. post-payment confirmation emails).
+    bg.add_task(_runner)
 
 async def check_subscription_expiry() -> dict:
     """

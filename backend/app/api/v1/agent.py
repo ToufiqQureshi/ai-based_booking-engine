@@ -5,6 +5,9 @@ import logging
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.feature_flags import require_feature
+# NOTE: create_agent_executor is imported lazily inside the handler (INF-01) —
+# importing app.core.agent at module load pulls in pandas + matplotlib (~150MB
+# RSS) into every worker at boot even when the agent is never used.
 from app.core.agent import create_agent_executor
 
 logger = logging.getLogger(__name__)
@@ -37,7 +40,8 @@ async def chat_with_agent(
         )
 
     try:
-        # 1. Initialize Agent
+        # 1. Initialize Agent (lazy import — see INF-01 note at top of file)
+        from app.core.agent import create_agent_executor
         agent = await create_agent_executor(session, current_user, user_query=payload.message)
 
         # 2. Build history as Agno Messages (limit last 20)
