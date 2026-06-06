@@ -1,21 +1,33 @@
 # Security Policy
 
-## Supported Versions
-
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
-
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a security vulnerability in Staybooker, please report it
+responsibly:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+- **Email:** security@staybooker.ai (or tech.revmerito@gmail.com)
+- **Do not** open a public GitHub issue for security problems.
+- Please include: a description of the issue, steps to reproduce, the
+  affected endpoint/component, and the potential impact.
+
+We aim to acknowledge reports within **2 business days** and to provide a
+remediation timeline within **7 business days**, prioritised by severity
+(Critical → High → Medium → Low).
+
+## Scope
+
+In scope: the backend API (`/api/v1/*`), the hotelier dashboard, the public
+booking engine, the super-admin panel, and authentication/authorization.
+
+Out of scope: denial-of-service testing against production, social
+engineering, and physical attacks.
+
+## Supported Versions
+
+The latest `main` branch is the only supported version. Security fixes are
+applied to `main` and deployed; older deploys are not separately patched.
+
+## Disclosure
+
+Please give us a reasonable window to remediate before any public
+disclosure. We're happy to credit reporters who follow this policy.

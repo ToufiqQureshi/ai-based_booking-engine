@@ -691,9 +691,11 @@ class GuestCancelInfoResponse(BaseModel):
     cancellation_mode: str
 
 @router.post("/bookings/cancel-request", response_model=GuestCancelInfoResponse)
-async def public_cancel_request(data: GuestCancelRequest, session: DbSession):
+@limiter.limit("10/minute")
+async def public_cancel_request(request: Request, data: GuestCancelRequest, session: DbSession):
     """
     Look up booking and calculate cancellation fee details.
+    PUB-01: rate-limited to throttle booking-number enumeration.
     """
     query = select(Booking).where(Booking.booking_number == data.booking_number)
     res = await session.execute(query)
@@ -742,9 +744,11 @@ async def public_cancel_request(data: GuestCancelRequest, session: DbSession):
     )
 
 @router.post("/bookings/cancel-confirm")
-async def public_cancel_confirm(data: GuestCancelRequest, session: DbSession):
+@limiter.limit("10/minute")
+async def public_cancel_confirm(request: Request, data: GuestCancelRequest, session: DbSession):
     """
     Confirm booking cancellation or request it, based on hotel settings.
+    PUB-01: rate-limited to throttle booking-number enumeration.
     """
     query = select(Booking).where(Booking.booking_number == data.booking_number)
     res = await session.execute(query)
