@@ -158,6 +158,23 @@ async def init_db():
         except Exception:
             pass
 
+    # DB-01: composite performance indexes. These live in Alembic migration
+    # 08_performance_indexes.py, but deploys run create_all (not `alembic
+    # upgrade`), so create_all only emits single-column indexes and these
+    # composites were missing in production. CREATE INDEX IF NOT EXISTS applies
+    # them idempotently on every boot until the deploy switches to Alembic.
+    for idx_sql in [
+        "CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings (created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings (hotel_id, check_in, check_out)",
+        "CREATE INDEX IF NOT EXISTS idx_room_rates_lookup ON room_rates (room_type_id, date_from, date_to)",
+        "CREATE INDEX IF NOT EXISTS idx_competitor_rates_lookup ON competitor_rates (competitor_id, check_in_date, fetched_at)",
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(idx_sql))
+        except Exception:
+            pass
+
     # Auto-heal: Sync AI fields from hotels table to integration_settings table if missing or not set
     try:
         async with engine.begin() as conn:

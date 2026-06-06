@@ -93,12 +93,15 @@ if settings.SENTRY_DSN:
     )
 
 # FastAPI app create karo
+# INF-06: only expose the interactive API docs in DEBUG. In production the
+# full API surface should not be publicly enumerable.
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Multi-tenant Hotel Management API",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan
 )
 

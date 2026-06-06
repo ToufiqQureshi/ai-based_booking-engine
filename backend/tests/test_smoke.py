@@ -20,9 +20,11 @@ async def test_root(client: AsyncClient):
     assert "Staybooker" in res.json()["message"]
 
 
-async def test_docs_reachable(client: AsyncClient):
+async def test_docs_disabled_outside_debug(client: AsyncClient):
+    # INF-06: interactive docs are only exposed when DEBUG is true. Tests run
+    # with DEBUG=False (production default), so /docs must NOT be reachable.
     res = await client.get("/docs")
-    assert res.status_code == 200
+    assert res.status_code == 404
 
 
 # --- Auth boundary ---
