@@ -37,4 +37,6 @@ slowapi
 sqlmodel
 supabase
 user-agents
+scrapling
 uvicorn
+

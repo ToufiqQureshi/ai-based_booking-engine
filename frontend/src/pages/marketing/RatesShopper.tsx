@@ -64,7 +64,7 @@ export default function RatesShopper() {
     const fetchData = useCallback(() => refetchAll(), [refetchAll]);
 
     useEffect(() => {
-        // Real-time listener for scraping extension updates
+        // Real-time listener for scraping updates
         const onScrapeComplete = () => refetchAll();
         window.addEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
         return () => window.removeEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
@@ -103,172 +103,25 @@ export default function RatesShopper() {
 
     const handleScrape = async (id: string, force: boolean = false) => {
         setIsScraping(true);
+        toast.info("Scraping initiated on the server...");
         try {
-            // Find competitor details
-            const comp = competitors.find(c => c.id === id);
-            if (!comp) return;
-
-            // Generate 7 Days of Scrape Jobs
-            const scrapeJobs: any[] = [];
-
-            for (let i = 0; i < 7; i++) {
-                // Calculate Check-In (Start Date + i)
-                const checkInDate = new Date();
-                checkInDate.setDate(checkInDate.getDate() + i);
-
-                // Calculate Check-Out (Check-In + 1)
-                const checkOutDate = new Date(checkInDate);
-                checkOutDate.setDate(checkOutDate.getDate() + 1);
-
-                // Construct URL based on Source
-                try {
-                    let normalizedUrl = comp.url;
-                    if (normalizedUrl && !normalizedUrl.startsWith('http')) {
-                        normalizedUrl = 'https://' + normalizedUrl;
-                    }
-                    const urlObj = new URL(normalizedUrl);
-
-                    // Clear params
-                    ['checkin', 'checkIn', 'checkout', 'checkOut', 'los', 'rooms', 'adults', 'children', 'childs'].forEach(key => {
-                        urlObj.searchParams.delete(key);
-                    });
-
-                    // Robust Source Detection
-                    const isAgoda = comp.source?.toUpperCase() === 'AGODA' || normalizedUrl?.toLowerCase().includes('agoda');
-
-                    if (isAgoda) {
-                        const checkInIso = checkInDate.toISOString().split('T')[0];
-                        urlObj.searchParams.set('checkIn', checkInIso);
-                        urlObj.searchParams.set('los', '1');
-                        urlObj.searchParams.set('rooms', '1');
-                        urlObj.searchParams.set('adults', '1');
-                    } else {
-                        const checkInStr = String(checkInDate.getMonth() + 1).padStart(2, '0') + String(checkInDate.getDate()).padStart(2, '0') + checkInDate.getFullYear();
-                        const checkOutStr = String(checkOutDate.getMonth() + 1).padStart(2, '0') + String(checkOutDate.getDate()).padStart(2, '0') + checkOutDate.getFullYear();
-                        urlObj.searchParams.set('checkin', checkInStr);
-                        urlObj.searchParams.set('checkout', checkOutStr);
-                    }
-
-                    scrapeJobs.push({
-                        id: comp.id,
-                        name: `${comp.name} (Day ${i + 1}) [${isAgoda ? 'Agoda' : 'MMT'}]`,
-                        url: urlObj.toString().replace(/\+/g, '%20')
-                    });
-                } catch (e) {
-                    console.error("Invalid URL:", comp.url, e);
-                    toast.error(`Invalid URL format for ${comp.name}`);
-                }
-            }
-
-            // --- Freshness Check (Postgres Based) ---
-            const formatForBackend = (job: any) => {
-                try {
-                    const u = new URL(job.url);
-                    let d = u.searchParams.get("checkIn"); // Agoda
-                    if (!d) {
-                        const mmt = u.searchParams.get("checkin"); // 01252026
-                        if (mmt && mmt.length === 8) d = `${mmt.substring(4, 8)}-${mmt.substring(0, 2)}-${mmt.substring(2, 4)}`;
-                    }
-                    return { competitor_id: job.id, check_in_date: d };
-                } catch (e) { return { competitor_id: job.id, check_in_date: null }; }
-            };
-
-            const checkList = scrapeJobs.map(formatForBackend).filter(x => x.check_in_date);
-
-            let jobsToDispatch = scrapeJobs;
-
-            if (!force) {
-                toast.info("Checking Database Freshness...");
-                try {
-                    const res = await apiClient.post('/competitors/check_freshness', checkList) as any;
-                    const neededJobs = res.jobs_to_scrape; // FIXED: no .data
-                    const cachedCount = res.cached_count; // FIXED: no .data
-
-                    if (cachedCount > 0) {
-                        toast.success(`Found ${cachedCount} valid rates in DB!`);
-                        setTimeout(() => fetchData(), 500);
-                    }
-
-                    if (neededJobs.length === 0) {
-                        toast.success("Current rates are fresh (last 24h). Click again to force re-scrape.");
-                        setForceRefreshMap(prev => ({ ...prev, [id]: true }));
-                        setIsScraping(false);
-                        return;
-                    }
-
-                    // Reset force if we found jobs to scrape
-                    setForceRefreshMap(prev => ({ ...prev, [id]: false }));
-
-                    // Filter Scrape Jobs if API success
-                    jobsToDispatch = scrapeJobs.filter(job => {
-                        const info = formatForBackend(job);
-                        return neededJobs.some((n: any) => n.competitor_id === info.competitor_id && n.check_in_date === info.check_in_date);
-                    });
-
-                } catch (err) {
-                    console.warn("Freshness check failed, proceeding with full scrape:", err);
-                    toast.error("Freshness check failed. Starting full scrape.");
-                }
-            } else {
-                toast.info("Force Scrape Initialized (Bypassing Freshness Check)");
-            }
-
-            if (jobsToDispatch.length > 0) {
-                const onPing = () => {
-                    toast.success("Extension is Active!");
-                    window.removeEventListener("PING_PONG" as any, onPing);
-                };
-                const onAck = () => {
-                    toast.success(`Extension acknowledged ${jobsToDispatch.length} jobs`);
-                    window.removeEventListener("SCRAPE_ACK" as any, onAck);
-                    window.removeEventListener("SCRAPE_ERROR" as any, onError);
-                };
-                const onError = (e: any) => {
-                    toast.error(`Extension error: ${e.detail?.error || 'Unknown Error'}`);
+            await apiClient.post(`/competitors/${id}/scrape`, {});
+            toast.success("Server-side scraping started in the background. Rates will be updated shortly!");
+            
+            // Poll/refetch data after 10 seconds, 25 seconds, and 45 seconds to show updates
+            let count = 0;
+            const timer = setInterval(() => {
+                fetchData();
+                count++;
+                if (count >= 3) {
+                    clearInterval(timer);
                     setIsScraping(false);
-                    window.removeEventListener("SCRAPE_ACK" as any, onAck);
-                    window.removeEventListener("SCRAPE_ERROR" as any, onError);
-                    window.removeEventListener("PING_PONG" as any, onPing);
-                };
-
-                window.addEventListener("PING_PONG" as any, onPing);
-                window.addEventListener("SCRAPE_ACK" as any, onAck);
-                window.addEventListener("SCRAPE_ERROR" as any, onError);
-
-                // Ping extension before sending heavy payload
-                window.dispatchEvent(new CustomEvent("EXTENSION_PING"));
-
-                setTimeout(() => {
-                    const event = new CustomEvent("INITIATE_SCRAPE", {
-                        detail: {
-                            jobs: jobsToDispatch,
-                            token: tokenStorage.getAccessToken()
-                        }
-                    });
-                    window.dispatchEvent(event);
-                }, 300); // 300ms to allow ping to settle
-
-                toast.info(`Scraping ${jobsToDispatch.length} fresh rates...`);
-
-                // Fail-safe cleanup for scraping state
-                let timeLeft = 60;
-                const timer = setInterval(() => {
-                    timeLeft -= 5;
-                    if (timeLeft <= 0) {
-                        clearInterval(timer);
-                        fetchData();
-                        setIsScraping(false);
-                        toast.success("Scraping period complete.");
-                    }
-                }, 5000);
-            } else {
-                setIsScraping(false);
-            }
-
-        } catch (error) {
+                }
+            }, 15000);
+        } catch (error: any) {
             console.error(error);
             setIsScraping(false);
-            toast.error("Failed to initiate scraping");
+            toast.error(error.message || "Failed to initiate scraping");
         }
     };
 

@@ -16,6 +16,12 @@ from app.models.rates import RoomRate
 from app.core.redis_client import redis_client
 from app.core.database import async_session
 from app.schemas.rate_ingest import RateIngestRequest
+import os
+import re
+import random
+import requests
+import asyncio
+from scrapling import Selector
 
 logger = logging.getLogger(__name__)
 
@@ -68,15 +74,169 @@ async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSes
     background_tasks.add_task(run_background_scrape, comp_id)
     return {"message": "Scrape started in background"}
 
+# Decodo Scraper API Configuration
+DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
+DECODO_AUTH_TOKEN = os.getenv("DECODO_AUTH_TOKEN", "Basic VTAwMDA0MjYwNTU6UFdfMTg0MjdiMzk3MmU3N2EzNWVlZWM3OGQ2ODhkZmIwY2Yw")
+
+def get_dynamic_dates(offset):
+    today = datetime.now()
+    checkin = (today + timedelta(days=offset)).strftime("%m%d%Y")
+    checkout = (today + timedelta(days=offset + 1)).strftime("%m%d%Y")
+    return checkin, checkout
+
+def update_url_dates(url, offset):
+    checkin, checkout = get_dynamic_dates(offset)
+    url = re.sub(r"checkin=\d{8}", f"checkin={checkin}", url)
+    url = re.sub(r"checkout=\d{8}", f"checkout={checkout}", url)
+    return url
+
+async def scrape_mmt_hotel_rate(url: str) -> dict:
+    """Performs extraction by fetching HTML via Decodo Scraper API and parsing it with Scrapling Selector."""
+    try:
+        logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}...")
+        
+        payload = {
+            "url": url,
+            "proxy_pool": "premium",
+            "headless": "html",
+            "geo": "in",
+            "device_type": "desktop_chrome"
+        }
+        
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": DECODO_AUTH_TOKEN
+        }
+        
+        # Since requests is synchronous, run in executor to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: requests.post(DECODO_URL, json=payload, headers=headers, timeout=60)
+        )
+        
+        if response.status_code != 200:
+            logger.error(f"Decodo API returned status code {response.status_code}: {response.text[:200]}")
+            return {"status": "failed", "reason": f"API_status_{response.status_code}"}
+            
+        res_json = response.json()
+        if not res_json.get("results") or len(res_json["results"]) == 0:
+            logger.error("Decodo API response doesn't contain results key or results list is empty")
+            return {"status": "failed", "reason": "empty_api_results"}
+            
+        first_result = res_json["results"][0]
+        html_content = first_result.get("content", "")
+        
+        # Check for blocking
+        if "access denied" in html_content.lower() or "access-denied" in html_content.lower() or "reference id" in html_content.lower():
+            logger.error("Blocked by Akamai (Access Denied / Reference ID)")
+            return {"status": "blocked", "reason": "shield_blocked"}
+            
+        page = Selector(html_content)
+        
+        # Check if sold out
+        sold_out_check = page.css("p.font14.appendBottom5.redText.latoBold.lineHight17").first
+        if sold_out_check and "You Just Missed It" in sold_out_check.text:
+            return {"status": "success", "price": 0.0, "is_sold_out": True}
+            
+        price_el = page.css('p.priceText.latoBlack.font22.blackText.appendBottom5[id="hlistpg_hotel_shown_price"]').first
+        if not price_el:
+            price_el = page.css('#hlistpg_hotel_shown_price').first
+            
+        if not price_el:
+            logger.warning("Scrape finished but Hotel Price element could not be found.")
+            return {"status": "failed", "reason": "price_element_not_found"}
+            
+        price_text = price_el.text.strip()
+        price_digits = re.sub(r"[^\d]", "", price_text)
+        if not price_digits:
+            logger.warning(f"Could not parse price digits from raw text: {price_text}")
+            return {"status": "failed", "reason": "price_parse_failed"}
+            
+        price = float(price_digits)
+        return {"status": "success", "price": price, "is_sold_out": False}
+        
+    except Exception as e:
+        logger.error(f"Scraper error: {e}")
+        return {"status": "failed", "reason": str(e)}
+
 async def run_background_scrape(comp_id: str):
-    """Wrapper to run scrape in its own DB session.
-    Currently, scraping is driven on the client-side via the Chrome extension which pushes rates.
-    This background task placeholder is kept for future server-side crawling/scraping support.
+    """
+    Run competitor rate scraping in the background using Decodo API + Scrapling.
+    Scrapes the next 7 days of rates.
     """
     logger.info(f"Starting Background Scrape for competitor ID: {comp_id}")
+    
     try:
-        # Server-side scraping is currently handled client-side by Chrome Extension
-        pass
+        async with async_session() as session:
+            comp = await session.get(Competitor, comp_id)
+            if not comp:
+                logger.error(f"Competitor {comp_id} not found for background scrape")
+                return
+                
+            url = comp.url
+            is_mmt = comp.source == CompetitorSource.MAKEMYTRIP or "makemytrip.com" in url.lower()
+            
+            if not is_mmt:
+                logger.warning(f"Background scrape only supported for MakeMyTrip. Competitor source: {comp.source}")
+                return
+                
+            logger.info(f"Scraping MakeMyTrip URL for competitor: {comp.name} ({comp_id})")
+            
+            # Scrape next 7 days
+            for offset in range(7):
+                check_in_date_obj = date.today() + timedelta(days=offset)
+                updated_url = update_url_dates(url, offset)
+                
+                # Sleep a random delay to avoid rate limiting
+                await asyncio.sleep(random.uniform(2, 4))
+                
+                # Scrape rate
+                rate_data = await scrape_mmt_hotel_rate(updated_url)
+                
+                if rate_data["status"] == "success":
+                    price = rate_data["price"]
+                    is_sold_out = rate_data["is_sold_out"]
+                    
+                    # Check if rate already exists for this competitor and date
+                    stmt = select(CompetitorRate).where(
+                        CompetitorRate.competitor_id == comp_id,
+                        CompetitorRate.check_in_date == check_in_date_obj
+                    )
+                    res = await session.execute(stmt)
+                    existing_rate = res.scalar_one_or_none()
+                    
+                    if existing_rate:
+                        existing_rate.price = price
+                        existing_rate.is_sold_out = is_sold_out
+                        existing_rate.fetched_at = datetime.utcnow()
+                        session.add(existing_rate)
+                    else:
+                        new_rate = CompetitorRate(
+                            competitor_id=comp_id,
+                            check_in_date=check_in_date_obj,
+                            price=price,
+                            is_sold_out=is_sold_out,
+                            fetched_at=datetime.utcnow()
+                        )
+                        session.add(new_rate)
+                    
+                    await session.commit()
+                    logger.info(f"Ingested rate for {comp.name} on {check_in_date_obj.isoformat()}: {price} (Sold out: {is_sold_out})")
+                else:
+                    logger.warning(f"Failed to scrape rate for {comp.name} on {check_in_date_obj.isoformat()}: {rate_data.get('reason')}")
+            
+            # Clear cache for this hotel
+            try:
+                r = redis_client.get_instance()
+                if r:
+                    keys_to_delete = r.keys(f"rate_comparison:{comp.hotel_id}:*") + r.keys(f"market_analysis:{comp.hotel_id}:*")
+                    if keys_to_delete:
+                        r.delete(*keys_to_delete)
+            except Exception as cache_err:
+                logger.warning(f"Failed to clear competitor cache on scrape completion: {cache_err}")
+                
     except Exception as e:
         logger.error(f"Background Scrape CRASHED for {comp_id}: {e}")
 
@@ -210,7 +370,7 @@ async def get_market_analysis(
                 "average_market_price": 0,
                 "highest_market_price": 0,
                 "market_position": "Unknown",
-                "suggestion": "No competitor data available. Check Chrome Extension."
+                "suggestion": "No competitor data available. Please trigger a refresh to fetch latest rates."
             })
             continue
 
