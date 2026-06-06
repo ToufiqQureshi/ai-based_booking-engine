@@ -96,19 +96,34 @@ async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSes
 
 # Decodo Scraper API Configuration
 DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
-DECODO_AUTH_TOKEN = get_settings().DECODO_AUTH_TOKEN or "Basic VTAwMDA0MjYwNTU6UFdfMTg0MjdiMzk3MmU3N2EzNWVlZWM3OGQ2ODhkZmIwY2Yw"
+raw_token = get_settings().DECODO_AUTH_TOKEN or "Basic VTAwMDA0MjYwNTU6UFdfMTg0MjdiMzk3MmU3N2EzNWVlZWM3OGQ2ODhkZmIwY2Yw"
+DECODO_AUTH_TOKEN = raw_token if raw_token.startswith("Basic ") else f"Basic {raw_token}"
 
 def get_dynamic_dates(offset):
     today = datetime.now()
-    checkin = (today + timedelta(days=offset)).strftime("%m%d%Y")
-    checkout = (today + timedelta(days=offset + 1)).strftime("%m%d%Y")
+    checkin = (today + timedelta(days=offset)).strftime("%d%m%Y")
+    checkout = (today + timedelta(days=offset + 1)).strftime("%d%m%Y")
     return checkin, checkout
+
+def clean_makemytrip_url(url, checkin, checkout):
+    hotel_id_match = re.search(r"(?:hotelId|topHtlId)=(\d+)", url)
+    if not hotel_id_match:
+        return url
+    
+    hotel_id = hotel_id_match.group(1)
+    city_match = re.search(r"city=([A-Za-z0-9]+)", url)
+    city = city_match.group(1) if city_match else "CTXLK"
+    
+    return f"https://www.makemytrip.com/hotels/hotel-listing/?checkin={checkin}&checkout={checkout}&city={city}&country=IN&hotelId={hotel_id}"
 
 def update_url_dates(url, offset):
     checkin, checkout = get_dynamic_dates(offset)
+    if "makemytrip.com" in url.lower():
+        return clean_makemytrip_url(url, checkin, checkout)
     url = re.sub(r"checkin=\d{8}", f"checkin={checkin}", url)
     url = re.sub(r"checkout=\d{8}", f"checkout={checkout}", url)
     return url
+
 
 async def scrape_mmt_hotel_rate(url: str) -> dict:
     """Performs extraction by fetching HTML via Decodo Scraper API and parsing it with Scrapling Selector."""
@@ -213,6 +228,7 @@ async def run_background_scrape(comp_id: str):
                 
             logger.info(f"Scraping MakeMyTrip URL for competitor: {comp.name} ({comp_id})")
             
+            success_count = 0
             has_errors = False
             last_error_reason = None
             
@@ -255,6 +271,7 @@ async def run_background_scrape(comp_id: str):
                         session.add(new_rate)
                     
                     await session.commit()
+                    success_count += 1
                     logger.info(f"Ingested rate for {comp.name} on {check_in_date_obj.isoformat()}: {price} (Sold out: {is_sold_out})")
                     
                     # Clear cache immediately on every iteration so frontend sees updates as they happen
@@ -274,13 +291,16 @@ async def run_background_scrape(comp_id: str):
             # Update final status
             comp = await session.get(Competitor, comp_id)
             if comp:
-                if has_errors:
-                    comp.last_scrape_status = "failed"
-                    comp.last_scrape_error = f"Scraping encountered errors on some dates: {last_error_reason}"
-                else:
+                if success_count > 0:
                     comp.last_scrape_status = "success"
-                    comp.last_scrape_error = None
+                    if has_errors:
+                        comp.last_scrape_error = f"Successfully scraped {success_count}/7 days. Some dates failed: {last_error_reason}"
+                    else:
+                        comp.last_scrape_error = None
                     comp.last_scraped_at = datetime.utcnow()
+                else:
+                    comp.last_scrape_status = "failed"
+                    comp.last_scrape_error = f"Scraping failed on all dates: {last_error_reason}"
                 session.add(comp)
                 await session.commit()
                 
