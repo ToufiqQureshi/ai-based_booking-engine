@@ -15,6 +15,7 @@ from app.models.room import RoomType
 from app.models.rates import RoomRate
 from app.core.redis_client import redis_client
 from app.core.database import async_session
+from app.core.config import get_settings
 from app.schemas.rate_ingest import RateIngestRequest
 import os
 import re
@@ -76,7 +77,7 @@ async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSes
 
 # Decodo Scraper API Configuration
 DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
-DECODO_AUTH_TOKEN = os.getenv("DECODO_AUTH_TOKEN", "Basic VTAwMDA0MjYwNTU6UFdfMTg0MjdiMzk3MmU3N2EzNWVlZWM3OGQ2ODhkZmIwY2Yw")
+DECODO_AUTH_TOKEN = get_settings().DECODO_AUTH_TOKEN or "Basic VTAwMDA0MjYwNTU6UFdfMTg0MjdiMzk3MmU3N2EzNWVlZWM3OGQ2ODhkZmIwY2Yw"
 
 def get_dynamic_dates(offset):
     today = datetime.now()

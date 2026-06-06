@@ -34,7 +34,7 @@ export default function RatesShopper() {
 
     // Single useQuery replacing 3 separate useEffect fetches — React Query handles
     // caching, deduplication, and background refresh automatically
-    const { data: rateShopperData, isLoading, refetch: refetchAll } = useQuery({
+    const { data: rateShopperData, isLoading, refetch: refetchAll } = useQuery<any>({
         queryKey: ['rateShopperData', startDate],
         queryFn: async () => {
             const [compRes, rateRes, analysisRes] = await Promise.all([
@@ -53,7 +53,7 @@ export default function RatesShopper() {
         staleTime: 1000 * 60 * 60, // 1 hour — competitor data doesn't change minute-to-minute
         gcTime: 1000 * 60 * 120,
         onError: () => toast.error("Failed to load rate shopper data"),
-    } as any);
+    });
 
     const competitors = rateShopperData?.competitors ?? [];
     const chartData = rateShopperData?.chartData ?? [];
