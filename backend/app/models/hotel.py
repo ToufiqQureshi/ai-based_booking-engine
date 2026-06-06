@@ -63,6 +63,10 @@ class HotelSettings(SQLModel):
     multi_room_cart: bool = True
     featured_room_type_id: Optional[str] = None
 
+    # Rate Shopper — hotelier picks the local hour (0-23) the daily
+    # auto-scrape runs at; None means auto-scrape is off (manual only).
+    rate_shopper_scrape_hour: Optional[int] = None
+
     # SMTP Configuration
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None

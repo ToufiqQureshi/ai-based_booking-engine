@@ -1,26 +1,24 @@
 from typing import List, Any, Dict, Optional
-from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks, Query
-from sqlmodel import select, desc, func
-from sqlalchemy import tuple_
+from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
+from sqlmodel import select, desc
 from datetime import date, timedelta, datetime
 import json
 import logging
-from pydantic import BaseModel
+from pydantic import BaseModel, Field as PydanticField, field_validator
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.core.feature_flags import require_feature
+from app.core.tasks import safe_background
+from app.core.decodo_usage import record_decodo_request, get_usage_summary
 from app.models.competitor import Competitor, CompetitorRate, CompetitorSource
 from app.models.hotel import Hotel
 from app.models.room import RoomType
-from app.models.rates import RoomRate
 from app.core.redis_client import redis_client
 from app.core.database import async_session
 from app.core.config import get_settings
-from app.schemas.rate_ingest import RateIngestRequest
-import os
 import re
 import random
-import requests
+import httpx
 import asyncio
 from scrapling import Selector
 
@@ -41,15 +39,60 @@ async def list_competitors(current_user: CurrentUser, session: DbSession):
     check_rate_shopper_feature(current_user)
     query = select(Competitor).where(Competitor.hotel_id == current_user.hotel_id)
     result = await session.execute(query)
-    return result.scalars().all()
+    competitors = result.scalars().all()
+
+    # Self-heal: nothing else ever revisits a competitor stuck on "running"
+    # (e.g. the worker restarted mid-scrape), so without this the Refresh
+    # button stays disabled and the UI polls forever. Surface it as a
+    # retryable failure the moment the hotelier looks at the page.
+    healed = False
+    for comp in competitors:
+        if _is_stale_running(comp):
+            comp.last_scrape_status = "failed"
+            comp.last_scrape_error = "Scrape timed out (the server may have restarted mid-run). Please try refreshing again."
+            session.add(comp)
+            healed = True
+    if healed:
+        await session.commit()
+
+    return competitors
+
+class CompetitorCreate(BaseModel):
+    """
+    Request body for adding a competitor.
+
+    Deliberately a *narrow* schema — the table model `Competitor` was
+    previously accepted directly as the request body, which let a client
+    set `id`, `hotel_id`, `is_active`, `last_scrape_status` and other
+    server-managed fields (mass assignment). Only `name`/`url`/`source`
+    are attacker-controlled inputs; everything else is derived server-side.
+    """
+    name: str
+    url: str
+    source: CompetitorSource = CompetitorSource.MAKEMYTRIP
+
+    @field_validator("name")
+    @classmethod
+    def _name_required(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("Name is required")
+        return v
+
+    @field_validator("url")
+    @classmethod
+    def _url_must_be_http(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not re.match(r"^https?://", v, re.IGNORECASE):
+            raise ValueError("URL must start with http:// or https://")
+        return v
+
 
 @router.post("", response_model=Competitor)
-async def add_competitor(comp_data: Competitor, current_user: CurrentUser, session: DbSession, background_tasks: BackgroundTasks):
+async def add_competitor(comp_data: CompetitorCreate, current_user: CurrentUser, session: DbSession):
     """Add a new competitor to track"""
     check_rate_shopper_feature(current_user)
-    # Force hotel_id
-    comp_data.hotel_id = current_user.hotel_id
-    
+
     # Check for duplicates (URL or Name)
     existing = await session.execute(
         select(Competitor).where(
@@ -58,26 +101,73 @@ async def add_competitor(comp_data: Competitor, current_user: CurrentUser, sessi
         )
     )
     existing_comp = existing.scalars().first()
-    
+
     if existing_comp:
         return existing_comp
 
-    session.add(comp_data)
+    comp = Competitor(
+        hotel_id=current_user.hotel_id,
+        name=comp_data.name,
+        url=comp_data.url,
+        source=comp_data.source,
+    )
+    session.add(comp)
     await session.commit()
-    await session.refresh(comp_data)
-    
-    return comp_data
+    await session.refresh(comp)
+
+    return comp
+
+# Decodo Scraper API Configuration
+DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
+
+# A scrape walks 7 days sequentially with a 2-4s pause between each Decodo
+# call; this is the generous upper bound for a healthy run. Past this we
+# treat "running" as a crashed/orphaned worker rather than work-in-progress
+# (no other job ever revisits these rows otherwise — see _is_stale_running).
+STALE_SCRAPE_MINUTES = 20
+
+# Each manual "Refresh Rates" click burns ~7 paid Decodo requests (premium
+# proxy + headless render). This cooldown stops a few impatient clicks from
+# multiplying our third-party bill — see CLAUDE.md "bound every cost".
+MANUAL_SCRAPE_COOLDOWN_SECONDS = 15 * 60
+
+
+def _decodo_auth_header() -> Optional[str]:
+    """
+    Build the Decodo Basic-auth header from the configured env var.
+
+    IMPORTANT: there must be NO hardcoded fallback credential here. A prior
+    version of this code shipped one as a default value — that's the exact
+    same class of bug as the leaked Razorpay secret CLAUDE.md warns about
+    (a real, working third-party credential baked into git history forever).
+    Missing config must surface as a clear "not configured" error instead.
+    """
+    token = get_settings().DECODO_AUTH_TOKEN
+    if not token:
+        return None
+    return token if token.startswith("Basic ") else f"Basic {token}"
+
+
+def _is_stale_running(comp: "Competitor") -> bool:
+    """A 'running' row with no progress for STALE_SCRAPE_MINUTES is orphaned
+    (worker restarted/crashed mid-scrape) — treat it as failed/retryable."""
+    if comp.last_scrape_status != "running":
+        return False
+    if not comp.scrape_started_at:
+        return True  # legacy rows from before we tracked start time
+    return datetime.utcnow() - comp.scrape_started_at > timedelta(minutes=STALE_SCRAPE_MINUTES)
+
 
 @router.post("/{comp_id}/scrape", dependencies=[Depends(require_feature("feature_rate_shopper"))])
 async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSession, background_tasks: BackgroundTasks):
     """Manually trigger a scrape"""
     check_rate_shopper_feature(current_user)
-    
+
     # Fetch competitor and verify ownership
     comp = await session.get(Competitor, comp_id)
     if not comp or comp.hotel_id != current_user.hotel_id:
         raise HTTPException(status_code=404, detail="Competitor not found")
-        
+
     settings = get_settings()
     if not settings.DECODO_AUTH_TOKEN:
         raise HTTPException(
@@ -85,19 +175,41 @@ async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSes
             detail="Decodo Scraper API key (DECODO_AUTH_TOKEN) is not configured in environment variables."
         )
 
+    # Don't allow a second concurrent scrape for the same competitor — this
+    # both prevents racing writes to the same CompetitorRate rows and stops
+    # double-clicks / multiple tabs from doubling the paid Decodo API calls.
+    if comp.last_scrape_status == "running" and not _is_stale_running(comp):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A scrape is already running for this competitor. Please wait for it to finish."
+        )
+
+    cooldown_key = f"scrape_cooldown:{comp_id}"
+    r = redis_client.get_instance()
+    if r:
+        try:
+            if not r.set(cooldown_key, "1", nx=True, ex=MANUAL_SCRAPE_COOLDOWN_SECONDS):
+                ttl = r.ttl(cooldown_key)
+                wait_minutes = max(1, ((ttl if ttl and ttl > 0 else MANUAL_SCRAPE_COOLDOWN_SECONDS) // 60) + 1)
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Please wait about {wait_minutes} more minute(s) before refreshing this competitor again."
+                )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.warning(f"Scrape cooldown check failed (failing open): {exc}")
+
     # Set status to running
     comp.last_scrape_status = "running"
     comp.last_scrape_error = None
+    comp.scrape_started_at = datetime.utcnow()
     session.add(comp)
     await session.commit()
-    
-    background_tasks.add_task(run_background_scrape, comp_id)
+
+    safe_background(background_tasks, lambda: run_background_scrape(comp_id), task_name="competitor_rate_scrape")
     return {"message": "Scrape started in background"}
 
-# Decodo Scraper API Configuration
-DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
-raw_token = get_settings().DECODO_AUTH_TOKEN or "Basic VTAwMDA0MjYwNTU6UFdfMTg0MjdiMzk3MmU3N2EzNWVlZWM3OGQ2ODhkZmIwY2Yw"
-DECODO_AUTH_TOKEN = raw_token if raw_token.startswith("Basic ") else f"Basic {raw_token}"
 
 def get_dynamic_dates(offset):
     today = datetime.now()
@@ -125,11 +237,15 @@ def update_url_dates(url, offset):
     return url
 
 
-async def scrape_mmt_hotel_rate(url: str) -> dict:
+async def scrape_mmt_hotel_rate(url: str, hotel_id: str) -> dict:
     """Performs extraction by fetching HTML via Decodo Scraper API and parsing it with Scrapling Selector."""
+    auth_header = _decodo_auth_header()
+    if not auth_header:
+        return {"status": "failed", "reason": "decodo_not_configured"}
+
     try:
         logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}...")
-        
+
         payload = {
             "url": url,
             "proxy_pool": "premium",
@@ -137,24 +253,35 @@ async def scrape_mmt_hotel_rate(url: str) -> dict:
             "geo": "in",
             "device_type": "desktop_chrome"
         }
-        
+
         headers = {
             "accept": "application/json",
             "content-type": "application/json",
-            "authorization": DECODO_AUTH_TOKEN
+            "authorization": auth_header
         }
-        
-        # Since requests is synchronous, run in executor to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: requests.post(DECODO_URL, json=payload, headers=headers, timeout=60)
-        )
-        
+
+        # Native async HTTP client — matches the rest of the codebase
+        # (external_sync/channel_manager/analytics all use httpx.AsyncClient).
+        # The previous `requests` + run_in_executor combo borrowed threads
+        # from the shared default executor, which Starlette also uses for
+        # sync route handlers — under concurrent scrapes that risks starving
+        # unrelated requests.
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(DECODO_URL, json=payload, headers=headers)
+        except httpx.HTTPError as e:
+            logger.error(f"Decodo API request failed before a response was received: {e}")
+            return {"status": "failed", "reason": f"request_error_{type(e).__name__}"}
+
+        # Decodo bills per processed request regardless of whether we end up
+        # finding a price — record it so the hotelier can see exactly what
+        # we're spending on their behalf (we resell this third-party capacity).
+        record_decodo_request(hotel_id)
+
         if response.status_code != 200:
             logger.error(f"Decodo API returned status code {response.status_code}: {response.text[:200]}")
             return {"status": "failed", "reason": f"API_status_{response.status_code}"}
-            
+
         res_json = response.json()
         if not res_json.get("results") or len(res_json["results"]) == 0:
             logger.error("Decodo API response doesn't contain results key or results list is empty")
@@ -209,13 +336,23 @@ async def run_background_scrape(comp_id: str):
             if not comp:
                 logger.error(f"Competitor {comp_id} not found for background scrape")
                 return
-                
+
+            # Guard against double-execution (e.g. the scheduled auto-scrape
+            # firing while a manual refresh is mid-flight, or vice versa) —
+            # each run burns paid Decodo calls, so we never want two at once
+            # for the same competitor unless the previous one is orphaned.
+            if comp.last_scrape_status == "running" and not _is_stale_running(comp):
+                logger.info(f"Skipping scrape for {comp_id} — a run is already in progress")
+                return
+
             comp.last_scrape_status = "running"
             comp.last_scrape_error = None
+            comp.scrape_started_at = datetime.utcnow()
             session.add(comp)
             await session.commit()
-            
+
             url = comp.url
+            hotel_id = comp.hotel_id
             is_mmt = comp.source == CompetitorSource.MAKEMYTRIP or "makemytrip.com" in url.lower()
             
             if not is_mmt:
@@ -241,7 +378,7 @@ async def run_background_scrape(comp_id: str):
                 await asyncio.sleep(random.uniform(2, 4))
                 
                 # Scrape rate
-                rate_data = await scrape_mmt_hotel_rate(updated_url)
+                rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id)
                 
                 if rate_data["status"] == "success":
                     price = rate_data["price"]
@@ -603,203 +740,141 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
 
     return final_res
 
-from redis.exceptions import LockError
+# --- Decodo Usage (cost transparency for hoteliers) ---
+# We buy this scraping capacity from a third party and resell it as the Rate
+# Shopper feature — every request costs us money, so the hotelier should be
+# able to see exactly how much is being used on their behalf.
 
-@router.post("/rates/ingest", response_model=dict)
-async def ingest_competitor_rates(
-    payload: RateIngestRequest,
-    session: DbSession,
-    current_user: CurrentUser
-):
+@router.get("/usage", dependencies=[Depends(require_feature("feature_rate_shopper"))])
+async def get_decodo_usage(current_user: CurrentUser):
+    """Today's and last-30-days Decodo Scraper API request counts for this hotel."""
     check_rate_shopper_feature(current_user)
-    """
-    Ingest rates from Chrome Extension (Authenticated).
-    """
-    if not payload.rates:
-        return {"message": "No rates provided", "status": "warning"}
+    return get_usage_summary(current_user.hotel_id)
 
-    comp_ids = {item.competitor_id for item in payload.rates}
-    
-    comp_query = select(Competitor.id).where(
-        Competitor.id.in_(comp_ids),
-        Competitor.hotel_id == current_user.hotel_id
+
+# --- Auto-Scrape Schedule (hotelier picks the time of day) ---
+
+class ScrapeScheduleResponse(BaseModel):
+    scrape_hour: Optional[int] = None
+    timezone: str = "Asia/Kolkata"
+
+
+class ScrapeScheduleUpdate(BaseModel):
+    scrape_hour: Optional[int] = PydanticField(default=None, ge=0, le=23)
+
+
+@router.get(
+    "/schedule",
+    response_model=ScrapeScheduleResponse,
+    dependencies=[Depends(require_feature("feature_rate_shopper"))],
+)
+async def get_scrape_schedule(current_user: CurrentUser, session: DbSession):
+    check_rate_shopper_feature(current_user)
+    hotel = await session.get(Hotel, current_user.hotel_id)
+    hotel_settings = (hotel.settings if hotel else None) or {}
+    return ScrapeScheduleResponse(
+        scrape_hour=hotel_settings.get("rate_shopper_scrape_hour"),
+        timezone=hotel_settings.get("timezone") or "Asia/Kolkata",
     )
-    valid_comp_ids = (await session.execute(comp_query)).scalars().all()
-    valid_comp_ids = set(valid_comp_ids)
 
-    if not valid_comp_ids:
-        return {"message": "No valid competitors found for this user", "status": "warning"}
 
-    valid_rates_payload = [r for r in payload.rates if r.competitor_id in valid_comp_ids]
+@router.put(
+    "/schedule",
+    response_model=ScrapeScheduleResponse,
+    dependencies=[
+        Depends(require_hotel_role("OWNER", "MANAGER")),
+        Depends(require_feature("feature_rate_shopper")),
+    ],
+)
+async def update_scrape_schedule(payload: ScrapeScheduleUpdate, current_user: CurrentUser, session: DbSession):
+    """
+    Hotelier picks what local hour (0-23, in their property's configured
+    timezone) the daily auto-scrape should run at. `null` turns auto-scrape
+    off — competitors can still be refreshed manually at any time.
+    """
+    check_rate_shopper_feature(current_user)
+    hotel = await session.get(Hotel, current_user.hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
 
-    if not valid_rates_payload:
-         return {"message": "No valid rates to ingest", "status": "warning"}
+    new_settings = dict(hotel.settings or {})
+    new_settings["rate_shopper_scrape_hour"] = payload.scrape_hour
+    hotel.settings = new_settings
+    session.add(hotel)
+    await session.commit()
 
-    keys = [(r.competitor_id, r.check_in_date) for r in valid_rates_payload]
+    return ScrapeScheduleResponse(
+        scrape_hour=payload.scrape_hour,
+        timezone=new_settings.get("timezone") or "Asia/Kolkata",
+    )
 
-    # Acquire distributed lock to prevent race conditions during concurrent ingestion
-    lock_name = f"lock:rates_ingest:{current_user.hotel_id}"
-    r_client = redis_client.get_instance()
 
-    if r_client:
-        lock = r_client.lock(lock_name, timeout=10, blocking_timeout=3)
+# Per-hotel dedupe key TTL — fires at most once per calendar day even if the
+# scheduler ticks hourly and the hour matches for >1 tick (DST edge cases etc).
+AUTO_SCRAPE_DEDUPE_TTL = 23 * 3600
+
+
+async def run_due_auto_scrapes(session) -> None:
+    """
+    Hourly scheduler tick (see app.core.scheduler): for every Rate-Shopper
+    hotel that has chosen an auto-scrape hour — IN ITS OWN LOCAL TIMEZONE,
+    the hotelier's choice, not ours — kick off a background scrape of all
+    its active competitors once that local hour arrives.
+
+    A Redis SETNX dedupe key per hotel-per-day prevents double-firing across
+    instances/ticks even if the outer scheduler lock expires mid-run.
+    """
+    from zoneinfo import ZoneInfo
+
+    now_utc = datetime.utcnow().replace(tzinfo=ZoneInfo("UTC"))
+
+    hotels_res = await session.execute(
+        select(Hotel.id, Hotel.settings).where(Hotel.feature_rate_shopper == True)
+    )
+    r = redis_client.get_instance()
+
+    for hotel_id, hotel_settings in hotels_res.all():
+        hotel_settings = hotel_settings or {}
+        scrape_hour = hotel_settings.get("rate_shopper_scrape_hour")
+        if scrape_hour is None:
+            continue
         try:
-            acquired = lock.acquire()
-            if not acquired:
-                return {"message": "System busy ingesting rates, please retry later.", "status": "warning"}
-        except Exception as e:
-            logger.warning(f"Failed to acquire redis lock: {e}")
-            lock = None
-    else:
-        lock = None
+            scrape_hour = int(scrape_hour)
+            if not (0 <= scrape_hour <= 23):
+                continue
+        except (TypeError, ValueError):
+            continue
 
-    try:
-        existing_rates_query = select(CompetitorRate).where(
-            tuple_(CompetitorRate.competitor_id, CompetitorRate.check_in_date).in_(keys)
+        tz_name = hotel_settings.get("timezone") or "UTC"
+        try:
+            local_now = now_utc.astimezone(ZoneInfo(tz_name))
+        except Exception:
+            local_now = now_utc
+
+        if local_now.hour != scrape_hour:
+            continue
+
+        dedupe_key = f"rate_shopper_auto_scrape:{hotel_id}:{local_now.strftime('%Y%m%d')}"
+        try:
+            if not r or not r.set(dedupe_key, "1", nx=True, ex=AUTO_SCRAPE_DEDUPE_TTL):
+                continue
+        except Exception as exc:
+            logger.warning(f"Auto-scrape dedupe check failed for hotel {hotel_id}: {exc}")
+            continue
+
+        comp_res = await session.execute(
+            select(Competitor.id).where(Competitor.hotel_id == hotel_id, Competitor.is_active == True)
         )
-        existing_rates_result = await session.execute(existing_rates_query)
-        existing_rates = existing_rates_result.scalars().all()
+        comp_ids = comp_res.scalars().all()
+        if not comp_ids:
+            continue
 
-        existing_map = {(r.competitor_id, r.check_in_date): r for r in existing_rates}
-
-        count_new = 0
-        count_update = 0
-
-        for item in valid_rates_payload:
-            key = (item.competitor_id, item.check_in_date)
-            
-            if key in existing_map:
-                rate_obj = existing_map[key]
-                rate_obj.price = item.price
-                rate_obj.is_sold_out = item.is_sold_out
-                rate_obj.room_type = item.room_type
-                rate_obj.fetched_at = datetime.utcnow()
-                session.add(rate_obj)
-                count_update += 1
-            else:
-                new_rate = CompetitorRate(
-                    competitor_id=item.competitor_id,
-                    check_in_date=item.check_in_date,
-                    price=item.price,
-                    is_sold_out=item.is_sold_out,
-                    room_type=item.room_type,
-                    currency=item.currency,
-                    fetched_at=datetime.utcnow()
-                )
-                session.add(new_rate)
-                count_new += 1
-
-        await session.commit()
-    finally:
-        if lock:
-            try:
-                lock.release()
-            except Exception:
-                pass
-
-    # --- Redis Write-Through (Performance) ---
-    try:
-        r = redis_client.get_instance()
-        pipe = r.pipeline()
-        for item in valid_rates_payload:
-            key = f"rate:{item.competitor_id}:{item.check_in_date.isoformat()}"
-            pipe.setex(key, 86400, "1") # 24h Expiry
-
-            # Invalidate Market Analysis Cache immediately
-            # Because rate changed, analysis might change
-            cache_key_analysis = f"market_analysis:{current_user.hotel_id}:{item.check_in_date.isoformat()}"
-            pipe.delete(cache_key_analysis)
-
-        pipe.execute()
-    except Exception as e:
-         logger.warning(f"Redis Write Failed (Ignored): {e}")
-
-    return {
-        "message": f"Processed {len(valid_rates_payload)} rates (New: {count_new}, Updated: {count_update})",
-        "status": "success"
-    }
-
-class ScrapeJobItem(BaseModel):
-    competitor_id: str
-    check_in_date: date
-
-class CheckFreshnessResponse(BaseModel):
-    jobs_to_scrape: List[ScrapeJobItem]
-    cached_count: int
-
-@router.post("/check_freshness", response_model=CheckFreshnessResponse)
-async def check_scrape_freshness(jobs: List[ScrapeJobItem], current_user: CurrentUser, session: DbSession):
-    """
-    Check if rates already exist in PostgreSQL (Supabase) instead of Redis.
-    """
-    # SECURITY (TEN-03): authenticate and scope to the caller's own competitors.
-    # Previously anonymous + unscoped, which let anyone probe another tenant's
-    # rate-shopping activity by guessing competitor ids.
-    requested_ids = {job.competitor_id for job in jobs}
-    if requested_ids:
-        owned = (await session.execute(
-            select(Competitor.id).where(
-                Competitor.id.in_(requested_ids),
-                Competitor.hotel_id == current_user.hotel_id,
-            )
-        )).scalars().all()
-        owned_ids = set(owned)
-        jobs = [j for j in jobs if j.competitor_id in owned_ids]
-
-    to_scrape = []
-    cached_hits = 0
-    
-    # 1. Fast Path: Check Redis
-    redis_misses = [] # List of jobs not found in Redis
-    try:
-        r = redis_client.get_instance()
-        pipe = r.pipeline()
-        for job in jobs:
-            key = f"rate:{job.competitor_id}:{job.check_in_date.isoformat()}"
-            pipe.exists(key)
-        results = pipe.execute()
-        
-        for i, exists in enumerate(results):
-            if exists:
-                cached_hits += 1
-            else:
-                redis_misses.append(jobs[i])
-    except Exception as e:
-        logger.warning(f"Redis Check Failed: {e}")
-        redis_misses = jobs # Fallback to DB check for all if Redis fails
-    
-    if not redis_misses:
-        return {"jobs_to_scrape": [], "cached_count": cached_hits}
-
-    # 2. Slow Path: Check DB for Redis Misses
-    comp_ids = {job.competitor_id for job in redis_misses}
-    dates = {job.check_in_date for job in redis_misses}
-    
-    query = select(CompetitorRate.competitor_id, CompetitorRate.check_in_date).where(
-        CompetitorRate.competitor_id.in_(comp_ids),
-        CompetitorRate.check_in_date.in_(dates),
-        CompetitorRate.fetched_at >= datetime.utcnow() - timedelta(hours=24)
-    )
-    
-    res = await session.execute(query)
-    existing = set(res.all())
-    
-    # 3. Populate Redis for DB Hits (Read-Repair)
-    if existing:
-        try:
-            r = redis_client.get_instance()
-            pipe = r.pipeline()
-            for cid, cdate in existing:
-                key = f"rate:{cid}:{cdate.isoformat()}"
-                pipe.setex(key, 86400, "1")
-            pipe.execute()
-        except Exception as cache_err:
-            logger.warning("Redis pipeline mark-existing failed: %s", cache_err)
-
-    for job in redis_misses:
-        if (job.competitor_id, job.check_in_date) in existing:
-            cached_hits += 1
-        else:
-            to_scrape.append(job)
-                
-    return {"jobs_to_scrape": to_scrape, "cached_count": cached_hits}
+        logger.info(
+            f"Auto-scrape: triggering {len(comp_ids)} competitor(s) for hotel {hotel_id} "
+            f"(local hour {scrape_hour}, tz {tz_name})"
+        )
+        # Sequential, not concurrent — keeps load (and the Decodo bill) for an
+        # auto-run identical to a hotelier manually clicking "Refresh Rates"
+        # on each competitor, one at a time.
+        for comp_id in comp_ids:
+            await run_background_scrape(comp_id)
