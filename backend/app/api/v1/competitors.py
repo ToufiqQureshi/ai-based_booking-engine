@@ -607,13 +607,13 @@ async def get_market_analysis(
         # Group by date - Keeping only the FIRST encountered (which is Latest due to DESC sort)
         seen_keys = set()
 
-        for r in all_rates:
-            key = (r.competitor_id, r.check_in_date)
+        for rate in all_rates:
+            key = (rate.competitor_id, rate.check_in_date)
             if key not in seen_keys:
                 seen_keys.add(key)
-                if r.check_in_date not in rates_by_date:
-                    rates_by_date[r.check_in_date] = []
-                rates_by_date[r.check_in_date].append(r.price)
+                if rate.check_in_date not in rates_by_date:
+                    rates_by_date[rate.check_in_date] = []
+                rates_by_date[rate.check_in_date].append(rate.price)
 
     # 3. Analyze
     results = []
@@ -723,10 +723,10 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
         all_rates = rate_res.scalars().all()
 
         # Populate map (since ordered by fetched_at desc, first encounter is latest)
-        for r in all_rates:
-            key = (r.competitor_id, r.check_in_date)
+        for rate in all_rates:
+            key = (rate.competitor_id, rate.check_in_date)
             if key not in rates_map:
-                rates_map[key] = r
+                rates_map[key] = rate
 
     # 4. Build Response Data (Iterate 7 days)
     chart_data = [] 
