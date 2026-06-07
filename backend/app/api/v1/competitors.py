@@ -517,18 +517,28 @@ async def run_background_scrape(comp_id: str):
                         "reason": str(ex),
                     }
 
-            # Launch all 7 scrape tasks concurrently!
-            tasks = [scrape_single_day(offset) for offset in range(7)]
-            results = await asyncio.gather(*tasks)
+            # Launch all 7 scrape tasks concurrently.
+            # as_completed processes each result the moment it finishes —
+            # we commit + clear the Redis cache after EACH day so the
+            # frontend polling sees prices appear one by one in real-time
+            # instead of waiting for all 7 to finish before anything shows.
+            pending_tasks = [
+                asyncio.create_task(scrape_single_day(offset))
+                for offset in range(7)
+            ]
 
-            # Process the results sequentially in the database session
-            for res in sorted(results, key=lambda x: x["offset"]):
-                # Check if user clicked cancel during the run
+            for coro in asyncio.as_completed(pending_tasks):
+                res = await coro
+
+                # Check cancellation flag — cancel remaining tasks if set
                 try:
                     _rc = redis_client.get_instance()
                     if _rc and _rc.get(cancel_key):
                         _rc.delete(cancel_key)
                         was_stopped = True
+                        # Cancel all still-running tasks to stop burning Decodo credits
+                        for t in pending_tasks:
+                            t.cancel()
                 except Exception as cancel_err:
                     logger.warning(f"Scrape cancel-flag check failed (ignoring): {cancel_err}")
 
@@ -567,11 +577,13 @@ async def run_background_scrape(comp_id: str):
                         )
                         session.add(new_rate)
                     
+                    # Commit immediately after each day — frontend sees the price
+                    # as soon as Decodo returns it, not after all 7 are done.
                     await session.commit()
                     success_count += 1
                     logger.info(f"Ingested rate for {comp.name} on {check_in_date_obj.isoformat()}: {price} (Sold out: {is_sold_out})")
                     
-                    # Clear cache immediately on every iteration so frontend sees updates as they happen
+                    # Clear cache immediately so the next frontend poll picks up this day's price
                     try:
                         r = redis_client.get_instance()
                         if r:
