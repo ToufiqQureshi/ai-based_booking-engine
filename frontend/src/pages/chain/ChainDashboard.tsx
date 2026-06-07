@@ -3,7 +3,7 @@ import {
   Building2, IndianRupee, TrendingUp, BookOpen, Loader2,
   ArrowLeftRight, Activity, Trophy, AlertTriangle, Users,
   Sparkles, ArrowUpRight, ArrowDownRight, Crown, Calendar,
-  ChevronRight, Download, BarChart3,
+  ChevronRight, Download, BarChart3, Trash2, Plus, Tag, Gift, Percent
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -98,13 +98,126 @@ export function ChainDashboard() {
   const navigate = useNavigate();
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const [period, setPeriod] = useState('30d');
-  const [activeTab, setActiveTab] = useState<'overview' | 'guests'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'guests' | 'promotions' | 'loyalty'>('overview');
+
+  // New states for creating promotion code
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [promoDescInput, setPromoDescInput] = useState('');
+  const [promoTypeInput, setPromoTypeInput] = useState<'percentage' | 'fixed_amount'>('percentage');
+  const [promoValInput, setPromoValInput] = useState(0);
+  const [promoStartInput, setPromoStartInput] = useState('');
+  const [promoEndInput, setPromoEndInput] = useState('');
+  const [promoMaxUsage, setPromoMaxUsage] = useState<number | ''>('');
+  const [isCreatingPromo, setIsCreatingPromo] = useState(false);
+
+  // New states for loyalty program edits
+  const [loyaltyActive, setLoyaltyActive] = useState(false);
+  const [loyaltyName, setLoyaltyName] = useState('Loyalty Program');
+  const [loyaltyDesc, setLoyaltyDesc] = useState('');
+  const [loyaltyMilestone, setLoyaltyMilestone] = useState(5);
+  const [loyaltyRewardType, setLoyaltyRewardType] = useState('percentage');
+  const [loyaltyRewardValue, setLoyaltyRewardValue] = useState(10.0);
+  const [loyaltyRewardDesc, setLoyaltyRewardDesc] = useState('');
+  const [loyaltyPopupTitle, setLoyaltyPopupTitle] = useState("You're Almost There!");
+  const [loyaltyPopupMsg, setLoyaltyPopupMsg] = useState("Book {remaining} more room(s) and unlock your reward!");
+  const [isSavingLoyalty, setIsSavingLoyalty] = useState(false);
 
   const { data, isLoading, error } = useQuery<ChainAnalytics>({
     queryKey: ['chainAnalytics', period],
     queryFn: () => apiClient.get<ChainAnalytics>(`/chain/analytics?period=${period}`),
     staleTime: 1000 * 60 * 5,
   });
+
+  const { data: loyaltyData, isLoading: loyaltyLoading, refetch: refetchLoyalty } = useQuery<any>({
+    queryKey: ['chainLoyalty'],
+    queryFn: () => apiClient.get<any>('/chain/loyalty'),
+    enabled: activeTab === 'loyalty',
+    staleTime: 1000 * 60 * 5,
+  });
+
+  React.useEffect(() => {
+    if (loyaltyData) {
+      setLoyaltyActive(loyaltyData.is_active || false);
+      setLoyaltyName(loyaltyData.program_name || 'Loyalty Program');
+      setLoyaltyDesc(loyaltyData.description || '');
+      setLoyaltyMilestone(loyaltyData.milestone_bookings || 5);
+      setLoyaltyRewardType(loyaltyData.reward_type || 'percentage');
+      setLoyaltyRewardValue(loyaltyData.reward_value || 10.0);
+      setLoyaltyRewardDesc(loyaltyData.reward_description || '');
+      setLoyaltyPopupTitle(loyaltyData.popup_title || "You're Almost There!");
+      setLoyaltyPopupMsg(loyaltyData.popup_message || "Book {remaining} more room(s) and unlock your reward!");
+    }
+  }, [loyaltyData]);
+
+  const { data: promosData, isLoading: promosLoading, refetch: refetchPromos } = useQuery<any[]>({
+    queryKey: ['chainPromos'],
+    queryFn: () => apiClient.get<any[]>('/chain/promos'),
+    enabled: activeTab === 'promotions',
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const handleSaveLoyalty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSavingLoyalty(true);
+      await apiClient.put('/chain/loyalty', {
+        is_active: loyaltyActive,
+        program_name: loyaltyName,
+        description: loyaltyDesc,
+        milestone_bookings: Number(loyaltyMilestone),
+        reward_type: loyaltyRewardType,
+        reward_value: Number(loyaltyRewardValue),
+        reward_description: loyaltyRewardDesc,
+        popup_title: loyaltyPopupTitle,
+        popup_message: loyaltyPopupMsg,
+      });
+      await refetchLoyalty();
+      alert('Loyalty Program Config Saved successfully!');
+    } catch (err: any) {
+      alert(`Failed to save: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsSavingLoyalty(false);
+    }
+  };
+
+  const handleCreatePromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoCodeInput) return;
+    try {
+      setIsCreatingPromo(true);
+      await apiClient.post('/chain/promos', {
+        code: promoCodeInput.trim().toUpperCase(),
+        description: promoDescInput,
+        discount_type: promoTypeInput,
+        discount_value: Number(promoValInput),
+        start_date: promoStartInput || null,
+        end_date: promoEndInput || null,
+        max_usage: promoMaxUsage !== '' ? Number(promoMaxUsage) : null,
+      });
+      setPromoCodeInput('');
+      setPromoDescInput('');
+      setPromoValInput(0);
+      setPromoStartInput('');
+      setPromoEndInput('');
+      setPromoMaxUsage('');
+      await refetchPromos();
+      alert('Promotion created successfully!');
+    } catch (err: any) {
+      alert(`Failed to create promotion: ${err.message || 'Promo code might already exist'}`);
+    } finally {
+      setIsCreatingPromo(false);
+    }
+  };
+
+  const handleDeletePromo = async (promoId: string) => {
+    if (!confirm('Are you sure you want to delete this promotion?')) return;
+    try {
+      await apiClient.delete(`/chain/promos/${promoId}`);
+      await refetchPromos();
+    } catch (err: any) {
+      alert(`Failed to delete promotion: ${err.message || 'Unknown error'}`);
+    }
+  };
 
   const { data: guestsData, isLoading: guestsLoading } = useQuery<ChainGuests>({
     queryKey: ['chainGuests'],
@@ -258,6 +371,28 @@ export function ChainDashboard() {
             )}
           >
             <Users className="w-4 h-4" /> Guest Insights
+          </button>
+          <button
+            onClick={() => setActiveTab('promotions')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
+              activeTab === 'promotions'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            )}
+          >
+            <Tag className="w-4 h-4" /> Brand Promos
+          </button>
+          <button
+            onClick={() => setActiveTab('loyalty')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
+              activeTab === 'loyalty'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            )}
+          >
+            <Gift className="w-4 h-4" /> Brand Loyalty
           </button>
         </div>
 
@@ -656,6 +791,327 @@ export function ChainDashboard() {
               </motion.div>
             </>
           )}
+        </motion.div>
+      )}
+
+      {/* ── BRAND PROMOTIONS TAB ── */}
+      {activeTab === 'promotions' && (
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid gap-6 md:grid-cols-3">
+          {/* Create Promo Code Form */}
+          <div className="md:col-span-1">
+            <Card className="border border-slate-100 shadow-md">
+              <CardHeader className="border-b px-5 py-4">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-indigo-600" /> Create Brand Promo
+                </CardTitle>
+                <CardDescription className="text-xs">Configure promo codes valid across all linked hotels</CardDescription>
+              </CardHeader>
+              <CardContent className="p-5">
+                <form onSubmit={handleCreatePromo} className="space-y-4 text-xs font-semibold text-slate-700">
+                  <div className="space-y-1">
+                    <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Coupon Code</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. BRANDWELCOME"
+                      value={promoCodeInput}
+                      onChange={e => setPromoCodeInput(e.target.value.toUpperCase())}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none font-bold tracking-widest bg-slate-50 focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Description</label>
+                    <textarea
+                      placeholder="Enter a brief coupon description"
+                      value={promoDescInput}
+                      onChange={e => setPromoDescInput(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none h-16 font-medium"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Discount Type</label>
+                      <select
+                        value={promoTypeInput}
+                        onChange={e => setPromoTypeInput(e.target.value as any)}
+                        className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs focus:outline-none"
+                      >
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed_amount">Fixed Amount (₹)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Discount Value</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={promoValInput || ''}
+                        onChange={e => setPromoValInput(Number(e.target.value))}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Start Date</label>
+                      <input
+                        type="date"
+                        value={promoStartInput}
+                        onChange={e => setPromoStartInput(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-slate-500 uppercase tracking-wider text-[10px]">End Date</label>
+                      <input
+                        type="date"
+                        value={promoEndInput}
+                        onChange={e => setPromoEndInput(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Max Usage Limit (Optional)</label>
+                    <input
+                      type="number"
+                      placeholder="Unlimited if left blank"
+                      value={promoMaxUsage}
+                      onChange={e => setPromoMaxUsage(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none font-medium"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isCreatingPromo}
+                    className="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-xs font-bold shadow-md hover:bg-indigo-700"
+                  >
+                    {isCreatingPromo ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Create Promotion'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Active Promo Codes Table */}
+          <div className="md:col-span-2">
+            <Card className="border border-slate-100 shadow-md">
+              <CardHeader className="border-b px-5 py-4">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-indigo-600" /> Active Brand Promotions
+                </CardTitle>
+                <CardDescription className="text-xs">Live coupon codes active across your brand portfolio</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 overflow-x-auto">
+                {promosLoading ? (
+                  <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-600" /></div>
+                ) : !promosData || promosData.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground text-xs italic">No brand-wide promotions created yet.</div>
+                ) : (
+                  <Table className="text-xs">
+                    <TableHeader>
+                      <TableRow className="bg-muted/20">
+                        <TableHead className="font-bold py-2.5">Code</TableHead>
+                        <TableHead className="font-bold">Discount</TableHead>
+                        <TableHead className="font-bold">Usage</TableHead>
+                        <TableHead className="font-bold">Validity</TableHead>
+                        <TableHead className="font-bold text-center"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {promosData.map((promo) => (
+                        <TableRow key={promo.id} className="hover:bg-muted/10">
+                          <TableCell className="font-black text-slate-800 tracking-wider py-3">{promo.code}</TableCell>
+                          <TableCell className="font-bold text-indigo-600">
+                            {promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₹${promo.discount_value}`}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {promo.current_usage || 0} / {promo.max_usage !== null ? promo.max_usage : '∞'}
+                          </TableCell>
+                          <TableCell className="text-slate-500 font-medium">
+                            {promo.start_date ? promo.start_date : 'Always'} to {promo.end_date ? promo.end_date : 'Always'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeletePromo(promo.id)}
+                              className="h-7 w-7 p-0 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── BRAND LOYALTY TAB ── */}
+      {activeTab === 'loyalty' && (
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-5">
+          <Card className="border border-slate-100 shadow-md">
+            <CardHeader className="border-b px-6 py-4 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-indigo-600" /> Brand Loyalty Program Config
+                </CardTitle>
+                <CardDescription className="text-xs">Configure cross-property points collection & redemption parameters</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                <input
+                  id="loyaltyActiveCheck"
+                  type="checkbox"
+                  checked={loyaltyActive}
+                  onChange={e => setLoyaltyActive(e.target.checked)}
+                  className="w-4.5 h-4.5 accent-indigo-600 cursor-pointer rounded"
+                />
+                <label htmlFor="loyaltyActiveCheck" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                  Program Active
+                </label>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {loyaltyLoading ? (
+                <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-600" /></div>
+              ) : (
+                <form onSubmit={handleSaveLoyalty} className="space-y-6 text-xs font-semibold text-slate-700">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Basic info */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider border-b pb-1.5">Program Details</h3>
+                      
+                      <div className="space-y-1">
+                        <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Program Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={loyaltyName}
+                          onChange={e => setLoyaltyName(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none font-bold bg-slate-50 focus:bg-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Description</label>
+                        <textarea
+                          value={loyaltyDesc}
+                          onChange={e => setLoyaltyDesc(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none h-24 font-medium"
+                          placeholder="Describe the rules and benefits of the loyalty program"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Milestone and Reward */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider border-b pb-1.5">Rules & Rewards</h3>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Milestone (Stays)</label>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            value={loyaltyMilestone}
+                            onChange={e => setLoyaltyMilestone(Number(e.target.value))}
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none bg-slate-50 focus:bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Reward Type</label>
+                          <select
+                            value={loyaltyRewardType}
+                            onChange={e => setLoyaltyRewardType(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs focus:outline-none bg-slate-50"
+                          >
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="fixed_amount">Fixed Amount (₹)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Reward Value</label>
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            step="0.01"
+                            value={loyaltyRewardValue}
+                            onChange={e => setLoyaltyRewardValue(Number(e.target.value))}
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none bg-slate-50 focus:bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Reward Description</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 10% Loyalty Discount"
+                            value={loyaltyRewardDesc}
+                            onChange={e => setLoyaltyRewardDesc(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none font-medium bg-slate-50 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-3 border-t">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider pb-1 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" /> Milestone Nudge Banner
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="space-y-1">
+                        <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Popup Title</label>
+                        <input
+                          type="text"
+                          required
+                          value={loyaltyPopupTitle}
+                          onChange={e => setLoyaltyPopupTitle(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none font-bold bg-slate-50 focus:bg-white"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Popup Nudge Message</label>
+                        <input
+                          type="text"
+                          required
+                          value={loyaltyPopupMsg}
+                          onChange={e => setLoyaltyPopupMsg(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:outline-none font-medium bg-slate-50 focus:bg-white"
+                        />
+                        <span className="text-[10px] text-slate-400 font-bold block pt-0.5">Use `{`{remaining}`} ` placeholder to auto-inject stays left.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4 border-t">
+                    <Button
+                      type="submit"
+                      disabled={isSavingLoyalty}
+                      className="bg-indigo-600 text-white rounded-lg px-8 py-3 text-xs font-bold shadow-md hover:bg-indigo-700"
+                    >
+                      {isSavingLoyalty ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : 'Save Configurations'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          </Card>
         </motion.div>
       )}
     </PageShell>

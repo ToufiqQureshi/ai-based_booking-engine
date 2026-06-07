@@ -112,6 +112,8 @@ class BookingBase(SQLModel):
     subtotal_amount: float = Field(default=0.0)
     tax_amount: float = Field(default=0.0)
     discount_amount: float = Field(default=0.0)
+    loyalty_points_earned: float = Field(default=0.0, ge=0)
+    loyalty_points_redeemed: float = Field(default=0.0, ge=0)
 
 
 class Booking(BookingBase, table=True):

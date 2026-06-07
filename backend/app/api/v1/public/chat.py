@@ -161,6 +161,7 @@ class GuestChatRequest(BaseModel):
     hotel_slug: str
     message: str
     history: List[Dict[str, str]] = [] # [{"role": "user", "content": "Hi"}, {"role": "assistant", "content": "Hello"}]
+    guest_email: Optional[str] = None
 
 class GuestChatResponse(BaseModel):
     response: str
@@ -260,6 +261,7 @@ async def chat_with_guest_ai(
             (getattr(integration_settings, 'ai_base_url', None) or getattr(hotel, 'ai_base_url', None)),
             hotel.name,
             _max_tokens,
+            payload.guest_email,
         )
         if not agent:
             return GuestChatResponse(response="AI Concierge is currently offline for this hotel. Please contact the front desk directly.")
@@ -318,7 +320,7 @@ async def chat_with_guest_ai(
                         max_tokens=fallback_max_tokens,
                     )
 
-                system_prompt_str = await get_guest_system_prompt_content(session, hotel.id, hotel.name)
+                system_prompt_str = await get_guest_system_prompt_content(session, hotel.id, hotel.name, payload.guest_email)
                 fallback_agent = Agent(model=fallback_llm, instructions=system_prompt_str)
                 # Pass full conversation so context isn't lost
                 fallback_result = await fallback_agent.arun(messages)
@@ -412,6 +414,7 @@ async def stream_guest_ai(
             (getattr(integration_settings, "ai_base_url", None) or getattr(hotel, "ai_base_url", None)),
             hotel.name,
             _stream_max_tokens,
+            payload.guest_email,
         )
     except HTTPException:
         raise

@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
 import { apiClient } from '@/api/client';
-import { AddOn } from '@/types/api';
+import { AddOn, PublicRoomSearchResult } from '@/types/api';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { BookingStepper } from '@/components/public/BookingStepper';
@@ -97,6 +97,11 @@ function BookingCheckoutInner() {
     const [promoMessage, setPromoMessage] = useState('');
     const [isValidating, setIsValidating] = useState(false);
 
+    // Loyalty points state
+    const [pointsBalance, setPointsBalance] = useState(0);
+    const [redeemPointsActive, setRedeemPointsActive] = useState(false);
+    const [redeemPointsAmount, setRedeemPointsAmount] = useState(0);
+
     // Loyalty state — reward popup (coupon unlocked)
     const [loyaltyData, setLoyaltyData] = useState<{
         isOpen: boolean;
@@ -118,6 +123,105 @@ function BookingCheckoutInner() {
 
     const [hasCheckedLoyalty, setHasCheckedLoyalty] = useState(false);
     const [allAddons, setAllAddons] = useState<AddOn[]>([]);
+
+    // Date change states
+    const [isChangingDates, setIsChangingDates] = useState(false);
+    const [newCheckIn, setNewCheckIn] = useState('');
+    const [newCheckOut, setNewCheckOut] = useState('');
+    const [isUpdatingDates, setIsUpdatingDates] = useState(false);
+
+    const handleOpenDateChange = () => {
+        if (!state) return;
+        setNewCheckIn(format(new Date(state.checkInDate), 'yyyy-MM-dd'));
+        setNewCheckOut(format(new Date(state.checkOutDate), 'yyyy-MM-dd'));
+        setIsChangingDates(true);
+    };
+
+    const handleUpdateDates = async () => {
+        if (!newCheckIn || !newCheckOut || !state) return;
+        
+        if (new Date(newCheckOut) <= new Date(newCheckIn)) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Dates',
+                description: 'Check-out date must be after Check-in date.',
+            });
+            return;
+        }
+
+        setIsUpdatingDates(true);
+        try {
+            const queryGuests = state.guests || '1';
+            const query = new URLSearchParams({
+                check_in: newCheckIn,
+                check_out: newCheckOut,
+                guests: queryGuests.toString(),
+                adults: (state.guests || 2).toString(),
+                rooms: '1'
+            }).toString();
+
+            const roomsData = await apiClient.get<PublicRoomSearchResult[]>(`/public/hotels/${hotelSlug}/rooms?${query}`);
+            
+            const selectedRoomId = state.rooms[0]?.id;
+            const selectedRatePlanId = state.rooms[0]?.rate_plan_id;
+            
+            const matchedRoom = roomsData.find(r => r.id === selectedRoomId);
+            if (!matchedRoom) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Room Unavailable',
+                    description: 'This room type is not available for the newly selected dates.',
+                });
+                return;
+            }
+
+            const matchedRate = (matchedRoom.rate_options || []).find(o => o.id === selectedRatePlanId) 
+                || matchedRoom.rate_options?.[0];
+
+            if (!matchedRate) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Rate Option Unavailable',
+                    description: 'No matching pricing options are available for the new dates.',
+                });
+                return;
+            }
+
+            setState(prev => {
+                if (!prev) return null;
+                return {
+                    ...prev,
+                    checkInDate: new Date(newCheckIn),
+                    checkOutDate: new Date(newCheckOut),
+                    rooms: [{
+                        ...prev.rooms[0],
+                        price_per_night: matchedRate.price_per_night,
+                        total_price: matchedRate.total_price,
+                        rate_plan_id: matchedRate.id,
+                        rate_plan_name: matchedRate.name
+                    }],
+                    totalRoomPrice: matchedRate.total_price
+                };
+            });
+
+            toast({
+                title: 'Dates Updated',
+                description: `Successfully shifted stay dates to ${format(new Date(newCheckIn), 'MMM dd')} - ${format(new Date(newCheckOut), 'MMM dd')}.`,
+            });
+            setIsChangingDates(false);
+
+        } catch (error) {
+            console.error('Failed to update stay dates:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Search Failed',
+                description: 'Failed to check availability for the new dates. Please try again.',
+            });
+        } finally {
+            setIsUpdatingDates(false);
+        }
+    };
+
 
     useEffect(() => {
         if (hotelSlug) {
@@ -146,6 +250,12 @@ function BookingCheckoutInner() {
     };
 
     const emailValue = watch('email');
+
+    useEffect(() => {
+        if (emailValue && !hasCheckedLoyalty && state) {
+            handleEmailBlur();
+        }
+    }, [emailValue, state, hasCheckedLoyalty]);
 
     // Auto-set paymentMethod when hotel setting loads
     useEffect(() => {
@@ -236,6 +346,11 @@ function BookingCheckoutInner() {
             });
 
             setHasCheckedLoyalty(true);
+
+            if (response.points_balance) {
+                setPointsBalance(response.points_balance);
+                setRedeemPointsAmount(response.points_balance);
+            }
 
             if (response.coupon_code) {
                 // Reward unlocked
@@ -330,6 +445,7 @@ function BookingCheckoutInner() {
                 payment_method: paymentMethod === 'property' ? 'pay_at_property' : 'online',
                 source: state.source === 'ai_agent' ? 'ai_agent' : undefined,
                 idempotency_key: idempotencyKeyRef.current,
+                redeem_points: redeemPointsActive ? redeemPointsAmount : undefined,
             };
 
             // First create the booking
@@ -579,7 +695,8 @@ function BookingCheckoutInner() {
     const taxAmount = roomTaxAmount + addonTaxAmount;
     const totalBeforeDiscount = (roomTaxType === 'exclusive' ? (state?.totalRoomPrice ?? 0) + roomTaxAmount : (state?.totalRoomPrice ?? 0)) +
                                 (addonTaxType === 'exclusive' ? addonsTotal + addonTaxAmount : addonsTotal);
-    const finalTotal = totalBeforeDiscount - discountAmount;
+    const pointsDiscount = redeemPointsActive ? Math.min(redeemPointsAmount, totalBeforeDiscount - discountAmount) : 0;
+    const finalTotal = totalBeforeDiscount - discountAmount - pointsDiscount;
 
     const handleApplyPromo = async (codeToApply?: string) => {
         const code = codeToApply || promoCode;
@@ -618,15 +735,20 @@ function BookingCheckoutInner() {
 
     const ctx = useMemo(() => ({
         hotelSlug: hotelSlug as string, hotel, room, state, setState, register, formState, getNormalizedColor, themeColor, handleEmailBlur, allAddons, currentAddons: state?.addons || [], handleToggleAddon, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, paymentMethod, setPaymentMethod, handleCheckout: onSubmit, handleSubmit, nights, hotelPaymentMode, roomsTotal: subtotalAmount - (state?.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0), addonsTotal: state?.addons ? state.addons.reduce((sum: number, a: any) => sum + a.price, 0) : 0,
-        appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount, addonTaxRate, addonTaxAmount, appliedPromo, setAppliedPromo, setDiscountAmount
+        appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount, addonTaxRate, addonTaxAmount, appliedPromo, setAppliedPromo, setDiscountAmount,
+        pointsBalance, setPointsBalance, redeemPointsActive, setRedeemPointsActive, redeemPointsAmount, setRedeemPointsAmount,
+        handleOpenDateChange
     }), [
         hotelSlug, hotel, room, state, register, formState, themeColor, allAddons,
         roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName,
         promoCode, promoMessage, isValidating, discountAmount, finalTotal,
         isSubmitting, paymentMethod, nights, hotelPaymentMode,
         appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount,
-        addonTaxRate, addonTaxAmount, appliedPromo
+        addonTaxRate, addonTaxAmount, appliedPromo,
+        pointsBalance, redeemPointsActive, redeemPointsAmount,
+        handleOpenDateChange
     ]);
+
 
     // Early return AFTER all hooks — guards the render below when state isn't loaded yet
     if (isInitializing) {
@@ -842,6 +964,58 @@ function BookingCheckoutInner() {
                 milestoneTotal={milestoneData.milestoneTotal}
                 onContinue={() => setMilestoneData(prev => ({ ...prev, isOpen: false }))}
             />
+
+            {/* Date Change Modal */}
+            {isChangingDates && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full border border-slate-100 shadow-2xl space-y-6">
+                        <div>
+                            <h3 className="text-xl font-black text-slate-800 tracking-tight">Modify Stay Dates</h3>
+                            <p className="text-xs text-slate-500 font-medium mt-1">Changing dates will check current room availability and update your reservation pricing.</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <Label htmlFor="newCheckIn" className="text-[10px] font-black text-slate-400 uppercase tracking-wider">New Check-in</Label>
+                                <Input
+                                    id="newCheckIn"
+                                    type="date"
+                                    value={newCheckIn}
+                                    onChange={(e) => setNewCheckIn(e.target.value)}
+                                    className="h-12 rounded-xl bg-slate-50 border-slate-200"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="newCheckOut" className="text-[10px] font-black text-slate-400 uppercase tracking-wider">New Check-out</Label>
+                                <Input
+                                    id="newCheckOut"
+                                    type="date"
+                                    value={newCheckOut}
+                                    onChange={(e) => setNewCheckOut(e.target.value)}
+                                    className="h-12 rounded-xl bg-slate-50 border-slate-200"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1 h-12 rounded-xl font-bold text-sm"
+                                onClick={() => setIsChangingDates(false)}
+                                disabled={isUpdatingDates}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1 h-12 rounded-xl font-bold text-sm text-white"
+                                style={{ backgroundColor: themeColor }}
+                                onClick={handleUpdateDates}
+                                disabled={isUpdatingDates || !newCheckIn || !newCheckOut}
+                            >
+                                {isUpdatingDates ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Dates'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
         </BookingCheckoutContext.Provider>
     );

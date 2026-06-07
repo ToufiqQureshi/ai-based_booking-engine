@@ -345,3 +345,126 @@ async def get_chain_guests(
         "offset": offset,
         "has_more": (offset + limit) < total_guest_count,
     }
+
+
+# ── Chain-Wide Promos & Loyalty ───────────────────────────────────────────────
+from pydantic import BaseModel
+from app.models.promo import PromoCode
+from app.models.loyalty import LoyaltyProgram
+
+class ChainPromoCreate(BaseModel):
+    code: str
+    description: Optional[str] = None
+    discount_type: str = "percentage"
+    discount_value: float
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    max_usage: Optional[int] = None
+
+class ChainLoyaltyUpdate(BaseModel):
+    is_active: Optional[bool] = None
+    program_name: Optional[str] = None
+    description: Optional[str] = None
+    milestone_bookings: Optional[int] = None
+    reward_type: Optional[str] = None
+    reward_value: Optional[float] = None
+    reward_description: Optional[str] = None
+    popup_title: Optional[str] = None
+    popup_message: Optional[str] = None
+
+@router.get("/promos", response_model=List[PromoCode])
+async def list_chain_promos(
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """List all promo codes for the chain group."""
+    query = select(PromoCode).where(PromoCode.chain_id == current_user.chain_id)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+@router.post("/promos", response_model=PromoCode)
+async def create_chain_promo(
+    payload: ChainPromoCreate,
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """Create a new chain-wide promo code."""
+    existing = await session.execute(
+        select(PromoCode).where(
+            PromoCode.code == payload.code,
+            PromoCode.chain_id == current_user.chain_id
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Promo code already exists in this chain")
+
+    promo = PromoCode(
+        chain_id=current_user.chain_id,
+        hotel_id=None,
+        code=payload.code,
+        description=payload.description,
+        discount_type=payload.discount_type,
+        discount_value=payload.discount_value,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        max_usage=payload.max_usage,
+        is_active=True
+    )
+    session.add(promo)
+    await session.commit()
+    await session.refresh(promo)
+    return promo
+
+@router.delete("/promos/{promo_id}")
+async def delete_chain_promo(
+    promo_id: str,
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """Delete a chain-level promo code."""
+    promo = await session.get(PromoCode, promo_id)
+    if not promo or promo.chain_id != current_user.chain_id:
+        raise HTTPException(status_code=404, detail="Promotion not found")
+    await session.delete(promo)
+    await session.commit()
+    return {"ok": True}
+
+@router.get("/loyalty", response_model=LoyaltyProgram)
+async def get_chain_loyalty(
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """Get or auto-create the chain's loyalty program settings."""
+    result = await session.execute(
+        select(LoyaltyProgram).where(LoyaltyProgram.chain_id == current_user.chain_id)
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        program = LoyaltyProgram(chain_id=current_user.chain_id, hotel_id=None)
+        session.add(program)
+        await session.commit()
+        await session.refresh(program)
+    return program
+
+@router.put("/loyalty", response_model=LoyaltyProgram)
+async def update_chain_loyalty(
+    payload: ChainLoyaltyUpdate,
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """Update chain loyalty program parameters."""
+    result = await session.execute(
+        select(LoyaltyProgram).where(LoyaltyProgram.chain_id == current_user.chain_id)
+    )
+    program = result.scalar_one_or_none()
+    if not program:
+        program = LoyaltyProgram(chain_id=current_user.chain_id, hotel_id=None)
+        session.add(program)
+
+    for field, val in payload.model_dump(exclude_none=True).items():
+        setattr(program, field, val)
+    program.updated_at = datetime.utcnow()
+    await session.commit()
+    await session.refresh(program)
+    return program
+

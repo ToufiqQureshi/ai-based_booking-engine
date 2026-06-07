@@ -45,6 +45,13 @@ export interface BookingCheckoutContextType {
     hotelPaymentMode: string;
     roomsTotal: number;
     addonsTotal: number;
+    pointsBalance?: number;
+    setPointsBalance?: (val: number) => void;
+    redeemPointsActive?: boolean;
+    setRedeemPointsActive?: (val: boolean) => void;
+    redeemPointsAmount?: number;
+    setRedeemPointsAmount?: (val: number) => void;
+    handleOpenDateChange?: () => void;
 }
 
 export const BookingCheckoutContext = createContext<BookingCheckoutContextType | null>(null);

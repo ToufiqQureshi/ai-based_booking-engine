@@ -11,7 +11,8 @@ class LoyaltyProgram(SQLModel, table=True):
     __tablename__ = "loyalty_programs"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    hotel_id: str = Field(foreign_key="hotels.id", index=True, unique=True)
+    hotel_id: Optional[str] = Field(default=None, foreign_key="hotels.id", index=True, unique=True)
+    chain_id: Optional[str] = Field(default=None, foreign_key="chains.id", index=True)
 
     is_active: bool = Field(default=False)
     program_name: str = Field(default="Loyalty Program")
@@ -34,17 +35,20 @@ class LoyaltyProgram(SQLModel, table=True):
 
 
 class GuestLoyalty(SQLModel, table=True):
-    """Tracks per-guest loyalty progress per hotel."""
+    """Tracks per-guest loyalty progress per hotel or chain."""
     __tablename__ = "guest_loyalty"
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    hotel_id: str = Field(foreign_key="hotels.id", index=True)
+    hotel_id: Optional[str] = Field(default=None, foreign_key="hotels.id", index=True)
+    chain_id: Optional[str] = Field(default=None, foreign_key="chains.id", index=True)
     guest_email: str = Field(index=True)
 
     total_completed_bookings: int = Field(default=0)
     total_rooms_booked: int = Field(default=0)
     total_spend: float = Field(default=0.0)
     rewards_earned: int = Field(default=0)
+    points_balance: float = Field(default=0.0)
     last_booking_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+

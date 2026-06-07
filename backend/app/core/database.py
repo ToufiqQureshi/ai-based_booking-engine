@@ -142,11 +142,39 @@ async def init_db():
         ("last_scrape_status", "VARCHAR(50) DEFAULT NULL"),
         ("last_scrape_error", "TEXT DEFAULT NULL"),
         ("last_scraped_at", "TIMESTAMP DEFAULT NULL"),
-        ("scrape_started_at", "TIMESTAMP DEFAULT NULL")
+        ("scrape_started_at", "TIMESTAMP DEFAULT NULL"),
+        ("is_scheduled", "BOOLEAN DEFAULT FALSE"),
     ]:
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE competitors ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
+    # Chain-wide features migrations
+    for table_alter in [
+        "ALTER TABLE chains ADD COLUMN primary_color VARCHAR(50) DEFAULT '#4f46e5'",
+        "ALTER TABLE loyalty_programs ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
+        "ALTER TABLE loyalty_programs ALTER COLUMN hotel_id DROP NOT NULL",
+        "ALTER TABLE guest_loyalty ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
+        "ALTER TABLE guest_loyalty ALTER COLUMN hotel_id DROP NOT NULL",
+        "ALTER TABLE guest_loyalty ADD COLUMN points_balance NUMERIC DEFAULT 0.00",
+        "ALTER TABLE promo_codes ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
+        "ALTER TABLE promo_codes ALTER COLUMN hotel_id DROP NOT NULL"
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(table_alter))
+        except Exception:
+            pass
+
+    for col, col_type in [
+        ("loyalty_points_earned", "NUMERIC DEFAULT 0.00"),
+        ("loyalty_points_redeemed", "NUMERIC DEFAULT 0.00")
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
         except Exception:
             pass
 

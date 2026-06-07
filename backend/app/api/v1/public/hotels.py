@@ -304,6 +304,7 @@ async def get_public_chain(request: Request, chain_slug: str, session: DbSession
             "city": getattr(h, "city", None),
             "logo_url": h.logo_url,
             "star_rating": getattr(h, "star_rating", None),
+            "primary_color": h.primary_color or "#7C3AED",
         }
         for h in hotels
     ]
@@ -323,3 +324,229 @@ async def get_public_chain(request: Request, chain_slug: str, session: DbSession
         pass
 
     return response
+
+
+@router.get("/chain/{chain_slug}/recommendations")
+@limiter.limit("60/minute")
+async def get_chain_recommendations(
+    request: Request,
+    chain_slug: str,
+    session: DbSession,
+    check_in: date = Query(...),
+    check_out: date = Query(...),
+    guests: int = Query(2),
+    exclude_hotel_id: Optional[str] = Query(None)
+):
+    """
+    Get alternative properties in the same chain with rooms available.
+    """
+    from app.models.chain import Chain
+    
+    # 1. Resolve chain
+    chain_res = await session.execute(select(Chain).where(Chain.slug == chain_slug))
+    chain = chain_res.scalar_one_or_none()
+    if not chain:
+        raise HTTPException(status_code=404, detail="Chain not found")
+        
+    cache_key = f"public:recommendations:{chain.id}:{check_in}:{check_out}:{guests}:{exclude_hotel_id}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
+    # 2. Get active hotels in the chain, excluding exclude_hotel_id
+    stmt = select(Hotel).where(
+        Hotel.chain_id == chain.id,
+        Hotel.is_active == True
+    )
+    if exclude_hotel_id:
+        stmt = stmt.where(Hotel.id != exclude_hotel_id)
+    hotels_res = await session.execute(stmt)
+    hotels = hotels_res.scalars().all()
+    
+    recommendations = []
+    
+    # 3. For each hotel, check availability of room types
+    for h in hotels:
+        rt_stmt = select(RoomType).where(
+            RoomType.hotel_id == h.id,
+            RoomType.is_active == True,
+            RoomType.max_occupancy >= guests
+        )
+        rt_res = await session.execute(rt_stmt)
+        room_types = rt_res.scalars().all()
+        if not room_types:
+            continue
+            
+        bk_stmt = select(Booking).where(
+            Booking.hotel_id == h.id,
+            Booking.status != BookingStatus.CANCELLED,
+            and_(
+                Booking.check_in < check_out,
+                Booking.check_out > check_in
+            )
+        )
+        bk_res = await session.execute(bk_stmt)
+        bookings = bk_res.scalars().all()
+        
+        bl_stmt = select(RoomBlock).where(
+            RoomBlock.hotel_id == h.id,
+            and_(
+                RoomBlock.start_date <= check_out,
+                RoomBlock.end_date >= check_in
+            )
+        )
+        bl_res = await session.execute(bl_stmt)
+        blocks = bl_res.scalars().all()
+        
+        hotel_min_price = None
+        hotel_total_available = 0
+        
+        for rt in room_types:
+            booked_count = sum(
+                1 for b in bookings for rb in b.rooms if rb.get("room_type_id") == rt.id
+            )
+            blocked_count = sum(
+                block.blocked_count for block in blocks if block.room_type_id == rt.id
+            )
+            available = rt.total_inventory - (booked_count + blocked_count)
+            
+            if available > 0:
+                hotel_total_available += available
+                price = float(rt.base_price)
+                if hotel_min_price is None or price < hotel_min_price:
+                    hotel_min_price = price
+                    
+        if hotel_total_available > 0 and hotel_min_price is not None:
+            nights = max(1, (check_out - check_in).days)
+            recommendations.append({
+                "hotel_id": h.id,
+                "name": h.name,
+                "slug": h.slug,
+                "city": getattr(h, "city", None),
+                "logo_url": h.logo_url,
+                "star_rating": getattr(h, "star_rating", None),
+                "price_starting_at": round(hotel_min_price * nights, 2),
+                "available_rooms": hotel_total_available
+            })
+            
+    try:
+        redis_client.set_value(cache_key, json.dumps(recommendations), expire=60)
+    except Exception:
+        pass
+        
+    return recommendations
+
+
+@router.get("/hotels/{hotel_identifier}/recommendations")
+@limiter.limit("60/minute")
+async def get_hotel_recommendations(
+    request: Request,
+    hotel_identifier: str,
+    session: DbSession,
+    check_in: date = Query(...),
+    check_out: date = Query(...),
+    guests: int = Query(2)
+):
+    """
+    Get alternative properties in the same chain as this hotel with rooms available.
+    """
+    # 1. Resolve hotel ID
+    hotel_id = await resolve_hotel_id(hotel_identifier, session)
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel or not hotel.chain_id:
+        return []
+        
+    cache_key = f"public:recommendations:hotel:{hotel_id}:{check_in}:{check_out}:{guests}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
+    # 2. Get active hotels in the chain, excluding this hotel
+    stmt = select(Hotel).where(
+        Hotel.chain_id == hotel.chain_id,
+        Hotel.id != hotel_id,
+        Hotel.is_active == True
+    )
+    hotels_res = await session.execute(stmt)
+    hotels = hotels_res.scalars().all()
+    
+    recommendations = []
+    
+    # 3. For each hotel, check availability of room types
+    for h in hotels:
+        rt_stmt = select(RoomType).where(
+            RoomType.hotel_id == h.id,
+            RoomType.is_active == True,
+            RoomType.max_occupancy >= guests
+        )
+        rt_res = await session.execute(rt_stmt)
+        room_types = rt_res.scalars().all()
+        if not room_types:
+            continue
+            
+        bk_stmt = select(Booking).where(
+            Booking.hotel_id == h.id,
+            Booking.status != BookingStatus.CANCELLED,
+            and_(
+                Booking.check_in < check_out,
+                Booking.check_out > check_in
+            )
+        )
+        bk_res = await session.execute(bk_stmt)
+        bookings = bk_res.scalars().all()
+        
+        bl_stmt = select(RoomBlock).where(
+            RoomBlock.hotel_id == h.id,
+            and_(
+                RoomBlock.start_date <= check_out,
+                RoomBlock.end_date >= check_in
+            )
+        )
+        bl_res = await session.execute(bl_stmt)
+        blocks = bl_res.scalars().all()
+        
+        hotel_min_price = None
+        hotel_total_available = 0
+        
+        for rt in room_types:
+            booked_count = sum(
+                1 for b in bookings for rb in b.rooms if rb.get("room_type_id") == rt.id
+            )
+            blocked_count = sum(
+                block.blocked_count for block in blocks if block.room_type_id == rt.id
+            )
+            available = rt.total_inventory - (booked_count + blocked_count)
+            
+            if available > 0:
+                hotel_total_available += available
+                price = float(rt.base_price)
+                if hotel_min_price is None or price < hotel_min_price:
+                    hotel_min_price = price
+                    
+        if hotel_total_available > 0 and hotel_min_price is not None:
+            nights = max(1, (check_out - check_in).days)
+            recommendations.append({
+                "hotel_id": h.id,
+                "name": h.name,
+                "slug": h.slug,
+                "city": getattr(h, "city", None),
+                "logo_url": h.logo_url,
+                "star_rating": getattr(h, "star_rating", None),
+                "price_starting_at": round(hotel_min_price * nights, 2),
+                "available_rooms": hotel_total_available
+            })
+            
+    try:
+        redis_client.set_value(cache_key, json.dumps(recommendations), expire=60)
+    except Exception:
+        pass
+        
+    return recommendations
+
+

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import select
+from sqlmodel import select, or_
 from typing import List, Optional
 from datetime import datetime, date
 
 from app.api.deps import DbSession, CurrentUser
 from app.models.promo import PromoCode
+from app.models.hotel import Hotel
 
 router = APIRouter()
 
@@ -81,9 +82,13 @@ async def validate_promo(
     hotel_id = payload.hotel_id
     booking_amount = payload.booking_amount
 
+    # Get hotel's chain_id
+    hotel_res = await session.execute(select(Hotel.chain_id).where(Hotel.id == hotel_id))
+    chain_id = hotel_res.scalar_one_or_none()
+
     query = select(PromoCode).where(
         PromoCode.code == code,
-        PromoCode.hotel_id == hotel_id,
+        or_(PromoCode.hotel_id == hotel_id, PromoCode.chain_id == chain_id),
         PromoCode.is_active == True
     )
     result = await session.execute(query)

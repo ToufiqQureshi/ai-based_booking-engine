@@ -20,6 +20,7 @@ class ChainCreateUpdate(BaseModel):
     name: str
     slug: str
     logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
 
 
 class ChainLinkRequest(BaseModel):
@@ -64,6 +65,7 @@ async def list_chains(
             "name": c.name,
             "slug": c.slug,
             "logo_url": c.logo_url,
+            "primary_color": c.primary_color,
             "created_at": c.created_at.isoformat() if c.created_at else None,
             "hotels": hotels_by_chain.get(c.id, []),
             "users": users_by_chain.get(c.id, []),
@@ -88,7 +90,8 @@ async def create_chain(
     new_chain = Chain(
         name=data.name,
         slug=data.slug,
-        logo_url=data.logo_url
+        logo_url=data.logo_url,
+        primary_color=data.primary_color
     )
     session.add(new_chain)
     
@@ -126,6 +129,7 @@ async def update_chain(
     chain.name = data.name
     chain.slug = data.slug
     chain.logo_url = data.logo_url
+    chain.primary_color = data.primary_color
     chain.updated_at = datetime.utcnow()
     session.add(chain)
     

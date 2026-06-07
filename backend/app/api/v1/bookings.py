@@ -496,6 +496,12 @@ async def update_booking(
             message=f"Booking status updated from {old_status} to {new_status}",
             changed_by=str(current_user.id)
         )
+        if new_status == BookingStatus.CHECKED_OUT:
+            from app.core.tasks import process_loyalty_checkout_task
+            background_tasks.add_task(
+                process_loyalty_checkout_task,
+                booking_id=booking.id
+            )
         
     booking.updated_at = datetime.utcnow()
     session.add(booking)

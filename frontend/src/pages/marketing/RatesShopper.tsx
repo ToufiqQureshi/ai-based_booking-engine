@@ -230,6 +230,17 @@ export default function RatesShopper() {
         }
     };
 
+    const handleToggleSchedule = async (id: string, isScheduled: boolean) => {
+        try {
+            await apiClient.patch(`/competitors/${id}/schedule`, { is_scheduled: isScheduled });
+            toast.success(isScheduled ? "Daily schedule enabled for this channel!" : "Daily schedule disabled.");
+            fetchData();
+        } catch (error: any) {
+            console.error(error);
+            toast.error("Failed to update schedule status");
+        }
+    };
+
     // Colors for graph
     const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#d0ed57"];
 
@@ -536,6 +547,22 @@ export default function RatesShopper() {
                                             ✅ Rates synced (last: {comp.last_scraped_at ? new Date(comp.last_scraped_at).toLocaleTimeString() : 'Just now'})
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Scheduler Configuration */}
+                                <div className="flex items-center justify-between mb-4 bg-muted/30 p-2 rounded-lg border border-dashed border-muted">
+                                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                                        🕒 Daily Auto-refresh
+                                    </span>
+                                    <Button
+                                        variant={comp.is_scheduled ? "default" : "outline"}
+                                        size="sm"
+                                        className="h-7 px-3 text-[10px]"
+                                        disabled={comp.last_scrape_status === 'running'}
+                                        onClick={() => handleToggleSchedule(comp.id, !comp.is_scheduled)}
+                                    >
+                                        {comp.is_scheduled ? "Enabled" : "Disabled"}
+                                    </Button>
                                 </div>
 
                                 <div className="flex gap-2">
