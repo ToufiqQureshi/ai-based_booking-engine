@@ -184,8 +184,8 @@ async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSes
     settings = get_settings()
     if not settings.DECODO_AUTH_TOKEN:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Decodo Scraper API key (DECODO_AUTH_TOKEN) is not configured in environment variables."
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Rate sync is temporarily unavailable. Our team has been notified — please try again shortly."
         )
 
     # Don't allow a second concurrent scrape for the same competitor — this
@@ -222,6 +222,38 @@ async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSes
 
     safe_background(background_tasks, lambda: run_background_scrape(comp_id), task_name="competitor_rate_scrape")
     return {"message": "Scrape started in background"}
+
+
+@router.post("/{comp_id}/stop", dependencies=[Depends(require_feature("feature_rate_shopper"))])
+async def stop_scrape(comp_id: str, current_user: CurrentUser, session: DbSession):
+    """
+    Stop an in-progress scrape. Any days already fetched stay saved (the
+    background job commits each day as it goes) — we just signal it to stop
+    before it burns more paid API calls on the remaining days.
+    """
+    check_rate_shopper_feature(current_user)
+
+    comp = await session.get(Competitor, comp_id)
+    if not comp or comp.hotel_id != current_user.hotel_id:
+        raise HTTPException(status_code=404, detail="Competitor not found")
+
+    if comp.last_scrape_status != "running":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No scrape is currently running for this competitor.",
+        )
+
+    # The background loop polls this Redis flag at the top of each day's
+    # iteration; TTL is a safety net so a stale flag can never block a future run.
+    r = redis_client.get_instance()
+    if r:
+        try:
+            r.set(f"scrape_cancel:{comp_id}", "1", ex=600)
+        except Exception as exc:
+            logger.warning(f"Failed to set scrape cancel flag for {comp_id}: {exc}")
+            raise HTTPException(status_code=503, detail="Could not request stop right now. Please try again.")
+
+    return {"message": "Stopping scrape — already-fetched rates are saved."}
 
 
 def get_dynamic_dates(offset):
@@ -379,14 +411,31 @@ async def run_background_scrape(comp_id: str):
             logger.info(f"Scraping MakeMyTrip URL for competitor: {comp.name} ({comp_id})")
             
             success_count = 0
+            attempted = 0
             has_errors = False
             last_error_reason = None
-            
+            was_stopped = False
+            cancel_key = f"scrape_cancel:{comp_id}"
+
             # Scrape next 7 days
             for offset in range(7):
+                # Hotelier-initiated stop: bail out before burning another paid
+                # API call. Days already scraped above are SAFE — each one is
+                # committed individually below, so a 4-of-7 stop keeps those 4.
+                try:
+                    _rc = redis_client.get_instance()
+                    if _rc and _rc.get(cancel_key):
+                        _rc.delete(cancel_key)
+                        was_stopped = True
+                        logger.info(f"Scrape for {comp_id} stopped by user after {attempted} day(s)")
+                        break
+                except Exception as cancel_err:
+                    logger.warning(f"Scrape cancel-flag check failed (ignoring): {cancel_err}")
+
+                attempted += 1
                 check_in_date_obj = date.today() + timedelta(days=offset)
                 updated_url = update_url_dates(url, offset)
-                
+
                 # Sleep a random delay to avoid rate limiting
                 await asyncio.sleep(random.uniform(2, 4))
                 
@@ -443,21 +492,29 @@ async def run_background_scrape(comp_id: str):
             if comp:
                 if success_count > 0:
                     comp.last_scrape_status = "success"
-                    if has_errors:
+                    if was_stopped:
+                        comp.last_scrape_error = f"Stopped by you — saved {success_count} day(s) of rates fetched so far."
+                    elif has_errors:
                         comp.last_scrape_error = f"Successfully scraped {success_count}/7 days. Some dates failed: {last_error_reason}"
                     else:
                         comp.last_scrape_error = None
                     comp.last_scraped_at = datetime.utcnow()
+                elif was_stopped:
+                    # Stopped before any day completed — nothing saved, but this
+                    # isn't a failure, so don't show a scary red error.
+                    comp.last_scrape_status = "success"
+                    comp.last_scrape_error = "Stopped by you before any rates were fetched."
                 else:
                     comp.last_scrape_status = "failed"
                     comp.last_scrape_error = f"Scraping failed on all dates: {last_error_reason}"
                 session.add(comp)
-                
-                # Log usage
+
+                # Log usage — bill only for the days we actually attempted, so a
+                # stopped run doesn't over-report (and over-charge) the hotel.
                 usage = ScraperUsage(
                     hotel_id=comp.hotel_id,
                     competitor_id=comp_id,
-                    request_count=7,
+                    request_count=attempted,
                     status="success" if success_count > 0 else "failed"
                 )
                 session.add(usage)
@@ -607,13 +664,13 @@ async def get_market_analysis(
         # Group by date - Keeping only the FIRST encountered (which is Latest due to DESC sort)
         seen_keys = set()
 
-        for r in all_rates:
-            key = (r.competitor_id, r.check_in_date)
+        for rate in all_rates:
+            key = (rate.competitor_id, rate.check_in_date)
             if key not in seen_keys:
                 seen_keys.add(key)
-                if r.check_in_date not in rates_by_date:
-                    rates_by_date[r.check_in_date] = []
-                rates_by_date[r.check_in_date].append(r.price)
+                if rate.check_in_date not in rates_by_date:
+                    rates_by_date[rate.check_in_date] = []
+                rates_by_date[rate.check_in_date].append(rate.price)
 
     # 3. Analyze
     results = []
@@ -723,10 +780,10 @@ async def get_rate_comparison(current_user: CurrentUser, session: DbSession, sta
         all_rates = rate_res.scalars().all()
 
         # Populate map (since ordered by fetched_at desc, first encounter is latest)
-        for r in all_rates:
-            key = (r.competitor_id, r.check_in_date)
+        for rate in all_rates:
+            key = (rate.competitor_id, rate.check_in_date)
             if key not in rates_map:
-                rates_map[key] = r
+                rates_map[key] = rate
 
     # 4. Build Response Data (Iterate 7 days)
     chart_data = [] 

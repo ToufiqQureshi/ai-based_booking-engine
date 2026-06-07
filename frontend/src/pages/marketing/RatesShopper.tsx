@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from '@/components/ui/label';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { apiClient, tokenStorage } from '@/api/client';
-import { Loader2, Plus, RefreshCw, Trash2, TrendingUp, TrendingDown, Minus, Sparkles, Activity, Clock } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Trash2, TrendingUp, TrendingDown, Minus, Sparkles, Activity, Clock, Square } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { RateTable } from '@/components/dashboard/RateTable';
@@ -68,9 +68,9 @@ export default function RatesShopper() {
     const maxCompetitors: number = (hotel as any)?.max_competitors ?? 5;
     const isAtCompetitorLimit = competitors.length >= maxCompetitors;
 
-    // Decodo Scraper API usage — cost transparency. We buy this scraping
-    // capacity from a third party and resell it as Rate Shopper, so the
-    // hotelier should be able to see exactly what's being spent on their behalf.
+    // OTA analytics usage — cost transparency. Each rate refresh consumes
+    // metered analytics capacity, so the hotelier should be able to see
+    // exactly how many rate checks have been used on their behalf.
     const { data: usageData } = useQuery<any>({
         queryKey: ['rateShopperUsage'],
         queryFn: () => apiClient.get('/competitors/usage'),
@@ -91,7 +91,7 @@ export default function RatesShopper() {
 
     const [scheduleHour, setScheduleHour] = useState<string>('off');
     const [isSavingSchedule, setIsSavingSchedule] = useState(false);
-    const canManageSchedule = user?.role === 'OWNER' || user?.role === 'MANAGER';
+    const canManageSchedule = user?.role === 'OWNER' || user?.role === 'MANAGER' || user?.role === 'SUPER_ADMIN';
 
     useEffect(() => {
         if (!scheduleData) return;
@@ -218,6 +218,17 @@ export default function RatesShopper() {
         }
     };
 
+    const handleStopScrape = async (id: string) => {
+        try {
+            await apiClient.post(`/competitors/${id}/stop`, {});
+            toast.success("Stopping… rates already fetched are saved.");
+            fetchData(); // Refetch so the status flips out of 'running'
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || "Failed to stop the scrape");
+        }
+    };
+
     const handleDeleteCompetitor = async (id: string) => {
         if (!confirm("Are you sure you want to remove this competitor?")) return;
         try {
@@ -306,17 +317,17 @@ export default function RatesShopper() {
                 </div>
             </div>
 
-            {/* Decodo API Usage & Auto-Sync Schedule */}
+            {/* OTA Analytics Usage & Auto-Sync Schedule */}
             <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="flex items-center gap-2 text-base">
                             <Activity className="h-4 w-4 text-muted-foreground" />
-                            Decodo Scraper API Usage
+                            Staybooker OTA Analytics
                         </CardTitle>
                         <CardDescription>
-                            We buy this scraping capacity from a third party (Decodo) on your behalf —
-                            every rate refresh costs us a real, billed request. Here's exactly what
+                            Every rate refresh pulls live pricing from the OTAs through Staybooker's
+                            analytics engine — each pull uses one rate check. Here's exactly what
                             you've used.
                         </CardDescription>
                     </CardHeader>
@@ -566,20 +577,27 @@ export default function RatesShopper() {
                                 </div>
 
                                 <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="flex-1"
-                                        disabled={comp.last_scrape_status === 'running'}
-                                        onClick={() => handleScrape(comp.id)}
-                                    >
-                                        {comp.last_scrape_status === 'running' ? (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        ) : (
+                                    {comp.last_scrape_status === 'running' ? (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1 text-destructive border-destructive/40 hover:bg-destructive/10"
+                                            onClick={() => handleStopScrape(comp.id)}
+                                        >
+                                            <Square className="mr-2 h-4 w-4" />
+                                            Stop (keep fetched)
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1"
+                                            onClick={() => handleScrape(comp.id)}
+                                        >
                                             <RefreshCw className="mr-2 h-4 w-4" />
-                                        )}
-                                        {comp.last_scrape_status === 'running' ? "Syncing..." : "Refresh Rates"}
-                                    </Button>
+                                            Refresh Rates
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="destructive"
                                         size="sm"
