@@ -765,7 +765,7 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
     Confirm booking cancellation or request it, based on hotel settings.
     PUB-01: rate-limited to throttle booking-number enumeration.
     """
-    query = select(Booking).where(Booking.booking_number == data.booking_number)
+    query = select(Booking).where(Booking.booking_number == data.booking_number).with_for_update()
     res = await session.execute(query)
     booking = res.scalar_one_or_none()
     

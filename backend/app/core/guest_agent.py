@@ -109,7 +109,7 @@ Today's date: {current_date}
 # ---------------------------------------------------------------------------
 
 _CACHE_KEY_PREFIX = "guest_agent:hotel_data"
-_CACHE_TTL = 86400  # 24 h; actively invalidated on admin edits
+_CACHE_TTL = 3600  # 1 h; keeps room prices reasonably fresh
 
 # Safe fire-and-forget pattern (prevents GC of background tasks)
 _bg_tasks: set = set()

@@ -274,6 +274,8 @@ async def get_chain_analytics(
 async def get_chain_guests(
     session: DbSession,
     current_user: User = Depends(get_chain_admin),
+    limit: int = Query(default=20, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     """
     Returns chain-wide guest insights: total guests, repeat guests (stayed at multiple
@@ -313,16 +315,19 @@ async def get_chain_guests(
         if not s["last_booking"] or (b.created_at and b.created_at > s["last_booking"]):
             s["last_booking"] = b.created_at
 
-    # Enrich top 10 guests with names — single bulk query (fixes N+1)
+    # Sort all guests by spend descending, then paginate
     sorted_guests = sorted(guest_stats.values(), key=lambda x: x["total_spend"], reverse=True)
-    top_10 = sorted_guests[:10]
-    top_ids = [g["guest_id"] for g in top_10]
+    total_guest_count = len(sorted_guests)
+    page_guests = sorted_guests[offset: offset + limit]
+
+    # Enrich page guests with names — single bulk query (fixes N+1)
+    page_ids = [g["guest_id"] for g in page_guests]
     gmap = {}
-    if top_ids:
-        gres = await session.execute(select(Guest).where(Guest.id.in_(top_ids)))
+    if page_ids:
+        gres = await session.execute(select(Guest).where(Guest.id.in_(page_ids)))
         gmap = {gu.id: gu for gu in gres.scalars().all()}
 
-    for g in top_10:
+    for g in page_guests:
         guest = gmap.get(g["guest_id"])
         g["name"] = f"{guest.first_name} {guest.last_name}".strip() if guest else "Unknown"
         g["hotels_count"] = len(g["hotels_visited"])
@@ -332,8 +337,11 @@ async def get_chain_guests(
     cross_property = sum(1 for g in guest_stats.values() if len(g["hotels_visited"]) > 1)
 
     return {
-        "total_guests": len(guest_stats),
+        "total_guests": total_guest_count,
         "cross_property_guests": cross_property,
-        "cross_property_pct": round((cross_property / len(guest_stats) * 100), 1) if guest_stats else 0,
-        "top_guests": top_10,
+        "cross_property_pct": round((cross_property / total_guest_count * 100), 1) if total_guest_count else 0,
+        "top_guests": page_guests,
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + limit) < total_guest_count,
     }

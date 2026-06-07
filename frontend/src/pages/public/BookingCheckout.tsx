@@ -591,7 +591,7 @@ function BookingCheckoutInner() {
             const res = await apiClient.post<{ valid: boolean, discount: number, message: string }>('/promos/validate', {
                 code: code,
                 hotel_id: room?.hotel_id,
-                booking_amount: grandTotal
+                booking_amount: totalBeforeDiscount
             });
 
             if (res.valid) {
