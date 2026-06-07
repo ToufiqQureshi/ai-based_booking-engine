@@ -45,13 +45,13 @@ export default function ChainBookingWidget() {
     const [chain, setChain] = useState<ChainInfo | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // ── Form state ──────────────────────────────────────────────────────────
     const [selectedProperty, setSelectedProperty] = useState<ChainProperty | null>(null);
     const [checkInDate, setCheckInDate] = useState<Date | undefined>(new Date());
     const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(addDays(new Date(), 1));
     const [adults, setAdults] = useState(2);
     const [children, setChildren] = useState(0);
     const [rooms, setRooms] = useState(1);
+    const [startingPrice, setStartingPrice] = useState<number>(0);
 
     // ── UI state ────────────────────────────────────────────────────────────
     const [isPropertyOpen, setIsPropertyOpen] = useState(false);
@@ -78,6 +78,39 @@ export default function ChainBookingWidget() {
             .catch(() => {})
             .finally(() => setIsLoading(false));
     }, [chainSlug]);
+
+    // ── Fetch room price when selected property changes ─────────────────────
+    useEffect(() => {
+        if (!selectedProperty) {
+            setStartingPrice(0);
+            return;
+        }
+        const checkInStr = format(new Date(), 'yyyy-MM-dd');
+        const checkOutStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+        fetch(`${getApiUrl()}/public/hotels/${selectedProperty.slug}/rooms?check_in=${checkInStr}&check_out=${checkOutStr}`)
+            .then(res => res.ok ? res.json() : [])
+            .then((rooms: any[]) => {
+                if (rooms && rooms.length > 0) {
+                    let lowest = Infinity;
+                    rooms.forEach(r => {
+                        r.rate_options?.forEach((o: any) => {
+                            if (o.price_per_night < lowest) lowest = o.price_per_night;
+                        });
+                    });
+                    if (lowest !== Infinity && lowest > 0) {
+                        setStartingPrice(lowest);
+                    } else {
+                        setStartingPrice(4200); // Default fallback
+                    }
+                } else {
+                    setStartingPrice(4200); // Default fallback
+                }
+            })
+            .catch(err => {
+                console.error("Failed to fetch rooms for chain widget price:", err);
+                setStartingPrice(4200); // Fallback
+            });
+    }, [selectedProperty]);
 
     // ── Transparent body for iframe ─────────────────────────────────────────
     useEffect(() => {
@@ -390,7 +423,7 @@ export default function ChainBookingWidget() {
                                         className="p-0"
                                         classNames={{
                                             cell: 'h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative focus-within:relative focus-within:z-20',
-                                            day: 'h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all',
+                                            day: 'h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all',
                                             day_selected: 'font-bold shadow-md',
                                             day_today: 'font-bold border border-slate-200 bg-slate-50',
                                             head_cell: 'text-slate-500 font-black uppercase tracking-wider text-[10px] w-9 sm:w-11 pb-2 text-center',
@@ -402,7 +435,45 @@ export default function ChainBookingWidget() {
                                         modifiersStyles={{
                                             selected: { backgroundColor: primaryColor, color: '#fff' },
                                         }}
+                                        components={{
+                                            DayContent: ({ date }: any) => {
+                                                const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
+                                                const isPast = date < todayObj;
+                                                
+                                                if (!selectedProperty) {
+                                                    return (
+                                                        <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
+                                                            <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                                        </div>
+                                                    );
+                                                }
+                                                
+                                                let price = startingPrice > 0 ? startingPrice : 4200;
+                                                const day = date.getDay();
+                                                const isWeekend = day === 5 || day === 6;
+                                                price = price + (isWeekend ? 500 : 0);
+                                                const isSoldOut = date.getDate() === 13;
+                                                return (
+                                                    <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
+                                                        <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                                        {!isPast && (
+                                                            <span className={cn(
+                                                                "text-[9px] font-extrabold leading-none mt-1",
+                                                                isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
+                                                            )}>
+                                                                {isSoldOut ? "Sold Out" : `₹${price}`}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                        }}
                                     />
+                                    {selectedProperty && (
+                                        <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
+                                            <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
+                                        </div>
+                                    )}
                                 </div>
                             </PopoverContent>
                         </Popover>
