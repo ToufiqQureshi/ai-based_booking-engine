@@ -367,3 +367,51 @@ async def test_staff_cannot_change_schedule(rate_shopper_staff_client: AsyncClie
 async def test_staff_can_view_schedule(rate_shopper_staff_client: AsyncClient):
     res = await rate_shopper_staff_client.get("/api/v1/competitors/schedule")
     assert res.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# POST /competitors/{id}/stop — stop an in-progress scrape, keep fetched days
+# ---------------------------------------------------------------------------
+
+async def test_stop_scrape_requires_auth(client: AsyncClient):
+    res = await client.post("/api/v1/competitors/does-not-matter/stop")
+    assert res.status_code == 401
+
+
+async def test_stop_scrape_404_for_unknown_competitor(rate_shopper_client: AsyncClient):
+    res = await rate_shopper_client.post("/api/v1/competitors/nonexistent-id/stop")
+    assert res.status_code == 404
+
+
+async def test_stop_scrape_409_when_not_running(rate_shopper_client: AsyncClient, seeded_hotel: Hotel):
+    """Stopping is only valid while a scrape is actually running."""
+    from app.models.competitor import Competitor
+
+    comp_id = str(uuid.uuid4())
+    async with AsyncSession(engine) as session:
+        session.add(Competitor(
+            id=comp_id, hotel_id=seeded_hotel.id, name="Rival",
+            url="https://www.makemytrip.com/hotels/?hotelId=123",
+            last_scrape_status="success",
+        ))
+        await session.commit()
+
+    res = await rate_shopper_client.post(f"/api/v1/competitors/{comp_id}/stop")
+    assert res.status_code == 409
+
+
+async def test_stop_scrape_404_for_other_hotels_competitor(rate_shopper_client: AsyncClient):
+    """IDOR guard: cannot stop a scrape on a competitor you don't own."""
+    from app.models.competitor import Competitor
+
+    comp_id = str(uuid.uuid4())
+    async with AsyncSession(engine) as session:
+        session.add(Competitor(
+            id=comp_id, hotel_id="some-other-hotel", name="Foreign",
+            url="https://www.makemytrip.com/hotels/?hotelId=999",
+            last_scrape_status="running",
+        ))
+        await session.commit()
+
+    res = await rate_shopper_client.post(f"/api/v1/competitors/{comp_id}/stop")
+    assert res.status_code == 404
