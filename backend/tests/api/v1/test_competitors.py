@@ -415,3 +415,27 @@ async def test_stop_scrape_404_for_other_hotels_competitor(rate_shopper_client: 
 
     res = await rate_shopper_client.post(f"/api/v1/competitors/{comp_id}/stop")
     assert res.status_code == 404
+
+
+async def test_stop_scrape_success(rate_shopper_client: AsyncClient, seeded_hotel: Hotel):
+    """Stopping a running scrape updates DB status to success immediately."""
+    from app.models.competitor import Competitor
+
+    comp_id = str(uuid.uuid4())
+    async with AsyncSession(engine) as session:
+        session.add(Competitor(
+            id=comp_id, hotel_id=seeded_hotel.id, name="Rival",
+            url="https://www.makemytrip.com/hotels/?hotelId=123",
+            last_scrape_status="running",
+        ))
+        await session.commit()
+
+    res = await rate_shopper_client.post(f"/api/v1/competitors/{comp_id}/stop")
+    assert res.status_code == 200
+    assert res.json()["message"] == "Stopping scrape — already-fetched rates are saved."
+
+    # Verify state in DB was flipped to success immediately
+    async with AsyncSession(engine) as session:
+        comp = await session.get(Competitor, comp_id)
+        assert comp.last_scrape_status == "success"
+        assert comp.last_scrape_error == "Stopped by you."

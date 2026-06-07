@@ -253,6 +253,14 @@ async def stop_scrape(comp_id: str, current_user: CurrentUser, session: DbSessio
             logger.warning(f"Failed to set scrape cancel flag for {comp_id}: {exc}")
             raise HTTPException(status_code=503, detail="Could not request stop right now. Please try again.")
 
+    # Force-update status in DB immediately so the frontend stops polling / showing "running"
+    # and recovers instantly. The background task checks the redis cancellation key on its 
+    # next loop iteration/check-in and exits early without overriding this.
+    comp.last_scrape_status = "success"
+    comp.last_scrape_error = "Stopped by you."
+    session.add(comp)
+    await session.commit()
+
     return {"message": "Stopping scrape — already-fetched rates are saved."}
 
 
