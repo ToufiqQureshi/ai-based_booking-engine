@@ -152,6 +152,7 @@ async def init_db():
 
     # Chain-wide features migrations
     for table_alter in [
+        "ALTER TABLE chains ADD COLUMN primary_color VARCHAR(50) DEFAULT '#4f46e5'",
         "ALTER TABLE loyalty_programs ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
         "ALTER TABLE loyalty_programs ALTER COLUMN hotel_id DROP NOT NULL",
         "ALTER TABLE guest_loyalty ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
