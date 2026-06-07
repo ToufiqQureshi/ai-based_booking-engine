@@ -114,6 +114,9 @@ class HotelBase(SQLModel):
     primary_color: Optional[str] = Field(default="#7C3AED")
     amenities: List[str] = Field(default_factory=list, sa_column=Column(JSON)) # Property-level amenities like "Free Parking", "Pool"
     
+    # Super-admin-controlled limits
+    max_competitors: int = Field(default=5)
+
     # Feature Flags (Controlled by Super Admin)
     feature_rate_shopper: bool = Field(default=False)
     feature_ai_agent: bool = Field(default=False)
@@ -213,6 +216,7 @@ class HotelUpdate(SQLModel):
     contact: Optional[dict] = None
     settings: Optional[dict] = None
     photos: Optional[List[dict]] = None
+    max_competitors: Optional[int] = None
     # Feature Flags
     feature_rate_shopper: Optional[bool] = None
     feature_ai_agent: Optional[bool] = None

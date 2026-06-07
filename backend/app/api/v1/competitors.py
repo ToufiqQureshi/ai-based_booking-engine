@@ -1,5 +1,6 @@
 from typing import List, Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
+from sqlalchemy import func
 from sqlmodel import select, desc
 from datetime import date, timedelta, datetime
 import json
@@ -92,6 +93,18 @@ class CompetitorCreate(BaseModel):
 async def add_competitor(comp_data: CompetitorCreate, current_user: CurrentUser, session: DbSession):
     """Add a new competitor to track"""
     check_rate_shopper_feature(current_user)
+
+    # Enforce per-hotel competitor limit (configurable by super-admin, default 5)
+    count_res = await session.execute(
+        select(func.count()).select_from(Competitor).where(Competitor.hotel_id == current_user.hotel_id)
+    )
+    current_count = count_res.scalar() or 0
+    max_comps = getattr(current_user.hotel, "max_competitors", None) or 5
+    if current_count >= max_comps:
+        raise HTTPException(
+            status_code=409,
+            detail=f"COMPETITOR_LIMIT_REACHED:{max_comps}",
+        )
 
     # Check for duplicates (URL or Name)
     existing = await session.execute(

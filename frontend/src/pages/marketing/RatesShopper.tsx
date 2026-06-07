@@ -65,6 +65,9 @@ export default function RatesShopper() {
     const chartCompetitorNames = rateShopperData?.chartCompetitorNames ?? [];
     const marketAnalysis = rateShopperData?.marketAnalysis ?? [];
 
+    const maxCompetitors: number = (hotel as any)?.max_competitors ?? 5;
+    const isAtCompetitorLimit = competitors.length >= maxCompetitors;
+
     // Decodo Scraper API usage — cost transparency. We buy this scraping
     // capacity from a third party and resell it as Rate Shopper, so the
     // hotelier should be able to see exactly what's being spent on their behalf.
@@ -191,7 +194,13 @@ export default function RatesShopper() {
             fetchData();
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || "Failed to add competitor");
+            const msg: string = error.message || "Failed to add competitor";
+            if (msg.startsWith("COMPETITOR_LIMIT_REACHED:")) {
+                const limit = msg.split(":")[1];
+                toast.error(`Competitor limit reached (${limit}). Contact support@staybooker.ai to increase your limit.`);
+            } else {
+                toast.error(msg);
+            }
         } finally {
             setIsAdding(false);
         }
@@ -267,9 +276,23 @@ export default function RatesShopper() {
                     <h1 className="text-2xl font-bold tracking-tight">Rate Parity Tracker <span className="text-xs font-normal text-muted-foreground ml-2">(v2.0 AI)</span></h1>
                     <p className="text-muted-foreground">AI-Powered Rate Parity & Channel Intelligence.</p>
                 </div>
-                <Button onClick={() => setIsAddOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" /> Add OTA Channel
-                </Button>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                        {competitors.length}/{maxCompetitors} channels
+                    </span>
+                    {isAtCompetitorLimit ? (
+                        <a
+                            href="mailto:support@staybooker.ai?subject=Increase%20competitor%20limit"
+                            className="inline-flex items-center gap-1 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-3 py-2 transition-colors"
+                        >
+                            <ShieldAlert className="h-4 w-4" /> Contact to Add More
+                        </a>
+                    ) : (
+                        <Button onClick={() => setIsAddOpen(true)}>
+                            <Plus className="mr-2 h-4 w-4" /> Add OTA Channel
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Decodo API Usage & Auto-Sync Schedule */}
