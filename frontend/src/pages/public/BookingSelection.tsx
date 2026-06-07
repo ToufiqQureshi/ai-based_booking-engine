@@ -22,6 +22,7 @@ import { ChatWidget } from '@/components/public/ChatWidget';
 import { format, addDays } from 'date-fns';
 import { getImageUrl } from '@/lib/utils';
 import { ICONS } from '@/lib/amenityIcons';
+import { LoyaltyRewardPopup, LoyaltyMilestonePopup } from '@/components/public/LoyaltyRewardPopup';
 
 // Extracted Booking Sub-Components
 import { RoomSearchHeader } from '@/components/public/booking/RoomSearchHeader';
@@ -85,6 +86,54 @@ export default function BookingSelection() {
     const [loyaltyMessage, setLoyaltyMessage] = useState('');
     const [loyaltyChecking, setLoyaltyChecking] = useState(false);
 
+    // Loyalty popups states
+    const [loyaltyData, setLoyaltyData] = useState<{
+        isOpen: boolean;
+        message: string;
+        couponCode: string;
+        discountText: string;
+    }>({
+        isOpen: false,
+        message: '',
+        couponCode: '',
+        discountText: '',
+    });
+
+    const [milestoneData, setMilestoneData] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        rewardDescription: string;
+        bookingsCompleted: number;
+        bookingsToReward: number;
+        milestoneTotal: number;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        rewardDescription: '',
+        bookingsCompleted: 0,
+        bookingsToReward: 0,
+        milestoneTotal: 0,
+    });
+
+    const applyLoyaltyCoupon = (couponCode: string) => {
+        setPromoCode(couponCode);
+        setLoyaltyData(prev => ({ ...prev, isOpen: false }));
+        if (!hotelSlug || !checkInDate || !checkOutDate) return;
+        const totalGuests = adults + children;
+        const params = new URLSearchParams({
+            check_in: format(checkInDate, 'yyyy-MM-dd'),
+            check_out: format(checkOutDate, 'yyyy-MM-dd'),
+            guests: totalGuests.toString(),
+            adults: adults.toString(),
+            children: children.toString(),
+            rooms: roomsCount.toString(),
+            promo_code: couponCode
+        });
+        navigate(`/book/${hotelSlug}/rooms?${params.toString()}`);
+    };
+
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768);
         check();
@@ -120,6 +169,27 @@ export default function BookingSelection() {
             if (response.message) {
                 setLoyaltyMessage(response.message);
             }
+
+            // Trigger popups based on response
+            if (response.coupon_code) {
+                setLoyaltyData({
+                    isOpen: true,
+                    message: response.message,
+                    couponCode: response.coupon_code,
+                    discountText: response.discount_text || '',
+                });
+            } else if (response.show_milestone_popup) {
+                setMilestoneData({
+                    isOpen: true,
+                    title: response.milestone_popup_title || "You're Almost There!",
+                    message: response.milestone_popup_message || '',
+                    rewardDescription: response.reward_description || '',
+                    bookingsCompleted: response.bookings_completed || 0,
+                    bookingsToReward: response.bookings_to_reward || 1,
+                    milestoneTotal: (response.bookings_completed || 0) + (response.bookings_to_reward || 1),
+                });
+            }
+
             sessionStorage.setItem('loyalty_checked_guest', JSON.stringify({
                 email: loyaltyEmail,
                 points_balance: response.points_balance || 0,
@@ -914,6 +984,29 @@ export default function BookingSelection() {
                 setIsRateModalOpen={setIsRateModalOpen}
                 selectedRateInfo={selectedRateInfo}
                 defaultCancellationPolicy={hotel?.settings?.cancellation_policy}
+            />
+
+            {/* Loyalty Reward Popup — coupon unlocked */}
+            <LoyaltyRewardPopup
+                isOpen={loyaltyData.isOpen}
+                onClose={() => setLoyaltyData(prev => ({ ...prev, isOpen: false }))}
+                message={loyaltyData.message}
+                couponCode={loyaltyData.couponCode}
+                discountText={loyaltyData.discountText}
+                onApply={() => applyLoyaltyCoupon(loyaltyData.couponCode)}
+            />
+
+            {/* Loyalty Milestone Nudge Popup — almost there */}
+            <LoyaltyMilestonePopup
+                isOpen={milestoneData.isOpen}
+                onClose={() => setMilestoneData(prev => ({ ...prev, isOpen: false }))}
+                title={milestoneData.title}
+                message={milestoneData.message}
+                rewardDescription={milestoneData.rewardDescription}
+                bookingsCompleted={milestoneData.bookingsCompleted}
+                bookingsToReward={milestoneData.bookingsToReward}
+                milestoneTotal={milestoneData.milestoneTotal}
+                onContinue={() => setMilestoneData(prev => ({ ...prev, isOpen: false }))}
             />
 
             <ChatWidget hotelSlug={hotelSlug || ''} bottomOffset={cart.length > 0 ? "bottom-24" : "bottom-4"} />
