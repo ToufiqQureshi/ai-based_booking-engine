@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,39 +31,65 @@ export default function RatesShopper() {
         localStorage.setItem("rateShopperActiveTab", activeTab);
     }, [activeTab]);
 
-    // Single useQuery replacing 3 separate useEffect fetches — React Query handles
-    // caching, deduplication, and background refresh automatically
-    const { data: rateShopperData, isLoading, error, isError, refetch: refetchAll } = useQuery<any>({
-        queryKey: ['rateShopperData', startDate],
+    // Competitors list — lightweight endpoint, polled every 5s while any scrape is running
+    // so status badges and the Stop button reflect reality in near-real-time.
+    const {
+        data: competitorsData,
+        isLoading: isCompLoading,
+        isError: isCompError,
+        error: compError,
+    } = useQuery<any[]>({
+        queryKey: ['competitors'],
+        queryFn: () => apiClient.get('/competitors') as Promise<any[]>,
+        staleTime: 0,
+        gcTime: 1000 * 60 * 30,
+        refetchInterval: 5000, // cheap endpoint — always poll so status stays live
+    });
+    const competitors: any[] = competitorsData ?? [];
+    const isAnyRunning = competitors.some((c: any) => c.last_scrape_status === 'running');
+
+    // Rates + analysis — polled every 5s while scraping so each committed day appears
+    // in the table/chart immediately (backend commits per-day, not only at the end).
+    // When no scrape is running the interval stops; a fresh fetch fires automatically
+    // when isAnyRunning flips false (queryKey changes).
+    const {
+        data: ratesData,
+        isLoading: isRatesLoading,
+        isFetching: isRatesFetching,
+        isError: isRatesError,
+        error: ratesError,
+    } = useQuery<any>({
+        queryKey: ['ratesData', startDate, isAnyRunning],
         queryFn: async () => {
-            const [compRes, rateRes, analysisRes] = await Promise.all([
-                apiClient.get('/competitors'),
+            const [rateRes, analysisRes] = await Promise.all([
                 apiClient.get('/competitors/rates/comparison', { start_date: startDate }),
                 apiClient.get('/competitors/analysis', { start_date: startDate, days: '7' }),
             ]);
             return {
-                competitors: compRes as any[],
                 chartData: (rateRes as any).chart_data,
                 tableData: (rateRes as any).table_data,
                 chartCompetitorNames: (rateRes as any).competitors,
                 marketAnalysis: analysisRes as any[],
             };
         },
-        staleTime: 1000 * 60 * 60, // 1 hour — competitor data doesn't change minute-to-minute
-        gcTime: 1000 * 60 * 120,
+        staleTime: 0,
+        gcTime: 1000 * 60 * 60,
+        refetchInterval: isAnyRunning ? 5000 : false,
     });
 
-    useEffect(() => {
-        if (isError) {
-            toast.error((error as any)?.message || "Failed to load rate shopper data");
-        }
-    }, [isError, error]);
+    const isLoading = isCompLoading || isRatesLoading;
 
-    const competitors = rateShopperData?.competitors ?? [];
-    const chartData = rateShopperData?.chartData ?? [];
-    const tableData = rateShopperData?.tableData ?? [];
-    const chartCompetitorNames = rateShopperData?.chartCompetitorNames ?? [];
-    const marketAnalysis = rateShopperData?.marketAnalysis ?? [];
+    useEffect(() => {
+        const msg = (compError as any)?.message || (ratesError as any)?.message;
+        if ((isCompError || isRatesError) && msg) {
+            toast.error(msg || "Failed to load rate shopper data");
+        }
+    }, [isCompError, isRatesError, compError, ratesError]);
+
+    const chartData = ratesData?.chartData ?? [];
+    const tableData = ratesData?.tableData ?? [];
+    const chartCompetitorNames = ratesData?.chartCompetitorNames ?? [];
+    const marketAnalysis = ratesData?.marketAnalysis ?? [];
 
     const maxCompetitors: number = (hotel as any)?.max_competitors ?? 5;
     const isAtCompetitorLimit = competitors.length >= maxCompetitors;
@@ -130,20 +156,6 @@ export default function RatesShopper() {
         }
     };
 
-    const fetchData = useCallback(() => refetchAll(), [refetchAll]);
-
-    // Auto-poll if any competitor is currently in 'running' state
-    useEffect(() => {
-        const isAnyRunning = competitors.some((c: any) => c.last_scrape_status === 'running');
-        if (!isAnyRunning) return;
-
-        const interval = setInterval(() => {
-            fetchData();
-        }, 5000); // Poll every 5 seconds to show data dynamically as it is scraped
-
-        return () => clearInterval(interval);
-    }, [competitors, fetchData]);
-
     // Handle toast notifications based on background status transitions
     useEffect(() => {
         if (!competitors.length) return;
@@ -157,6 +169,8 @@ export default function RatesShopper() {
                 toast.error(`Error scraping ${comp.name}: ${comp.last_scrape_error || 'Unknown error'}`);
             } else if (comp.last_scrape_status === 'success' && prevStatus === 'running') {
                 toast.success(`Successfully updated rates for ${comp.name}!`);
+                // Refresh usage counter now that new requests were consumed
+                queryClient.invalidateQueries({ queryKey: ['rateShopperUsage'] });
             }
         });
         
@@ -191,7 +205,7 @@ export default function RatesShopper() {
             setNewCompName('');
             setNewCompUrl('');
             toast.success("Competitor added successfully");
-            fetchData();
+            queryClient.invalidateQueries({ queryKey: ['competitors'] });
         } catch (error: any) {
             console.error(error);
             const msg: string = error.message || "Failed to add competitor";
@@ -211,7 +225,9 @@ export default function RatesShopper() {
         try {
             await apiClient.post(`/competitors/${id}/scrape`, {});
             toast.success("Server-side scraping started in the background. Rates will be updated shortly!");
-            fetchData(); // Refetch to show running state immediately
+            // Force immediate refresh so running status appears and live polling kicks in
+            queryClient.invalidateQueries({ queryKey: ['competitors'] });
+            queryClient.invalidateQueries({ queryKey: ['ratesData'] });
         } catch (error: any) {
             console.error(error);
             toast.error(error.message || "Failed to initiate scraping");
@@ -222,7 +238,7 @@ export default function RatesShopper() {
         try {
             await apiClient.post(`/competitors/${id}/stop`, {});
             toast.success("Stopping… rates already fetched are saved.");
-            fetchData(); // Refetch so the status flips out of 'running'
+            queryClient.invalidateQueries({ queryKey: ['competitors'] });
         } catch (error: any) {
             console.error(error);
             toast.error(error.message || "Failed to stop the scrape");
@@ -234,7 +250,8 @@ export default function RatesShopper() {
         try {
             await apiClient.delete(`/competitors/${id}`);
             toast.success("Competitor removed");
-            refetchAll(); // Refresh all data via React Query
+            queryClient.invalidateQueries({ queryKey: ['competitors'] });
+            queryClient.invalidateQueries({ queryKey: ['ratesData'] });
         } catch (error) {
             console.error(error);
             toast.error("Failed to delete competitor");
@@ -245,7 +262,7 @@ export default function RatesShopper() {
         try {
             await apiClient.patch(`/competitors/${id}/schedule`, { is_scheduled: isScheduled });
             toast.success(isScheduled ? "Daily schedule enabled for this channel!" : "Daily schedule disabled.");
-            fetchData();
+            queryClient.invalidateQueries({ queryKey: ['competitors'] });
         } catch (error: any) {
             console.error(error);
             toast.error("Failed to update schedule status");
@@ -447,7 +464,15 @@ export default function RatesShopper() {
                 {/* Main Chart Card */}
                 <Card className="col-span-4">
                     <CardHeader>
-                        <CardTitle>Price Comparison (Next 7 Days)</CardTitle>
+                        <div className="flex items-center justify-between">
+                            <CardTitle>Price Comparison (Next 7 Days)</CardTitle>
+                            {isRatesFetching && (
+                                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Updating...
+                                </span>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent className="pl-2">
                         <div className="h-[400px] w-full">

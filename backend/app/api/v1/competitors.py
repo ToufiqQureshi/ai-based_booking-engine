@@ -337,9 +337,12 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         # sync route handlers — under concurrent scrapes that risks starving
         # unrelated requests.
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=35.0) as client:
                 response = await client.post(DECODO_URL, json=payload, headers=headers)
         except httpx.HTTPError as e:
+            # Network/timeout — Decodo may have already received and billed the request,
+            # so record usage here too for transparency.
+            record_decodo_request(hotel_id)
             logger.error(f"Decodo API request failed before a response was received: {e}")
             return {"status": "failed", "reason": f"request_error_{type(e).__name__}"}
 
@@ -431,7 +434,9 @@ async def run_background_scrape(comp_id: str):
     Scrapes the next 7 days of rates.
     """
     logger.info(f"Starting Background Scrape for competitor ID: {comp_id}")
-    
+    # Declare before try so crash handler can read how many days were actually attempted.
+    attempted = 0
+
     try:
         async with async_session() as session:
             comp = await session.get(Competitor, comp_id)
@@ -474,7 +479,7 @@ async def run_background_scrape(comp_id: str):
             scrape_session_id = uuid.uuid4().hex[:12]
 
             success_count = 0
-            attempted = 0
+            # `attempted` is pre-declared before the outer try for crash-handler access
             has_errors = False
             last_error_reason = None
             was_stopped = False
@@ -640,11 +645,11 @@ async def run_background_scrape(comp_id: str):
                     comp.last_scrape_error = f"Internal system crash: {str(e)}"
                     session.add(comp)
                     
-                    # Log failed usage
+                    # Log failed usage — use the actual attempted count, not a hardcoded 7
                     usage = ScraperUsage(
                         hotel_id=comp.hotel_id,
                         competitor_id=comp_id,
-                        request_count=7,
+                        request_count=attempted,
                         status="failed"
                     )
                     session.add(usage)
