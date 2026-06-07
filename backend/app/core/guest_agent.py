@@ -183,7 +183,14 @@ async def _fetch_hotel_data(session: AsyncSession, hotel_id: str) -> Optional[di
             "description": hotel.description,
             "address": hotel.address if isinstance(hotel.address, dict) else {},
             "contact": hotel.contact if isinstance(hotel.contact, dict) else {},
-            "settings": hotel.settings if isinstance(hotel.settings, dict) else {},
+            "settings": {
+                k: v for k, v in (hotel.settings if isinstance(hotel.settings, dict) else {}).items()
+                if k in (
+                    "cancellation_policy", "child_policy", "payment_policy",
+                    "check_in_time", "check_out_time", "pet_policy",
+                    "extra_bed_policy", "tax_type", "tax_rate",
+                )
+            },
             "star_rating": hotel.star_rating,
         },
         "rooms": [

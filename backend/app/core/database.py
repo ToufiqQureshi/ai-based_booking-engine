@@ -186,6 +186,8 @@ async def init_db():
         "ALTER TABLE hotels ADD COLUMN ai_max_tokens INTEGER",
         "ALTER TABLE hotels ADD COLUMN max_competitors INTEGER DEFAULT 5",
         "ALTER TABLE integration_settings ADD COLUMN ai_max_tokens INTEGER",
+        "ALTER TABLE chains ADD COLUMN primary_color VARCHAR(50) DEFAULT '#4f46e5'",
+        "ALTER TABLE chains ADD COLUMN is_active BOOLEAN DEFAULT TRUE",
     ]:
         try:
             async with engine.begin() as conn:

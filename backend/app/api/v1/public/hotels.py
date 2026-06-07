@@ -313,7 +313,7 @@ async def get_public_chain(request: Request, chain_slug: str, session: DbSession
         "name": chain.name,
         "slug": chain.slug,
         "logo_url": chain.logo_url,
-        "primary_color": None,
+        "primary_color": getattr(chain, "primary_color", None) or "#4f46e5",
         "properties": properties,
     }
 
