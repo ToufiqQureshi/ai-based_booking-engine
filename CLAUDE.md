@@ -86,5 +86,12 @@ These rules are derived from a full security/performance audit
 - [ ] LLM calls bounded & usage-tracked (if AI)
 - [ ] No PII/secret in logs; no new lint/test failures
 - [ ] `cd backend && pytest` green; frontend builds if touched
+- [ ] Updated `work_log_tracker.csv` at the project root with the list of changes made
+
+## 11. Work Log Tracker Maintenance
+- If you add, modify, or delete features or endpoints, you **must** document it in `work_log_tracker.csv` at the project root.
+- Maintain fields: `"Timestamp","Task Name","File Path","Category","API Calls Count","Caching & Database Details","Security Controls / IDOR Prevention"`.
+- Always wrap each field in double quotes (`"`) to ensure clean parsing by Excel/Google Sheets.
 
 See also: `docs/SCALE_TUNING.md` (go-live sizing) and `docs/SECURITY_AUDIT_REPORT.md`.
+

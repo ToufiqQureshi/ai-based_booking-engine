@@ -17,6 +17,7 @@ interface ChainProperty {
     city?: string;
     logo_url?: string | null;
     star_rating?: number;
+    primary_color?: string | null;
 }
 
 interface ChainInfo {
@@ -139,7 +140,7 @@ export default function ChainBookingWidget() {
         }
     };
 
-    const primaryColor = previewColor || chain?.primary_color || '#4f46e5';
+    const primaryColor = previewColor || selectedProperty?.primary_color || chain?.primary_color || '#4f46e5';
 
     const filteredProperties = (chain?.properties || []).filter(p =>
         p.name.toLowerCase().includes(propertySearch.toLowerCase()) ||
@@ -172,9 +173,12 @@ export default function ChainBookingWidget() {
                 .chain-btn {
                     background-color: ${primaryColor} !important;
                     color: white !important;
+                    box-shadow: 0 4px 12px 0 ${primaryColor}30;
+                    transition: all 0.2s ease-in-out;
                 }
                 .chain-btn:hover {
                     filter: brightness(1.08);
+                    box-shadow: 0 6px 16px 0 ${primaryColor}40;
                 }
                 .chain-accent { color: ${primaryColor} !important; }
                 .chain-border-focus:focus-within {
@@ -188,9 +192,14 @@ export default function ChainBookingWidget() {
                 .rdp-day_selected {
                     background-color: ${primaryColor} !important;
                     color: white !important;
+                    box-shadow: 0 4px 14px 0 ${primaryColor}40;
                 }
                 .rdp-caption {
                     background-color: ${primaryColor} !important;
+                }
+                .rdp-day_today {
+                    color: ${primaryColor} !important;
+                    border-color: ${primaryColor}80 !important;
                 }
             `}</style>
 

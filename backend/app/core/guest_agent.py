@@ -7,7 +7,7 @@ import logging
 from sqlmodel import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.booking import Booking, BookingStatus
+from app.models.booking import Booking, BookingStatus, Guest
 from app.models.room import RoomType
 from app.models.hotel import Hotel
 from app.core.redis_client import redis_client
@@ -208,7 +208,7 @@ async def _fetch_hotel_data(session: AsyncSession, hotel_id: str) -> Optional[di
 # Prompt builder (from cached dict — no DB needed)
 # ---------------------------------------------------------------------------
 
-def _build_formatted_prompt(data: dict, hotel_name: str) -> str:
+def _build_formatted_prompt(data: dict, hotel_name: str, guest_history: Optional[str] = None) -> str:
     hotel = data["hotel"]
     settings = hotel.get("settings", {})
     address = hotel.get("address", {})
@@ -230,7 +230,7 @@ def _build_formatted_prompt(data: dict, hotel_name: str) -> str:
     if settings.get("payment_policy"):
         policies.append(f"Payment Policy: {settings['payment_policy']}")
 
-    return SYSTEM_PROMPT.format(
+    prompt = SYSTEM_PROMPT.format(
         hotel_name=hotel_name,
         address=f"{address.get('street', '')}, {address.get('city', '')}, {address.get('country', '')}",
         contact=f"Phone: {contact.get('phone', '')}, Email: {contact.get('email', '')}",
@@ -242,18 +242,73 @@ def _build_formatted_prompt(data: dict, hotel_name: str) -> str:
         current_date=date.today().isoformat(),
     )
 
+    if guest_history:
+        prompt += f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nGUEST HISTORICAL PREFERENCES (Chain-wide)\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n{guest_history}\nUse this historical data to personalise recommendations (e.g. if they request food options or room layouts they preferred in the past).\n"
+
+    return prompt
+
 
 # ---------------------------------------------------------------------------
 # Public helpers
 # ---------------------------------------------------------------------------
 
+async def _fetch_chain_guest_history(session: AsyncSession, email: str, chain_id: str) -> str:
+    try:
+        # Get all hotels in the chain
+        hotel_ids_res = await session.execute(
+            select(Hotel.id).where(Hotel.chain_id == chain_id)
+        )
+        hotel_ids = [r[0] for r in hotel_ids_res.all()]
+        if not hotel_ids:
+            return ""
+            
+        # Get guest details in the chain
+        guest_res = await session.execute(
+            select(Guest).where(Guest.email == email, Guest.hotel_id.in_(hotel_ids))
+        )
+        guests = guest_res.scalars().all()
+        guest_ids = [g.id for g in guests]
+        if not guest_ids:
+            return ""
+            
+        # Get past bookings
+        booking_stmt = select(Booking).where(
+            Booking.guest_id.in_(guest_ids),
+            Booking.status == BookingStatus.CHECKED_OUT
+        )
+        booking_res = await session.execute(booking_stmt)
+        bookings = booking_res.scalars().all()
+        if not bookings:
+            return ""
+            
+        history_lines = []
+        for b in bookings:
+            hotel_name_res = await session.execute(select(Hotel.name).where(Hotel.id == b.hotel_id))
+            h_name = hotel_name_res.scalar_one_or_none() or "Sister Hotel"
+            rooms_str = ", ".join(r.get("room_type_name", "Room") for r in b.rooms)
+            req = f" (Special Requests: {b.special_requests})" if b.special_requests else ""
+            history_lines.append(f"- Stayed at {h_name} in {rooms_str} from {b.check_in} to {b.check_out}{req}")
+            
+        return "\n".join(history_lines)
+    except Exception as exc:
+        logger.warning(f"Error fetching guest history: {exc}")
+        return ""
+
+
 async def get_guest_system_prompt_content(
-    session: AsyncSession, hotel_id: str, hotel_name: str
+    session: AsyncSession, hotel_id: str, hotel_name: str, guest_email: Optional[str] = None
 ) -> str:
     data = await _fetch_hotel_data(session, hotel_id)
     if not data:
         return ""
-    return _build_formatted_prompt(data, hotel_name)
+        
+    guest_history = ""
+    hotel_res = await session.execute(select(Hotel.chain_id).where(Hotel.id == hotel_id))
+    chain_id = hotel_res.scalar_one_or_none()
+    if chain_id and guest_email:
+        guest_history = await _fetch_chain_guest_history(session, guest_email, chain_id)
+        
+    return _build_formatted_prompt(data, hotel_name, guest_history)
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +324,7 @@ async def create_guest_agent_graph(
     ai_base_url: str = None,
     hotel_name: str = "the hotel",
     ai_max_tokens: int = None,
+    guest_email: Optional[str] = None,
 ):
     if not ai_api_key or not ai_model:
         return None
@@ -526,7 +582,13 @@ async def create_guest_agent_graph(
                 cache_ttl=300,
             )
 
-        formatted_prompt = _build_formatted_prompt(data, hotel_name)
+        guest_history = ""
+        hotel_res = await session.execute(select(Hotel.chain_id).where(Hotel.id == hotel_id))
+        chain_id = hotel_res.scalar_one_or_none()
+        if chain_id and guest_email:
+            guest_history = await _fetch_chain_guest_history(session, guest_email, chain_id)
+
+        formatted_prompt = _build_formatted_prompt(data, hotel_name, guest_history)
 
         return Agent(
             model=llm_model,

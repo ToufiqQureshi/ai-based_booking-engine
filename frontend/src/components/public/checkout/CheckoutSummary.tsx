@@ -9,7 +9,7 @@ import { Loader2, ArrowRight, MapPin, Sparkles, ShieldCheck, Info } from 'lucide
 import { cn } from '@/lib/utils';
 
 export function CheckoutSummary() {
-    const { room, state, getNormalizedColor, themeColor, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, nights, roomsTotal, addonsTotal, appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount, addonTaxRate, addonTaxAmount, appliedPromo, setAppliedPromo, setDiscountAmount } = useBookingCheckout();
+    const { room, state, getNormalizedColor, themeColor, formatCurrency, roomTaxType, addonTaxType, subtotalAmount, taxAmount, taxName, promoCode, setPromoCode, promoMessage, handleApplyPromo, isValidating, discountAmount, finalTotal, isSubmitting, nights, roomsTotal, addonsTotal, appliedRoomTaxRate, roomTaxCalculationMethod, roomTaxAmount, addonTaxRate, addonTaxAmount, appliedPromo, setAppliedPromo, setDiscountAmount, pointsBalance = 0, setPointsBalance, redeemPointsActive = false, setRedeemPointsActive, handleOpenDateChange } = useBookingCheckout();
     
     return (
                     <div className="lg:sticky lg:top-8 h-fit animate-enter" style={{ animationDelay: '0.1s' }}>
@@ -58,6 +58,14 @@ export function CheckoutSummary() {
                                         <p className="text-[10px] text-slate-500 font-bold uppercase">11:00 AM</p>
                                     </div>
                                 </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleOpenDateChange}
+                                    className="w-full h-10 rounded-xl font-bold text-xs"
+                                >
+                                    Modify Stay Dates
+                                </Button>
 
                                 <Separator className="bg-slate-100" />
 
@@ -150,6 +158,33 @@ export function CheckoutSummary() {
                                     )}
                                 </div>
 
+                                {/* Loyalty Points Redemption */}
+                                {pointsBalance > 0 && (
+                                    <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 rounded-2xl border border-amber-200/60 p-4 space-y-3 shadow-inner">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                                                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Loyalty Balance</span>
+                                            </div>
+                                            <Badge className="bg-amber-100 text-amber-800 font-extrabold px-2.5 py-0.5 border-0 rounded-full">
+                                                {pointsBalance} Points Available
+                                            </Badge>
+                                        </div>
+                                        <div className="flex items-center gap-3 bg-white/80 p-2.5 rounded-xl border border-amber-100/50">
+                                            <input
+                                                id="redeemPoints"
+                                                type="checkbox"
+                                                checked={redeemPointsActive}
+                                                onChange={(e) => setRedeemPointsActive(e.target.checked)}
+                                                className="w-4.5 h-4.5 accent-amber-600 cursor-pointer rounded"
+                                            />
+                                            <label htmlFor="redeemPoints" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                                                Redeem {pointsBalance} points to save {formatCurrency(pointsBalance)}
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Total */}
                                 <div className="pt-8 border-t border-slate-100">
                                     <div className="space-y-2 mb-6">
@@ -169,6 +204,12 @@ export function CheckoutSummary() {
                                             <div className="flex justify-between items-center text-green-600 font-bold animate-in fade-in slide-in-from-top-1">
                                                 <span className="text-xs uppercase tracking-widest">Loyalty Reward</span>
                                                 <span className="text-sm">-{formatCurrency(discountAmount)}</span>
+                                            </div>
+                                        )}
+                                        {redeemPointsActive && (
+                                            <div className="flex justify-between items-center text-amber-600 font-bold animate-in fade-in slide-in-from-top-1">
+                                                <span className="text-xs uppercase tracking-widest">Points Redeemed</span>
+                                                <span className="text-sm">-{formatCurrency(pointsBalance)}</span>
                                             </div>
                                         )}
                                     </div>

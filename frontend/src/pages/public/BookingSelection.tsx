@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, ChevronLeft, ChevronRight, Check, ShoppingBag, X, ArrowRight, Sparkles, Hotel as HotelIcon } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Check, ShoppingBag, X, ArrowRight, Sparkles, Hotel as HotelIcon, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,7 @@ export default function BookingSelection() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRateInfo, setSelectedRateInfo] = useState<RateOption | null>(null);
     const [isRateModalOpen, setIsRateModalOpen] = useState(false);
+    const [recommendations, setRecommendations] = useState<any[]>([]);
 
     // Addon Sheet State
     const [isAddonSheetOpen, setIsAddonSheetOpen] = useState(false);
@@ -77,12 +78,60 @@ export default function BookingSelection() {
     const [isMobile, setIsMobile] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+    // Loyalty checking states
+    const [loyaltyEmail, setLoyaltyEmail] = useState('');
+    const [isLoyaltyChecked, setIsLoyaltyChecked] = useState(false);
+    const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+    const [loyaltyMessage, setLoyaltyMessage] = useState('');
+    const [loyaltyChecking, setLoyaltyChecking] = useState(false);
+
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768);
         check();
         window.addEventListener('resize', check);
         return () => window.removeEventListener('resize', check);
     }, []);
+
+    useEffect(() => {
+        const saved = sessionStorage.getItem('loyalty_checked_guest');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setLoyaltyEmail(parsed.email);
+                setIsLoyaltyChecked(true);
+                setLoyaltyBalance(parsed.points_balance);
+                setLoyaltyMessage(parsed.message);
+            } catch (_) {}
+        }
+    }, []);
+
+    const handleCheckLoyalty = async () => {
+        if (!loyaltyEmail) return;
+        setLoyaltyChecking(true);
+        try {
+            const response = await apiClient.post<any>('/public/loyalty-check', {
+                email: loyaltyEmail,
+                hotel_id: hotel?.id || hotelSlug,
+            });
+            setIsLoyaltyChecked(true);
+            if (response.points_balance) {
+                setLoyaltyBalance(response.points_balance);
+            }
+            if (response.message) {
+                setLoyaltyMessage(response.message);
+            }
+            sessionStorage.setItem('loyalty_checked_guest', JSON.stringify({
+                email: loyaltyEmail,
+                points_balance: response.points_balance || 0,
+                coupon_code: response.coupon_code || null,
+                message: response.message || ''
+            }));
+        } catch (error) {
+            console.error('Failed to check loyalty:', error);
+        } finally {
+            setLoyaltyChecking(false);
+        }
+    };
 
     // Filters
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 20000]);
@@ -219,6 +268,18 @@ export default function BookingSelection() {
                 setAddons(addonsData.filter(a => a.is_active !== false));
                 setHotel(hotelData);
 
+                if (roomsData.length === 0) {
+                    try {
+                        const recs = await apiClient.get<any[]>(`/public/hotels/${hotelSlug}/recommendations?${query}`);
+                        setRecommendations(recs);
+                    } catch (err) {
+                        console.error('Failed to fetch recommendations:', err);
+                        setRecommendations([]);
+                    }
+                } else {
+                    setRecommendations([]);
+                }
+
 
             } catch (error) {
                 console.error('Failed to fetch data:', error);
@@ -300,7 +361,10 @@ export default function BookingSelection() {
                     rate_plan_name: selectedRatePlan.name
                 }],
                 totalRoomPrice: selectedRatePlan.total_price,
-                addons: selectedAddons
+                addons: selectedAddons,
+                guest_prefill: isLoyaltyChecked ? {
+                    email: loyaltyEmail
+                } : undefined
             }
         });
     };
@@ -444,6 +508,69 @@ export default function BookingSelection() {
                     handleSearch={handleSearch}
                 />
 
+                {/* Loyalty Program Member Verification Banner */}
+                <div className="mb-6 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20 rounded-3xl p-5 md:p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 flex-shrink-0">
+                            <Sparkles className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-slate-800 tracking-tight text-base">Staybooker Loyalty Program</h3>
+                            <p className="text-xs text-slate-500 font-medium">
+                                {isLoyaltyChecked 
+                                    ? `Welcome back! You have active points available for your stay.` 
+                                    : "Enter your email to unlock exclusive member rates & redeem your points."}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        {isLoyaltyChecked ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-extrabold px-3 py-1.5 border-0 rounded-full text-xs">
+                                    {loyaltyBalance} Points Available
+                                </Badge>
+                                {loyaltyMessage && (
+                                    <span className="text-xs font-bold text-slate-600">{loyaltyMessage}</span>
+                                )}
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-slate-400 hover:text-slate-600 font-bold text-xs" 
+                                    onClick={() => {
+                                        setIsLoyaltyChecked(false);
+                                        setLoyaltyEmail('');
+                                        setLoyaltyBalance(0);
+                                        setLoyaltyMessage('');
+                                        sessionStorage.removeItem('loyalty_checked_guest');
+                                    }}
+                                >
+                                    Change
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex gap-2 w-full md:w-[320px]">
+                                <input
+                                    type="email"
+                                    placeholder="Enter email address"
+                                    value={loyaltyEmail}
+                                    onChange={(e) => setLoyaltyEmail(e.target.value)}
+                                    className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:border-amber-500 font-semibold flex-1"
+                                />
+                                <Button
+                                    size="sm"
+                                    className="rounded-xl px-5 font-bold text-white shrink-0 animate-enter"
+                                    style={{ backgroundColor: '#f59e0b' }}
+                                    onClick={handleCheckLoyalty}
+                                    disabled={loyaltyChecking || !loyaltyEmail}
+                                >
+                                    {loyaltyChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Check'}
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Sidebar Filters */}
                     <div className="lg:col-span-3 space-y-4">
@@ -506,16 +633,86 @@ export default function BookingSelection() {
                         </div>
 
                         {filteredRooms.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-slate-100 p-8 text-center">
-                                <h3 className="text-2xl font-bold text-slate-900 mb-3">No availability for these criteria</h3>
-                                <p className="text-slate-500 mb-6">Adjust your dates or filters to search again.</p>
-                                <button 
-                                    className="px-6 py-2 text-white rounded-xl font-bold transition-all active:scale-95 shadow-md" 
-                                    style={{ backgroundColor: themeColor }}
-                                    onClick={() => { setPriceRange([0, 20000]); setSelectedMealPlans([]); }}
-                                >
-                                    Clear Filters
-                                </button>
+                            <div className="space-y-8">
+                                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-slate-100 p-8 text-center shadow-sm">
+                                    <h3 className="text-2xl font-bold text-slate-900 mb-3">No availability for these criteria</h3>
+                                    <p className="text-slate-500 mb-6">Adjust your dates or filters to search again.</p>
+                                    <button 
+                                        className="px-6 py-2 text-white rounded-xl font-bold transition-all active:scale-95 shadow-md" 
+                                        style={{ backgroundColor: themeColor }}
+                                        onClick={() => { setPriceRange([0, 20000]); setSelectedMealPlans([]); }}
+                                    >
+                                        Clear Filters
+                                    </button>
+                                </div>
+                                {recommendations.length > 0 && (
+                                    <div className="bg-gradient-to-br from-indigo-50/40 via-purple-50/20 to-white rounded-3xl border border-slate-100 p-6 md:p-8 shadow-sm">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                                <Sparkles className="w-5 h-5 animate-pulse" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-800 tracking-tight">Rooms Sold Out? Sibling Properties are Available</h3>
+                                                <p className="text-xs text-slate-500 font-medium">We found these sister properties in the same chain with availability for your dates.</p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {recommendations.map((rec) => (
+                                                <div key={rec.hotel_id} className="bg-white rounded-2xl border border-slate-200/80 p-5 hover:shadow-md transition-all flex flex-col justify-between group">
+                                                    <div className="flex gap-4">
+                                                        {rec.logo_url ? (
+                                                            <img src={rec.logo_url} alt={rec.name} className="w-12 h-12 rounded-xl object-cover border border-slate-100" />
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+                                                                <HotelIcon className="w-5 h-5" />
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <h4 className="font-extrabold text-slate-800 text-[15px] group-hover:text-indigo-600 transition-colors">{rec.name}</h4>
+                                                            <p className="text-xs font-semibold text-slate-400 mt-1 flex items-center gap-1">
+                                                                <MapPin className="w-3.5 h-3.5" /> {rec.city || 'Unknown Location'}
+                                                            </p>
+                                                            {rec.star_rating && (
+                                                                <div className="flex items-center gap-1 mt-1.5">
+                                                                    <Badge variant="outline" className="text-[9px] font-bold text-indigo-600 border-indigo-100 bg-indigo-50/30 px-1.5 py-0">
+                                                                        {rec.star_rating} Star
+                                                                    </Badge>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                                                        <div>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Starting from</span>
+                                                            <span className="text-[15px] font-black text-slate-800">{formatCurrency(rec.price_starting_at)}</span>
+                                                        </div>
+                                                        <Button 
+                                                            onClick={() => {
+                                                                const queryParams = new URLSearchParams({
+                                                                    check_in: checkIn,
+                                                                    check_out: checkOut,
+                                                                    guests: (adults + children).toString(),
+                                                                    adults: adults.toString(),
+                                                                    children: children.toString(),
+                                                                    rooms: roomsCount.toString(),
+                                                                    promo_code: promoCode
+                                                                });
+                                                                navigate(`/book/${rec.slug}/rooms?${queryParams.toString()}`);
+                                                            }}
+                                                            className="rounded-xl font-bold text-xs gap-1.5 text-white shadow-sm"
+                                                            style={{ backgroundColor: themeColor }}
+                                                            size="sm"
+                                                        >
+                                                            View Rooms
+                                                            <ArrowRight className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-8">

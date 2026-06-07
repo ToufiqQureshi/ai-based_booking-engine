@@ -78,6 +78,7 @@ class PublicBookingCreate(BaseModel):
     payment_method: Optional[str] = None
     # "ai_agent" when the guest arrived via an AI-concierge booking link, else booking_engine
     source: Optional[str] = None
+    redeem_points: Optional[float] = None
 
 class PublicBookingResponse(BaseModel):
     id: str
@@ -336,12 +337,16 @@ async def create_public_booking(
         tax_amount = round(room_tax_amount + addon_tax_amount, 2)
         total_before_discount = subtotal_amount + tax_amount
         
-        # Apply Promo Code if valid on backend
+        # Get hotel's chain_id
+        hotel_model = await session.get(Hotel, hotel_id)
+        chain_id = hotel_model.chain_id if hotel_model else None
+
+        # Apply Promo Code if valid on backend (checks hotel-specific & chain-level promos)
         discount_amount = 0.0
         if booking_data.promo_code:
             promo_query = select(PromoCode).where(
                 PromoCode.code == booking_data.promo_code,
-                PromoCode.hotel_id == hotel_id,
+                or_(PromoCode.hotel_id == hotel_id, PromoCode.chain_id == chain_id),
                 PromoCode.is_active == True
             )
             promo_res = await session.execute(promo_query)
@@ -356,7 +361,30 @@ async def create_public_booking(
                 promo.current_usage = (promo.current_usage or 0) + 1
                 session.add(promo)
                 
-        total_amount = round(total_before_discount - discount_amount, 2)
+        # Deduct Loyalty Points if requested
+        points_redeemed = 0.0
+        if booking_data.redeem_points and booking_data.redeem_points > 0:
+            if chain_id:
+                loyal_stmt = select(GuestLoyalty).where(
+                    GuestLoyalty.guest_email == guest_data.email,
+                    GuestLoyalty.chain_id == chain_id
+                )
+            else:
+                loyal_stmt = select(GuestLoyalty).where(
+                    GuestLoyalty.guest_email == guest_data.email,
+                    GuestLoyalty.hotel_id == hotel_id
+                )
+            loyal_res = await session.execute(loyal_stmt)
+            loyal = loyal_res.scalar_one_or_none()
+            
+            if not loyal or loyal.points_balance < booking_data.redeem_points:
+                raise HTTPException(status_code=400, detail="Insufficient loyalty points balance")
+                
+            points_redeemed = min(booking_data.redeem_points, total_before_discount - discount_amount)
+            loyal.points_balance = float(loyal.points_balance) - points_redeemed
+            session.add(loyal)
+            
+        total_amount = round(total_before_discount - discount_amount - points_redeemed, 2)
         discount_amount = round(discount_amount, 2)
         
         # Build tax details object
@@ -433,6 +461,7 @@ async def create_public_booking(
             tax_details=tax_details,
             status=BookingStatus.PENDING,
             source=BookingSource.AI_AGENT if booking_data.source == "ai_agent" else BookingSource.BOOKING_ENGINE,
+            loyalty_points_redeemed=points_redeemed,
         )
         session.add(booking)
         await session.commit()
@@ -532,6 +561,7 @@ class LoyaltyCheckResponse(BaseModel):
     bookings_completed: int = 0
     bookings_to_reward: int = 0
     reward_description: Optional[str] = None
+    points_balance: float = 0.0
 
 
 @router.post("/loyalty-check", response_model=LoyaltyCheckResponse)
@@ -539,41 +569,96 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
     """
     Checks guest loyalty status against the hotel's configured loyalty program.
     Returns reward coupon if milestone reached, or milestone nudge popup if close.
+    Also returns current points balance.
     """
     try:
-        # 1. Fetch hotel's loyalty program config
-        prog_result = await session.execute(
-            select(LoyaltyProgram).where(
-                LoyaltyProgram.hotel_id == data.hotel_id,
-                LoyaltyProgram.is_active == True,
-            )
-        )
-        program = prog_result.scalar_one_or_none()
+        # 1. Fetch hotel's chain_id
+        hotel_res = await session.execute(select(Hotel.chain_id).where(Hotel.id == data.hotel_id))
+        chain_id = hotel_res.scalar_one_or_none()
 
-        # 2. Find guest
-        guest_result = await session.execute(
-            select(Guest).where(
-                Guest.email == data.email,
-                Guest.hotel_id == data.hotel_id,
-            )
-        )
-        guest = guest_result.scalar_one_or_none()
-
-        # 3. Count completed bookings
-        completed_count = 0
-        first_name = "Guest"
-        if guest:
-            first_name = guest.first_name or "Guest"
-            b_result = await session.execute(
-                select(Booking).where(
-                    Booking.guest_id == guest.id,
+        # 2. Fetch loyalty program config (hotel-specific or fallback to chain-level)
+        if chain_id:
+            prog_result = await session.execute(
+                select(LoyaltyProgram).where(
                     or_(
-                        Booking.status == BookingStatus.CONFIRMED,
-                        Booking.status == BookingStatus.CHECKED_OUT,
+                        LoyaltyProgram.hotel_id == data.hotel_id,
+                        LoyaltyProgram.chain_id == chain_id
                     ),
+                    LoyaltyProgram.is_active == True,
                 )
             )
-            completed_count = len(b_result.scalars().all())
+        else:
+            prog_result = await session.execute(
+                select(LoyaltyProgram).where(
+                    LoyaltyProgram.hotel_id == data.hotel_id,
+                    LoyaltyProgram.is_active == True,
+                )
+            )
+        program = prog_result.scalar_one_or_none()
+
+        # 3. Find guest loyalty record & calculate points balance
+        if chain_id:
+            loyal_stmt = select(GuestLoyalty).where(
+                GuestLoyalty.guest_email == data.email,
+                GuestLoyalty.chain_id == chain_id
+            )
+        else:
+            loyal_stmt = select(GuestLoyalty).where(
+                GuestLoyalty.guest_email == data.email,
+                GuestLoyalty.hotel_id == data.hotel_id
+            )
+        loyal_res = await session.execute(loyal_stmt)
+        loyal = loyal_res.scalar_one_or_none()
+        points_balance = float(loyal.points_balance) if loyal else 0.0
+
+        # 4. Count completed bookings across hotel or chain
+        completed_count = 0
+        first_name = "Guest"
+        if chain_id:
+            # Find all guest instances in the chain's hotels to count past bookings
+            hotels_in_chain_stmt = select(Hotel.id).where(Hotel.chain_id == chain_id)
+            hotels_in_chain_res = await session.execute(hotels_in_chain_stmt)
+            hotel_ids = hotels_in_chain_res.scalars().all()
+            
+            guests_res = await session.execute(
+                select(Guest).where(Guest.email == data.email, Guest.hotel_id.in_(hotel_ids))
+            )
+            guests = guests_res.scalars().all()
+            guest_ids = [g.id for g in guests]
+            if guests:
+                first_name = guests[0].first_name or "Guest"
+                
+            if guest_ids:
+                b_result = await session.execute(
+                    select(Booking).where(
+                        Booking.guest_id.in_(guest_ids),
+                        or_(
+                            Booking.status == BookingStatus.CONFIRMED,
+                            Booking.status == BookingStatus.CHECKED_OUT,
+                        ),
+                    )
+                )
+                completed_count = len(b_result.scalars().all())
+        else:
+            guest_result = await session.execute(
+                select(Guest).where(
+                    Guest.email == data.email,
+                    Guest.hotel_id == data.hotel_id,
+                )
+            )
+            guest = guest_result.scalar_one_or_none()
+            if guest:
+                first_name = guest.first_name or "Guest"
+                b_result = await session.execute(
+                    select(Booking).where(
+                        Booking.guest_id == guest.id,
+                        or_(
+                            Booking.status == BookingStatus.CONFIRMED,
+                            Booking.status == BookingStatus.CHECKED_OUT,
+                        ),
+                    )
+                )
+                completed_count = len(b_result.scalars().all())
 
         # No program configured — fall back to simple repeat-guest check
         if not program:
@@ -582,22 +667,24 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
                     is_repeat_guest=True,
                     message=f"Welcome back, {first_name}! We're delighted to have you again.",
                     bookings_completed=completed_count,
+                    points_balance=points_balance,
                 )
             return LoyaltyCheckResponse(
                 is_repeat_guest=False,
                 message="Welcome! We're excited to have you here.",
+                points_balance=points_balance,
             )
 
         milestone = program.milestone_bookings
         bookings_since_last_reward = completed_count % milestone if milestone > 0 else completed_count
         remaining = milestone - bookings_since_last_reward
 
-        # 4. Guest has reached or passed a milestone — reward!
+        # 5. Guest has reached or passed a milestone — reward!
         if completed_count > 0 and bookings_since_last_reward == 0:
-            # Generate/find reward coupon
+            # Generate/find reward coupon (checks hotel-specific & chain-level promos)
             promo_result = await session.execute(
                 select(PromoCode).where(
-                    PromoCode.hotel_id == data.hotel_id,
+                    or_(PromoCode.hotel_id == data.hotel_id, PromoCode.chain_id == chain_id),
                     PromoCode.code.like("%LOYALTY%"),
                     PromoCode.is_active == True,
                 )
@@ -624,9 +711,10 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
                 bookings_completed=completed_count,
                 bookings_to_reward=0,
                 reward_description=program.reward_description,
+                points_balance=points_balance,
             )
 
-        # 5. Guest is close (within 1 booking of milestone) — show nudge popup
+        # 6. Guest is close (within 1 booking of milestone) — show nudge popup
         if completed_count > 0 and remaining == 1:
             popup_msg = program.popup_message.replace("{remaining}", str(remaining))
             val = program.reward_value
@@ -644,21 +732,24 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
                 bookings_completed=completed_count,
                 bookings_to_reward=remaining,
                 reward_description=reward_desc,
+                points_balance=points_balance,
             )
 
-        # 6. Repeat guest, no milestone action needed
+        # 7. Repeat guest, no milestone action needed
         if completed_count > 0:
             return LoyaltyCheckResponse(
                 is_repeat_guest=True,
                 message=f"Welcome back, {first_name}! Great to see you again.",
                 bookings_completed=completed_count,
                 bookings_to_reward=remaining,
+                points_balance=points_balance,
             )
 
         return LoyaltyCheckResponse(
             is_repeat_guest=False,
             message="Welcome! We're excited to have you here.",
             bookings_to_reward=milestone,
+            points_balance=points_balance,
         )
 
     except Exception as e:
@@ -666,6 +757,7 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
         return LoyaltyCheckResponse(
             is_repeat_guest=False,
             message="Welcome! Enjoy your booking experience.",
+            points_balance=0.0,
         )
 
 

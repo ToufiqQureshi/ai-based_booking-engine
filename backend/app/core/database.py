@@ -150,6 +150,32 @@ async def init_db():
         except Exception:
             pass
 
+    # Chain-wide features migrations
+    for table_alter in [
+        "ALTER TABLE loyalty_programs ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
+        "ALTER TABLE loyalty_programs ALTER COLUMN hotel_id DROP NOT NULL",
+        "ALTER TABLE guest_loyalty ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
+        "ALTER TABLE guest_loyalty ALTER COLUMN hotel_id DROP NOT NULL",
+        "ALTER TABLE guest_loyalty ADD COLUMN points_balance NUMERIC DEFAULT 0.00",
+        "ALTER TABLE promo_codes ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
+        "ALTER TABLE promo_codes ALTER COLUMN hotel_id DROP NOT NULL"
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(table_alter))
+        except Exception:
+            pass
+
+    for col, col_type in [
+        ("loyalty_points_earned", "NUMERIC DEFAULT 0.00"),
+        ("loyalty_points_redeemed", "NUMERIC DEFAULT 0.00")
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
+        except Exception:
+            pass
+
     # SystemBroadcast scheduling + targeting columns
     # JSON DEFAULT must be cast for Postgres ('[]'::json), but SQLite tolerates plain '[]'.
     json_default = "'[]'::json" if not is_sqlite else "'[]'"

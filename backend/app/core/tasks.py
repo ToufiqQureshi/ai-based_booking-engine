@@ -159,3 +159,105 @@ async def log_timeline_task(
             await session.commit()
         except Exception:
             logger.exception("Failed to log timeline event for booking %s", booking_id)
+
+
+async def process_loyalty_checkout_task(booking_id: str) -> None:
+    """Background task to calculate and award loyalty points on guest checkout."""
+    from app.core.database import async_session
+    from app.models.booking import Booking, BookingStatus, Guest
+    from app.models.hotel import Hotel
+    from app.models.loyalty import LoyaltyProgram, GuestLoyalty
+    from sqlmodel import select
+    from datetime import datetime
+
+    async with async_session() as session:
+        try:
+            booking = await session.get(Booking, booking_id)
+            if not booking or booking.status != BookingStatus.CHECKED_OUT:
+                return
+
+            hotel = await session.get(Hotel, booking.hotel_id)
+            if not hotel:
+                return
+
+            chain_id = hotel.chain_id
+
+            if chain_id:
+                prog_stmt = select(LoyaltyProgram).where(
+                    LoyaltyProgram.chain_id == chain_id,
+                    LoyaltyProgram.is_active == True
+                )
+            else:
+                prog_stmt = select(LoyaltyProgram).where(
+                    LoyaltyProgram.hotel_id == hotel.id,
+                    LoyaltyProgram.is_active == True
+                )
+
+            prog_res = await session.execute(prog_stmt)
+            program = prog_res.scalar_one_or_none()
+            if not program:
+                return
+
+            guest = await session.get(Guest, booking.guest_id)
+            if not guest:
+                return
+
+            if chain_id:
+                loyal_stmt = select(GuestLoyalty).where(
+                    GuestLoyalty.guest_email == guest.email,
+                    GuestLoyalty.chain_id == chain_id
+                )
+            else:
+                loyal_stmt = select(GuestLoyalty).where(
+                    GuestLoyalty.guest_email == guest.email,
+                    GuestLoyalty.hotel_id == hotel.id
+                )
+
+            loyal_res = await session.execute(loyal_stmt)
+            loyal = loyal_res.scalar_one_or_none()
+            if not loyal:
+                loyal = GuestLoyalty(
+                    guest_email=guest.email,
+                    hotel_id=None if chain_id else hotel.id,
+                    chain_id=chain_id or None,
+                    total_completed_bookings=0,
+                    total_rooms_booked=0,
+                    total_spend=0.0,
+                    rewards_earned=0,
+                    points_balance=0.0
+                )
+                session.add(loyal)
+
+            earned_points = round(booking.total_amount * 0.1, 2)
+            
+            loyal.total_completed_bookings += 1
+            loyal.total_rooms_booked += len(booking.rooms)
+            loyal.total_spend += booking.total_amount
+            loyal.points_balance += earned_points
+            loyal.last_booking_at = datetime.utcnow()
+            loyal.updated_at = datetime.utcnow()
+
+            booking.loyalty_points_earned = earned_points
+
+            if program.milestone_bookings > 0:
+                milestone = program.milestone_bookings
+                calculated_rewards = loyal.total_completed_bookings // milestone
+                if calculated_rewards > loyal.rewards_earned:
+                    loyal.rewards_earned = calculated_rewards
+                    if program.reward_type == "percentage":
+                        loyal.points_balance += program.reward_value
+
+            session.add(loyal)
+            session.add(booking)
+            await session.commit()
+            
+            if chain_id:
+                try:
+                    from app.core.redis_client import redis_client
+                    redis_client.delete_pattern(f"chain_analytics:{chain_id}:*")
+                    redis_client.delete_pattern(f"chain_guests:{chain_id}:*")
+                except Exception:
+                    pass
+        except Exception:
+            logger.exception("Failed to process loyalty check-out for booking %s", booking_id)
+
