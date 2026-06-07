@@ -253,6 +253,14 @@ async def stop_scrape(comp_id: str, current_user: CurrentUser, session: DbSessio
             logger.warning(f"Failed to set scrape cancel flag for {comp_id}: {exc}")
             raise HTTPException(status_code=503, detail="Could not request stop right now. Please try again.")
 
+    # Force-update status in DB immediately so the frontend stops polling / showing "running"
+    # and recovers instantly. The background task checks the redis cancellation key on its 
+    # next loop iteration/check-in and exits early without overriding this.
+    comp.last_scrape_status = "success"
+    comp.last_scrape_error = "Stopped by you."
+    session.add(comp)
+    await session.commit()
+
     return {"message": "Stopping scrape — already-fetched rates are saved."}
 
 
@@ -417,42 +425,77 @@ async def run_background_scrape(comp_id: str):
             was_stopped = False
             cancel_key = f"scrape_cancel:{comp_id}"
 
-            # Scrape next 7 days
-            for offset in range(7):
-                # Hotelier-initiated stop: bail out before burning another paid
-                # API call. Days already scraped above are SAFE — each one is
-                # committed individually below, so a 4-of-7 stop keeps those 4.
+            # We define an inner async helper function to scrape a single offset day.
+            # Running this concurrently allows all 7 days to be fetched in parallel.
+            async def scrape_single_day(offset_val: int):
+                try:
+                    # Stagger launches slightly (e.g. 250ms spacing) so we don't dump 
+                    # all requests onto the Decodo endpoint in the same exact millisecond.
+                    await asyncio.sleep(offset_val * 0.25)
+                    
+                    # Check cancellation flag before making the HTTP call
+                    try:
+                        _rc = redis_client.get_instance()
+                        if _rc and _rc.get(cancel_key):
+                            return {"status": "stopped", "offset": offset_val, "date": date.today() + timedelta(days=offset_val)}
+                    except Exception as cancel_err:
+                        logger.warning(f"Scrape cancel-flag check failed (ignoring): {cancel_err}")
+                    
+                    check_in_date_obj = date.today() + timedelta(days=offset_val)
+                    updated_url = update_url_dates(url, offset_val)
+                    
+                    rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id)
+                    return {
+                        "status": rate_data.get("status"),
+                        "offset": offset_val,
+                        "date": check_in_date_obj,
+                        "price": rate_data.get("price"),
+                        "is_sold_out": rate_data.get("is_sold_out"),
+                        "reason": rate_data.get("reason"),
+                    }
+                except Exception as ex:
+                    logger.error(f"Task error in scrape_single_day for offset {offset_val}: {ex}")
+                    return {
+                        "status": "failed",
+                        "offset": offset_val,
+                        "date": date.today() + timedelta(days=offset_val),
+                        "reason": str(ex),
+                    }
+
+            # Launch all 7 scrape tasks concurrently!
+            tasks = [scrape_single_day(offset) for offset in range(7)]
+            results = await asyncio.gather(*tasks)
+
+            # Process the results sequentially in the database session
+            for res in sorted(results, key=lambda x: x["offset"]):
+                # Check if user clicked cancel during the run
                 try:
                     _rc = redis_client.get_instance()
                     if _rc and _rc.get(cancel_key):
                         _rc.delete(cancel_key)
                         was_stopped = True
-                        logger.info(f"Scrape for {comp_id} stopped by user after {attempted} day(s)")
-                        break
                 except Exception as cancel_err:
                     logger.warning(f"Scrape cancel-flag check failed (ignoring): {cancel_err}")
 
-                attempted += 1
-                check_in_date_obj = date.today() + timedelta(days=offset)
-                updated_url = update_url_dates(url, offset)
+                if was_stopped or res["status"] == "stopped":
+                    was_stopped = True
+                    logger.info(f"Scrape for {comp_id} stopped/cancelled by user after {attempted} days processed")
+                    break
 
-                # Sleep a random delay to avoid rate limiting
-                await asyncio.sleep(random.uniform(2, 4))
-                
-                # Scrape rate
-                rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id)
-                
-                if rate_data["status"] == "success":
-                    price = rate_data["price"]
-                    is_sold_out = rate_data["is_sold_out"]
+                attempted += 1
+                check_in_date_obj = res["date"]
+
+                if res["status"] == "success":
+                    price = res["price"]
+                    is_sold_out = res["is_sold_out"]
                     
                     # Check if rate already exists for this competitor and date
                     stmt = select(CompetitorRate).where(
                         CompetitorRate.competitor_id == comp_id,
                         CompetitorRate.check_in_date == check_in_date_obj
                     )
-                    res = await session.execute(stmt)
-                    existing_rate = res.scalar_one_or_none()
+                    db_res = await session.execute(stmt)
+                    existing_rate = db_res.scalar_one_or_none()
                     
                     if existing_rate:
                         existing_rate.price = price
@@ -484,7 +527,7 @@ async def run_background_scrape(comp_id: str):
                         logger.warning(f"Failed to clear competitor cache: {cache_err}")
                 else:
                     has_errors = True
-                    last_error_reason = rate_data.get("reason", "Unknown scraping failure")
+                    last_error_reason = res.get("reason", "Unknown scraping failure")
                     logger.warning(f"Failed to scrape rate for {comp.name} on {check_in_date_obj.isoformat()}: {last_error_reason}")
             
             # Update final status
