@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import date, datetime, timedelta
 from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+from sqlalchemy import func
 from sqlmodel import select, and_, or_
 from pydantic import BaseModel
 import uuid
@@ -344,6 +345,8 @@ async def create_public_booking(
         # Apply Promo Code if valid on backend (checks hotel-specific & chain-level promos)
         discount_amount = 0.0
         if booking_data.promo_code:
+            from datetime import date as _date
+            today = _date.today()
             promo_query = select(PromoCode).where(
                 PromoCode.code == booking_data.promo_code,
                 or_(PromoCode.hotel_id == hotel_id, PromoCode.chain_id == chain_id),
@@ -351,6 +354,14 @@ async def create_public_booking(
             )
             promo_res = await session.execute(promo_query)
             promo = promo_res.scalar_one_or_none()
+            if promo:
+                # Validate: not expired, not before start, not over usage cap
+                if promo.end_date and promo.end_date < today:
+                    promo = None  # expired
+                elif promo.start_date and promo.start_date > today:
+                    promo = None  # not started yet
+                elif promo.max_usage is not None and (promo.current_usage or 0) >= promo.max_usage:
+                    promo = None  # usage cap reached
             if promo:
                 if promo.discount_type == "percentage":
                     discount_amount = (total_before_discount * promo.discount_value) / 100
@@ -565,7 +576,8 @@ class LoyaltyCheckResponse(BaseModel):
 
 
 @router.post("/loyalty-check", response_model=LoyaltyCheckResponse)
-async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
+@limiter.limit("15/minute")
+async def check_guest_loyalty(request: Request, data: LoyaltyCheckRequest, session: DbSession):
     """
     Checks guest loyalty status against the hotel's configured loyalty program.
     Returns reward coupon if milestone reached, or milestone nudge popup if close.
@@ -619,7 +631,7 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
             hotels_in_chain_stmt = select(Hotel.id).where(Hotel.chain_id == chain_id)
             hotels_in_chain_res = await session.execute(hotels_in_chain_stmt)
             hotel_ids = hotels_in_chain_res.scalars().all()
-            
+
             guests_res = await session.execute(
                 select(Guest).where(Guest.email == data.email, Guest.hotel_id.in_(hotel_ids))
             )
@@ -627,10 +639,10 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
             guest_ids = [g.id for g in guests]
             if guests:
                 first_name = guests[0].first_name or "Guest"
-                
+
             if guest_ids:
                 b_result = await session.execute(
-                    select(Booking).where(
+                    select(func.count()).select_from(Booking).where(
                         Booking.guest_id.in_(guest_ids),
                         or_(
                             Booking.status == BookingStatus.CONFIRMED,
@@ -638,7 +650,7 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
                         ),
                     )
                 )
-                completed_count = len(b_result.scalars().all())
+                completed_count = b_result.scalar() or 0
         else:
             guest_result = await session.execute(
                 select(Guest).where(
@@ -650,15 +662,16 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
             if guest:
                 first_name = guest.first_name or "Guest"
                 b_result = await session.execute(
-                    select(Booking).where(
+                    select(func.count()).select_from(Booking).where(
                         Booking.guest_id == guest.id,
+                        Booking.hotel_id == data.hotel_id,
                         or_(
                             Booking.status == BookingStatus.CONFIRMED,
                             Booking.status == BookingStatus.CHECKED_OUT,
                         ),
                     )
                 )
-                completed_count = len(b_result.scalars().all())
+                completed_count = b_result.scalar() or 0
 
         # No program configured — fall back to simple repeat-guest check
         if not program:
@@ -752,8 +765,10 @@ async def check_guest_loyalty(data: LoyaltyCheckRequest, session: DbSession):
             points_balance=points_balance,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Loyalty check error: {str(e)}")
+        logger.error(f"Loyalty check unexpected error for hotel {data.hotel_id}: {str(e)}", exc_info=True)
         return LoyaltyCheckResponse(
             is_repeat_guest=False,
             message="Welcome! Enjoy your booking experience.",
@@ -842,7 +857,7 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
     Confirm booking cancellation or request it, based on hotel settings.
     PUB-01: rate-limited to throttle booking-number enumeration.
     """
-    query = select(Booking).where(Booking.booking_number == data.booking_number)
+    query = select(Booking).where(Booking.booking_number == data.booking_number).with_for_update()
     res = await session.execute(query)
     booking = res.scalar_one_or_none()
     

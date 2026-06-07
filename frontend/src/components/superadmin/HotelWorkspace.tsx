@@ -384,11 +384,34 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
 
                 {/* ── FEATURES ── */}
                 <TabsContent value="features" className="mt-0">
-                    <div className="border border-border rounded-2xl p-5 bg-background space-y-1">
-                        <div className="flex items-center justify-between mb-4">
+                    <div className="border border-border rounded-2xl p-5 bg-background space-y-4">
+                        <div className="flex items-center justify-between">
                             <h3 className="text-sm font-black text-foreground">Feature Access Control</h3>
                             <p className="text-[10px] text-muted-foreground">Changes apply immediately</p>
                         </div>
+                        {/* Competitor limit — super-admin controlled */}
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20">
+                            <div>
+                                <p className="text-sm font-bold text-foreground">Max Competitors (Rate Shopper)</p>
+                                <p className="text-[10px] text-muted-foreground">Hotelier can track up to this many OTA channels. Default: 5.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={50}
+                                    defaultValue={hotel.max_competitors ?? 5}
+                                    className="w-16 h-8 text-center border border-border rounded-lg text-sm font-bold bg-background text-foreground"
+                                    onBlur={(e) => {
+                                        const val = parseInt(e.target.value, 10);
+                                        if (!isNaN(val) && val >= 1 && val !== (hotel.max_competitors ?? 5)) {
+                                            toggleFeatureMutation.mutate({ flag: 'max_competitors' as any, value: val as any });
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1">
                         {FEATURE_FLAGS.map((f, i) => {
                             const Icon = f.icon;
                             const isOn = !!hotel[f.id];
@@ -411,6 +434,7 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                                 </div>
                             );
                         })}
+                        </div>
                     </div>
                 </TabsContent>
 

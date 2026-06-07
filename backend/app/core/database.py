@@ -142,7 +142,8 @@ async def init_db():
         ("last_scrape_status", "VARCHAR(50) DEFAULT NULL"),
         ("last_scrape_error", "TEXT DEFAULT NULL"),
         ("last_scraped_at", "TIMESTAMP DEFAULT NULL"),
-        ("is_scheduled", "BOOLEAN DEFAULT FALSE")
+        ("scrape_started_at", "TIMESTAMP DEFAULT NULL"),
+        ("is_scheduled", "BOOLEAN DEFAULT FALSE"),
     ]:
         try:
             async with engine.begin() as conn:
@@ -206,16 +207,36 @@ async def init_db():
         except Exception:
             pass
 
-    # DB-01: composite performance indexes. These live in Alembic migration
-    # 08_performance_indexes.py, but deploys run create_all (not `alembic
-    # upgrade`), so create_all only emits single-column indexes and these
-    # composites were missing in production. CREATE INDEX IF NOT EXISTS applies
+    # DB-02: columns added after initial table creation — create_all won't add
+    # them to existing tables, so we do it explicitly here (idempotent; the
+    # except block swallows the "column already exists" error from Postgres).
+    for col_sql in [
+        "ALTER TABLE hotels ADD COLUMN ai_max_tokens INTEGER",
+        "ALTER TABLE hotels ADD COLUMN max_competitors INTEGER DEFAULT 5",
+        "ALTER TABLE integration_settings ADD COLUMN ai_max_tokens INTEGER",
+        "ALTER TABLE chains ADD COLUMN primary_color VARCHAR(50) DEFAULT '#4f46e5'",
+        "ALTER TABLE chains ADD COLUMN is_active BOOLEAN DEFAULT TRUE",
+    ]:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(col_sql))
+        except Exception:
+            pass
+
+    # DB-01: composite performance indexes + unique constraints. These live in
+    # Alembic migration 08_performance_indexes.py, but deploys run create_all
+    # (not `alembic upgrade`), so create_all only emits single-column indexes
+    # and these were missing in production. CREATE INDEX IF NOT EXISTS applies
     # them idempotently on every boot until the deploy switches to Alembic.
     for idx_sql in [
         "CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings (created_at)",
         "CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings (hotel_id, check_in, check_out)",
         "CREATE INDEX IF NOT EXISTS idx_room_rates_lookup ON room_rates (room_type_id, date_from, date_to)",
         "CREATE INDEX IF NOT EXISTS idx_competitor_rates_lookup ON competitor_rates (competitor_id, check_in_date, fetched_at)",
+        # Enforce DB-level uniqueness on users — the model declares unique=True
+        # but create_all won't retroactively add the index to an existing table.
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_supabase_id ON users (supabase_id) WHERE supabase_id IS NOT NULL",
     ]:
         try:
             async with engine.begin() as conn:

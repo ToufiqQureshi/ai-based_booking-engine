@@ -7,8 +7,10 @@ lock (`set_nx_ex`) per job per tick so exactly one instance does the work.
 If Redis is unavailable we fail-open and run (single-instance assumption).
 
 Jobs:
-  - social_proof        every 15 min  — refresh cached social-proof stats
-  - subscription_expiry every 24 h    — notify hotels of expiring plans
+  - social_proof          every 15 min     — refresh cached social-proof stats
+  - subscription_expiry   every 24 h       — notify hotels of expiring plans
+  - rate_shopper_auto_scrape  hourly (:10) — scrape competitor rates for hotels
+                                             whose configured local hour is now
 
 Disable entirely with ENABLE_SCHEDULER=false.
 """
@@ -53,6 +55,13 @@ async def _job_subscription_expiry() -> None:
     await check_subscription_expiry()
 
 
+async def _job_rate_shopper_auto_scrape() -> None:
+    from app.core.database import async_session
+    from app.api.v1.competitors import run_due_auto_scrapes
+    async with async_session() as session:
+        await run_due_auto_scrapes(session)
+
+
 async def _tick_social_proof() -> None:
     # lock TTL < interval so a crashed run releases before the next tick
     await _run_locked("social_proof", 600, _job_social_proof)
@@ -62,33 +71,9 @@ async def _tick_subscription_expiry() -> None:
     await _run_locked("subscription_expiry", 3600, _job_subscription_expiry)
 
 
-async def _job_competitor_scraping() -> None:
-    from app.core.database import async_session
-    from app.models.competitor import Competitor
-    from app.api.v1.competitors import run_background_scrape
-    from sqlmodel import select
-    import asyncio
-    import random
-    
-    async with async_session() as session:
-        stmt = select(Competitor).where(
-            Competitor.is_active == True,
-            Competitor.is_scheduled == True
-        )
-        res = await session.execute(stmt)
-        competitors = res.scalars().all()
-        
-    for comp in competitors:
-        try:
-            logger.info(f"Scheduler: starting automatic scrape for competitor {comp.name} ({comp.id})")
-            await run_background_scrape(comp.id)
-            await asyncio.sleep(random.uniform(5, 10))
-        except Exception as e:
-            logger.error(f"Scheduler: failed to scrape competitor {comp.id}: {e}")
-
-
-async def _tick_competitor_scraping() -> None:
-    await _run_locked("competitor_scraping", 14400, _job_competitor_scraping)
+async def _tick_rate_shopper_auto_scrape() -> None:
+    # lock TTL < 1h interval so a crashed run releases before the next tick
+    await _run_locked("rate_shopper_auto_scrape", 1800, _job_rate_shopper_auto_scrape)
 
 
 def start_scheduler() -> None:
@@ -100,11 +85,14 @@ def start_scheduler() -> None:
                   id="social_proof", max_instances=1, coalesce=True)
     sched.add_job(_tick_subscription_expiry, "interval", hours=24,
                   id="subscription_expiry", max_instances=1, coalesce=True)
-    sched.add_job(_tick_competitor_scraping, "interval", hours=24,
-                  id="competitor_scraping", max_instances=1, coalesce=True)
+    sched.add_job(_tick_rate_shopper_auto_scrape, "cron", minute=10,
+                  id="rate_shopper_auto_scrape", max_instances=1, coalesce=True)
     sched.start()
     _scheduler = sched
-    logger.info("Background scheduler started (social_proof=15m, subscription_expiry=24h, competitor_scraping=24h)")
+    logger.info(
+        "Background scheduler started (social_proof=15m, subscription_expiry=24h, "
+        "rate_shopper_auto_scrape=hourly:10)"
+    )
 
 
 def shutdown_scheduler() -> None:

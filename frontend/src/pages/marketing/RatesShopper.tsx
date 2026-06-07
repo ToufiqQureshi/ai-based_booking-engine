@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from '@/components/ui/label';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { apiClient, tokenStorage } from '@/api/client';
-import { Loader2, Plus, RefreshCw, Trash2, TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Trash2, TrendingUp, TrendingDown, Minus, Sparkles, Activity, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { RateTable } from '@/components/dashboard/RateTable';
@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ShieldAlert } from 'lucide-react';
 
 export default function RatesShopper() {
-    const { hotel } = useAuth();
+    const { hotel, user } = useAuth();
     const queryClient = useQueryClient();
     const [lastStatuses, setLastStatuses] = useState<Record<string, string>>({});
     const [activeTab, setActiveTab] = useState(() => localStorage.getItem("rateShopperActiveTab") || "ALL");
@@ -55,9 +55,9 @@ export default function RatesShopper() {
 
     useEffect(() => {
         if (isError) {
-            toast.error("Failed to load rate shopper data");
+            toast.error((error as any)?.message || "Failed to load rate shopper data");
         }
-    }, [isError]);
+    }, [isError, error]);
 
     const competitors = rateShopperData?.competitors ?? [];
     const chartData = rateShopperData?.chartData ?? [];
@@ -65,14 +65,72 @@ export default function RatesShopper() {
     const chartCompetitorNames = rateShopperData?.chartCompetitorNames ?? [];
     const marketAnalysis = rateShopperData?.marketAnalysis ?? [];
 
-    const fetchData = useCallback(() => refetchAll(), [refetchAll]);
+    const maxCompetitors: number = (hotel as any)?.max_competitors ?? 5;
+    const isAtCompetitorLimit = competitors.length >= maxCompetitors;
+
+    // Decodo Scraper API usage — cost transparency. We buy this scraping
+    // capacity from a third party and resell it as Rate Shopper, so the
+    // hotelier should be able to see exactly what's being spent on their behalf.
+    const { data: usageData } = useQuery<any>({
+        queryKey: ['rateShopperUsage'],
+        queryFn: () => apiClient.get('/competitors/usage'),
+        enabled: !!hotel?.feature_rate_shopper,
+        staleTime: 1000 * 60 * 10,
+        gcTime: 1000 * 60 * 60,
+    });
+
+    // Auto-sync schedule — the hotelier (not us) decides what local hour
+    // the daily competitor rate refresh runs at.
+    const { data: scheduleData } = useQuery<any>({
+        queryKey: ['rateShopperSchedule'],
+        queryFn: () => apiClient.get('/competitors/schedule'),
+        enabled: !!hotel?.feature_rate_shopper,
+        staleTime: 1000 * 60 * 10,
+        gcTime: 1000 * 60 * 60,
+    });
+
+    const [scheduleHour, setScheduleHour] = useState<string>('off');
+    const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+    const canManageSchedule = user?.role === 'OWNER' || user?.role === 'MANAGER';
 
     useEffect(() => {
-        // Real-time listener for scraping updates
-        const onScrapeComplete = () => refetchAll();
-        window.addEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
-        return () => window.removeEventListener("SCRAPE_COMPLETE" as any, onScrapeComplete);
-    }, [refetchAll]);
+        if (!scheduleData) return;
+        setScheduleHour(
+            scheduleData.scrape_hour === null || scheduleData.scrape_hour === undefined
+                ? 'off'
+                : String(scheduleData.scrape_hour)
+        );
+    }, [scheduleData]);
+
+    const formatHour = (hour: number) => {
+        const period = hour < 12 ? 'AM' : 'PM';
+        const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+        return `${displayHour}:00 ${period}`;
+    };
+
+    const handleScheduleChange = async (value: string) => {
+        const previous = scheduleHour;
+        setScheduleHour(value);
+        setIsSavingSchedule(true);
+        try {
+            const scrape_hour = value === 'off' ? null : parseInt(value, 10);
+            const updated = await apiClient.put<any>('/competitors/schedule', { scrape_hour });
+            queryClient.setQueryData(['rateShopperSchedule'], updated);
+            toast.success(
+                scrape_hour === null
+                    ? "Auto-sync turned off. You can still refresh competitors manually anytime."
+                    : `Auto-sync scheduled for ${formatHour(scrape_hour)} (${updated?.timezone || 'your property timezone'}) every day.`
+            );
+        } catch (error: any) {
+            console.error(error);
+            setScheduleHour(previous);
+            toast.error(error.message || "Failed to update auto-sync schedule");
+        } finally {
+            setIsSavingSchedule(false);
+        }
+    };
+
+    const fetchData = useCallback(() => refetchAll(), [refetchAll]);
 
     // Auto-poll if any competitor is currently in 'running' state
     useEffect(() => {
@@ -118,13 +176,16 @@ export default function RatesShopper() {
             toast.warning("Please enter both Name and URL");
             return;
         }
+        if (!/^https?:\/\//i.test(newCompUrl.trim())) {
+            toast.warning("OTA Booking URL must start with http:// or https://");
+            return;
+        }
         setIsAdding(true);
         try {
             await apiClient.post('/competitors', {
                 name: newCompName,
                 url: newCompUrl,
                 source: newCompSource,
-                hotel_id: "placeholder"
             });
             setIsAddOpen(false);
             setNewCompName('');
@@ -133,7 +194,13 @@ export default function RatesShopper() {
             fetchData();
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || "Failed to add competitor");
+            const msg: string = error.message || "Failed to add competitor";
+            if (msg.startsWith("COMPETITOR_LIMIT_REACHED:")) {
+                const limit = msg.split(":")[1];
+                toast.error(`Competitor limit reached (${limit}). Contact support@staybooker.ai to increase your limit.`);
+            } else {
+                toast.error(msg);
+            }
         } finally {
             setIsAdding(false);
         }
@@ -220,9 +287,99 @@ export default function RatesShopper() {
                     <h1 className="text-2xl font-bold tracking-tight">Rate Parity Tracker <span className="text-xs font-normal text-muted-foreground ml-2">(v2.0 AI)</span></h1>
                     <p className="text-muted-foreground">AI-Powered Rate Parity & Channel Intelligence.</p>
                 </div>
-                <Button onClick={() => setIsAddOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" /> Add OTA Channel
-                </Button>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                        {competitors.length}/{maxCompetitors} channels
+                    </span>
+                    {isAtCompetitorLimit ? (
+                        <a
+                            href="mailto:support@staybooker.ai?subject=Increase%20competitor%20limit"
+                            className="inline-flex items-center gap-1 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-3 py-2 transition-colors"
+                        >
+                            <ShieldAlert className="h-4 w-4" /> Contact to Add More
+                        </a>
+                    ) : (
+                        <Button onClick={() => setIsAddOpen(true)}>
+                            <Plus className="mr-2 h-4 w-4" /> Add OTA Channel
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            {/* Decodo API Usage & Auto-Sync Schedule */}
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <Activity className="h-4 w-4 text-muted-foreground" />
+                            Decodo Scraper API Usage
+                        </CardTitle>
+                        <CardDescription>
+                            We buy this scraping capacity from a third party (Decodo) on your behalf —
+                            every rate refresh costs us a real, billed request. Here's exactly what
+                            you've used.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-8">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Today</p>
+                                <p className="text-2xl font-bold">{usageData?.today ?? 0}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Last 30 Days</p>
+                                <p className="text-2xl font-bold">{usageData?.last_30_days ?? 0}</p>
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-3">
+                            Each "Refresh Rates" click checks ~7 days of pricing for one competitor —
+                            roughly 7 requests.
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            Daily Auto-Sync Schedule
+                        </CardTitle>
+                        <CardDescription>
+                            Pick the hour — in your property's local time — we automatically refresh
+                            every tracked competitor's rates each day. Choose "Off" to refresh manually only.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {canManageSchedule ? (
+                            <>
+                                <div className="flex items-center gap-3">
+                                    <Select value={scheduleHour} onValueChange={handleScheduleChange} disabled={isSavingSchedule}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Select time" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="off">Off (manual only)</SelectItem>
+                                            {Array.from({ length: 24 }, (_, h) => (
+                                                <SelectItem key={h} value={String(h)}>{formatHour(h)}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {isSavingSchedule && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-3">
+                                    Time shown is in your property's timezone ({scheduleData?.timezone || 'Asia/Kolkata'}).
+                                </p>
+                            </>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                {scheduleData?.scrape_hour != null
+                                    ? `Auto-sync runs daily at ${formatHour(scheduleData.scrape_hour)} (${scheduleData?.timezone || 'property timezone'}).`
+                                    : "Auto-sync is currently off — rates are refreshed manually only."}
+                                {" "}Only Owners and Managers can change this.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -462,7 +619,7 @@ export default function RatesShopper() {
                                 <SelectContent>
                                     <SelectItem value="MAKEMYTRIP">MakeMyTrip (Real-Time)</SelectItem>
                                     <SelectItem value="BOOKING" disabled>Booking.com (Coming Soon)</SelectItem>
-                                    <SelectItem value="AGODA">Agoda (Real-Time)</SelectItem>
+                                    <SelectItem value="AGODA" disabled>Agoda (Coming Soon)</SelectItem>
                                     <SelectItem value="EXPEDIA" disabled>Expedia (Coming Soon)</SelectItem>
                                 </SelectContent>
                             </Select>

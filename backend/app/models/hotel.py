@@ -63,6 +63,10 @@ class HotelSettings(SQLModel):
     multi_room_cart: bool = True
     featured_room_type_id: Optional[str] = None
 
+    # Rate Shopper — hotelier picks the local hour (0-23) the daily
+    # auto-scrape runs at; None means auto-scrape is off (manual only).
+    rate_shopper_scrape_hour: Optional[int] = None
+
     # SMTP Configuration
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
@@ -110,6 +114,9 @@ class HotelBase(SQLModel):
     primary_color: Optional[str] = Field(default="#7C3AED")
     amenities: List[str] = Field(default_factory=list, sa_column=Column(JSON)) # Property-level amenities like "Free Parking", "Pool"
     
+    # Super-admin-controlled limits
+    max_competitors: int = Field(default=5)
+
     # Feature Flags (Controlled by Super Admin)
     feature_rate_shopper: bool = Field(default=False)
     feature_ai_agent: bool = Field(default=False)
@@ -209,6 +216,7 @@ class HotelUpdate(SQLModel):
     contact: Optional[dict] = None
     settings: Optional[dict] = None
     photos: Optional[List[dict]] = None
+    max_competitors: Optional[int] = None
     # Feature Flags
     feature_rate_shopper: Optional[bool] = None
     feature_ai_agent: Optional[bool] = None

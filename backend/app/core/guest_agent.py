@@ -109,7 +109,7 @@ Today's date: {current_date}
 # ---------------------------------------------------------------------------
 
 _CACHE_KEY_PREFIX = "guest_agent:hotel_data"
-_CACHE_TTL = 86400  # 24 h; actively invalidated on admin edits
+_CACHE_TTL = 3600  # 1 h; keeps room prices reasonably fresh
 
 # Safe fire-and-forget pattern (prevents GC of background tasks)
 _bg_tasks: set = set()
@@ -183,7 +183,14 @@ async def _fetch_hotel_data(session: AsyncSession, hotel_id: str) -> Optional[di
             "description": hotel.description,
             "address": hotel.address if isinstance(hotel.address, dict) else {},
             "contact": hotel.contact if isinstance(hotel.contact, dict) else {},
-            "settings": hotel.settings if isinstance(hotel.settings, dict) else {},
+            "settings": {
+                k: v for k, v in (hotel.settings if isinstance(hotel.settings, dict) else {}).items()
+                if k in (
+                    "cancellation_policy", "child_policy", "payment_policy",
+                    "check_in_time", "check_out_time", "pet_policy",
+                    "extra_bed_policy", "tax_type", "tax_rate",
+                )
+            },
             "star_rating": hotel.star_rating,
         },
         "rooms": [

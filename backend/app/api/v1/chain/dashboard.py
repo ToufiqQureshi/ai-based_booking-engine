@@ -15,12 +15,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chain", tags=["Chain Management"])
 
 
-async def get_chain_admin(current_user: CurrentUser) -> User:
-    """Verifies that the current user belongs to a brand/chain group."""
+async def get_chain_admin(current_user: CurrentUser, session: DbSession) -> User:
+    """Verifies the user belongs to an active chain."""
     if not current_user.chain_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access restricted to brand/chain administrators only",
+        )
+    chain = await session.get(Chain, current_user.chain_id)
+    if not chain or not getattr(chain, "is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chain not found or inactive",
         )
     return current_user
 
@@ -121,33 +127,52 @@ async def get_chain_analytics(
     )
     inventory_map = {row[0]: int(row[1] or 0) for row in room_inv.all()}
 
-    # 3. Bookings in current period
-    booking_query = select(Booking).where(
+    # 3. Aggregate metrics for current period — use SQL aggregates, not full row load
+    agg_where = [
         Booking.hotel_id.in_(hotel_ids),
         Booking.status != BookingStatus.CANCELLED,
+    ]
+    if period != "all":
+        agg_where += [Booking.check_in >= start, Booking.check_in <= end]
+
+    agg_res = await session.execute(
+        select(
+            func.coalesce(func.sum(Booking.total_amount), 0).label("total_revenue"),
+            func.count(Booking.id).label("total_bookings"),
+            func.count(func.distinct(Booking.guest_id)).label("total_guests"),
+        ).where(and_(*agg_where))
     )
-    if period != "all":
-        booking_query = booking_query.where(Booking.check_in >= start, Booking.check_in <= end)
+    agg_row = agg_res.one()
+    total_revenue = float(agg_row.total_revenue)
+    total_bookings = int(agg_row.total_bookings)
+    total_guests = int(agg_row.total_guests)
 
-    bookings = (await session.execute(booking_query)).scalars().all()
-
-    # 4. Previous period bookings (for comparison)
-    prev_bookings = []
+    # Previous period aggregates for % change
+    prev_revenue = 0.0
+    prev_bookings_count = 0
     if period != "all":
-        prev_q = select(Booking).where(
-            Booking.hotel_id.in_(hotel_ids),
-            Booking.status != BookingStatus.CANCELLED,
-            Booking.check_in >= prev_start,
-            Booking.check_in <= prev_end,
+        prev_agg = await session.execute(
+            select(
+                func.coalesce(func.sum(Booking.total_amount), 0).label("rev"),
+                func.count(Booking.id).label("cnt"),
+            ).where(
+                Booking.hotel_id.in_(hotel_ids),
+                Booking.status != BookingStatus.CANCELLED,
+                Booking.check_in >= prev_start,
+                Booking.check_in <= prev_end,
+            )
         )
-        prev_bookings = (await session.execute(prev_q)).scalars().all()
+        pr = prev_agg.one()
+        prev_revenue = float(pr.rev)
+        prev_bookings_count = int(pr.cnt)
 
-    # 5. Aggregate metrics
-    total_revenue = sum(b.total_amount or 0 for b in bookings)
-    prev_revenue = sum(b.total_amount or 0 for b in prev_bookings)
-    total_bookings = len(bookings)
-    unique_guest_ids = {b.guest_id for b in bookings if b.guest_id}
-    total_guests = len(unique_guest_ids)
+    # Load bookings per hotel for occupancy calculation — capped at 5000 rows
+    booking_query = (
+        select(Booking)
+        .where(and_(*agg_where))
+        .limit(5000)
+    )
+    bookings = (await session.execute(booking_query)).scalars().all()
 
     # Period length for occupancy denominator
     days_in_period = (end - start).days if period != "all" else 365
@@ -235,7 +260,7 @@ async def get_chain_analytics(
         "total_bookings": total_bookings,
         "total_guests": total_guests,
         "revenue_change_pct": _pct_change(total_revenue, prev_revenue) if period != "all" else 0,
-        "bookings_change_pct": _pct_change(total_bookings, len(prev_bookings)) if period != "all" else 0,
+        "bookings_change_pct": _pct_change(total_bookings, prev_bookings_count) if period != "all" else 0,
         "revenue_by_hotel": revenue_by_hotel,
         "recent_bookings": recent_bookings,
         "top_performer": top_performer,
@@ -249,6 +274,8 @@ async def get_chain_analytics(
 async def get_chain_guests(
     session: DbSession,
     current_user: User = Depends(get_chain_admin),
+    limit: int = Query(default=20, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     """
     Returns chain-wide guest insights: total guests, repeat guests (stayed at multiple
@@ -267,7 +294,7 @@ async def get_chain_guests(
         select(Booking).where(
             Booking.hotel_id.in_(hotels),
             Booking.status != BookingStatus.CANCELLED,
-        )
+        ).limit(5000)
     )).scalars().all()
 
     # Aggregate per guest_id
@@ -288,19 +315,21 @@ async def get_chain_guests(
         if not s["last_booking"] or (b.created_at and b.created_at > s["last_booking"]):
             s["last_booking"] = b.created_at
 
-    # Enrich top 10 guests with names — single bulk query (fixes N+1)
+    # Sort all guests by spend descending, then paginate
     sorted_guests = sorted(guest_stats.values(), key=lambda x: x["total_spend"], reverse=True)
-    top_10 = sorted_guests[:10]
-    top_ids = [g["guest_id"] for g in top_10]
+    total_guest_count = len(sorted_guests)
+    page_guests = sorted_guests[offset: offset + limit]
+
+    # Enrich page guests with names — single bulk query (fixes N+1)
+    page_ids = [g["guest_id"] for g in page_guests]
     gmap = {}
-    if top_ids:
-        gres = await session.execute(select(Guest).where(Guest.id.in_(top_ids)))
+    if page_ids:
+        gres = await session.execute(select(Guest).where(Guest.id.in_(page_ids)))
         gmap = {gu.id: gu for gu in gres.scalars().all()}
 
-    for g in top_10:
+    for g in page_guests:
         guest = gmap.get(g["guest_id"])
         g["name"] = f"{guest.first_name} {guest.last_name}".strip() if guest else "Unknown"
-        g["email"] = guest.email if guest else ""
         g["hotels_count"] = len(g["hotels_visited"])
         g["hotels_visited"] = list(g["hotels_visited"])
         g["last_booking"] = g["last_booking"].isoformat() if g["last_booking"] else None
@@ -308,10 +337,13 @@ async def get_chain_guests(
     cross_property = sum(1 for g in guest_stats.values() if len(g["hotels_visited"]) > 1)
 
     return {
-        "total_guests": len(guest_stats),
+        "total_guests": total_guest_count,
         "cross_property_guests": cross_property,
-        "cross_property_pct": round((cross_property / len(guest_stats) * 100), 1) if guest_stats else 0,
-        "top_guests": top_10,
+        "cross_property_pct": round((cross_property / total_guest_count * 100), 1) if total_guest_count else 0,
+        "top_guests": page_guests,
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + limit) < total_guest_count,
     }
 
 

@@ -16,7 +16,7 @@ export function CheckoutSummary() {
                         <div className="bg-white rounded-[3rem] overflow-hidden shadow-2xl shadow-slate-300/50 border border-slate-100">
                             {/* Room Image Header */}
                             <div className="h-56 relative bg-slate-200">
-                                {room.photos && room.photos.length > 0 ? (
+                                {room?.photos && room.photos.length > 0 ? (
                                     <img src={room.photos[0].url} alt="Room" className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
@@ -26,7 +26,7 @@ export function CheckoutSummary() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                 <div className="absolute bottom-6 left-8 right-8 text-white">
                                     <h3 className="font-black text-2xl mb-1 tracking-tight">
-                                        {state.rooms.length > 1 ? `${state.rooms.length} Rooms Selected` : room.name}
+                                        {state.rooms.length > 1 ? `${state.rooms.length} Rooms Selected` : (room?.name ?? '')}
                                     </h3>
                                     <p className="text-xs text-white/90 font-medium mb-3 line-clamp-1">
                                         {state.rooms.map(r => r.name || r.room_type_name).join(' • ')}
