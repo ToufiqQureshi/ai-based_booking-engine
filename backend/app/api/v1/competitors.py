@@ -19,6 +19,7 @@ from app.core.database import async_session
 from app.core.config import get_settings
 import re
 import random
+import uuid
 import httpx
 import asyncio
 from scrapling import Selector
@@ -270,16 +271,19 @@ def get_dynamic_dates(offset):
     checkout = (today + timedelta(days=offset + 1)).strftime("%d%m%Y")
     return checkin, checkout
 
-def clean_makemytrip_url(url, checkin, checkout):
-    hotel_id_match = re.search(r"(?:hotelId|topHtlId)=(\d+)", url)
-    if not hotel_id_match:
-        return url
-    
-    hotel_id = hotel_id_match.group(1)
-    city_match = re.search(r"city=([A-Za-z0-9]+)", url)
-    city = city_match.group(1) if city_match else "CTXLK"
-    
-    return f"https://www.makemytrip.com/hotels/hotel-listing/?checkin={checkin}&checkout={checkout}&city={city}&country=IN&hotelId={hotel_id}"
+def clean_makemytrip_url(url: str, checkin: str, checkout: str) -> str:
+    """
+    Update checkin/checkout dates in a MakeMyTrip URL while preserving ALL
+    other query parameters.
+
+    The old implementation rebuilt a stripped-down URL with only hotelId+city,
+    which broke region-based resort listings that rely on topHtlId, locusId,
+    locusType, and searchText to resolve the correct hotel page.  Replacing
+    just the date tokens avoids that regression.
+    """
+    url = re.sub(r"checkin=\d{8}", f"checkin={checkin}", url)
+    url = re.sub(r"checkout=\d{8}", f"checkout={checkout}", url)
+    return url
 
 def update_url_dates(url, offset):
     checkin, checkout = get_dynamic_dates(offset)
@@ -290,22 +294,35 @@ def update_url_dates(url, offset):
     return url
 
 
-async def scrape_mmt_hotel_rate(url: str, hotel_id: str) -> dict:
-    """Performs extraction by fetching HTML via Decodo Scraper API and parsing it with Scrapling Selector."""
+async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None) -> dict:
+    """
+    Performs extraction by fetching HTML via Decodo Scraper API and parsing it
+    with Scrapling Selector.
+
+    session_id: When provided, Decodo reuses the same proxy IP for all requests
+    in the same session (up to 10 min). This is critical — without a session_id,
+    geo:in gets a fresh IP each time and MakeMyTrip's Akamai consistently blocks
+    the first request (613 error). With a session_id the connection is warmed up
+    and subsequent requests succeed reliably.
+    """
     auth_header = _decodo_auth_header()
     if not auth_header:
         return {"status": "failed", "reason": "decodo_not_configured"}
 
     try:
-        logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}...")
+        logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}... (session={session_id})")
 
-        payload = {
+        payload: dict = {
             "url": url,
             "proxy_pool": "premium",
             "headless": "html",
             "geo": "in",
-            "device_type": "desktop_chrome"
+            "device_type": "desktop_chrome",
         }
+        # session_id pins all 7-day requests to the same Decodo proxy IP,
+        # which avoids Akamai's per-IP challenge on fresh connections.
+        if session_id:
+            payload["session_id"] = session_id
 
         headers = {
             "accept": "application/json",
@@ -336,6 +353,16 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str) -> dict:
             return {"status": "failed", "reason": f"API_status_{response.status_code}"}
 
         res_json = response.json()
+
+        # Decodo status_code 613 = target scraping failed (Akamai/bot-protection
+        # blocked the request). This can happen even with session_id on the very
+        # first warm-up request — treat it as a transient failure so the caller
+        # can retry rather than marking the whole scrape as broken.
+        decodo_status = res_json.get("status_code")
+        if decodo_status == 613:
+            logger.warning(f"Decodo 613 (blocked by target) for {url[:60]}")
+            return {"status": "failed", "reason": "decodo_613_target_blocked"}
+
         if not res_json.get("results") or len(res_json["results"]) == 0:
             logger.error("Decodo API response doesn't contain results key or results list is empty")
             return {"status": "failed", "reason": "empty_api_results"}
@@ -362,14 +389,36 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str) -> dict:
         if not price_el:
             logger.warning("Scrape finished but Hotel Price element could not be found.")
             return {"status": "failed", "reason": "price_element_not_found"}
-            
-        price_text = price_el.text.strip()
-        price_digits = re.sub(r"[^\d]", "", price_text)
-        if not price_digits:
-            logger.warning(f"Could not parse price digits from raw text: {price_text}")
+
+        # MMT renders the price as: <p id="hlistpg_hotel_shown_price">₹ <span>2,449</span></p>
+        # Scrapling's .text already aggregates child text, so the element text is
+        # typically "₹ 2,449".  We extract the FIRST contiguous digit-and-comma
+        # group to get a clean number — avoids the double-collection bug where
+        # iterating css("*") duplicated child text into "₹ 2,449 ₹ 2,449" and
+        # then stripping gave the wrong value 24492449 instead of 2449.
+        price_text = price_el.text or ""
+
+        # If parent text is only a currency symbol (no digits), also check children
+        if not re.search(r"\d", price_text):
+            for child in price_el.css("*"):
+                child_text = child.text or ""
+                if re.search(r"\d", child_text):
+                    price_text = child_text
+                    break
+
+        # Extract the FIRST number token (e.g. "2,449" → "2449")
+        price_match = re.search(r"[\d,]+", price_text)
+        if not price_match:
+            logger.warning(f"Could not parse price digits from raw text: {price_text!r}")
             return {"status": "failed", "reason": "price_parse_failed"}
-            
+
+        price_digits = re.sub(r"[^\d]", "", price_match.group())
+        if not price_digits:
+            logger.warning(f"Empty digits after cleaning: {price_text!r}")
+            return {"status": "failed", "reason": "price_parse_failed"}
+
         price = float(price_digits)
+        logger.info(f"Parsed price: Rs.{price:,.0f} from text {price_text!r}")
         return {"status": "success", "price": price, "is_sold_out": False}
         
     except Exception as e:
@@ -417,7 +466,13 @@ async def run_background_scrape(comp_id: str):
                 return
                 
             logger.info(f"Scraping MakeMyTrip URL for competitor: {comp.name} ({comp_id})")
-            
+
+            # One session_id per scrape run so all 7 days share the same Decodo
+            # proxy IP. Akamai treats a warmed-up IP much more leniently than a
+            # fresh one, which is why the previous code (no session_id) got 613
+            # errors consistently on geo:in.
+            scrape_session_id = uuid.uuid4().hex[:12]
+
             success_count = 0
             attempted = 0
             has_errors = False
@@ -444,7 +499,7 @@ async def run_background_scrape(comp_id: str):
                     check_in_date_obj = date.today() + timedelta(days=offset_val)
                     updated_url = update_url_dates(url, offset_val)
                     
-                    rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id)
+                    rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id, session_id=scrape_session_id)
                     return {
                         "status": rate_data.get("status"),
                         "offset": offset_val,
