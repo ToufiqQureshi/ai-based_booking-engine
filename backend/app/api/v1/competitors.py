@@ -296,14 +296,16 @@ def update_url_dates(url, offset):
 
 async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None) -> dict:
     """
-    Performs extraction by fetching HTML via Decodo Scraper API and parsing it
-    with Scrapling Selector.
+    Fetch one day's rate from MMT via Decodo Scraper API + Scrapling.
 
-    session_id: When provided, Decodo reuses the same proxy IP for all requests
-    in the same session (up to 10 min). This is critical — without a session_id,
-    geo:in gets a fresh IP each time and MakeMyTrip's Akamai consistently blocks
-    the first request (613 error). With a session_id the connection is warmed up
-    and subsequent requests succeed reliably.
+    session_id: Decodo reuses the same proxy IP for the entire scrape session
+    (up to 10 min). Sequential requests with 2-3s gaps let Akamai's first
+    challenge resolve before the next request lands — this is why we do NOT
+    fire all 7 days concurrently (concurrent burst = same IP = bot-block on all).
+
+    613 handling: the caller retries up to MAX_613_RETRIES times with a delay,
+    so this function just returns the raw result; retry logic lives in
+    _scrape_mmt_with_retry.
     """
     auth_header = _decodo_auth_header()
     if not auth_header:
@@ -319,8 +321,6 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             "geo": "in",
             "device_type": "desktop_chrome",
         }
-        # session_id pins all 7-day requests to the same Decodo proxy IP,
-        # which avoids Akamai's per-IP challenge on fresh connections.
         if session_id:
             payload["session_id"] = session_id
 
@@ -330,25 +330,14 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             "authorization": auth_header
         }
 
-        # Native async HTTP client — matches the rest of the codebase
-        # (external_sync/channel_manager/analytics all use httpx.AsyncClient).
-        # The previous `requests` + run_in_executor combo borrowed threads
-        # from the shared default executor, which Starlette also uses for
-        # sync route handlers — under concurrent scrapes that risks starving
-        # unrelated requests.
         try:
             async with httpx.AsyncClient(timeout=35.0) as client:
                 response = await client.post(DECODO_URL, json=payload, headers=headers)
         except httpx.HTTPError as e:
-            # Network/timeout — Decodo may have already received and billed the request,
-            # so record usage here too for transparency.
             record_decodo_request(hotel_id)
             logger.error(f"Decodo API request failed before a response was received: {e}")
             return {"status": "failed", "reason": f"request_error_{type(e).__name__}"}
 
-        # Decodo bills per processed request regardless of whether we end up
-        # finding a price — record it so the hotelier can see exactly what
-        # we're spending on their behalf (we resell this third-party capacity).
         record_decodo_request(hotel_id)
 
         if response.status_code != 200:
@@ -357,10 +346,6 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
 
         res_json = response.json()
 
-        # Decodo status_code 613 = target scraping failed (Akamai/bot-protection
-        # blocked the request). This can happen even with session_id on the very
-        # first warm-up request — treat it as a transient failure so the caller
-        # can retry rather than marking the whole scrape as broken.
         decodo_status = res_json.get("status_code")
         if decodo_status == 613:
             logger.warning(f"Decodo 613 (blocked by target) for {url[:60]}")
@@ -369,39 +354,39 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         if not res_json.get("results") or len(res_json["results"]) == 0:
             logger.error("Decodo API response doesn't contain results key or results list is empty")
             return {"status": "failed", "reason": "empty_api_results"}
-            
+
         first_result = res_json["results"][0]
         html_content = first_result.get("content", "")
-        
-        # Check for blocking
+
         if "access denied" in html_content.lower() or "access-denied" in html_content.lower() or "reference id" in html_content.lower():
             logger.error("Blocked by Akamai (Access Denied / Reference ID)")
             return {"status": "blocked", "reason": "shield_blocked"}
-            
+
         page = Selector(html_content)
-        
-        # Check if sold out
+
+        # Sold-out check
         sold_out_check = page.css("p.font14.appendBottom5.redText.latoBold.lineHight17").first
         if sold_out_check and "You Just Missed It" in sold_out_check.text:
             return {"status": "success", "price": 0.0, "is_sold_out": True}
-            
+
+        # Primary selector, ID fallback, then a broader data-attribute fallback
         price_el = page.css('p.priceText.latoBlack.font22.blackText.appendBottom5[id="hlistpg_hotel_shown_price"]').first
         if not price_el:
             price_el = page.css('#hlistpg_hotel_shown_price').first
-            
         if not price_el:
-            logger.warning("Scrape finished but Hotel Price element could not be found.")
+            # MMT sometimes wraps price in a span with data-cy attribute
+            price_el = page.css('[data-cy="hotel-price"]').first
+
+        if not price_el:
+            # Log a snippet to help debug selector drift after MMT HTML changes
+            logger.warning(
+                f"Price element not found in MMT page (HTML size={len(html_content)}). "
+                f"First 300 chars: {html_content[:300]!r}"
+            )
             return {"status": "failed", "reason": "price_element_not_found"}
 
-        # MMT renders the price as: <p id="hlistpg_hotel_shown_price">₹ <span>2,449</span></p>
-        # Scrapling's .text already aggregates child text, so the element text is
-        # typically "₹ 2,449".  We extract the FIRST contiguous digit-and-comma
-        # group to get a clean number — avoids the double-collection bug where
-        # iterating css("*") duplicated child text into "₹ 2,449 ₹ 2,449" and
-        # then stripping gave the wrong value 24492449 instead of 2449.
         price_text = price_el.text or ""
 
-        # If parent text is only a currency symbol (no digits), also check children
         if not re.search(r"\d", price_text):
             for child in price_el.css("*"):
                 child_text = child.text or ""
@@ -409,7 +394,6 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
                     price_text = child_text
                     break
 
-        # Extract the FIRST number token (e.g. "2,449" → "2449")
         price_match = re.search(r"[\d,]+", price_text)
         if not price_match:
             logger.warning(f"Could not parse price digits from raw text: {price_text!r}")
@@ -423,10 +407,33 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         price = float(price_digits)
         logger.info(f"Parsed price: Rs.{price:,.0f} from text {price_text!r}")
         return {"status": "success", "price": price, "is_sold_out": False}
-        
+
     except Exception as e:
         logger.error(f"Scraper error: {e}")
         return {"status": "failed", "reason": str(e)}
+
+
+# Max retries on Decodo 613 (Akamai bot-block) per day.
+# 3 attempts = 1 original + 2 retries. Retry delay starts at 4s then 8s.
+MAX_613_RETRIES = 2
+# Gap between sequential day scrapes — gives Akamai time to see the IP as
+# "legitimate" rather than a burst. Firing all 7 days concurrently on the same
+# session_id IP caused persistent 613 errors across all days.
+INTER_DAY_PAUSE_SECONDS = 2.5
+
+
+async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> dict:
+    """Wrap scrape_mmt_hotel_rate with 613-specific retry + exponential backoff."""
+    delay = 4.0
+    for attempt in range(MAX_613_RETRIES + 1):
+        result = await scrape_mmt_hotel_rate(url, hotel_id, session_id=session_id)
+        if result.get("reason") != "decodo_613_target_blocked":
+            return result
+        if attempt < MAX_613_RETRIES:
+            logger.info(f"613 on attempt {attempt + 1}, retrying in {delay:.0f}s…")
+            await asyncio.sleep(delay)
+            delay *= 2
+    return result
 
 async def run_background_scrape(comp_id: str):
     """
@@ -473,100 +480,47 @@ async def run_background_scrape(comp_id: str):
             logger.info(f"Scraping MakeMyTrip URL for competitor: {comp.name} ({comp_id})")
 
             # One session_id per scrape run so all 7 days share the same Decodo
-            # proxy IP. Akamai treats a warmed-up IP much more leniently than a
-            # fresh one, which is why the previous code (no session_id) got 613
-            # errors consistently on geo:in.
+            # proxy IP. Requests are made SEQUENTIALLY with a short inter-day
+            # pause (INTER_DAY_PAUSE_SECONDS) so Akamai sees gradual, human-like
+            # traffic from the warmed-up IP rather than a 7-request burst that
+            # triggers bot-block (613) on every slot.
             scrape_session_id = uuid.uuid4().hex[:12]
 
             success_count = 0
-            # `attempted` is pre-declared before the outer try for crash-handler access
             has_errors = False
             last_error_reason = None
             was_stopped = False
             cancel_key = f"scrape_cancel:{comp_id}"
 
-            # We define an inner async helper function to scrape a single offset day.
-            # Running this concurrently allows all 7 days to be fetched in parallel.
-            async def scrape_single_day(offset_val: int):
-                try:
-                    # Stagger launches slightly (e.g. 250ms spacing) so we don't dump 
-                    # all requests onto the Decodo endpoint in the same exact millisecond.
-                    await asyncio.sleep(offset_val * 0.25)
-                    
-                    # Check cancellation flag before making the HTTP call
-                    try:
-                        _rc = redis_client.get_instance()
-                        if _rc and _rc.get(cancel_key):
-                            return {"status": "stopped", "offset": offset_val, "date": date.today() + timedelta(days=offset_val)}
-                    except Exception as cancel_err:
-                        logger.warning(f"Scrape cancel-flag check failed (ignoring): {cancel_err}")
-                    
-                    check_in_date_obj = date.today() + timedelta(days=offset_val)
-                    updated_url = update_url_dates(url, offset_val)
-                    
-                    rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id, session_id=scrape_session_id)
-                    return {
-                        "status": rate_data.get("status"),
-                        "offset": offset_val,
-                        "date": check_in_date_obj,
-                        "price": rate_data.get("price"),
-                        "is_sold_out": rate_data.get("is_sold_out"),
-                        "reason": rate_data.get("reason"),
-                    }
-                except Exception as ex:
-                    logger.error(f"Task error in scrape_single_day for offset {offset_val}: {ex}")
-                    return {
-                        "status": "failed",
-                        "offset": offset_val,
-                        "date": date.today() + timedelta(days=offset_val),
-                        "reason": str(ex),
-                    }
-
-            # Launch all 7 scrape tasks concurrently.
-            # as_completed processes each result the moment it finishes —
-            # we commit + clear the Redis cache after EACH day so the
-            # frontend polling sees prices appear one by one in real-time
-            # instead of waiting for all 7 to finish before anything shows.
-            pending_tasks = [
-                asyncio.create_task(scrape_single_day(offset))
-                for offset in range(7)
-            ]
-
-            for coro in asyncio.as_completed(pending_tasks):
-                res = await coro
-
-                # Check cancellation flag — cancel remaining tasks if set
+            for offset in range(7):
+                # Check cancellation flag before each day
                 try:
                     _rc = redis_client.get_instance()
                     if _rc and _rc.get(cancel_key):
                         _rc.delete(cancel_key)
                         was_stopped = True
-                        # Cancel all still-running tasks to stop burning Decodo credits
-                        for t in pending_tasks:
-                            t.cancel()
+                        logger.info(f"Scrape for {comp_id} cancelled by user after {attempted} days")
+                        break
                 except Exception as cancel_err:
                     logger.warning(f"Scrape cancel-flag check failed (ignoring): {cancel_err}")
 
-                if was_stopped or res["status"] == "stopped":
-                    was_stopped = True
-                    logger.info(f"Scrape for {comp_id} stopped/cancelled by user after {attempted} days processed")
-                    break
-
+                check_in_date_obj = date.today() + timedelta(days=offset)
+                updated_url = update_url_dates(url, offset)
                 attempted += 1
-                check_in_date_obj = res["date"]
 
-                if res["status"] == "success":
-                    price = res["price"]
-                    is_sold_out = res["is_sold_out"]
-                    
-                    # Check if rate already exists for this competitor and date
+                rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
+
+                if rate_data.get("status") == "success":
+                    price = rate_data["price"]
+                    is_sold_out = rate_data.get("is_sold_out", False)
+
                     stmt = select(CompetitorRate).where(
                         CompetitorRate.competitor_id == comp_id,
                         CompetitorRate.check_in_date == check_in_date_obj
                     )
                     db_res = await session.execute(stmt)
                     existing_rate = db_res.scalar_one_or_none()
-                    
+
                     if existing_rate:
                         existing_rate.price = price
                         existing_rate.is_sold_out = is_sold_out
@@ -581,14 +535,12 @@ async def run_background_scrape(comp_id: str):
                             fetched_at=datetime.utcnow()
                         )
                         session.add(new_rate)
-                    
-                    # Commit immediately after each day — frontend sees the price
-                    # as soon as Decodo returns it, not after all 7 are done.
+
+                    # Commit per-day so frontend polling shows live progress
                     await session.commit()
                     success_count += 1
-                    logger.info(f"Ingested rate for {comp.name} on {check_in_date_obj.isoformat()}: {price} (Sold out: {is_sold_out})")
-                    
-                    # Clear cache immediately so the next frontend poll picks up this day's price
+                    logger.info(f"Ingested rate for {comp.name} on {check_in_date_obj.isoformat()}: {price} (sold_out={is_sold_out})")
+
                     try:
                         r = redis_client.get_instance()
                         if r:
@@ -599,8 +551,13 @@ async def run_background_scrape(comp_id: str):
                         logger.warning(f"Failed to clear competitor cache: {cache_err}")
                 else:
                     has_errors = True
-                    last_error_reason = res.get("reason", "Unknown scraping failure")
-                    logger.warning(f"Failed to scrape rate for {comp.name} on {check_in_date_obj.isoformat()}: {last_error_reason}")
+                    last_error_reason = rate_data.get("reason", "unknown")
+                    logger.warning(f"Failed to scrape {comp.name} on {check_in_date_obj.isoformat()}: {last_error_reason}")
+
+                # Pause between days so the warmed-up proxy IP looks human to Akamai.
+                # Skip the pause after the last day or if we're about to be cancelled.
+                if offset < 6 and not was_stopped:
+                    await asyncio.sleep(INTER_DAY_PAUSE_SECONDS)
             
             # Update final status
             comp = await session.get(Competitor, comp_id)
