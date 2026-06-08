@@ -1,6 +1,7 @@
 // Bookings Page - Real API Integration
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useHotelWebSocket } from '@/hooks/useHotelWebSocket';
 import {
   Plus, Search, Filter, Eye, Edit, X, MoreHorizontal, Loader2,
   CalendarDays, Download, MessageSquare, Phone, Globe, Building2,
@@ -141,6 +142,18 @@ export function BookingsPage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const { toast } = useToast();
+
+  const handleWsEvent = useCallback((event: { type: string; data?: Record<string, unknown> }) => {
+    if (event.type === 'booking_created' || event.type === 'booking_updated' || event.type === 'booking_cancelled') {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      if (event.type === 'booking_created') {
+        const d = event.data ?? {};
+        toast({ title: `New booking: ${d.guest_name ?? 'Guest'}`, description: String(d.booking_number ?? '') });
+      }
+    }
+  }, [queryClient, toast]);
+
+  useHotelWebSocket({ onEvent: handleWsEvent });
 
   const { data: bookings = [], isLoading, isPlaceholderData, refetch } = useQuery({
     queryKey: ['bookings', statusFilter],

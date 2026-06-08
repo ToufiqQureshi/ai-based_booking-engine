@@ -36,7 +36,7 @@ const getBaseUrl = () => {
   return '/api/v1';
 };
 
-const API_BASE_URL = getBaseUrl();
+export const API_BASE_URL = getBaseUrl();
 
 
 // Token storage keys

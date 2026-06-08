@@ -328,7 +328,19 @@ async def create_booking(
     _clear_dashboard_cache(current_user.hotel_id)
     await session.refresh(booking)
     await session.refresh(guest)
-    
+
+    from app.api.v1.ws import broadcast_to_hotel
+    background_tasks.add_task(
+        broadcast_to_hotel, current_user.hotel_id, "booking_created", {
+            "booking_number": booking.booking_number,
+            "guest_name": f"{guest.first_name} {guest.last_name}",
+            "room": booking.rooms[0].get("room_type_name", "Room") if booking.rooms else "Room",
+            "check_in": str(booking.check_in),
+            "total_amount": booking.total_amount,
+            "status": booking.status.value,
+        }
+    )
+
     # Enqueue Email Notifications
     email_service = await get_email_service()
     
@@ -512,10 +524,21 @@ async def update_booking(
     clear_availability_cache(current_user.hotel_id)
     _clear_dashboard_cache(current_user.hotel_id)
     await session.refresh(booking)
-    
+
+    from app.api.v1.ws import broadcast_to_hotel
+    event_type = "booking_cancelled" if new_status == BookingStatus.CANCELLED else "booking_updated"
+    background_tasks.add_task(
+        broadcast_to_hotel, current_user.hotel_id, event_type, {
+            "booking_id": booking.id,
+            "booking_number": booking.booking_number,
+            "status": booking.status.value,
+            "old_status": old_status.value if old_status != new_status else booking.status.value,
+        }
+    )
+
     guest_result = await session.execute(select(Guest).where(Guest.id == booking.guest_id))
     guest = guest_result.scalar_one_or_none()
-    
+
     response = booking.model_dump()
     response["guest"] = guest.model_dump() if guest else {}
     return response
