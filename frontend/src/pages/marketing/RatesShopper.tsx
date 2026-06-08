@@ -108,6 +108,7 @@ export default function RatesShopper() {
         if (raw.includes('price_element_not_found')) return 'Could not find the price on the OTA page. The URL may be outdated — try re-adding the competitor.';
         if (raw.includes('price_parse_failed')) return 'Found the price element but could not read the value. OTA may have changed their layout.';
         if (raw.includes('empty_api_results')) return 'Scraper returned no data. The OTA page may have changed or the URL is invalid.';
+        if (raw.includes('decodo_session_failed')) return 'Scraper session was reset mid-run (proxy IP was blocked). Click Refresh to retry.';
         if (raw.includes('request_error')) return 'Network request to Decodo failed. This is usually temporary — try again.';
         if (raw.includes('API_status_')) {
             const code = raw.match(/API_status_(\d+)/)?.[1];

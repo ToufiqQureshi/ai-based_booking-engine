@@ -395,7 +395,13 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         record_decodo_request(hotel_id)
 
         if response.status_code != 200:
-            logger.error(f"Decodo API returned status code {response.status_code}: {response.text[:200]}")
+            body_text = response.text[:300]
+            # 400 with "Session...has failed" means Decodo invalidated our proxy session
+            # (the IP got flagged). Caller must rotate to a fresh session_id and retry.
+            if response.status_code == 400 and "has failed" in body_text.lower() and "session" in body_text.lower():
+                logger.warning(f"Decodo session '{session_id}' was invalidated (400 session-failed) for {url[:60]}")
+                return {"status": "failed", "reason": "decodo_session_failed"}
+            logger.error(f"Decodo API returned status code {response.status_code}: {body_text}")
             return {"status": "failed", "reason": f"API_status_{response.status_code}"}
 
         res_json = response.json()
@@ -585,6 +591,15 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False):
                 attempted += 1
 
                 rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
+
+                # Decodo killed our session (IP blocked mid-run) → rotate to a fresh
+                # session and retry this day once. The new session is also used for all
+                # remaining days so we don't keep hitting the dead session.
+                if rate_data.get("reason") == "decodo_session_failed":
+                    logger.info(f"Rotating Decodo session (old={scrape_session_id}) and retrying day {offset + 1}/7")
+                    scrape_session_id = uuid.uuid4().hex[:12]
+                    await asyncio.sleep(3.0)  # brief pause to let the new session warm up
+                    rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
 
                 if rate_data.get("status") == "success":
                     price = rate_data["price"]
