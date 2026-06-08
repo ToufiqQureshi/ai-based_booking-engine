@@ -380,6 +380,18 @@ async def create_public_booking(
             await _update_guest_loyalty(session, hotel_id, guest.email, booking.total_amount, len(booking_data.rooms))
             await session.commit()
 
+            from app.api.v1.ws import broadcast_to_hotel
+            background_tasks.add_task(
+                broadcast_to_hotel, hotel_id, "booking_created", {
+                    "booking_number": booking.booking_number,
+                    "guest_name": f"{guest.first_name} {guest.last_name}",
+                    "room": booking.rooms[0].get("room_type_name", "Room") if booking.rooms else "Room",
+                    "check_in": str(booking.check_in),
+                    "total_amount": booking.total_amount,
+                    "status": BookingStatus.CONFIRMED.value,
+                }
+            )
+
             from app.services.email_service import get_email_service
             email_service = await get_email_service()
             h_settings = hotel.settings if hotel and hotel.settings else {}
@@ -619,7 +631,7 @@ async def public_cancel_request(request: Request, data: GuestCancelRequest, sess
 
 @router.post("/bookings/cancel-confirm")
 @limiter.limit("10/minute")
-async def public_cancel_confirm(request: Request, data: GuestCancelRequest, session: DbSession):
+async def public_cancel_confirm(request: Request, data: GuestCancelRequest, session: DbSession, background_tasks: BackgroundTasks):
     """
     Execute or request a cancellation. Instant-mode cancels immediately;
     request-mode moves to CANCEL_REQUESTED for hotelier approval.
@@ -678,6 +690,13 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
         clear_availability_cache(booking.hotel_id)
     except Exception as e:
         logger.error(f"Failed clearing availability cache on guest cancellation: {e}")
+
+    from app.api.v1.ws import broadcast_to_hotel
+    background_tasks.add_task(
+        broadcast_to_hotel, booking.hotel_id, "booking_cancelled", {
+            "booking_number": booking.booking_number,
+        }
+    )
 
     return {
         "status": "cancelled", "booking_number": booking.booking_number,
