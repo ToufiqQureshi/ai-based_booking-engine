@@ -5,6 +5,7 @@ Public booking widget routes:
   POST /public/bookings/cancel-request  — compute cancellation fee
   POST /public/bookings/cancel-confirm  — execute cancellation
 """
+import time
 from datetime import date, timedelta
 from typing import List, Optional
 
@@ -358,6 +359,13 @@ async def create_public_booking(
         session.add(booking)
         await session.commit()
 
+        # Bump rate_version so SSE stream notifies all guests on the booking page
+        # that inventory has changed — they'll re-fetch availability within 30 s.
+        try:
+            redis_client.set_value(f"rate_version:{hotel_id}", str(int(time.time())), expire=86400)
+        except Exception:
+            pass
+
         try:
             from app.api.v1.availability import clear_availability_cache
             clear_availability_cache(hotel_id)
@@ -658,6 +666,12 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
     booking.updated_at = utcnow()
     session.add(booking)
     await session.commit()
+
+    # Cancellation frees inventory — notify waiting guests via SSE.
+    try:
+        redis_client.set_value(f"rate_version:{booking.hotel_id}", str(int(time.time())), expire=86400)
+    except Exception:
+        pass
 
     try:
         from app.api.v1.availability import clear_availability_cache
