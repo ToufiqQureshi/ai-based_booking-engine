@@ -279,7 +279,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 {data?.ai_api_key_preview && <span className="text-muted-foreground font-normal">current: {data.ai_api_key_preview}</span>}
                             </Label>
                             <div className="relative">
-                                <Input type={showAiKey ? 'text' : 'password'} value={aiApiKey} onChange={e => setAiApiKey(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <Input type={showAiKey ? 'text' : 'password'} autoComplete="new-password" value={aiApiKey} onChange={e => setAiApiKey(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowAiKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                     {showAiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -311,7 +311,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 {data?.whatsapp_api_key_preview && <span className="text-muted-foreground font-normal">current: {data.whatsapp_api_key_preview}</span>}
                             </Label>
                             <div className="relative">
-                                <Input type={showWaKey ? 'text' : 'password'} value={waApiKey} onChange={e => setWaApiKey(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <Input type={showWaKey ? 'text' : 'password'} autoComplete="new-password" value={waApiKey} onChange={e => setWaApiKey(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowWaKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                     {showWaKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -349,7 +349,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                         <div className="space-y-2 md:col-span-2">
                             <Label className="text-xs font-bold text-foreground/80">Password / App Password</Label>
                             <div className="relative">
-                                <Input type={showSmtp ? 'text' : 'password'} value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <Input type={showSmtp ? 'text' : 'password'} autoComplete="new-password" value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} placeholder="Leave blank to keep existing" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowSmtp(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
                                     {showSmtp ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -377,7 +377,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 {data?.has_razorpay_secret && <span className="text-emerald-500 inline-flex items-center gap-1 text-[10px]"><ShieldCheck className="w-3 h-3" /> configured</span>}
                             </Label>
                             <div className="relative">
-                                <Input type={showRzpSecret ? 'text' : 'password'} value={razorpayKeySecret} onChange={e => setRazorpayKeySecret(e.target.value)} placeholder={data?.has_razorpay_secret ? 'Leave blank to keep existing' : 'Enter key secret'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <Input type={showRzpSecret ? 'text' : 'password'} autoComplete="new-password" value={razorpayKeySecret} onChange={e => setRazorpayKeySecret(e.target.value)} placeholder={data?.has_razorpay_secret ? 'Leave blank to keep existing' : 'Enter key secret'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowRzpSecret(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
                                     {showRzpSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
