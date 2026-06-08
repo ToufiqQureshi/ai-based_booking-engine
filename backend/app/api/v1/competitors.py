@@ -134,10 +134,21 @@ async def add_competitor(comp_data: CompetitorCreate, current_user: CurrentUser,
 # Decodo Scraper API Configuration
 DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
 
-# A scrape walks 7 days sequentially with a 2-4s pause between each Decodo
-# call; this is the generous upper bound for a healthy run. Past this we
-# treat "running" as a crashed/orphaned worker rather than work-in-progress
-# (no other job ever revisits these rows otherwise — see _is_stale_running).
+# MMT renders its price client-side via an async XHR after the initial DOM is
+# ready. We ask Decodo's headless browser to wait this many seconds (in-page,
+# via browser_actions) so that price node exists before the HTML is captured.
+# Too low → price_element_not_found; too high → slower + risks the HTTP timeout.
+MMT_RENDER_WAIT_SECONDS = 12
+
+# httpx read timeout for a single Decodo call. Must exceed Decodo's own
+# (render + MMT_RENDER_WAIT_SECONDS) processing time, with headroom.
+DECODO_HTTP_TIMEOUT_SECONDS = 60.0
+
+# A scrape walks 7 days sequentially; each day waits on Decodo's headless
+# render + in-page price wait, then pauses before the next. This is the
+# generous upper bound for a healthy run. Past this we treat "running" as a
+# crashed/orphaned worker rather than work-in-progress (no other job ever
+# revisits these rows otherwise — see _is_stale_running).
 STALE_SCRAPE_MINUTES = 15
 
 # Each manual "Refresh Rates" click burns ~7 paid Decodo requests (premium
@@ -314,19 +325,26 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
     try:
         logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}... (session={session_id})")
 
-        # Per official Decodo v2 docs:
-        # - target:"universal" is required (was missing — likely caused parse errors)
-        # - geo must be full country name "India", not ISO code "in"
-        # - parse:False ensures raw HTML is returned (without it Decodo may return
-        #   structured/processed data, which breaks our CSS selectors)
+        # Payload mirrors the exact request Decodo's own dashboard playground
+        # generates for this account (verified against the Web Scraping API UI):
+        # - proxy_pool:"premium" → 193-country pool that INCLUDES India. The
+        #   "standard" pool only covers 8 countries (no India), so dropping this
+        #   silently routed MMT requests through non-Indian IPs and got blocked.
+        # - geo:"India" → full country name (lowercase ISO "in" was ignored).
+        # - headless:"html" renders JavaScript, BUT it snapshots the DOM as soon
+        #   as the page is "ready" — MMT loads its price via an async XHR that
+        #   usually finishes AFTER that, so the price node is missing and we get
+        #   price_element_not_found every day. browser_actions.wait holds the
+        #   headless browser open long enough for that XHR to populate the price.
         payload: dict = {
-            "target": "universal",
             "url": url,
             "proxy_pool": "premium",
             "headless": "html",
             "geo": "India",
             "device_type": "desktop_chrome",
-            "parse": False,
+            "browser_actions": [
+                {"type": "wait", "wait_time_s": str(MMT_RENDER_WAIT_SECONDS)},
+            ],
         }
         if session_id:
             payload["session_id"] = session_id
@@ -337,8 +355,11 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             "authorization": auth_header
         }
 
+        # Timeout must comfortably exceed (Decodo render + browser_actions wait).
+        # With a ~12s in-page wait, 35s was too tight; 60s gives headroom so the
+        # request doesn't abort right as Decodo is about to return the page.
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=DECODO_HTTP_TIMEOUT_SECONDS) as client:
                 response = await client.post(DECODO_URL, json=payload, headers=headers)
         except httpx.HTTPError as e:
             record_decodo_request(hotel_id)

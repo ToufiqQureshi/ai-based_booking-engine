@@ -30,18 +30,21 @@ async def test_scrape(url: str):
     print(f"\n🔍  Testing Decodo scrape for URL:\n    {url[:100]}...\n")
 
     payload = {
-        "target": "universal",
         "url": url,
+        "proxy_pool": "premium",
         "headless": "html",
         "geo": "India",
         "device_type": "desktop_chrome",
-        "parse": False,
+        # Wait for MMT's client-side price XHR to populate before snapshotting.
+        "browser_actions": [
+            {"type": "wait", "wait_time_s": "12"},
+        ],
     }
 
     print(f"📤  Payload: {payload}\n")
 
     try:
-        async with httpx.AsyncClient(timeout=40.0) as client:
+        async with httpx.AsyncClient(timeout=70.0) as client:
             response = await client.post(
                 DECODO_URL,
                 json=payload,
