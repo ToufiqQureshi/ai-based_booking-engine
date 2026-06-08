@@ -138,12 +138,12 @@ DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
 # call; this is the generous upper bound for a healthy run. Past this we
 # treat "running" as a crashed/orphaned worker rather than work-in-progress
 # (no other job ever revisits these rows otherwise — see _is_stale_running).
-STALE_SCRAPE_MINUTES = 20
+STALE_SCRAPE_MINUTES = 3
 
 # Each manual "Refresh Rates" click burns ~7 paid Decodo requests (premium
 # proxy + headless render). This cooldown stops a few impatient clicks from
 # multiplying our third-party bill — see CLAUDE.md "bound every cost".
-MANUAL_SCRAPE_COOLDOWN_SECONDS = 15 * 60
+MANUAL_SCRAPE_COOLDOWN_SECONDS = 5 * 60
 
 
 def _decodo_auth_header() -> Optional[str]:
@@ -337,7 +337,7 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         }
 
         try:
-            async with httpx.AsyncClient(timeout=35.0) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(DECODO_URL, json=payload, headers=headers)
         except httpx.HTTPError as e:
             record_decodo_request(hotel_id)
