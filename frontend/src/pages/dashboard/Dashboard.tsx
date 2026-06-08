@@ -1,5 +1,5 @@
 ﻿// Dashboard Home Page - Clean & Professional Design
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -15,7 +15,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useHotelWebSocket } from '@/hooks/useHotelWebSocket';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,7 +48,25 @@ export function DashboardPage() {
   const { hotel, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const aiToastShownFor = useRef<string | null>(null);
+
+  const handleWsEvent = useCallback((event: { type: string; data?: Record<string, unknown> }) => {
+    if (event.type === 'booking_created') {
+      queryClient.invalidateQueries({ queryKey: ['recentBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      const d = event.data ?? {};
+      toast({
+        title: `New Booking: ${d.guest_name ?? 'Guest'}`,
+        description: `${d.room ?? ''} · Check-in ${d.check_in ?? ''} · ₹${d.total_amount ?? ''}`,
+      });
+    } else if (event.type === 'booking_updated' || event.type === 'booking_cancelled') {
+      queryClient.invalidateQueries({ queryKey: ['recentBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+    }
+  }, [queryClient, toast]);
+
+  useHotelWebSocket({ onEvent: handleWsEvent, enabled: !!hotel?.id });
 
   // 1. Fetch Stats
   const { data: stats, isLoading: isStatsLoading, isError: isStatsError } = useQuery<DashboardStats>({

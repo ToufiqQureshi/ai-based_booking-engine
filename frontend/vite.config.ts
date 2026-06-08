@@ -4,6 +4,12 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./src/setupTests.ts",
+    exclude: ["tests/e2e/**", "node_modules/**"],
+  },
   server: {
     host: "::",
     port: 8080,
@@ -11,6 +17,7 @@ export default defineConfig(() => ({
       "/api": {
         target: "http://127.0.0.1:8001",
         secure: false,
+        ws: true,
       },
       "/static": {
         target: "http://127.0.0.1:8001",
