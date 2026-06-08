@@ -1,10 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
 
-from app.api.deps import DbSession, CurrentUser
+from app.api.deps import DbSession, CurrentUser, require_hotel_role
 from app.models.loyalty import LoyaltyProgram, GuestLoyalty
 
 router = APIRouter()
@@ -53,7 +53,7 @@ async def get_loyalty_program(current_user: CurrentUser, session: DbSession):
     return program
 
 
-@router.put("/program")
+@router.put("/program", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def update_loyalty_program(
     data: LoyaltyProgramUpdate,
     current_user: CurrentUser,
@@ -78,8 +78,13 @@ async def update_loyalty_program(
 
 
 @router.get("/guests", response_model=List[GuestLoyaltySummary])
-async def list_loyal_guests(current_user: CurrentUser, session: DbSession):
-    """List all guests with loyalty data for this hotel."""
+async def list_loyal_guests(
+    current_user: CurrentUser,
+    session: DbSession,
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+):
+    """List guests with loyalty data for this hotel."""
     program_result = await session.execute(
         select(LoyaltyProgram).where(LoyaltyProgram.hotel_id == current_user.hotel_id)
     )
@@ -90,6 +95,8 @@ async def list_loyal_guests(current_user: CurrentUser, session: DbSession):
         select(GuestLoyalty)
         .where(GuestLoyalty.hotel_id == current_user.hotel_id)
         .order_by(GuestLoyalty.total_completed_bookings.desc())
+        .offset(offset)
+        .limit(limit)
     )
     guests = result.scalars().all()
 
