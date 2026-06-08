@@ -1,44 +1,68 @@
+"""
+Email Service — transactional emails via Brevo or hotel-custom SMTP.
+Brevo is imported lazily so the module loads cleanly in test environments
+where the brevo SDK isn't installed.
+"""
 import logging
-from brevo import AsyncBrevo
-from brevo.transactional_emails import (
-    SendTransacEmailRequestSender,
-    SendTransacEmailRequestToItem,
-    SendTransacEmailRequestReplyTo
-)
-from app.core.config import get_settings
-import aiosmtplib
 from email.message import EmailMessage
 
+import aiosmtplib
+
+from app.core.config import get_settings
+
 logger = logging.getLogger(__name__)
+
+
+def _get_brevo():
+    """Lazy import of brevo SDK — avoids hard boot failure if package is absent."""
+    try:
+        from brevo import AsyncBrevo
+        from brevo.transactional_emails import (
+            SendTransacEmailRequestSender,
+            SendTransacEmailRequestToItem,
+            SendTransacEmailRequestReplyTo,
+        )
+        return AsyncBrevo, SendTransacEmailRequestSender, SendTransacEmailRequestToItem, SendTransacEmailRequestReplyTo
+    except ImportError:
+        logger.warning("brevo SDK not installed — Brevo email delivery will be skipped")
+        return None, None, None, None
+
 
 class EmailService:
     def __init__(self):
         self.settings = get_settings()
         self.default_api_key = self.settings.BREVO_API_KEY
-        
-        if self.default_api_key:
+
+        AsyncBrevo, *_ = _get_brevo()
+        if self.default_api_key and AsyncBrevo:
             self.default_client = AsyncBrevo(api_key=self.default_api_key)
         else:
             self.default_client = None
-            logger.warning("Default BREVO_API_KEY is not set.")
+            if not self.default_api_key:
+                logger.warning("BREVO_API_KEY is not set — platform email will be skipped")
 
-    def _get_sender(self, custom_email: str = None, custom_name: str = None) -> SendTransacEmailRequestSender:
+    def _get_sender(self, custom_email: str = None, custom_name: str = None):
+        _, SendTransacEmailRequestSender, *_ = _get_brevo()
+        if not SendTransacEmailRequestSender:
+            return None
         return SendTransacEmailRequestSender(
             email=custom_email or self.settings.BREVO_SENDER_EMAIL,
-            name=custom_name or self.settings.BREVO_SENDER_NAME
+            name=custom_name or self.settings.BREVO_SENDER_NAME,
         )
 
-    async def _send_via_smtp(self, to_emails: list, subject: str, html_content: str, smtp_host: str, smtp_port: int, smtp_username: str, smtp_password: str, smtp_from: str, cc_emails: list = None):
+    async def _send_via_smtp(
+        self, to_emails, subject, html_content,
+        smtp_host, smtp_port, smtp_username, smtp_password, smtp_from, cc_emails=None
+    ):
         try:
             msg = EmailMessage()
             msg.set_content("Please enable HTML to view this email.")
-            msg.add_alternative(html_content, subtype='html')
-            msg['Subject'] = subject
-            msg['From'] = smtp_from
-            msg['To'] = ", ".join(to_emails)
+            msg.add_alternative(html_content, subtype="html")
+            msg["Subject"] = subject
+            msg["From"] = smtp_from
+            msg["To"] = ", ".join(to_emails)
             if cc_emails:
-                msg['Cc'] = ", ".join(cc_emails)
-            
+                msg["Cc"] = ", ".join(cc_emails)
             await aiosmtplib.send(
                 msg,
                 hostname=smtp_host,
@@ -46,42 +70,36 @@ class EmailService:
                 username=smtp_username,
                 password=smtp_password,
                 start_tls=True if smtp_port == 587 else False,
-                use_tls=True if smtp_port == 465 else False
+                use_tls=True if smtp_port == 465 else False,
             )
-            logger.info(f"SMTP Email sent successfully to {to_emails}")
+            logger.info("SMTP email sent to %s", to_emails)
             return True
         except Exception as e:
-            logger.error(f"SMTP Failed to send email to {to_emails}: {e}")
+            logger.error("SMTP send failed to %s: %s", to_emails, e)
             return False
 
-    async def _send_email(self, to_emails: list, subject: str, html_content: str, sender: SendTransacEmailRequestSender, cc_emails: list = None, reply_to: str = None, custom_client: AsyncBrevo = None):
+    async def _send_email(self, to_emails, subject, html_content, sender, cc_emails=None, reply_to=None, custom_client=None):
+        _, _, SendTransacEmailRequestToItem, SendTransacEmailRequestReplyTo = _get_brevo()
         client = custom_client or self.default_client
-        if not client:
-            logger.warning(f"Simulating email to {to_emails}: {subject}")
+        if not client or not SendTransacEmailRequestToItem:
+            logger.warning("Brevo not available — simulating email to %s: %s", to_emails, subject)
             return False
-
         try:
             to_items = [SendTransacEmailRequestToItem(email=e.strip()) for e in to_emails if e.strip()]
-            cc_items = None
-            if cc_emails:
-                cc_items = [SendTransacEmailRequestToItem(email=e.strip()) for e in cc_emails if e.strip()]
-                
-            kwargs = {
-                "subject": subject,
-                "html_content": html_content,
-                "sender": sender,
-                "to": to_items
-            }
+            cc_items = (
+                [SendTransacEmailRequestToItem(email=e.strip()) for e in cc_emails if e.strip()]
+                if cc_emails else None
+            )
+            kwargs = {"subject": subject, "html_content": html_content, "sender": sender, "to": to_items}
             if cc_items:
                 kwargs["cc"] = cc_items
-            if reply_to:
+            if reply_to and SendTransacEmailRequestReplyTo:
                 kwargs["reply_to"] = SendTransacEmailRequestReplyTo(email=reply_to, name=sender.name)
-
             await client.transactional_emails.send_transac_email(**kwargs)
-            logger.info(f"Brevo Email sent successfully to {to_emails}")
+            logger.info("Brevo email sent to %s", to_emails)
             return True
         except Exception as e:
-            logger.error(f"Brevo Failed to send email to {to_emails}: {e}")
+            logger.error("Brevo send failed to %s: %s", to_emails, e)
             return False
 
     def _replace_template(self, template: str, kwargs: dict) -> str:
@@ -89,8 +107,7 @@ class EmailService:
             template = template.replace(f"[{k}]", str(v))
         return template
 
-    async def _dispatch_hotel_email(self, hotel_settings: dict, to_emails: list, subject: str, html_content: str, cc_emails: list = None):
-        # 1. Custom SMTP
+    async def _dispatch_hotel_email(self, hotel_settings: dict, to_emails, subject, html_content, cc_emails=None):
         smtp_host = hotel_settings.get("smtp_host")
         smtp_password = hotel_settings.get("smtp_password")
         if smtp_host and smtp_password:
@@ -103,79 +120,61 @@ class EmailService:
                 smtp_username=hotel_settings.get("smtp_username"),
                 smtp_password=smtp_password,
                 smtp_from=hotel_settings.get("smtp_from_email") or hotel_settings.get("smtp_username"),
-                cc_emails=cc_emails
+                cc_emails=cc_emails,
             )
-        
-        # 2. Platform Brevo with Reply-To (all hotels send mail using platform's Brevo account)
         reply_to_email = hotel_settings.get("email_reply_to")
         sender_name = hotel_settings.get("email_sender_name")
-        
-        sender = self._get_sender(custom_name=sender_name) # Uses platform default BREVO_SENDER_EMAIL
+        sender = self._get_sender(custom_name=sender_name)
         return await self._send_email(to_emails, subject, html_content, sender, cc_emails, reply_to=reply_to_email)
 
-
-    async def send_guest_booking_confirmation(self, guest_email: str, guest_name: str, booking_number: str, check_in: str, check_out: str, total_amount: float, hotel_settings: dict = None):
+    async def send_guest_booking_confirmation(
+        self, guest_email, guest_name, booking_number, check_in, check_out, total_amount, hotel_settings=None
+    ):
         hotel_settings = hotel_settings or {}
         subject = f"Booking Confirmation: {booking_number}"
         template = hotel_settings.get("email_template")
-        
         if template:
             html_content = self._replace_template(template, {
-                "GUEST_NAME": guest_name,
-                "BOOKING_REFERENCE": booking_number,
-                "CHECK_IN": check_in,
-                "CHECK_OUT": check_out,
-                "TOTAL_AMOUNT": total_amount
+                "GUEST_NAME": guest_name, "BOOKING_REFERENCE": booking_number,
+                "CHECK_IN": check_in, "CHECK_OUT": check_out, "TOTAL_AMOUNT": total_amount,
             })
         else:
-            sig_html = f"<br><br>{hotel_settings.get('email_signature', '')}" if hotel_settings.get('email_signature') else "<br><br><p>We look forward to hosting you!</p>"
-            html_content = f"""
-            <html>
-                <body>
-                    <h2>Hi {guest_name},</h2>
-                    <p>Thank you for booking with us!</p>
-                    <p><strong>Booking Reference:</strong> {booking_number}</p>
-                    <p><strong>Check-in:</strong> {check_in}</p>
-                    <p><strong>Check-out:</strong> {check_out}</p>
-                    <p><strong>Total Amount:</strong> INR {total_amount}</p>
-                    {sig_html}
-                </body>
-            </html>
-            """
-            
+            sig = hotel_settings.get("email_signature", "")
+            sig_html = f"<br><br>{sig}" if sig else "<br><br><p>We look forward to hosting you!</p>"
+            html_content = f"""<html><body>
+                <h2>Hi {guest_name},</h2>
+                <p>Thank you for booking with us!</p>
+                <p><strong>Booking Reference:</strong> {booking_number}</p>
+                <p><strong>Check-in:</strong> {check_in}</p>
+                <p><strong>Check-out:</strong> {check_out}</p>
+                <p><strong>Total Amount:</strong> INR {total_amount}</p>
+                {sig_html}
+            </body></html>"""
         await self._dispatch_hotel_email(hotel_settings, [guest_email], subject, html_content)
 
-
-    async def send_hotel_booking_notification(self, hotel_emails: str, booking_number: str, guest_name: str, check_in: str, check_out: str, total_amount: float, hotel_settings: dict = None):
+    async def send_hotel_booking_notification(
+        self, hotel_emails, booking_number, guest_name, check_in, check_out, total_amount, hotel_settings=None
+    ):
         hotel_settings = hotel_settings or {}
         if not hotel_emails:
             hotel_emails = self.settings.HOTEL_NOTIFICATION_EMAILS
             if not hotel_emails:
-                logger.warning("No hotel emails configured for notification.")
+                logger.warning("No hotel emails configured for notification")
                 return
-
         subject = f"New Booking Received: {booking_number}"
-        html_content = f"""
-        <html>
-            <body>
-                <h2>New Booking Alert</h2>
-                <p>A new booking has been confirmed.</p>
-                <p><strong>Booking Reference:</strong> {booking_number}</p>
-                <p><strong>Guest Name:</strong> {guest_name}</p>
-                <p><strong>Check-in:</strong> {check_in}</p>
-                <p><strong>Check-out:</strong> {check_out}</p>
-                <p><strong>Total Revenue:</strong> INR {total_amount}</p>
-            </body>
-        </html>
-        """
-        
+        html_content = f"""<html><body>
+            <h2>New Booking Alert</h2>
+            <p><strong>Booking Reference:</strong> {booking_number}</p>
+            <p><strong>Guest Name:</strong> {guest_name}</p>
+            <p><strong>Check-in:</strong> {check_in}</p>
+            <p><strong>Check-out:</strong> {check_out}</p>
+            <p><strong>Total Revenue:</strong> INR {total_amount}</p>
+        </body></html>"""
         emails = [e.strip() for e in hotel_emails.split(",") if e.strip()]
         cc_list = hotel_settings.get("email_cc_list")
         cc_emails = [e.strip() for e in cc_list.split(",")] if cc_list else []
-        
         await self._dispatch_hotel_email(hotel_settings, emails, subject, html_content, cc_emails=cc_emails)
 
 
-# Dependency injection
 async def get_email_service() -> EmailService:
     return EmailService()

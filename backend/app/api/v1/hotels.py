@@ -3,7 +3,6 @@ Hotels Router
 Hotel profile aur settings management.
 Multi-tenant - har user apni hotel hi dekh/edit kar sakta hai.
 """
-from app.services.email_service import get_email_service
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 
@@ -156,7 +155,7 @@ async def test_email_connection(
     hotel_id: str,
     request: TestEmailRequest,
     current_user: CurrentUser,
-    email_service=Depends(get_email_service)
+
 ):
     # SECURITY: This endpoint dispatches an email through caller-supplied SMTP
     # settings. It MUST be authenticated and scoped to the caller's own hotel,

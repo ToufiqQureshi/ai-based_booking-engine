@@ -38,6 +38,7 @@ from app.api.v1 import auth, users, hotels, rooms, bookings, dashboard, rates, p
 from app.api.v1.social_proof import router as social_proof_router
 from app.api.v1.public import sse as public_sse
 from app.api.v1.chain.dashboard import router as chain_router
+from app.api.v1.ws import router as ws_router
 
 
 
@@ -220,6 +221,7 @@ app.include_router(loyalty.router, prefix=API_V1_PREFIX + "/loyalty", tags=["Loy
 app.include_router(social_proof_router, prefix=API_V1_PREFIX)
 app.include_router(public_sse.router, prefix=API_V1_PREFIX)
 app.include_router(chain_router, prefix=API_V1_PREFIX)
+app.include_router(ws_router, prefix=API_V1_PREFIX)
 
 
 # Root endpoint
