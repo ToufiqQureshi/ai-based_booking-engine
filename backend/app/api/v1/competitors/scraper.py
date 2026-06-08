@@ -1,0 +1,219 @@
+"""
+Competitor scraper: Decodo API client + Scrapling HTML parser for MakeMyTrip.
+No FastAPI router here — pure scraping logic consumed by background.py.
+"""
+import re
+import uuid
+import logging
+import asyncio
+from datetime import datetime, timedelta
+from typing import Optional
+
+import httpx
+from scrapling import Selector
+
+from app.core.config import get_settings
+from app.core.decodo_usage import record_decodo_request
+
+logger = logging.getLogger(__name__)
+
+# --- Decodo API constants ---
+
+DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
+
+# MMT renders its price client-side via an async XHR after the initial DOM is
+# ready. We ask Decodo's headless browser to wait this many seconds so that the
+# price node exists before the HTML snapshot is captured.
+MMT_RENDER_WAIT_SECONDS = 12
+
+# httpx read timeout for a single Decodo call. Must exceed Decodo's own
+# (render + MMT_RENDER_WAIT_SECONDS) processing time, with headroom.
+DECODO_HTTP_TIMEOUT_SECONDS = 60.0
+
+# Past this age a "running" competitor row is treated as an orphaned/crashed
+# worker rather than active work-in-progress — no other process ever revisits it.
+STALE_SCRAPE_MINUTES = 15
+
+# Each manual "Refresh" click burns ~7 paid Decodo requests. This cooldown
+# prevents rapid re-clicks from multiplying the third-party bill.
+MANUAL_SCRAPE_COOLDOWN_SECONDS = 5 * 60
+
+
+def _decodo_auth_header() -> Optional[str]:
+    """
+    Build the Decodo Basic-auth header from config.
+
+    IMPORTANT: no hardcoded fallback. A prior version shipped a real credential
+    as a default value — same class of bug as the leaked Razorpay secret in
+    CLAUDE.md. Missing config must surface as a clear error.
+    """
+    token = get_settings().DECODO_AUTH_TOKEN
+    if not token:
+        return None
+    return token if token.startswith("Basic ") else f"Basic {token}"
+
+
+def _is_stale_running(comp) -> bool:
+    """A 'running' row with no progress for STALE_SCRAPE_MINUTES is orphaned
+    (worker restarted/crashed mid-scrape) — surface it as failed/retryable."""
+    if comp.last_scrape_status != "running":
+        return False
+    if not comp.scrape_started_at:
+        return True  # legacy rows from before we tracked start time
+    return datetime.utcnow() - comp.scrape_started_at > timedelta(minutes=STALE_SCRAPE_MINUTES)
+
+
+def get_dynamic_dates(offset: int):
+    today = datetime.now()
+    checkin = (today + timedelta(days=offset)).strftime("%d%m%Y")
+    checkout = (today + timedelta(days=offset + 1)).strftime("%d%m%Y")
+    return checkin, checkout
+
+
+def clean_makemytrip_url(url: str, checkin: str, checkout: str) -> str:
+    """
+    Replace checkin/checkout date tokens while preserving ALL other query params.
+    The old implementation stripped params like topHtlId/locusId which broke
+    region-based resort listings.
+    """
+    url = re.sub(r"checkin=\d{8}", f"checkin={checkin}", url)
+    url = re.sub(r"checkout=\d{8}", f"checkout={checkout}", url)
+    return url
+
+
+def update_url_dates(url: str, offset: int) -> str:
+    checkin, checkout = get_dynamic_dates(offset)
+    if "makemytrip.com" in url.lower():
+        return clean_makemytrip_url(url, checkin, checkout)
+    url = re.sub(r"checkin=\d{8}", f"checkin={checkin}", url)
+    url = re.sub(r"checkout=\d{8}", f"checkout={checkout}", url)
+    return url
+
+
+async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None) -> dict:
+    """
+    Fetch one day's rate from MMT via Decodo Scraper API + Scrapling.
+
+    session_id: Decodo reuses the same proxy IP for the entire scrape session
+    (up to 10 min). Sequential requests with 2-3s gaps let Akamai's first
+    challenge resolve before the next request lands — this is why we do NOT
+    fire all 7 days concurrently (concurrent burst = same IP = bot-block on all).
+
+    613 handling: returns raw result; retry logic lives in _scrape_mmt_with_retry.
+    """
+    auth_header = _decodo_auth_header()
+    if not auth_header:
+        return {"status": "failed", "reason": "decodo_not_configured"}
+
+    try:
+        logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}... (session={session_id})")
+
+        # proxy_pool:"premium" → 193-country pool that includes India. "standard"
+        # only covers 8 countries (no India), so dropping this silently routed
+        # MMT requests through non-Indian IPs and caused blocks.
+        payload: dict = {
+            "url": url,
+            "proxy_pool": "premium",
+            "headless": "html",
+            "geo": "India",
+            "xhr": True,
+            "device_type": "desktop_chrome",
+            "browser_actions": [
+                {"type": "wait", "wait_time_s": str(MMT_RENDER_WAIT_SECONDS)},
+            ],
+        }
+        if session_id:
+            payload["session_id"] = session_id
+
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": auth_header,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=DECODO_HTTP_TIMEOUT_SECONDS) as client:
+                response = await client.post(DECODO_URL, json=payload, headers=headers)
+        except httpx.HTTPError as e:
+            record_decodo_request(hotel_id)
+            logger.error(f"Decodo API request failed before a response: {e}")
+            return {"status": "failed", "reason": f"request_error_{type(e).__name__}"}
+
+        record_decodo_request(hotel_id)
+
+        if response.status_code != 200:
+            body_text = response.text[:300]
+            if response.status_code == 400 and "has failed" in body_text.lower() and "session" in body_text.lower():
+                logger.warning(f"Decodo session '{session_id}' invalidated (400 session-failed) for {url[:60]}")
+                return {"status": "failed", "reason": "decodo_session_failed"}
+            logger.error(f"Decodo API returned {response.status_code}: {body_text}")
+            return {"status": "failed", "reason": f"API_status_{response.status_code}"}
+
+        res_json = response.json()
+
+        if not res_json.get("results") or len(res_json["results"]) == 0:
+            top_status = res_json.get("status_code")
+            if top_status == 613:
+                logger.warning(f"Decodo 613 (blocked, top-level) for {url[:60]}")
+                return {"status": "failed", "reason": "decodo_613_target_blocked"}
+            logger.error(f"Decodo API: empty results. top-level status={top_status}, body={str(res_json)[:200]}")
+            return {"status": "failed", "reason": "empty_api_results"}
+
+        first_result = res_json["results"][0]
+        result_status = first_result.get("status_code")
+        if result_status == 613:
+            logger.warning(f"Decodo 613 (blocked, results[0]) for {url[:60]}")
+            return {"status": "failed", "reason": "decodo_613_target_blocked"}
+
+        html_content = first_result.get("content", "")
+
+        if "access denied" in html_content.lower() or "access-denied" in html_content.lower() or "reference id" in html_content.lower():
+            logger.error("Blocked by Akamai (Access Denied / Reference ID)")
+            return {"status": "blocked", "reason": "shield_blocked"}
+
+        page = Selector(html_content)
+
+        sold_out_check = page.css("p.font14.appendBottom5.redText.latoBold.lineHight17").first
+        if sold_out_check and "You Just Missed It" in sold_out_check.text:
+            return {"status": "success", "price": 0.0, "is_sold_out": True}
+
+        # Primary selector, ID fallback, then data-attribute fallback
+        price_el = page.css('p.priceText.latoBlack.font22.blackText.appendBottom5[id="hlistpg_hotel_shown_price"]').first
+        if not price_el:
+            price_el = page.css('#hlistpg_hotel_shown_price').first
+        if not price_el:
+            price_el = page.css('[data-cy="hotel-price"]').first
+
+        if not price_el:
+            logger.warning(
+                f"Price element not found in MMT page (HTML size={len(html_content)}). "
+                f"First 300 chars: {html_content[:300]!r}"
+            )
+            return {"status": "failed", "reason": "price_element_not_found"}
+
+        price_text = price_el.text or ""
+
+        if not re.search(r"\d", price_text):
+            for child in price_el.css("*"):
+                child_text = child.text or ""
+                if re.search(r"\d", child_text):
+                    price_text = child_text
+                    break
+
+        price_match = re.search(r"[\d,]+", price_text)
+        if not price_match:
+            logger.warning(f"Could not parse price digits from: {price_text!r}")
+            return {"status": "failed", "reason": "price_parse_failed"}
+
+        price_digits = re.sub(r"[^\d]", "", price_match.group())
+        if not price_digits:
+            logger.warning(f"Empty digits after cleaning: {price_text!r}")
+            return {"status": "failed", "reason": "price_parse_failed"}
+
+        price = float(price_digits)
+        logger.info(f"Parsed price: Rs.{price:,.0f} from text {price_text!r}")
+        return {"status": "success", "price": price, "is_sold_out": False}
+
+    except Exception as e:
+        logger.error(f"Scraper error: {e}")
+        return {"status": "failed", "reason": str(e)}
