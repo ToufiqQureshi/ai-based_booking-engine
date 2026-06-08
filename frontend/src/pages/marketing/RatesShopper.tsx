@@ -276,15 +276,21 @@ export default function RatesShopper() {
     const filteredCompetitors = competitors.filter(c => {
         if (activeTab === "ALL") return true;
         const isAgoda = c.source?.toUpperCase() === 'AGODA' || c.url?.toLowerCase().includes('agoda');
-        return activeTab === "AGODA" ? isAgoda : !isAgoda;
+        const isMmt = c.source?.toUpperCase() === 'MAKEMYTRIP' || c.url?.toLowerCase().includes('makemytrip');
+        if (activeTab === "AGODA") return isAgoda;
+        if (activeTab === "MAKEMYTRIP") return isMmt;
+        return true;
     });
 
     const filteredChartNames = chartCompetitorNames.filter(name => {
-        // Find competitor object by name (approximate match or exact)
+        if (activeTab === "ALL") return true;
         const comp = competitors.find(c => c.name === name);
         if (!comp) return true;
         const isAgoda = comp.source?.toUpperCase() === 'AGODA' || comp.url?.toLowerCase().includes('agoda');
-        return activeTab === "AGODA" ? isAgoda : !isAgoda;
+        const isMmt = comp.source?.toUpperCase() === 'MAKEMYTRIP' || comp.url?.toLowerCase().includes('makemytrip');
+        if (activeTab === "AGODA") return isAgoda;
+        if (activeTab === "MAKEMYTRIP") return isMmt;
+        return true;
     });
 
     // Get today's analysis
