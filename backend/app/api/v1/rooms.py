@@ -16,7 +16,15 @@ from sqlmodel import delete
 from app.api.v1.availability import clear_availability_cache
 from app.core.cache import cache_response, invalidate_cache
 from app.core.guest_agent import invalidate_guest_agent_cache
+from app.core.redis_client import redis_client
 from fastapi import Request
+import time
+
+def _bump_rate_version(hotel_id: str) -> None:
+    try:
+        redis_client.set_value(f"rate_version:{hotel_id}", str(int(time.time())), expire=86400)
+    except Exception:
+        pass
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
@@ -87,6 +95,7 @@ async def create_room(
     clear_availability_cache(current_user.hotel_id)
     invalidate_cache(f"rooms:{current_user.hotel_id}:*")
     invalidate_guest_agent_cache(current_user.hotel_id)
+    _bump_rate_version(current_user.hotel_id)
     return room
 
 
@@ -174,6 +183,7 @@ async def update_room(
     invalidate_cache(f"rooms:{current_user.hotel_id}:*")
     invalidate_cache(f"room:{current_user.hotel_id}:*/rooms/{room_id}*")
     invalidate_guest_agent_cache(current_user.hotel_id)
+    _bump_rate_version(current_user.hotel_id)
     return room
 
 
@@ -213,3 +223,4 @@ async def delete_room(room_id: str, current_user: CurrentUser, session: DbSessio
     invalidate_cache(f"rooms:{current_user.hotel_id}:*")
     invalidate_cache(f"room:{current_user.hotel_id}:*/rooms/{room_id}*")
     invalidate_guest_agent_cache(current_user.hotel_id)
+    _bump_rate_version(current_user.hotel_id)
