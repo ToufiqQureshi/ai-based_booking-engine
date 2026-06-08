@@ -322,6 +322,7 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         payload: dict = {
             "target": "universal",
             "url": url,
+            "proxy_pool": "premium",
             "headless": "html",
             "geo": "India",
             "device_type": "desktop_chrome",
