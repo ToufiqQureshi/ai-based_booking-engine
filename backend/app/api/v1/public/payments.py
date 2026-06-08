@@ -291,10 +291,9 @@ async def verify_razorpay_payment(
         guest = None
         if not already_confirmed:
             booking.status = BookingStatus.CONFIRMED
-            booking.paid_amount = booking.total_amount  # Assuming full payment was made online
+            booking.paid_amount = booking.total_amount
             booking.updated_at = utcnow()
 
-            # Record the payment in DB if payment model exists
             from app.models.payment import Payment
             payment = Payment(
                 hotel_id=booking.hotel_id,
@@ -307,6 +306,20 @@ async def verify_razorpay_payment(
             )
             session.add(payment)
             session.add(booking)
+
+            # Update loyalty progress for this confirmed booking
+            from app.api.v1.public.bookings import _update_guest_loyalty
+            guest_res = await session.execute(
+                select(Guest).where(Guest.id == booking.guest_id)
+            )
+            _guest = guest_res.scalar_one_or_none()
+            if _guest:
+                rooms_count = len(booking.rooms) if isinstance(booking.rooms, list) else 1
+                await _update_guest_loyalty(
+                    session, booking.hotel_id, _guest.email,
+                    booking.total_amount, rooms_count
+                )
+
             await session.commit()
 
             # Send confirmation emails using FastAPI's BackgroundTasks — the
@@ -503,6 +516,20 @@ async def razorpay_webhook(
             )
             session.add(payment)
             session.add(booking)
+
+            # Update loyalty counters via webhook confirmation path
+            from app.api.v1.public.bookings import _update_guest_loyalty
+            guest_res = await session.execute(
+                select(Guest).where(Guest.id == booking.guest_id)
+            )
+            _guest = guest_res.scalar_one_or_none()
+            if _guest:
+                rooms_count = len(booking.rooms) if isinstance(booking.rooms, list) else 1
+                await _update_guest_loyalty(
+                    session, booking.hotel_id, _guest.email,
+                    booking.total_amount, rooms_count
+                )
+
             await session.commit()
             logger.info(f"Webhook CONFIRMED booking {booking.id} via {event_type}")
         return {"status": "ok", "booking_id": booking.id, "event": event_type}

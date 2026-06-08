@@ -367,6 +367,7 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             "proxy_pool": "premium",
             "headless": "html",
             "geo": "India",
+             "xhr": True,
             "device_type": "desktop_chrome",
             "browser_actions": [
                 {"type": "wait", "wait_time_s": str(MMT_RENDER_WAIT_SECONDS)},
@@ -1036,15 +1037,41 @@ async def get_decodo_usage(current_user: CurrentUser):
     return get_usage_summary(current_user.hotel_id)
 
 
-# --- Auto-Scrape Schedule (hotelier picks the time of day) ---
+# --- Auto-Scrape Schedule (hotelier picks up to 4 times per day) ---
 
 class ScrapeScheduleResponse(BaseModel):
-    scrape_hour: Optional[int] = None
+    scrape_hours: List[int] = []   # up to 4 local hours (0-23) per day
     timezone: str = "Asia/Kolkata"
 
 
 class ScrapeScheduleUpdate(BaseModel):
-    scrape_hour: Optional[int] = PydanticField(default=None, ge=0, le=23)
+    # None = turn off; empty list = turn off; up to 4 distinct hours per day
+    scrape_hours: Optional[List[int]] = PydanticField(default=None)
+
+    @field_validator("scrape_hours")
+    @classmethod
+    def _validate_hours(cls, v: Optional[List[int]]) -> Optional[List[int]]:
+        if v is None:
+            return v
+        cleaned = sorted({int(h) for h in v})
+        invalid = [h for h in cleaned if not (0 <= h <= 23)]
+        if invalid:
+            raise ValueError(f"Invalid hour(s) {invalid}: each must be 0-23")
+        if len(cleaned) > 4:
+            raise ValueError("Maximum 4 scrape times per day allowed")
+        return cleaned
+
+
+def _read_scrape_hours(hotel_settings: dict) -> List[int]:
+    """Read scrape schedule, handling both the new (list) and old (single int) format."""
+    hours = hotel_settings.get("rate_shopper_scrape_hours")
+    if isinstance(hours, list):
+        return [h for h in hours if isinstance(h, int) and 0 <= h <= 23]
+    # Backward compat: old single-hour setting
+    legacy = hotel_settings.get("rate_shopper_scrape_hour")
+    if isinstance(legacy, int) and 0 <= legacy <= 23:
+        return [legacy]
+    return []
 
 
 @router.get(
@@ -1057,7 +1084,7 @@ async def get_scrape_schedule(current_user: CurrentUser, session: DbSession):
     hotel = await session.get(Hotel, current_user.hotel_id)
     hotel_settings = (hotel.settings if hotel else None) or {}
     return ScrapeScheduleResponse(
-        scrape_hour=hotel_settings.get("rate_shopper_scrape_hour"),
+        scrape_hours=_read_scrape_hours(hotel_settings),
         timezone=hotel_settings.get("timezone") or "Asia/Kolkata",
     )
 
@@ -1072,9 +1099,8 @@ async def get_scrape_schedule(current_user: CurrentUser, session: DbSession):
 )
 async def update_scrape_schedule(payload: ScrapeScheduleUpdate, current_user: CurrentUser, session: DbSession):
     """
-    Hotelier picks what local hour (0-23, in their property's configured
-    timezone) the daily auto-scrape should run at. `null` turns auto-scrape
-    off — competitors can still be refreshed manually at any time.
+    Hotelier picks up to 4 local hours per day for automatic competitor scraping.
+    Empty list / null turns auto-scrape off; manual refresh always works.
     """
     check_rate_shopper_feature(current_user)
     hotel = await session.get(Hotel, current_user.hotel_id)
@@ -1082,13 +1108,16 @@ async def update_scrape_schedule(payload: ScrapeScheduleUpdate, current_user: Cu
         raise HTTPException(status_code=404, detail="Hotel not found")
 
     new_settings = dict(hotel.settings or {})
-    new_settings["rate_shopper_scrape_hour"] = payload.scrape_hour
+    new_hours = payload.scrape_hours or []
+    new_settings["rate_shopper_scrape_hours"] = new_hours
+    # Remove old single-hour key so both paths stay in sync
+    new_settings.pop("rate_shopper_scrape_hour", None)
     hotel.settings = new_settings
     session.add(hotel)
     await session.commit()
 
     return ScrapeScheduleResponse(
-        scrape_hour=payload.scrape_hour,
+        scrape_hours=new_hours,
         timezone=new_settings.get("timezone") or "Asia/Kolkata",
     )
 
@@ -1100,13 +1129,12 @@ AUTO_SCRAPE_DEDUPE_TTL = 23 * 3600
 
 async def run_due_auto_scrapes(session) -> None:
     """
-    Hourly scheduler tick (see app.core.scheduler): for every Rate-Shopper
-    hotel that has chosen an auto-scrape hour — IN ITS OWN LOCAL TIMEZONE,
-    the hotelier's choice, not ours — kick off a background scrape of all
-    its active competitors once that local hour arrives.
+    Hourly scheduler tick: for every Rate-Shopper hotel that has scheduled
+    one or more local hours — up to 4 per day — kick off competitor scrapes
+    when the current local hour matches any configured slot.
 
-    A Redis SETNX dedupe key per hotel-per-day prevents double-firing across
-    instances/ticks even if the outer scheduler lock expires mid-run.
+    Dedupe key is per-hotel-per-day-per-hour so each slot fires independently
+    (e.g. 9 AM + 3 PM both run, not just the first matching hour).
     """
     from zoneinfo import ZoneInfo
 
@@ -1119,14 +1147,8 @@ async def run_due_auto_scrapes(session) -> None:
 
     for hotel_id, hotel_settings in hotels_res.all():
         hotel_settings = hotel_settings or {}
-        scrape_hour = hotel_settings.get("rate_shopper_scrape_hour")
-        if scrape_hour is None:
-            continue
-        try:
-            scrape_hour = int(scrape_hour)
-            if not (0 <= scrape_hour <= 23):
-                continue
-        except (TypeError, ValueError):
+        scrape_hours = _read_scrape_hours(hotel_settings)
+        if not scrape_hours:
             continue
 
         tz_name = hotel_settings.get("timezone") or "UTC"
@@ -1135,10 +1157,12 @@ async def run_due_auto_scrapes(session) -> None:
         except Exception:
             local_now = now_utc
 
-        if local_now.hour != scrape_hour:
+        if local_now.hour not in scrape_hours:
             continue
 
-        dedupe_key = f"rate_shopper_auto_scrape:{hotel_id}:{local_now.strftime('%Y%m%d')}"
+        # Per-hour dedupe: 9 AM slot and 3 PM slot both get their own key
+        # so both can fire on the same calendar day.
+        dedupe_key = f"rate_shopper_auto_scrape:{hotel_id}:{local_now.strftime('%Y%m%d')}:{local_now.hour}"
         try:
             if not r or not r.set(dedupe_key, "1", nx=True, ex=AUTO_SCRAPE_DEDUPE_TTL):
                 continue
@@ -1155,10 +1179,7 @@ async def run_due_auto_scrapes(session) -> None:
 
         logger.info(
             f"Auto-scrape: triggering {len(comp_ids)} competitor(s) for hotel {hotel_id} "
-            f"(local hour {scrape_hour}, tz {tz_name})"
+            f"(local hour {local_now.hour}, tz {tz_name}, slots configured: {scrape_hours})"
         )
-        # Sequential, not concurrent — keeps load (and the Decodo bill) for an
-        # auto-run identical to a hotelier manually clicking "Refresh Rates"
-        # on each competitor, one at a time.
         for comp_id in comp_ids:
             await run_background_scrape(comp_id)

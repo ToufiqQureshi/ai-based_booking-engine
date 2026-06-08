@@ -108,6 +108,86 @@ def generate_booking_number() -> str:
 from fastapi import Request
 from app.core.limiter import limiter
 
+
+async def _update_guest_loyalty(
+    session,
+    hotel_id: str,
+    guest_email: str,
+    total_amount: float,
+    rooms_count: int,
+) -> None:
+    """
+    Called every time a booking moves to CONFIRMED status.
+    Updates GuestLoyalty counters and — when a milestone is hit — creates
+    a single-use PromoCode in the DB so loyalty-check can hand it to the guest.
+    Runs inside the calling session; caller is responsible for commit.
+    """
+    try:
+        # Fetch the hotel's active loyalty program
+        prog_res = await session.execute(
+            select(LoyaltyProgram).where(
+                LoyaltyProgram.hotel_id == hotel_id,
+                LoyaltyProgram.is_active == True,
+            )
+        )
+        program = prog_res.scalar_one_or_none()
+        if not program:
+            return  # no active program — nothing to track
+
+        # Get or create the GuestLoyalty record for this email + hotel
+        loyal_res = await session.execute(
+            select(GuestLoyalty).where(
+                GuestLoyalty.guest_email == guest_email,
+                GuestLoyalty.hotel_id == hotel_id,
+            )
+        )
+        loyal = loyal_res.scalar_one_or_none()
+        if not loyal:
+            loyal = GuestLoyalty(hotel_id=hotel_id, guest_email=guest_email)
+            session.add(loyal)
+
+        loyal.total_completed_bookings += 1
+        loyal.total_rooms_booked += rooms_count
+        loyal.total_spend = float(loyal.total_spend) + total_amount
+        loyal.last_booking_at = datetime.utcnow()
+        loyal.updated_at = datetime.utcnow()
+        session.add(loyal)
+
+        # Check if this booking hit a new milestone
+        milestone = program.milestone_bookings or 5
+        if milestone > 0 and loyal.total_completed_bookings % milestone == 0:
+            # Milestone reached — create a unique single-use promo code
+            from datetime import date as _date
+            import secrets
+            code = f"LOYAL-{secrets.token_hex(4).upper()}-{loyal.total_completed_bookings}"
+            disc_type = "percentage" if program.reward_type == "percentage" else "fixed_amount"
+            disc_value = program.reward_value if program.reward_type != "free_night" else 100.0
+            if program.reward_type == "free_night":
+                disc_type = "percentage"  # treat free night as 100% off
+
+            promo = PromoCode(
+                hotel_id=hotel_id,
+                code=code,
+                description=f"Loyalty reward — {program.reward_description or program.program_name}",
+                discount_type=disc_type,
+                discount_value=disc_value,
+                max_usage=1,
+                current_usage=0,
+                is_active=True,
+                end_date=_date.fromordinal(_date.today().toordinal() + 180),  # 6-month expiry
+            )
+            session.add(promo)
+            loyal.rewards_earned += 1
+            session.add(loyal)
+            logger.info(
+                f"Loyalty milestone reached: hotel={hotel_id} guest={guest_email} "
+                f"bookings={loyal.total_completed_bookings} coupon={code}"
+            )
+    except Exception as exc:
+        # Loyalty tracking must never break a booking confirmation
+        logger.warning(f"_update_guest_loyalty failed for {guest_email}@{hotel_id}: {exc}")
+
+
 @router.post("/bookings", response_model=PublicBookingResponse)
 @limiter.limit("5/minute")
 async def create_public_booking(
@@ -491,6 +571,11 @@ async def create_public_booking(
         if booking_data.payment_method == "pay_at_property":
             booking.status = BookingStatus.CONFIRMED
             session.add(booking)
+            # Update loyalty counters now that this booking is confirmed
+            await _update_guest_loyalty(
+                session, hotel_id, guest.email, booking.total_amount,
+                len(booking_data.rooms)
+            )
             await session.commit()
             
             email_service = await get_email_service()

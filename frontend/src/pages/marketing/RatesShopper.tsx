@@ -150,17 +150,13 @@ export default function RatesShopper() {
         gcTime: 1000 * 60 * 60,
     });
 
-    const [scheduleHour, setScheduleHour] = useState<string>('off');
+    const [scheduleHours, setScheduleHours] = useState<number[]>([]);
     const [isSavingSchedule, setIsSavingSchedule] = useState(false);
     const canManageSchedule = user?.role === 'OWNER' || user?.role === 'MANAGER' || user?.role === 'SUPER_ADMIN';
 
     useEffect(() => {
         if (!scheduleData) return;
-        setScheduleHour(
-            scheduleData.scrape_hour === null || scheduleData.scrape_hour === undefined
-                ? 'off'
-                : String(scheduleData.scrape_hour)
-        );
+        setScheduleHours(Array.isArray(scheduleData.scrape_hours) ? scheduleData.scrape_hours : []);
     }, [scheduleData]);
 
     const formatHour = (hour: number) => {
@@ -169,23 +165,49 @@ export default function RatesShopper() {
         return `${displayHour}:00 ${period}`;
     };
 
-    const handleScheduleChange = async (value: string) => {
-        const previous = scheduleHour;
-        setScheduleHour(value);
+    const handleToggleHour = async (hour: number) => {
+        if (!canManageSchedule) return;
+        const isSelected = scheduleHours.includes(hour);
+        const newHours = isSelected
+            ? scheduleHours.filter(h => h !== hour)
+            : scheduleHours.length >= 4
+                ? scheduleHours  // max 4 — ignore click
+                : [...scheduleHours, hour].sort((a, b) => a - b);
+
+        if (newHours === scheduleHours) {
+            toast.warning("Maximum 4 scrape times per day allowed.");
+            return;
+        }
+        const previous = scheduleHours;
+        setScheduleHours(newHours);
         setIsSavingSchedule(true);
         try {
-            const scrape_hour = value === 'off' ? null : parseInt(value, 10);
-            const updated = await apiClient.put<any>('/competitors/schedule', { scrape_hour });
+            const updated = await apiClient.put<any>('/competitors/schedule', { scrape_hours: newHours });
             queryClient.setQueryData(['rateShopperSchedule'], updated);
             toast.success(
-                scrape_hour === null
+                newHours.length === 0
                     ? "Auto-sync turned off. You can still refresh competitors manually anytime."
-                    : `Auto-sync scheduled for ${formatHour(scrape_hour)} (${updated?.timezone || 'your property timezone'}) every day.`
+                    : `Auto-sync set to ${newHours.map(formatHour).join(', ')} (${updated?.timezone || 'property timezone'}).`
             );
         } catch (error: any) {
-            console.error(error);
-            setScheduleHour(previous);
+            setScheduleHours(previous);
             toast.error(error.message || "Failed to update auto-sync schedule");
+        } finally {
+            setIsSavingSchedule(false);
+        }
+    };
+
+    const handleClearSchedule = async () => {
+        const previous = scheduleHours;
+        setScheduleHours([]);
+        setIsSavingSchedule(true);
+        try {
+            await apiClient.put('/competitors/schedule', { scrape_hours: [] });
+            queryClient.setQueryData(['rateShopperSchedule'], { scrape_hours: [], timezone: scheduleData?.timezone });
+            toast.success("Auto-sync turned off.");
+        } catch (error: any) {
+            setScheduleHours(previous);
+            toast.error(error.message || "Failed to update schedule");
         } finally {
             setIsSavingSchedule(false);
         }
@@ -540,37 +562,76 @@ export default function RatesShopper() {
                         <CardTitle className="flex items-center gap-2 text-base">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             Daily Auto-Sync Schedule
+                            {isSavingSchedule && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                         </CardTitle>
                         <CardDescription>
-                            Pick the hour — in your property's local time — we automatically refresh
-                            every tracked competitor's rates each day. Choose "Off" to refresh manually only.
+                            Pick up to <strong>4 times per day</strong> (property local time) to auto-refresh all competitor rates.
+                            Tap a time to toggle it on/off.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {canManageSchedule ? (
                             <>
-                                <div className="flex items-center gap-3">
-                                    <Select value={scheduleHour} onValueChange={handleScheduleChange} disabled={isSavingSchedule}>
-                                        <SelectTrigger className="w-[200px]">
-                                            <SelectValue placeholder="Select time" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="off">Off (manual only)</SelectItem>
-                                            {Array.from({ length: 24 }, (_, h) => (
-                                                <SelectItem key={h} value={String(h)}>{formatHour(h)}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {isSavingSchedule && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                                {/* Selected slots as pills */}
+                                {scheduleHours.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mb-3">
+                                        {scheduleHours.map(h => (
+                                            <button
+                                                key={h}
+                                                onClick={() => handleToggleHour(h)}
+                                                disabled={isSavingSchedule}
+                                                className="inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-xs font-medium px-3 py-1 hover:bg-primary/80 transition-colors"
+                                            >
+                                                {formatHour(h)} <X className="h-3 w-3" />
+                                            </button>
+                                        ))}
+                                        <button
+                                            onClick={handleClearSchedule}
+                                            disabled={isSavingSchedule}
+                                            className="text-xs text-muted-foreground hover:text-destructive underline underline-offset-2 ml-1"
+                                        >
+                                            Clear all
+                                        </button>
+                                    </div>
+                                )}
+                                {scheduleHours.length === 0 && (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-3 font-medium">
+                                        Auto-sync is off — select time slots below or refresh manually.
+                                    </p>
+                                )}
+                                {/* 24-hour grid: 2 rows × 12 columns */}
+                                <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
+                                    {Array.from({ length: 24 }, (_, h) => {
+                                        const selected = scheduleHours.includes(h);
+                                        const atLimit = !selected && scheduleHours.length >= 4;
+                                        return (
+                                            <button
+                                                key={h}
+                                                onClick={() => handleToggleHour(h)}
+                                                disabled={isSavingSchedule || atLimit}
+                                                title={atLimit ? 'Max 4 slots' : formatHour(h)}
+                                                className={`rounded px-1.5 py-1 text-[10px] font-medium transition-colors
+                                                    ${selected
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : atLimit
+                                                            ? 'bg-muted text-muted-foreground/40 cursor-not-allowed'
+                                                            : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                                                    }`}
+                                            >
+                                                {formatHour(h).replace(':00', '')}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-3">
-                                    Time shown is in your property's timezone ({scheduleData?.timezone || 'Asia/Kolkata'}).
+                                    Times are in your property's timezone ({scheduleData?.timezone || 'Asia/Kolkata'}).
+                                    {scheduleHours.length > 0 && ` Syncing ${scheduleHours.length}×/day.`}
                                 </p>
                             </>
                         ) : (
                             <p className="text-sm text-muted-foreground">
-                                {scheduleData?.scrape_hour != null
-                                    ? `Auto-sync runs daily at ${formatHour(scheduleData.scrape_hour)} (${scheduleData?.timezone || 'property timezone'}).`
+                                {scheduleHours.length > 0
+                                    ? `Auto-sync runs at ${scheduleHours.map(formatHour).join(', ')} (${scheduleData?.timezone || 'property timezone'}).`
                                     : "Auto-sync is currently off — rates are refreshed manually only."}
                                 {" "}Only Owners and Managers can change this.
                             </p>
