@@ -331,36 +331,40 @@ async def test_get_schedule_defaults_to_off(rate_shopper_client: AsyncClient):
     res = await rate_shopper_client.get("/api/v1/competitors/schedule")
     assert res.status_code == 200
     body = res.json()
-    assert body["scrape_hour"] is None
+    # The multi-hour API returns scrape_hours: [] when no schedule is configured
+    assert "scrape_hours" in body
+    assert body["scrape_hours"] == []
     assert "timezone" in body
 
 
 async def test_owner_can_set_schedule_hour(rate_shopper_client: AsyncClient):
-    res = await rate_shopper_client.put("/api/v1/competitors/schedule", json={"scrape_hour": 3})
+    # Set one hour
+    res = await rate_shopper_client.put("/api/v1/competitors/schedule", json={"scrape_hours": [3]})
     assert res.status_code == 200
-    assert res.json()["scrape_hour"] == 3
+    assert res.json()["scrape_hours"] == [3]
 
     # Persisted — a follow-up GET reflects it
     get_res = await rate_shopper_client.get("/api/v1/competitors/schedule")
-    assert get_res.json()["scrape_hour"] == 3
+    assert get_res.json()["scrape_hours"] == [3]
 
-    # Turning it back off (null) disables auto-scrape
-    off_res = await rate_shopper_client.put("/api/v1/competitors/schedule", json={"scrape_hour": None})
+    # Turning it back off (empty list) disables auto-scrape
+    off_res = await rate_shopper_client.put("/api/v1/competitors/schedule", json={"scrape_hours": []})
     assert off_res.status_code == 200
-    assert off_res.json()["scrape_hour"] is None
+    assert off_res.json()["scrape_hours"] == []
 
 
 async def test_schedule_hour_out_of_range_rejected(rate_shopper_client: AsyncClient):
-    res = await rate_shopper_client.put("/api/v1/competitors/schedule", json={"scrape_hour": 24})
+    # Hour 24 is invalid (must be 0-23)
+    res = await rate_shopper_client.put("/api/v1/competitors/schedule", json={"scrape_hours": [24]})
     assert res.status_code == 422
 
-    res = await rate_shopper_client.put("/api/v1/competitors/schedule", json={"scrape_hour": -1})
+    res = await rate_shopper_client.put("/api/v1/competitors/schedule", json={"scrape_hours": [-1]})
     assert res.status_code == 422
 
 
 async def test_staff_cannot_change_schedule(rate_shopper_staff_client: AsyncClient):
     """STAFF is operational-only — scheduling is an OWNER/MANAGER config action."""
-    res = await rate_shopper_staff_client.put("/api/v1/competitors/schedule", json={"scrape_hour": 5})
+    res = await rate_shopper_staff_client.put("/api/v1/competitors/schedule", json={"scrape_hours": [5]})
     assert res.status_code == 403
 
 
