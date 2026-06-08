@@ -138,7 +138,7 @@ DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
 # call; this is the generous upper bound for a healthy run. Past this we
 # treat "running" as a crashed/orphaned worker rather than work-in-progress
 # (no other job ever revisits these rows otherwise — see _is_stale_running).
-STALE_SCRAPE_MINUTES = 3
+STALE_SCRAPE_MINUTES = 15
 
 # Each manual "Refresh Rates" click burns ~7 paid Decodo requests (premium
 # proxy + headless render). This cooldown stops a few impatient clicks from
