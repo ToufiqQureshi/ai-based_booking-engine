@@ -314,12 +314,18 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
     try:
         logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}... (session={session_id})")
 
+        # Per official Decodo v2 docs:
+        # - target:"universal" is required (was missing — likely caused parse errors)
+        # - geo must be full country name "India", not ISO code "in"
+        # - parse:False ensures raw HTML is returned (without it Decodo may return
+        #   structured/processed data, which breaks our CSS selectors)
         payload: dict = {
+            "target": "universal",
             "url": url,
-            "proxy_pool": "premium",
             "headless": "html",
-            "geo": "in",
+            "geo": "India",
             "device_type": "desktop_chrome",
+            "parse": False,
         }
         if session_id:
             payload["session_id"] = session_id
@@ -346,16 +352,25 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
 
         res_json = response.json()
 
-        decodo_status = res_json.get("status_code")
-        if decodo_status == 613:
-            logger.warning(f"Decodo 613 (blocked by target) for {url[:60]}")
-            return {"status": "failed", "reason": "decodo_613_target_blocked"}
-
+        # Docs show status_code inside results[0]; also check top-level for older
+        # response envelopes (e.g. when results is empty and Decodo puts error code at root).
         if not res_json.get("results") or len(res_json["results"]) == 0:
-            logger.error("Decodo API response doesn't contain results key or results list is empty")
+            top_status = res_json.get("status_code")
+            if top_status == 613:
+                logger.warning(f"Decodo 613 (blocked by target, top-level) for {url[:60]}")
+                return {"status": "failed", "reason": "decodo_613_target_blocked"}
+            logger.error(f"Decodo API: empty results. top-level status={top_status}, body={str(res_json)[:200]}")
             return {"status": "failed", "reason": "empty_api_results"}
 
         first_result = res_json["results"][0]
+
+        # Decodo 613 = target site blocked the request (Akamai / bot-protection).
+        # Check inside results[0] per the documented response schema.
+        result_status = first_result.get("status_code")
+        if result_status == 613:
+            logger.warning(f"Decodo 613 (blocked by target) for {url[:60]}")
+            return {"status": "failed", "reason": "decodo_613_target_blocked"}
+
         html_content = first_result.get("content", "")
 
         if "access denied" in html_content.lower() or "access-denied" in html_content.lower() or "reference id" in html_content.lower():
