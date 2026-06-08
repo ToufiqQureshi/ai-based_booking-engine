@@ -149,12 +149,12 @@ DECODO_HTTP_TIMEOUT_SECONDS = 60.0
 # generous upper bound for a healthy run. Past this we treat "running" as a
 # crashed/orphaned worker rather than work-in-progress (no other job ever
 # revisits these rows otherwise — see _is_stale_running).
-STALE_SCRAPE_MINUTES = 20
+STALE_SCRAPE_MINUTES = 15
 
 # Each manual "Refresh Rates" click burns ~7 paid Decodo requests (premium
 # proxy + headless render). This cooldown stops a few impatient clicks from
 # multiplying our third-party bill — see CLAUDE.md "bound every cost".
-MANUAL_SCRAPE_COOLDOWN_SECONDS = 15 * 60
+MANUAL_SCRAPE_COOLDOWN_SECONDS = 5 * 60
 
 
 def _decodo_auth_header() -> Optional[str]:
