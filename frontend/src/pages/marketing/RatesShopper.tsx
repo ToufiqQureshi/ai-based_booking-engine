@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from '@/components/ui/label';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { apiClient, tokenStorage } from '@/api/client';
-import { Loader2, Plus, RefreshCw, Trash2, TrendingUp, TrendingDown, Minus, Sparkles, Activity, Clock, Square } from 'lucide-react';
+import { apiClient, ApiClientError } from '@/api/client';
+import { Loader2, Plus, RefreshCw, Trash2, TrendingUp, TrendingDown, Minus, Sparkles, Activity, Clock, Square, AlertTriangle, WifiOff, KeyRound, X, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { RateTable } from '@/components/dashboard/RateTable';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +21,10 @@ export default function RatesShopper() {
     const { hotel, user } = useAuth();
     const queryClient = useQueryClient();
     const [lastStatuses, setLastStatuses] = useState<Record<string, string>>({});
+    // Tracks which (comp_id, date) pairs we've already toasted so we don't re-fire on re-renders
+    const seenProgressRef = useRef<Record<string, Set<string>>>({});
+    // Page-level error banner (persistent — not just a toast)
+    const [pageError, setPageError] = useState<{ type: 'service' | 'network' | 'limit' | 'load'; title: string; message: string } | null>(null);
     const [activeTab, setActiveTab] = useState(() => localStorage.getItem("rateShopperActiveTab") || "ALL");
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [newCompName, setNewCompName] = useState('');
@@ -74,17 +79,46 @@ export default function RatesShopper() {
         },
         staleTime: 0,
         gcTime: 1000 * 60 * 60,
-        refetchInterval: isAnyRunning ? 5000 : false,
+        refetchInterval: isAnyRunning ? 2000 : false,
     });
 
     const isLoading = isCompLoading || isRatesLoading;
 
+    // Set a persistent page banner when initial data load fails
     useEffect(() => {
-        const msg = (compError as any)?.message || (ratesError as any)?.message;
-        if ((isCompError || isRatesError) && msg) {
-            toast.error(msg || "Failed to load rate shopper data");
+        if (isCompError && compError) {
+            const err = compError as any;
+            const status = err?.status;
+            if (status === 503) {
+                setPageError({ type: 'service', title: 'Rate Sync Service Unavailable', message: err.message || 'Decodo API is not configured. Contact your administrator.' });
+            } else if (!navigator.onLine || err?.name === 'AbortError') {
+                setPageError({ type: 'network', title: 'Network Error', message: 'Could not reach the server. Check your connection.' });
+            } else {
+                setPageError({ type: 'load', title: 'Failed to Load Competitors', message: err.message || 'Something went wrong loading your tracked channels.' });
+            }
         }
-    }, [isCompError, isRatesError, compError, ratesError]);
+    }, [isCompError, compError]);
+
+    // Maps backend error reason codes to human-readable messages shown in the card
+    const friendlyError = (raw: string | null | undefined): string => {
+        if (!raw) return 'Unknown error occurred';
+        if (raw.includes('decodo_not_configured') || raw.includes('not configured')) return 'Rate sync API key is not set up — contact your administrator.';
+        if (raw.includes('decodo_613') || raw.includes('target_blocked')) return 'Blocked by OTA anti-bot protection. Try again in a few hours.';
+        if (raw.includes('shield_blocked') || raw.includes('Access Denied')) return 'OTA security (Akamai) blocked the request. Try again later.';
+        if (raw.includes('price_element_not_found')) return 'Could not find the price on the OTA page. The URL may be outdated — try re-adding the competitor.';
+        if (raw.includes('price_parse_failed')) return 'Found the price element but could not read the value. OTA may have changed their layout.';
+        if (raw.includes('empty_api_results')) return 'Scraper returned no data. The OTA page may have changed or the URL is invalid.';
+        if (raw.includes('request_error')) return 'Network request to Decodo failed. This is usually temporary — try again.';
+        if (raw.includes('API_status_')) {
+            const code = raw.match(/API_status_(\d+)/)?.[1];
+            return `Decodo returned HTTP ${code}. This is usually temporary — try again in a few minutes.`;
+        }
+        if (raw.includes('timed out') || raw.includes('timeout')) return 'Scrape timed out. The server may have restarted — click Refresh to retry.';
+        if (raw.includes('Stopped by you')) return raw; // user-initiated, show as-is
+        if (raw.includes('Successfully scraped')) return raw; // partial success, show as-is
+        if (raw.includes('Internal system crash')) return 'An unexpected server error occurred. Please try again.';
+        return raw;
+    };
 
     const chartData = ratesData?.chartData ?? [];
     const tableData = ratesData?.tableData ?? [];
@@ -180,6 +214,55 @@ export default function RatesShopper() {
         }
     }, [competitors, lastStatuses]);
 
+    // Poll per-day scraping progress for running competitors.
+    // Every 2s we check /competitors/{id}/progress and fire a toast the moment
+    // a new date+price lands — gives the hotelier live feedback instead of
+    // waiting for the entire 7-day run to complete.
+    useEffect(() => {
+        if (!isAnyRunning) {
+            seenProgressRef.current = {};
+            return;
+        }
+
+        const runningComps = competitors.filter((c: any) => c.last_scrape_status === 'running');
+        if (!runningComps.length) return;
+
+        const intervalId = setInterval(async () => {
+            for (const comp of runningComps) {
+                try {
+                    const progress = await apiClient.get(`/competitors/${comp.id}/progress`) as Array<{
+                        date: string;
+                        price: number;
+                        is_sold_out: boolean;
+                    }>;
+                    if (!seenProgressRef.current[comp.id]) {
+                        seenProgressRef.current[comp.id] = new Set();
+                    }
+                    for (const item of progress) {
+                        if (!seenProgressRef.current[comp.id].has(item.date)) {
+                            seenProgressRef.current[comp.id].add(item.date);
+                            const dateLabel = new Date(item.date + 'T00:00:00').toLocaleDateString('en-IN', {
+                                day: 'numeric', month: 'short'
+                            });
+                            if (item.is_sold_out) {
+                                toast.warning(`${comp.name} · ${dateLabel} — Sold Out`, { duration: 4000 });
+                            } else {
+                                toast.success(
+                                    `${comp.name} · ${dateLabel} — ₹${item.price.toLocaleString('en-IN')}`,
+                                    { duration: 4000 }
+                                );
+                            }
+                        }
+                    }
+                } catch {
+                    // silent — progress endpoint is best-effort, don't spam errors
+                }
+            }
+        }, 2000);
+
+        return () => clearInterval(intervalId);
+    }, [isAnyRunning, competitors]);
+
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setStartDate(e.target.value);
     };
@@ -221,16 +304,48 @@ export default function RatesShopper() {
     };
 
     const handleScrape = async (id: string) => {
+        setPageError(null);
         toast.info("Scraping initiated on the server...");
         try {
             await apiClient.post(`/competitors/${id}/scrape`, {});
             toast.success("Server-side scraping started in the background. Rates will be updated shortly!");
-            // Force immediate refresh so running status appears and live polling kicks in
             queryClient.invalidateQueries({ queryKey: ['competitors'] });
             queryClient.invalidateQueries({ queryKey: ['ratesData'] });
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || "Failed to initiate scraping");
+            if (error instanceof ApiClientError) {
+                if (error.status === 503) {
+                    setPageError({
+                        type: 'service',
+                        title: 'Rate Sync Service Unavailable',
+                        message: error.message || 'The Decodo scraping API is not configured or is down. Please contact your administrator to set up the API key.',
+                    });
+                } else if (error.status === 429) {
+                    setPageError({
+                        type: 'limit',
+                        title: 'Cooldown in Progress',
+                        message: error.message || 'Please wait a few minutes before refreshing this competitor again.',
+                    });
+                } else if (error.status === 409) {
+                    toast.warning(error.message || 'A scrape is already running for this competitor.');
+                } else if (error.status === 0 || error.name === 'TypeError') {
+                    setPageError({
+                        type: 'network',
+                        title: 'Network Error',
+                        message: 'Could not reach the server. Please check your internet connection and try again.',
+                    });
+                } else {
+                    toast.error(error.message || 'Failed to initiate scraping');
+                }
+            } else if (error?.name === 'AbortError' || error?.name === 'TimeoutError') {
+                setPageError({
+                    type: 'network',
+                    title: 'Request Timed Out',
+                    message: 'The server took too long to respond. Please try again.',
+                });
+            } else {
+                toast.error(error.message || 'Failed to initiate scraping');
+            }
         }
     };
 
@@ -339,6 +454,53 @@ export default function RatesShopper() {
                     )}
                 </div>
             </div>
+
+            {/* ── Page-level error banner ── */}
+            {pageError && (
+                <Alert
+                    variant="destructive"
+                    className={
+                        pageError.type === 'limit'
+                            ? 'border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200 [&>svg]:text-amber-600'
+                            : pageError.type === 'service'
+                            ? 'border-red-400 bg-red-50 dark:bg-red-950'
+                            : 'border-destructive/50 bg-destructive/5'
+                    }
+                >
+                    {pageError.type === 'service' && <KeyRound className="h-4 w-4" />}
+                    {pageError.type === 'network' && <WifiOff className="h-4 w-4" />}
+                    {(pageError.type === 'load' || pageError.type === 'limit') && <AlertTriangle className="h-4 w-4" />}
+                    <div className="flex items-start justify-between gap-4 w-full">
+                        <div className="flex-1">
+                            <AlertTitle>{pageError.title}</AlertTitle>
+                            <AlertDescription className="mt-1">{pageError.message}</AlertDescription>
+                        </div>
+                        <button
+                            onClick={() => setPageError(null)}
+                            className="shrink-0 opacity-60 hover:opacity-100 transition-opacity mt-0.5"
+                            aria-label="Dismiss"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                </Alert>
+            )}
+
+            {/* ── Competitors failed to load — full inline error state ── */}
+            {isCompError && !competitors.length && (
+                <Card className="border-destructive/40 bg-destructive/5">
+                    <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                        <WifiOff className="h-10 w-10 text-destructive opacity-60" />
+                        <p className="font-semibold text-destructive">Could not load tracked channels</p>
+                        <p className="text-sm text-muted-foreground max-w-sm">
+                            {(compError as any)?.message || 'Failed to connect to the server. Please refresh the page.'}
+                        </p>
+                        <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['competitors'] })}>
+                            <RotateCcw className="h-4 w-4 mr-2" /> Retry
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* OTA Analytics Usage & Auto-Sync Schedule */}
             <div className="grid gap-4 md:grid-cols-2">
@@ -567,27 +729,35 @@ export default function RatesShopper() {
                                 </div>
                                 
                                 {/* Status Information */}
-                                <div className="text-xs mb-4 flex flex-col gap-1">
+                                <div className="mb-3 flex flex-col gap-2">
                                     {comp.last_scrape_status === 'running' && (
-                                        <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-medium">
-                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                            Scraping rates headlessly...
+                                        <div className="flex items-center gap-2 rounded-md bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 px-3 py-2 text-xs text-blue-700 dark:text-blue-300 font-medium">
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                                            Scraping rates headlessly… prices will appear below as each date completes.
                                         </div>
                                     )}
                                     {comp.last_scrape_status === 'failed' && (
-                                        <div className="text-destructive font-medium flex flex-col gap-0.5">
-                                            <span className="flex items-center gap-1">❌ Scrape failed</span>
-                                            <span className="text-[10px] text-muted-foreground break-all" title={comp.last_scrape_error}>
-                                                {comp.last_scrape_error && comp.last_scrape_error.length > 60 
-                                                    ? `${comp.last_scrape_error.substring(0, 60)}...` 
-                                                    : comp.last_scrape_error}
-                                            </span>
+                                        <Alert variant="destructive" className="py-2 px-3">
+                                            <AlertTriangle className="h-3.5 w-3.5" />
+                                            <AlertTitle className="text-xs font-semibold">Scrape Failed</AlertTitle>
+                                            <AlertDescription className="text-xs mt-0.5 leading-snug">
+                                                {friendlyError(comp.last_scrape_error)}
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+                                    {comp.last_scrape_status === 'success' && comp.last_scrape_error && (
+                                        // Partial success (some days failed) or stopped-by-user message
+                                        <div className="rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+                                            ⚠ {friendlyError(comp.last_scrape_error)}
                                         </div>
                                     )}
-                                    {comp.last_scrape_status === 'success' && (
-                                        <div className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
-                                            ✅ Rates synced (last: {comp.last_scraped_at ? new Date(comp.last_scraped_at).toLocaleTimeString() : 'Just now'})
+                                    {comp.last_scrape_status === 'success' && !comp.last_scrape_error && (
+                                        <div className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-400 font-medium">
+                                            ✅ Rates synced — {comp.last_scraped_at ? new Date(comp.last_scraped_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Just now'}
                                         </div>
+                                    )}
+                                    {!comp.last_scrape_status && (
+                                        <div className="text-xs text-muted-foreground">No data yet — click Refresh Rates to start.</div>
                                     )}
                                 </div>
 

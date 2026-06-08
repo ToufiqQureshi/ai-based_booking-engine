@@ -232,7 +232,11 @@ async def trigger_scrape(comp_id: str, current_user: CurrentUser, session: DbSes
     session.add(comp)
     await session.commit()
 
-    safe_background(background_tasks, lambda: run_background_scrape(comp_id), task_name="competitor_rate_scrape")
+    # Pass status_pre_set=True so the double-execution guard inside
+    # run_background_scrape doesn't fire — we already set status="running"
+    # above, and without this flag the guard sees "running" and immediately
+    # exits, causing 100% of manual scrapes to silently do nothing.
+    safe_background(background_tasks, lambda: run_background_scrape(comp_id, status_pre_set=True), task_name="competitor_rate_scrape")
     return {"message": "Scrape started in background"}
 
 
@@ -274,6 +278,28 @@ async def stop_scrape(comp_id: str, current_user: CurrentUser, session: DbSessio
     await session.commit()
 
     return {"message": "Stopping scrape — already-fetched rates are saved."}
+
+
+@router.get("/{comp_id}/progress", dependencies=[Depends(require_feature("feature_rate_shopper"))])
+async def get_scrape_progress(comp_id: str, current_user: CurrentUser, session: DbSession):
+    """
+    Returns live per-day scraping results for a running scrape.
+    Frontend polls this every 2s to show a per-date price toast the instant
+    a day is committed — rather than waiting for the whole 7-day run to finish.
+    Returns [] when no in-progress data exists (e.g. scrape not yet started or already done).
+    """
+    check_rate_shopper_feature(current_user)
+    comp = await session.get(Competitor, comp_id)
+    if not comp or comp.hotel_id != current_user.hotel_id:
+        raise HTTPException(status_code=404, detail="Competitor not found")
+    r = redis_client.get_instance()
+    if not r:
+        return []
+    try:
+        raw = r.get(f"scrape_progress:{comp_id}")
+        return json.loads(raw) if raw else []
+    except Exception:
+        return []
 
 
 def get_dynamic_dates(offset):
@@ -472,10 +498,14 @@ async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> di
             delay *= 2
     return result
 
-async def run_background_scrape(comp_id: str):
+async def run_background_scrape(comp_id: str, status_pre_set: bool = False):
     """
     Run competitor rate scraping in the background using Decodo API + Scrapling.
     Scrapes the next 7 days of rates.
+
+    status_pre_set=True when trigger_scrape already committed status="running"
+    before launching this task — skip the double-execution guard in that case.
+    The guard still fires for the auto-scrape scheduler path (status_pre_set=False).
     """
     logger.info(f"Starting Background Scrape for competitor ID: {comp_id}")
     # Declare before try so crash handler can read how many days were actually attempted.
@@ -489,10 +519,11 @@ async def run_background_scrape(comp_id: str):
                 return
 
             # Guard against double-execution (e.g. the scheduled auto-scrape
-            # firing while a manual refresh is mid-flight, or vice versa) —
-            # each run burns paid Decodo calls, so we never want two at once
-            # for the same competitor unless the previous one is orphaned.
-            if comp.last_scrape_status == "running" and not _is_stale_running(comp):
+            # firing while a manual refresh is mid-flight, or vice versa).
+            # IMPORTANT: skip this guard when the caller (trigger_scrape) already
+            # set status="running" — otherwise we see our own "running" and exit
+            # before doing any work (the bug that caused all manual scrapes to silently fail).
+            if not status_pre_set and comp.last_scrape_status == "running" and not _is_stale_running(comp):
                 logger.info(f"Skipping scrape for {comp_id} — a run is already in progress")
                 return
 
@@ -501,6 +532,14 @@ async def run_background_scrape(comp_id: str):
             comp.scrape_started_at = datetime.utcnow()
             session.add(comp)
             await session.commit()
+
+            # Clear previous run's progress so frontend polls don't show stale per-day toasts
+            try:
+                _rp = redis_client.get_instance()
+                if _rp:
+                    _rp.delete(f"scrape_progress:{comp_id}")
+            except Exception:
+                pass
 
             url = comp.url
             hotel_id = comp.hotel_id
@@ -577,6 +616,23 @@ async def run_background_scrape(comp_id: str):
                     await session.commit()
                     success_count += 1
                     logger.info(f"Ingested rate for {comp.name} on {check_in_date_obj.isoformat()}: {price} (sold_out={is_sold_out})")
+
+                    # Push per-day result to Redis so the frontend can show a live
+                    # toast with the actual price the moment this day is scraped.
+                    try:
+                        _rp = redis_client.get_instance()
+                        if _rp:
+                            progress_key = f"scrape_progress:{comp_id}"
+                            existing_raw = _rp.get(progress_key)
+                            progress_list = json.loads(existing_raw) if existing_raw else []
+                            progress_list.append({
+                                "date": check_in_date_obj.isoformat(),
+                                "price": price,
+                                "is_sold_out": is_sold_out,
+                            })
+                            _rp.setex(progress_key, 600, json.dumps(progress_list))
+                    except Exception as pe:
+                        logger.warning(f"Failed to write scrape progress to Redis: {pe}")
 
                     try:
                         r = redis_client.get_instance()
