@@ -497,6 +497,128 @@ async def search_public_rooms(
 
 
 from app.models.addon import AddOn
+from collections import defaultdict
+import calendar as cal_mod
+
+
+@router.get("/hotels/{hotel_slug}/calendar")
+async def get_calendar_availability(
+    hotel_slug: str,
+    session: DbSession,
+    month: str = Query(..., regex=r"^\d{4}-\d{2}$"),
+):
+    """
+    Per-date availability + min price for a calendar month.
+    Used by the booking widget calendar to show real prices and sold-out dates.
+    Response: {"2026-07-01": {"min_price": 2500.0, "available": true}, ...}
+    Cached 30s in Redis; key cleared by clear_availability_cache on any write.
+    """
+    from datetime import date, timedelta
+
+    hotel_id = await resolve_hotel_id(hotel_slug, session)
+
+    cache_key = f"public:calendar:{hotel_id}:{month}"
+    try:
+        cached = redis_client.get_value(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        pass
+
+    year, mon = int(month[:4]), int(month[5:])
+    start_date = date(year, mon, 1)
+    last_day = cal_mod.monthrange(year, mon)[1]
+    end_date = date(year, mon, last_day)
+
+    # 1. Room types
+    room_types = (await session.execute(
+        select(RoomType).where(RoomType.hotel_id == hotel_id, RoomType.is_active == True)
+    )).scalars().all()
+    if not room_types:
+        return {}
+
+    # 2. Confirmed/checked-in bookings overlapping this month
+    bookings = (await session.execute(
+        select(Booking).where(
+            Booking.hotel_id == hotel_id,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN]),
+            Booking.check_in <= end_date,
+            Booking.check_out > start_date,
+        )
+    )).scalars().all()
+
+    # 3. Blocks overlapping this month
+    blocks = (await session.execute(
+        select(RoomBlock).where(
+            RoomBlock.hotel_id == hotel_id,
+            RoomBlock.start_date <= end_date,
+            RoomBlock.end_date >= start_date,
+        )
+    )).scalars().all()
+
+    # 4. Daily base-rate overrides overlapping this month
+    rate_overrides = (await session.execute(
+        select(RoomRate).where(
+            RoomRate.hotel_id == hotel_id,
+            RoomRate.rate_plan_id == None,
+            RoomRate.date_from <= end_date,
+            RoomRate.date_to >= start_date,
+        )
+    )).scalars().all()
+
+    # Pre-compute booked count per (room_type_id, date) — single pass, no N+1
+    booked: dict = defaultdict(int)
+    for b in bookings:
+        d = max(b.check_in, start_date)
+        end = min(b.check_out, end_date + timedelta(days=1))
+        while d < end:
+            for r in (b.rooms or []):
+                if r.get("room_type_id"):
+                    booked[(r["room_type_id"], d)] += 1
+            d += timedelta(days=1)
+
+    # Pre-compute blocked count per (room_type_id, date)
+    blocked: dict = defaultdict(int)
+    for bl in blocks:
+        d = max(bl.start_date, start_date)
+        end = min(bl.end_date, end_date)
+        while d <= end:
+            blocked[(bl.room_type_id, d)] += bl.blocked_count
+            d += timedelta(days=1)
+
+    # Pre-compute daily rate override per (room_type_id, date)
+    rate_override: dict = {}
+    for ro in rate_overrides:
+        d = max(ro.date_from, start_date)
+        end = min(ro.date_to, end_date)
+        while d <= end:
+            key = (ro.room_type_id, d)
+            if key not in rate_override:
+                rate_override[key] = float(ro.price)
+            d += timedelta(days=1)
+
+    # Build per-day result
+    result = {}
+    curr = start_date
+    while curr <= end_date:
+        day_min_price: float | None = None
+        day_available = False
+        for rt in room_types:
+            avail = rt.total_inventory - booked[(rt.id, curr)] - blocked[(rt.id, curr)]
+            if avail > 0:
+                day_available = True
+                price = rate_override.get((rt.id, curr), float(rt.base_price))
+                if day_min_price is None or price < day_min_price:
+                    day_min_price = price
+        result[curr.isoformat()] = {"min_price": day_min_price, "available": day_available}
+        curr += timedelta(days=1)
+
+    try:
+        redis_client.set_value(cache_key, json.dumps(result), expire=30)
+    except Exception:
+        pass
+    return result
+
 
 @router.get("/hotels/{hotel_identifier}/addons", response_model=List[AddOn])
 async def get_public_addons(hotel_identifier: str, session: DbSession):
