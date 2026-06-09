@@ -403,11 +403,15 @@ export default function BookingSelection() {
                 `/public/hotels/${hotelSlug}/rooms?${query}`
             );
 
-            // Merge only the dynamic price/availability fields — keep static fields untouched
+            // Merge: update dynamic fields, mark rooms absent from response as sold out
+            const freshById = new Map(freshRooms.map(r => [r.id, r]));
             setRooms(prev => prev.map(existing => {
-                if (targetIds && !targetIds.has(existing.id)) return existing; // not changed
-                const updated = freshRooms.find(r => r.id === existing.id);
-                if (!updated) return existing;
+                if (targetIds && !targetIds.has(existing.id)) return existing; // not targeted
+                const updated = freshById.get(existing.id);
+                if (!updated) {
+                    // Room absent from response = sold out — mark it, don't silently keep stale data
+                    return { ...existing, available_rooms: 0, rate_options: [] };
+                }
                 return {
                     ...existing,
                     rate_options: updated.rate_options,

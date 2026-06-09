@@ -29,6 +29,7 @@ export function RoomCard({
     isRefreshing = false,
 }: RoomCardProps) {
     const displayRates = filteredRates || (room.rate_options || []).filter(o => !o.is_package);
+    const isSoldOut = room.available_rooms === 0;
 
     return (
         <div className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-slate-300 transition-all duration-300 group">
@@ -37,10 +38,17 @@ export function RoomCard({
                 <div className="lg:w-[35%] h-64 lg:h-auto bg-slate-50 relative overflow-hidden">
                     <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
                     <div className="absolute top-6 left-6 z-10">
-                        <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm flex items-center gap-2 border border-white/50">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Available</span>
-                        </div>
+                        {isSoldOut ? (
+                            <div className="bg-red-600/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-white" />
+                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Sold Out</span>
+                            </div>
+                        ) : (
+                            <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm flex items-center gap-2 border border-white/50">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Available</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -82,6 +90,15 @@ export function RoomCard({
 
                     {/* Rates: Clean List Style */}
                     <div className="border-t border-slate-100 mt-auto pt-4 space-y-3">
+                        {isSoldOut ? (
+                            <div className="flex items-center justify-between py-2">
+                                <span className="text-sm text-slate-400 italic">No rooms available for these dates</span>
+                                <Button disabled className="text-xs px-6 h-10 rounded-xl opacity-40 cursor-not-allowed">
+                                    Sold Out
+                                </Button>
+                            </div>
+                        ) : (
+                        <>
                         {isRefreshing && (
                             <div className="flex items-center gap-2 text-[11px] text-slate-400 pb-1">
                                 <div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
@@ -158,6 +175,8 @@ export function RoomCard({
                                 </div>
                             </div>
                         ))}
+                        </>
+                        )}
                     </div>
                 </div>
             </div>
