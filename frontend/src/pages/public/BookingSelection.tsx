@@ -12,7 +12,7 @@ import {
     SheetDescription,
     SheetFooter,
 } from "@/components/ui/sheet";
-import { apiClient } from '@/api/client';
+import { apiClient, API_BASE_URL } from '@/api/client';
 import { cn } from '@/lib/utils';
 import { PublicRoomSearchResult, RateOption, AddOn, Hotel } from '@/types/api';
 import { RoomDetailModal } from '@/components/public/RoomDetailModal';
@@ -364,8 +364,7 @@ export default function BookingSelection() {
     // SSE subscription: auto-refresh rates when hotelier updates them
     useEffect(() => {
         if (!hotel?.id) return;
-        const apiBase = import.meta.env.VITE_API_URL || '';
-        const es = new EventSource(`${apiBase}/api/v1/public/hotels/${hotel.id}/rate-updates`);
+        const es = new EventSource(`${API_BASE_URL}/public/hotels/${hotel.id}/rate-updates`);
         es.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
