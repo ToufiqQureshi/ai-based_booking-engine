@@ -524,7 +524,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                             onChange={(e) => setInput(e.target.value)}
                                             placeholder="Message Concierge..."
                                             disabled={isLoading}
-                                            className="focus-visible:ring-0 focus-visible:ring-offset-0 border-slate-200 rounded-2xl px-4 py-5 text-[14px] bg-slate-50/50 placeholder:text-slate-400 pr-12 h-11 transition-all focus:bg-white focus:border-slate-300 shadow-inner font-medium"
+                                            className="text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 border-slate-200 rounded-2xl px-4 py-5 text-[14px] bg-slate-50/50 pr-12 h-11 transition-all focus:bg-white focus:border-slate-300 shadow-inner font-medium"
                                         />
                                         <Button
                                             type="submit"
