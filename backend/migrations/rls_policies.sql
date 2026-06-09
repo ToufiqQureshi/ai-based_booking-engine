@@ -129,8 +129,11 @@ CREATE POLICY "users_tenant_isolation" ON users
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "notifications_tenant_isolation" ON notifications;
 CREATE POLICY "notifications_tenant_isolation" ON notifications
-  USING (hotel_id = public.current_hotel_id())
-  WITH CHECK (hotel_id = public.current_hotel_id());
+  USING (
+    user_id IN (
+      SELECT id FROM users WHERE hotel_id = public.current_hotel_id()
+    )
+  );
 
 ALTER TABLE addons ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "addons_tenant_isolation" ON addons;
@@ -138,14 +141,7 @@ CREATE POLICY "addons_tenant_isolation" ON addons
   USING (hotel_id = public.current_hotel_id())
   WITH CHECK (hotel_id = public.current_hotel_id());
 
-ALTER TABLE booking_addons ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "booking_addons_tenant_isolation" ON booking_addons;
-CREATE POLICY "booking_addons_tenant_isolation" ON booking_addons
-  USING (
-    booking_id IN (
-      SELECT id FROM bookings WHERE hotel_id = public.current_hotel_id()
-    )
-  );
+-- booking_addons: addons are stored as a JSON column inside bookings, no separate table.
 
 
 -- =============================================================================
