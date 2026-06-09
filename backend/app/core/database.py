@@ -213,7 +213,10 @@ async def init_db():
     for col_sql in [
         "ALTER TABLE hotels ADD COLUMN ai_max_tokens INTEGER",
         "ALTER TABLE hotels ADD COLUMN max_competitors INTEGER DEFAULT 5",
+        "ALTER TABLE hotels ADD COLUMN ai_api_key_vault_id VARCHAR(255)",
         "ALTER TABLE integration_settings ADD COLUMN ai_max_tokens INTEGER",
+        "ALTER TABLE integration_settings ADD COLUMN ai_api_key_vault_id VARCHAR(255)",
+        "ALTER TABLE integration_settings ADD COLUMN webhook_secret_vault_id VARCHAR(255)",
         "ALTER TABLE chains ADD COLUMN primary_color VARCHAR(50) DEFAULT '#4f46e5'",
         "ALTER TABLE chains ADD COLUMN is_active BOOLEAN DEFAULT TRUE",
     ]:
@@ -313,6 +316,137 @@ async def init_db():
         import logging
         logging.getLogger(__name__).warning(f"Database auto-heal for AI integration settings failed: {e}")
 
+    # Vault: enable supabase_vault extension (idempotent, Postgres only)
+    if not is_sqlite:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS supabase_vault CASCADE"))
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).info(
+                "supabase_vault extension not available (ok in local dev): %s", e
+            )
+
+    # Vault migration: migrate existing plaintext hotel secrets to Vault (best-effort)
+    if not is_sqlite:
+        try:
+            await _migrate_secrets_to_vault()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Vault secret migration skipped: %s", e)
+
+
+async def _migrate_secrets_to_vault() -> None:
+    """
+    One-time best-effort migration: for each hotel that still has plaintext
+    secrets in hotel.settings or ai_api_key column, move them to Vault.
+    Safe to run repeatedly — skips hotels that already have vault_ids.
+    """
+    import logging
+    import json
+    _log = logging.getLogger(__name__)
+
+    async with async_session() as session:
+        # Check if Vault is available before doing anything
+        try:
+            await session.execute(text("SELECT 1 FROM vault.secrets LIMIT 1"))
+        except Exception:
+            _log.info("Vault not available — skipping secret migration")
+            return
+
+        # Fetch hotels with at least one plaintext secret that lacks a vault_id
+        result = await session.execute(text("""
+            SELECT id, settings, ai_api_key, ai_api_key_vault_id
+            FROM hotels
+            WHERE is_active = TRUE
+              AND (
+                (settings->>'razorpay_key_secret' IS NOT NULL AND settings->>'razorpay_key_secret_vault_id' IS NULL)
+                OR (settings->>'whatsapp_api_key' IS NOT NULL AND settings->>'whatsapp_api_key_vault_id' IS NULL)
+                OR (settings->>'smtp_password' IS NOT NULL AND settings->>'smtp_password_vault_id' IS NULL)
+                OR (ai_api_key IS NOT NULL AND ai_api_key_vault_id IS NULL)
+              )
+        """))
+        rows = result.fetchall()
+        if not rows:
+            return
+
+        _log.info("Vault migration: migrating secrets for %d hotel(s)", len(rows))
+        migrated = 0
+
+        for row in rows:
+            hotel_id, raw_settings, ai_api_key, ai_api_key_vault_id = row
+            try:
+                settings = raw_settings if isinstance(raw_settings, dict) else (json.loads(raw_settings) if raw_settings else {})
+                settings_changed = False
+
+                _SECRETS_TO_MIGRATE = {
+                    "razorpay_key_secret": "razorpay_key_secret_vault_id",
+                    "whatsapp_api_key": "whatsapp_api_key_vault_id",
+                    "smtp_password": "smtp_password_vault_id",
+                }
+                for plaintext_key, vault_id_key in _SECRETS_TO_MIGRATE.items():
+                    plaintext = settings.get(plaintext_key)
+                    if plaintext and not settings.get(vault_id_key):
+                        vault_res = await session.execute(
+                            text("SELECT vault.create_secret(:secret, :name, :desc)"),
+                            {"secret": plaintext, "name": f"hotel_{hotel_id}_{plaintext_key}",
+                             "desc": f"Migrated from hotel.settings: {plaintext_key}"},
+                        )
+                        vault_id = str(vault_res.scalar())
+                        settings[vault_id_key] = vault_id
+                        settings[plaintext_key] = None
+                        settings_changed = True
+
+                if settings_changed:
+                    await session.execute(
+                        text("UPDATE hotels SET settings = :s WHERE id = :id"),
+                        {"s": json.dumps(settings), "id": hotel_id},
+                    )
+
+                # Migrate ai_api_key column
+                if ai_api_key and not ai_api_key_vault_id:
+                    vault_res = await session.execute(
+                        text("SELECT vault.create_secret(:secret, :name, :desc)"),
+                        {"secret": ai_api_key, "name": f"hotel_{hotel_id}_ai_api_key",
+                         "desc": f"Migrated from hotels.ai_api_key"},
+                    )
+                    new_vault_id = str(vault_res.scalar())
+                    await session.execute(
+                        text("UPDATE hotels SET ai_api_key = NULL, ai_api_key_vault_id = :vid WHERE id = :id"),
+                        {"vid": new_vault_id, "id": hotel_id},
+                    )
+
+                migrated += 1
+            except Exception as e:
+                _log.warning("Vault migration failed for hotel %s: %s", hotel_id, e)
+                continue
+
+        # Migrate integration_settings.ai_api_key
+        int_result = await session.execute(text("""
+            SELECT id, hotel_id, ai_api_key
+            FROM integration_settings
+            WHERE ai_api_key IS NOT NULL AND ai_api_key_vault_id IS NULL
+        """))
+        int_rows = int_result.fetchall()
+        for int_row in int_rows:
+            int_id, int_hotel_id, int_ai_key = int_row
+            try:
+                vault_res = await session.execute(
+                    text("SELECT vault.create_secret(:secret, :name, :desc)"),
+                    {"secret": int_ai_key, "name": f"hotel_{int_hotel_id}_int_ai_api_key",
+                     "desc": "Migrated from integration_settings.ai_api_key"},
+                )
+                new_vault_id = str(vault_res.scalar())
+                await session.execute(
+                    text("UPDATE integration_settings SET ai_api_key = NULL, ai_api_key_vault_id = :vid WHERE id = :id"),
+                    {"vid": new_vault_id, "id": int_id},
+                )
+            except Exception as e:
+                _log.warning("Vault migration failed for integration_settings %s: %s", int_id, e)
+                continue
+
+        await session.commit()
+        _log.info("Vault migration complete: %d hotel(s) migrated", migrated)
 
 
 async def get_session() -> AsyncSession:

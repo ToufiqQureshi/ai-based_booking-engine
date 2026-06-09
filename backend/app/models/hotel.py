@@ -158,6 +158,7 @@ class Hotel(HotelBase, table=True):
     # AI dynamic configurations
     ai_provider: Optional[str] = Field(default="groq")
     ai_api_key: Optional[str] = Field(default=None)
+    ai_api_key_vault_id: Optional[str] = Field(default=None)  # Vault UUID replaces ai_api_key
     ai_model: Optional[str] = Field(default="llama-3.1-70b-versatile")
     ai_base_url: Optional[str] = Field(default=None)
     ai_max_tokens: Optional[int] = Field(default=None)

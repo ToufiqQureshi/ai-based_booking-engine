@@ -186,6 +186,8 @@ async def create_razorpay_order(
 
     hotel = await session.get(Hotel, booking.hotel_id)
     h_settings = hotel.settings if hotel and hotel.settings else {}
+    from app.core.vault import resolve_settings_secrets
+    h_settings = await resolve_settings_secrets(session, h_settings)
     hotel_key_id = h_settings.get("razorpay_key_id")
     hotel_key_secret = h_settings.get("razorpay_key_secret")
 
@@ -263,6 +265,8 @@ async def verify_razorpay_payment(
 
     hotel = await session.get(Hotel, booking.hotel_id)
     h_settings = hotel.settings if hotel and hotel.settings else {}
+    from app.core.vault import resolve_settings_secrets
+    h_settings = await resolve_settings_secrets(session, h_settings)
     hotel_key_id = h_settings.get("razorpay_key_id")
     hotel_key_secret = h_settings.get("razorpay_key_secret")
 

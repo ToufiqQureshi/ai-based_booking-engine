@@ -252,11 +252,13 @@ async def chat_with_guest_ai(
         _max_tokens = (
             getattr(integration_settings, 'ai_max_tokens', None) or getattr(hotel, 'ai_max_tokens', None)
         )
+        from app.core.vault import get_hotel_ai_key
+        _ai_key = await get_hotel_ai_key(session, integration_settings, hotel)
         agent = await create_guest_agent_graph(
             session,
             hotel.id,
             (getattr(integration_settings, 'ai_provider', None) or getattr(hotel, 'ai_provider', None)),
-            (getattr(integration_settings, 'ai_api_key', None) or getattr(hotel, 'ai_api_key', None)),
+            _ai_key,
             (getattr(integration_settings, 'ai_model', None) or getattr(hotel, 'ai_model', None)),
             (getattr(integration_settings, 'ai_base_url', None) or getattr(hotel, 'ai_base_url', None)),
             hotel.name,
@@ -282,7 +284,7 @@ async def chat_with_guest_ai(
                 from app.core.guest_agent import get_guest_system_prompt_content
 
                 effective_provider = (getattr(integration_settings, 'ai_provider', None) or getattr(hotel, 'ai_provider', None) or "")
-                target_api_key = (getattr(integration_settings, 'ai_api_key', None) or getattr(hotel, 'ai_api_key', None))
+                target_api_key = _ai_key  # already resolved from Vault above
                 ai_model_name = (getattr(integration_settings, 'ai_model', None) or getattr(hotel, 'ai_model', None))
                 ai_base_url_val = (getattr(integration_settings, 'ai_base_url', None) or getattr(hotel, 'ai_base_url', None))
                 fallback_max_tokens = _max_tokens or 1024
@@ -402,14 +404,16 @@ async def stream_guest_ai(
         messages = chat_history_stream + [AgnoMessage(role="user", content=payload.message)]
 
         from app.core.guest_agent import create_guest_agent_graph
+        from app.core.vault import get_hotel_ai_key
         _stream_max_tokens = (
             getattr(integration_settings, "ai_max_tokens", None) or getattr(hotel, "ai_max_tokens", None)
         )
+        _stream_ai_key = await get_hotel_ai_key(session, integration_settings, hotel)
         agent = await create_guest_agent_graph(
             session,
             hotel.id,
             (getattr(integration_settings, "ai_provider", None) or getattr(hotel, "ai_provider", None)),
-            (getattr(integration_settings, "ai_api_key", None) or getattr(hotel, "ai_api_key", None)),
+            _stream_ai_key,
             (getattr(integration_settings, "ai_model", None) or getattr(hotel, "ai_model", None)),
             (getattr(integration_settings, "ai_base_url", None) or getattr(hotel, "ai_base_url", None)),
             hotel.name,

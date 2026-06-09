@@ -835,10 +835,10 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         ""
     )
 
+    from app.core.vault import get_hotel_ai_key
     target_api_key = (
-        getattr(int_settings, 'ai_api_key', None) or 
-        getattr(user.hotel, 'ai_api_key', None) or 
-        settings.GROQ_API_KEY
+        await get_hotel_ai_key(session, int_settings, user.hotel)
+        or settings.GROQ_API_KEY
     )
 
     if not target_api_key:

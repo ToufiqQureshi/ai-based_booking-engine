@@ -390,8 +390,11 @@ async def create_public_booking(
             )
 
             from app.services.email_service import get_email_service
+            from app.core.vault import resolve_settings_secrets
             email_service = await get_email_service()
-            h_settings = hotel.settings if hotel and hotel.settings else {}
+            h_settings = await resolve_settings_secrets(
+                session, hotel.settings if hotel and hotel.settings else {}
+            )
 
             background_tasks.add_task(
                 email_service.send_guest_booking_confirmation,
