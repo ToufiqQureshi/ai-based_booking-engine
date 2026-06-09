@@ -33,6 +33,7 @@ from ._schemas import (
     PublicBookingResponse,
 )
 from ._booking_helpers import generate_booking_number, _update_guest_loyalty
+from app.core.rate_signals import bump_rate_version
 
 import logging
 
@@ -359,12 +360,8 @@ async def create_public_booking(
         session.add(booking)
         await session.commit()
 
-        # Bump rate_version so SSE stream notifies all guests on the booking page
-        # that inventory has changed — they'll re-fetch availability within 30 s.
-        try:
-            redis_client.set_value(f"rate_version:{hotel_id}", str(int(time.time())), expire=86400)
-        except Exception:
-            pass
+        # Bump rate_version — inventory changed, notify guests via SSE.
+        bump_rate_version(hotel_id)
 
         try:
             from app.api.v1.availability import clear_availability_cache
@@ -680,10 +677,7 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
     await session.commit()
 
     # Cancellation frees inventory — notify waiting guests via SSE.
-    try:
-        redis_client.set_value(f"rate_version:{booking.hotel_id}", str(int(time.time())), expire=86400)
-    except Exception:
-        pass
+    bump_rate_version(booking.hotel_id)
 
     try:
         from app.api.v1.availability import clear_availability_cache

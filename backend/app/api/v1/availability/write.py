@@ -3,7 +3,6 @@ Write availability endpoints: create/delete blocks, set rates,
 weekend bulk-update, and calendar copy.
 """
 import logging
-import time
 from datetime import date, timedelta
 from typing import Optional
 
@@ -14,20 +13,11 @@ from sqlmodel import select, delete
 from app.api.deps import CurrentUser, DbSession
 from app.models.room import RoomType, RoomBlock, RoomBlockCreate, RoomBlockRead
 from app.models.rates import RoomRate
-from app.core.redis_client import redis_client
-
 from .helpers import _assert_room_type_owned, clear_availability_cache, set_single_day_rate, set_single_day_block
+from app.core.rate_signals import bump_rate_version
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/availability", tags=["Availability"])
-
-
-def _bump_rate_version(hotel_id: str) -> None:
-    """Notify SSE clients that prices changed so guests re-fetch room rates."""
-    try:
-        redis_client.set_value(f"rate_version:{hotel_id}", str(int(time.time())), expire=86400)
-    except Exception:
-        pass
 
 
 @router.post("/blocks", response_model=RoomBlockRead)
@@ -127,7 +117,7 @@ async def update_daily_rates(rate_data: RateUpdate, current_user: CurrentUser, s
     ))
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
-    _bump_rate_version(current_user.hotel_id)
+    bump_rate_version(current_user.hotel_id, rate_data.room_type_id)
     return {"message": "Rates updated successfully"}
 
 
@@ -175,7 +165,7 @@ async def update_weekends(data: WeekendUpdateRequest, current_user: CurrentUser,
 
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
-    _bump_rate_version(current_user.hotel_id)
+    bump_rate_version(current_user.hotel_id, data.room_type_id)
     action_text = "reset to defaults" if data.reset_to_default else "applied"
     return {"message": f"Weekend updates {action_text} successfully for {updated_days} days."}
 
@@ -249,5 +239,5 @@ async def copy_calendar(data: CopyCalendarRequest, current_user: CurrentUser, se
 
     await session.commit()
     clear_availability_cache(current_user.hotel_id)
-    _bump_rate_version(current_user.hotel_id)
+    bump_rate_version(current_user.hotel_id, data.room_type_id)
     return {"message": f"Calendar settings copied successfully for {days_to_copy} days."}

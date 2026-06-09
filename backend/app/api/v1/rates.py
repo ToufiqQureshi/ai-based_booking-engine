@@ -9,6 +9,7 @@ from app.api.deps import CurrentUser, DbSession, require_hotel_role
 from app.api.v1.availability import clear_availability_cache
 from app.core.redis_client import redis_client
 from app.core.guest_agent import invalidate_guest_agent_cache
+from app.core.rate_signals import bump_rate_version
 from app.models.rates import RatePlan, RatePlanCreate, RatePlanRead
 from sqlmodel import select
 
@@ -21,8 +22,8 @@ def _clear_rate_caches(hotel_id: str):
     redis_client.delete_pattern(f"public:rooms:{hotel_id}:*")
     redis_client.delete_pattern(f"rooms:{hotel_id}:*")
     invalidate_guest_agent_cache(hotel_id)
-    import time
-    redis_client.set_value(f"rate_version:{hotel_id}", str(int(time.time())), expire=86400)
+    # Rate plan changes can affect any room using that plan — signal all rooms
+    bump_rate_version(hotel_id)
 
 
 @router.get("/plans", response_model=List[RatePlanRead])

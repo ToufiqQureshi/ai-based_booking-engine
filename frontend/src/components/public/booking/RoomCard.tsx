@@ -14,6 +14,7 @@ interface RoomCardProps {
     setSelectedRoom: (room: PublicRoomSearchResult) => void;
     setIsModalOpen: (val: boolean) => void;
     getImageUrl: (url?: string | null) => string;
+    isRefreshing?: boolean;
 }
 
 export function RoomCard({
@@ -25,6 +26,7 @@ export function RoomCard({
     setSelectedRoom,
     setIsModalOpen,
     getImageUrl,
+    isRefreshing = false,
 }: RoomCardProps) {
     const displayRates = filteredRates || (room.rate_options || []).filter(o => !o.is_package);
 
@@ -80,6 +82,12 @@ export function RoomCard({
 
                     {/* Rates: Clean List Style */}
                     <div className="border-t border-slate-100 mt-auto pt-4 space-y-3">
+                        {isRefreshing && (
+                            <div className="flex items-center gap-2 text-[11px] text-slate-400 pb-1">
+                                <div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
+                                Refreshing rates…
+                            </div>
+                        )}
                         {displayRates.map((plan) => (
                             <div 
                                 key={plan.id} 
@@ -119,16 +127,25 @@ export function RoomCard({
 
                                 <div className="flex items-center gap-5">
                                     <div className="text-right">
-                                        <div className="flex items-baseline justify-end gap-1">
-                                            <span className="text-lg font-bold text-slate-900">
-                                                {formatCurrency(plan.total_price)}
-                                            </span>
-                                            <span className="text-[10px] text-slate-400 font-medium">total</span>
-                                        </div>
-                                        {(plan.market_price || room.market_price) && (
-                                            <p className="text-[10px] text-slate-300 line-through">
-                                                {formatCurrency(plan.market_price || room.market_price || 0)}
-                                            </p>
+                                        {isRefreshing ? (
+                                            <div className="space-y-1.5">
+                                                <div className="h-6 w-20 bg-slate-100 animate-pulse rounded ml-auto" />
+                                                <div className="h-3 w-14 bg-slate-100 animate-pulse rounded ml-auto" />
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-baseline justify-end gap-1">
+                                                    <span className="text-lg font-bold text-slate-900">
+                                                        {formatCurrency(plan.total_price)}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 font-medium">total</span>
+                                                </div>
+                                                {(plan.market_price || room.market_price) && (
+                                                    <p className="text-[10px] text-slate-300 line-through">
+                                                        {formatCurrency(plan.market_price || room.market_price || 0)}
+                                                    </p>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                     <Button 
