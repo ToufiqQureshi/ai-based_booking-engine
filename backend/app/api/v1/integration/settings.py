@@ -304,8 +304,10 @@ async def test_whatsapp_connection(current_user: CurrentUser, session: DbSession
     if not hotel or not hotel.settings:
         return {"status": "error", "message": "Hotel settings not found."}
 
-    wa_token = hotel.settings.get("whatsapp_api_key")
-    wa_phone_id = hotel.settings.get("whatsapp_phone_number_id")
+    from app.core.vault import resolve_settings_secrets
+    resolved = await resolve_settings_secrets(session, hotel.settings)
+    wa_token = resolved.get("whatsapp_api_key")
+    wa_phone_id = resolved.get("whatsapp_phone_number_id")
 
     if not wa_token or not wa_phone_id:
         return {"status": "error", "message": "WhatsApp API Key or Phone ID is missing. Please save settings first."}

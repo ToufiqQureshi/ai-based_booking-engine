@@ -91,27 +91,29 @@ def _mask_settings_for_hotelier(settings: Optional[Dict[str, Any]]) -> Dict[str,
             # Replace secret with a presence flag.
             if k == "whatsapp_api_key":
                 masked["has_whatsapp_api_key"] = bool(v)
+            elif k == "whatsapp_api_key_vault_id":
+                masked.setdefault("has_whatsapp_api_key", bool(v))
             elif k == "whatsapp_phone_number_id":
                 masked["has_whatsapp_phone_id"] = bool(v)
             elif k == "whatsapp_business_account_id":
                 masked["has_whatsapp_business_id"] = bool(v)
             elif k == "brevo_api_key":
-                # Deprecated per-hotel key; platform global key is checked below.
                 pass
             elif k == "smtp_password":
                 masked["has_smtp_password"] = bool(v)
+            elif k == "smtp_password_vault_id":
+                masked.setdefault("has_smtp_password", bool(v))
             elif k in ("smtp_host", "smtp_port", "smtp_username"):
                 masked["has_smtp_config"] = bool(v)
             elif k == "ai_whatsapp_credits":
-                # Surface remaining credits (read-only useful for UI)
                 masked["ai_whatsapp_credits"] = int(v) if isinstance(v, (int, float)) else 0
             elif k == "total_messages_sent":
                 masked["total_messages_sent"] = int(v) if isinstance(v, (int, float)) else 0
             elif k == "razorpay_key_secret":
-                # Expose only a presence flag so the UI can show "configured".
                 masked["has_razorpay_secret"] = bool(v)
-            # else: heuristic-matched secret — drop it entirely (no presence flag).
-            # drop the actual secret
+            elif k == "razorpay_key_secret_vault_id":
+                masked.setdefault("has_razorpay_secret", bool(v))
+            # else: heuristic-matched secret — dropped entirely (no presence flag)
         else:
             masked[k] = v
 

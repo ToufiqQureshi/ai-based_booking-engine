@@ -126,7 +126,9 @@ async def whatsapp_webhook_receive(
                     h_settings = h.settings or {}
                     if str(h_settings.get("whatsapp_phone_number_id") or "") == phone_number_id:
                         target_hotel = h
-                        whatsapp_token_to_use = h_settings.get("whatsapp_api_key")
+                        from app.core.vault import resolve_settings_secrets
+                        resolved_settings = await resolve_settings_secrets(session, h_settings)
+                        whatsapp_token_to_use = resolved_settings.get("whatsapp_api_key")
                         break
 
                 if not target_hotel:

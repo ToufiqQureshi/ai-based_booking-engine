@@ -343,10 +343,13 @@ async def create_booking(
 
     # Enqueue Email Notifications
     email_service = await get_email_service()
-    
-    # Extract multi-tenant settings
-    h_settings = hotel.settings if hotel and hotel.settings else {}
-    
+
+    # Resolve Vault secrets before background task — session closes after response
+    from app.core.vault import resolve_settings_secrets
+    h_settings = await resolve_settings_secrets(
+        session, hotel.settings if hotel and hotel.settings else {}
+    )
+
     background_tasks.add_task(
         email_service.send_guest_booking_confirmation,
         guest_email=guest.email,
