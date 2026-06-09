@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -291,7 +291,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 {data?.ai_api_key_preview && <span className="text-muted-foreground font-normal">current: {data.ai_api_key_preview}</span>}
                             </Label>
                             <div className="relative">
-                                <Input type={showAiKey ? 'text' : 'password'} readOnly={aiKeyLocked} onFocus={() => setAiKeyLocked(false)} onClick={() => setAiKeyLocked(false)} autoComplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={aiApiKey} onChange={e => setAiApiKey(e.target.value)} placeholder={aiKeyLocked ? 'Click to enter a new key (leave blank to keep existing)' : 'Leave blank to keep existing'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <Input type="text" style={showAiKey ? {} : { WebkitTextSecurity: 'disc' } as React.CSSProperties} readOnly={aiKeyLocked} onFocus={() => setAiKeyLocked(false)} onClick={() => setAiKeyLocked(false)} autoComplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={aiApiKey} onChange={e => setAiApiKey(e.target.value)} placeholder={aiKeyLocked ? 'Click to enter a new key (leave blank to keep existing)' : 'Leave blank to keep existing'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowAiKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                     {showAiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -323,7 +323,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 {data?.whatsapp_api_key_preview && <span className="text-muted-foreground font-normal">current: {data.whatsapp_api_key_preview}</span>}
                             </Label>
                             <div className="relative">
-                                <Input type={showWaKey ? 'text' : 'password'} readOnly={waKeyLocked} onFocus={() => setWaKeyLocked(false)} onClick={() => setWaKeyLocked(false)} autoComplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={waApiKey} onChange={e => setWaApiKey(e.target.value)} placeholder={waKeyLocked ? 'Click to enter a new key (leave blank to keep existing)' : 'Leave blank to keep existing'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <Input type="text" style={showWaKey ? {} : { WebkitTextSecurity: 'disc' } as React.CSSProperties} readOnly={waKeyLocked} onFocus={() => setWaKeyLocked(false)} onClick={() => setWaKeyLocked(false)} autoComplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={waApiKey} onChange={e => setWaApiKey(e.target.value)} placeholder={waKeyLocked ? 'Click to enter a new key (leave blank to keep existing)' : 'Leave blank to keep existing'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowWaKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                     {showWaKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -361,7 +361,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                         <div className="space-y-2 md:col-span-2">
                             <Label className="text-xs font-bold text-foreground/80">Password / App Password</Label>
                             <div className="relative">
-                                <Input type={showSmtp ? 'text' : 'password'} readOnly={smtpPassLocked} onFocus={() => setSmtpPassLocked(false)} onClick={() => setSmtpPassLocked(false)} autoComplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} placeholder={smtpPassLocked ? 'Click to enter a new password (leave blank to keep existing)' : 'Leave blank to keep existing'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <Input type="text" style={showSmtp ? {} : { WebkitTextSecurity: 'disc' } as React.CSSProperties} readOnly={smtpPassLocked} onFocus={() => setSmtpPassLocked(false)} onClick={() => setSmtpPassLocked(false)} autoComplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={smtpPassword} onChange={e => setSmtpPassword(e.target.value)} placeholder={smtpPassLocked ? 'Click to enter a new password (leave blank to keep existing)' : 'Leave blank to keep existing'} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowSmtp(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
                                     {showSmtp ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -389,7 +389,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 {data?.has_razorpay_secret && <span className="text-emerald-500 inline-flex items-center gap-1 text-[10px]"><ShieldCheck className="w-3 h-3" /> configured</span>}
                             </Label>
                             <div className="relative">
-                                <Input type={showRzpSecret ? 'text' : 'password'} readOnly={rzpSecretLocked} onFocus={() => setRzpSecretLocked(false)} onClick={() => setRzpSecretLocked(false)} autoComplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={razorpayKeySecret} onChange={e => setRazorpayKeySecret(e.target.value)} placeholder={rzpSecretLocked ? 'Click to enter key secret' : (data?.has_razorpay_secret ? 'Leave blank to keep existing' : 'Enter key secret')} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
+                                <Input type="text" style={showRzpSecret ? {} : { WebkitTextSecurity: 'disc' } as React.CSSProperties} readOnly={rzpSecretLocked} onFocus={() => setRzpSecretLocked(false)} onClick={() => setRzpSecretLocked(false)} autoComplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value={razorpayKeySecret} onChange={e => setRazorpayKeySecret(e.target.value)} placeholder={rzpSecretLocked ? 'Click to enter key secret' : (data?.has_razorpay_secret ? 'Leave blank to keep existing' : 'Enter key secret')} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11 pr-10" />
                                 <button type="button" onClick={() => setShowRzpSecret(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
                                     {showRzpSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
