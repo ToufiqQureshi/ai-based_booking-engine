@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, ChevronLeft, ChevronRight, Check, ShoppingBag, X, ArrowRight, Sparkles, Hotel as HotelIcon, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -301,6 +301,9 @@ export default function BookingSelection() {
         navigate(`/book/${hotelSlug}/rooms?${params.toString()}`);
     };
 
+    // Which room_type_ids are currently refreshing their rates (shimmer state)
+    const [refreshingRoomIds, setRefreshingRoomIds] = useState<Set<string>>(new Set());
+
     // Ref to the current fetchData so SSE can trigger a refresh without stale closures
     const fetchDataRef = useRef<(() => void) | null>(null);
 
@@ -361,15 +364,81 @@ export default function BookingSelection() {
         fetchData();
     }, [hotelSlug, checkIn, checkOut, paramGuests, paramAdults, paramChildren, urlPromo, location.state]);
 
-    // SSE subscription: auto-refresh rates when hotelier updates them
+    /**
+     * Surgical rate refresh — called by SSE on price change.
+     * Only re-fetches the rooms endpoint and merges price/availability fields.
+     * Images, descriptions, amenities are NOT re-fetched (no Supabase calls for them).
+     * roomTypeIds=null means "all rooms changed" (bulk op / rate plan change).
+     */
+    const refreshRatesOnly = useCallback(async (roomTypeIds: string[] | null) => {
+        if (!hotelSlug || !checkIn || !checkOut) return;
+
+        const targetIds = roomTypeIds ? new Set(roomTypeIds) : null; // null = all
+
+        // Mark affected rooms as refreshing (shimmer)
+        setRefreshingRoomIds(prev => {
+            if (targetIds === null) {
+                // All rooms — use '__ALL__' sentinel
+                return new Set(['__ALL__']);
+            }
+            const next = new Set(prev);
+            targetIds.forEach(id => next.add(id));
+            return next;
+        });
+
+        try {
+            const normalizedCheckIn = checkIn.replace(/\s+/g, '-');
+            const normalizedCheckOut = checkOut.replace(/\s+/g, '-');
+            const query = new URLSearchParams({
+                check_in: normalizedCheckIn,
+                check_out: normalizedCheckOut,
+                guests: paramGuests || String(adults + children) || '1',
+                adults: paramAdults || String(adults),
+                children: paramChildren || String(children),
+                rooms: paramRooms || String(roomsCount),
+                promo_code: urlPromo || '',
+            }).toString();
+
+            const freshRooms = await apiClient.get<PublicRoomSearchResult[]>(
+                `/public/hotels/${hotelSlug}/rooms?${query}`
+            );
+
+            // Merge: update dynamic fields, mark rooms absent from response as sold out
+            const freshById = new Map(freshRooms.map(r => [r.id, r]));
+            setRooms(prev => prev.map(existing => {
+                if (targetIds && !targetIds.has(existing.id)) return existing; // not targeted
+                const updated = freshById.get(existing.id);
+                if (!updated) {
+                    // Room absent from response = sold out — mark it, don't silently keep stale data
+                    return { ...existing, available_rooms: 0, rate_options: [] };
+                }
+                return {
+                    ...existing,
+                    rate_options: updated.rate_options,
+                    available_rooms: updated.available_rooms,
+                    price_starting_at: updated.price_starting_at,
+                };
+            }));
+        } catch {
+            // silent — guest still sees old price, will reconcile on next poll
+        } finally {
+            setRefreshingRoomIds(new Set());
+        }
+    }, [hotelSlug, checkIn, checkOut, paramGuests, adults, children, paramAdults, paramChildren, paramRooms, roomsCount, urlPromo]);
+
+    // SSE subscription: surgically refresh only changed room's rates
+    const refreshRatesOnlyRef = useRef(refreshRatesOnly);
+    useEffect(() => { refreshRatesOnlyRef.current = refreshRatesOnly; }, [refreshRatesOnly]);
+
     useEffect(() => {
         if (!hotel?.id) return;
         const es = new EventSource(`${API_BASE_URL}/public/hotels/${hotel.id}/rate-updates`);
         es.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === 'rate_update' && fetchDataRef.current) {
-                    fetchDataRef.current();
+                if (data.type === 'rate_update') {
+                    // room_type_ids: string[] = specific rooms, null = all rooms
+                    refreshRatesOnlyRef.current(data.room_type_ids ?? null);
                 }
             } catch (_) {
                 // ignore parse errors
@@ -828,6 +897,10 @@ export default function BookingSelection() {
                                                 setSelectedRoom={setSelectedRoom}
                                                 setIsModalOpen={setIsModalOpen}
                                                 getImageUrl={getImageUrl}
+                                                isRefreshing={
+                                                    refreshingRoomIds.has(room.id) ||
+                                                    refreshingRoomIds.has('__ALL__')
+                                                }
                                             />
                                         );
                                     })

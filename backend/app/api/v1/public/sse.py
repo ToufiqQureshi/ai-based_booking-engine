@@ -43,7 +43,10 @@ async def rate_update_stream(hotel_id: str, request: Request):
                 if current_version != last_version:
                     last_version = current_version
                     polls_since_heartbeat = 0
-                    yield f"data: {json.dumps({'type': 'rate_update', 'hotel_id': hotel_id, 'version': current_version})}\n\n"
+                    # Read which room changed (set by bump_rate_version with 10s TTL)
+                    changed = redis_client.get_value(f"rate_changed_room:{hotel_id}")
+                    room_type_ids = None if (not changed or changed == "ALL") else [changed]
+                    yield f"data: {json.dumps({'type': 'rate_update', 'hotel_id': hotel_id, 'version': current_version, 'room_type_ids': room_type_ids})}\n\n"
                 else:
                     polls_since_heartbeat += 1
                     if polls_since_heartbeat >= HEARTBEAT_EVERY_N_POLLS:
