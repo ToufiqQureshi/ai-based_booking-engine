@@ -1,9 +1,13 @@
-import { format } from 'date-fns';
+import { format, addMonths, startOfMonth } from 'date-fns';
+import { useState, useEffect, useRef } from 'react';
 import { Calendar as CalendarIcon, Search, User, ChevronDown, Plus, Minus, X, ArrowRight, Hotel as HotelIcon, Sparkles } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { apiClient } from '@/api/client';
+
+interface CalendarDay { min_price: number | null; available: boolean; }
 
 interface RoomSearchHeaderProps {
     searchType: 'room' | 'package';
@@ -30,6 +34,9 @@ interface RoomSearchHeaderProps {
     isMobile: boolean;
     startingPrice: number;
     handleSearch: () => void;
+    hotelSlug?: string;
+    currency?: string;
+    calendarRefreshTrigger?: number;
 }
 
 export function RoomSearchHeader({
@@ -57,7 +64,52 @@ export function RoomSearchHeader({
     isMobile,
     startingPrice,
     handleSearch,
+    hotelSlug,
+    currency = 'INR',
+    calendarRefreshTrigger,
 }: RoomSearchHeaderProps) {
+    const [calendarData, setCalendarData] = useState<Record<string, CalendarDay>>({});
+    const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
+    const fetchedMonths = useRef<Set<string>>(new Set());
+
+    const formatPrice = (price: number) => {
+        if (currency === 'INR') return `₹${Math.round(price).toLocaleString('en-IN')}`;
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(price);
+    };
+
+    // Fetch calendar data for a month string "YYYY-MM"
+    const fetchMonth = async (monthStr: string) => {
+        if (!hotelSlug) return;
+        try {
+            const data = await apiClient.get<Record<string, CalendarDay>>(
+                `/public/hotels/${hotelSlug}/calendar`,
+                { month: monthStr }
+            );
+            setCalendarData(prev => ({ ...prev, ...data }));
+        } catch {
+            // silent — calendar will just show no prices
+        }
+    };
+
+    // Fetch visible months whenever displayMonth, hotelSlug, or refresh trigger changes
+    useEffect(() => {
+        if (!hotelSlug) return;
+        const months = [
+            format(displayMonth, 'yyyy-MM'),
+            format(addMonths(displayMonth, 1), 'yyyy-MM'),
+        ];
+        // On refresh trigger, clear cache so we re-fetch
+        if (calendarRefreshTrigger !== undefined) {
+            fetchedMonths.current.clear();
+        }
+        months.forEach(m => {
+            if (!fetchedMonths.current.has(m)) {
+                fetchedMonths.current.add(m);
+                fetchMonth(m);
+            }
+        });
+    }, [hotelSlug, displayMonth, calendarRefreshTrigger]);
+
     return (
         <div id="hotelier-search-widget" className="bg-white/95 backdrop-blur-2xl p-4 sm:p-6 rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] mb-6 sm:mb-10 max-w-6xl mx-auto border border-white/60">
             {/* Premium Room/Package Switch */}
@@ -194,15 +246,15 @@ export function RoomSearchHeader({
                                 selected: { backgroundColor: themeColor, color: '#fff' },
                                 today: { color: themeColor, fontWeight: 700 }
                             }}
+                            onMonthChange={(month: Date) => setDisplayMonth(startOfMonth(month))}
                             components={{
                                 DayContent: ({ date }: any) => {
-                                    const todayObj = new Date(new Date().setHours(0,0,0,0));
+                                    const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
                                     const isPast = date < todayObj;
-                                    let price = startingPrice > 0 ? startingPrice : 4200;
-                                    const day = date.getDay();
-                                    const isWeekend = day === 5 || day === 6;
-                                    price = price + (isWeekend ? 500 : 0);
-                                    const isSoldOut = date.getDate() === 13;
+                                    const key = format(date, 'yyyy-MM-dd');
+                                    const dayData = calendarData[key];
+                                    const isSoldOut = dayData ? !dayData.available : false;
+                                    const price = dayData?.min_price ?? null;
 
                                     return (
                                         <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
@@ -210,9 +262,13 @@ export function RoomSearchHeader({
                                             {!isPast && (
                                                 <span className={cn(
                                                     "text-[9px] font-extrabold leading-none mt-1",
-                                                    isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
+                                                    isSoldOut
+                                                        ? "text-red-400"
+                                                        : price !== null
+                                                            ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700"
+                                                            : "text-slate-300"
                                                 )}>
-                                                    {isSoldOut ? "Sold Out" : `₹${price}`}
+                                                    {isSoldOut ? "Sold" : price !== null ? formatPrice(price) : ''}
                                                 </span>
                                             )}
                                         </div>
@@ -221,7 +277,7 @@ export function RoomSearchHeader({
                             }}
                         />
                         <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                            <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
+                            <span className="text-red-400 font-extrabold">Sold</span> = No rooms &nbsp;·&nbsp; Prices shown are starting rates
                         </div>
                         </div>
                     </PopoverContent>

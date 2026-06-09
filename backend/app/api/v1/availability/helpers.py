@@ -33,6 +33,7 @@ def clear_availability_cache(hotel_id: str) -> None:
     try:
         redis_client.delete_pattern(f"availability:{hotel_id}:*")
         redis_client.delete_pattern(f"public:rooms:{hotel_id}:*")
+        redis_client.delete_pattern(f"public:calendar:{hotel_id}:*")
         redis_client.delete_pattern(f"analytics_dashboard:{hotel_id}:*")
         redis_client.delete_pattern(f"dashboard_stats:{hotel_id}:*")
     except Exception as e:

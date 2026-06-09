@@ -303,6 +303,8 @@ export default function BookingSelection() {
 
     // Which room_type_ids are currently refreshing their rates (shimmer state)
     const [refreshingRoomIds, setRefreshingRoomIds] = useState<Set<string>>(new Set());
+    // Increment to tell RoomSearchHeader calendar to re-fetch month data
+    const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
 
     // Ref to the current fetchData so SSE can trigger a refresh without stale closures
     const fetchDataRef = useRef<(() => void) | null>(null);
@@ -439,6 +441,8 @@ export default function BookingSelection() {
                 if (data.type === 'rate_update') {
                     // room_type_ids: string[] = specific rooms, null = all rooms
                     refreshRatesOnlyRef.current(data.room_type_ids ?? null);
+                    // Also refresh calendar prices (Redis cache cleared by bump_rate_version)
+                    setCalendarRefreshTrigger(t => t + 1);
                 }
             } catch (_) {
                 // ignore parse errors
@@ -644,6 +648,9 @@ export default function BookingSelection() {
                     isMobile={isMobile}
                     startingPrice={startingPrice}
                     handleSearch={handleSearch}
+                    hotelSlug={hotelSlug}
+                    currency={hotel?.settings?.currency || 'INR'}
+                    calendarRefreshTrigger={calendarRefreshTrigger}
                 />
 
                 {/* Loyalty Program Member Verification Banner */}
