@@ -168,6 +168,9 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             return {"status": "failed", "reason": "decodo_613_target_blocked"}
 
         html_content = first_result.get("content") or ""
+        if not html_content.strip():
+            logger.warning(f"Decodo returned empty HTML content for {url[:60]}")
+            return {"status": "failed", "reason": "empty_html_content"}
 
         if "access denied" in html_content.lower() or "access-denied" in html_content.lower() or "reference id" in html_content.lower():
             logger.error("Blocked by Akamai (Access Denied / Reference ID)")
