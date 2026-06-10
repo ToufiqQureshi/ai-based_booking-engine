@@ -136,7 +136,7 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                     "API_status_422",
                     "decodo_613_target_blocked",
                 ):
-                    logger.info(
+                    logger.warning(
                         f"Rotating Decodo session due to {rate_data.get('reason')} (old={scrape_session_id}) "
                         f"and retrying day {offset + 1}/7 using United Kingdom geo"
                     )
