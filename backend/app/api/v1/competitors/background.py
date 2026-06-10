@@ -80,9 +80,7 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
 
             # Clear previous run's progress so frontend doesn't show stale toasts
             try:
-                _rp = redis_client.get_instance()
-                if _rp:
-                    _rp.delete(f"scrape_progress:{comp_id}")
+                redis_client.delete_value(f"scrape_progress:{comp_id}")
             except Exception:
                 pass
 
@@ -114,9 +112,8 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
             for offset in range(7):
                 # Check cancellation flag before each day
                 try:
-                    _rc = redis_client.get_instance()
-                    if _rc and _rc.get(cancel_key):
-                        _rc.delete(cancel_key)
+                    if redis_client.get_value(cancel_key):
+                        redis_client.delete_value(cancel_key)
                         was_stopped = True
                         logger.info(f"Scrape for {comp_id} cancelled by user after {attempted} days")
                         break
@@ -136,6 +133,7 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                     "API_status_422",
                     "decodo_613_target_blocked",
                     "empty_html_content",
+                    "shield_blocked",
                 ):
                     logger.warning(
                         f"Rotating Decodo session due to {rate_data.get('reason')} (old={scrape_session_id}) "
@@ -181,30 +179,22 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
 
                     # Push per-day result to Redis for live price toasts
                     try:
-                        _rp = redis_client.get_instance()
-                        if _rp:
-                            progress_key = f"scrape_progress:{comp_id}"
-                            existing_raw = _rp.get(progress_key)
-                            progress_list = json.loads(existing_raw) if existing_raw else []
-                            progress_list.append({
-                                "date": check_in_date_obj.isoformat(),
-                                "price": price,
-                                "is_sold_out": is_sold_out,
-                            })
-                            _rp.setex(progress_key, 600, json.dumps(progress_list))
+                        progress_key = f"scrape_progress:{comp_id}"
+                        existing_raw = redis_client.get_value(progress_key)
+                        progress_list = json.loads(existing_raw) if existing_raw else []
+                        progress_list.append({
+                            "date": check_in_date_obj.isoformat(),
+                            "price": price,
+                            "is_sold_out": is_sold_out,
+                        })
+                        redis_client.set_value(progress_key, json.dumps(progress_list), expire=600)
                     except Exception as pe:
                         logger.warning(f"Failed to write scrape progress to Redis: {pe}")
 
                     # Invalidate rate comparison + market analysis cache for this hotel
                     try:
-                        r = redis_client.get_instance()
-                        if r:
-                            keys = (
-                                r.keys(f"rate_comparison:{comp.hotel_id}:*")
-                                + r.keys(f"market_analysis:{comp.hotel_id}:*")
-                            )
-                            if keys:
-                                r.delete(*keys)
+                        redis_client.delete_pattern(f"rate_comparison:{comp.hotel_id}:*")
+                        redis_client.delete_pattern(f"market_analysis:{comp.hotel_id}:*")
                     except Exception as cache_err:
                         logger.warning(f"Failed to clear competitor cache: {cache_err}")
                 else:
