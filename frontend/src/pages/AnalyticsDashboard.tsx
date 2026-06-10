@@ -9,11 +9,11 @@ import {
 import { apiClient as api } from '../api/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Users, Clock, MousePointerClick, 
+  Clock,
   Globe, TrendingUp, TrendingDown, Layout,
   DollarSign, PieChart as PieIcon, Calendar, Download,
-  Activity, ArrowUpRight, ArrowDownRight, Zap, MessageCircle, Bed,
-  Smartphone, Monitor, Tablet, RefreshCw, AlertCircle, XCircle
+  Activity, ArrowUpRight, ArrowDownRight, Zap, Bed,
+  Smartphone, Monitor, Tablet, AlertCircle, XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -62,11 +62,6 @@ interface LiveEvent {
 const CHART_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6'];
 
 const FUNNEL_COLORS = ['#1e293b', '#4f46e5', '#0ea5e9', '#10b981'];
-
-const formatSeconds = (s: number) => {
-  if (s < 60) return `${s}s`;
-  return `${Math.floor(s / 60)}m ${s % 60}s`;
-};
 
 const countryFlag = (code: string): string => {
   if (!code || code.length < 2) return '🌐';

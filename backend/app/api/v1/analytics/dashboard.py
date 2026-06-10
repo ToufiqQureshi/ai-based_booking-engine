@@ -20,25 +20,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # ISO-3166-1 alpha-2 codes for the countries we see most in Indian hotel traffic
-_COUNTRY_CODES: dict[str, str] = {
-    "India": "IN", "United States": "US", "United Kingdom": "GB",
-    "Germany": "DE", "France": "FR", "Australia": "AU", "Canada": "CA",
-    "Singapore": "SG", "UAE": "AE", "United Arab Emirates": "AE",
-    "Japan": "JP", "China": "CN", "Russia": "RU", "Brazil": "BR",
-    "Italy": "IT", "Spain": "ES", "Netherlands": "NL", "Thailand": "TH",
-    "Malaysia": "MY", "Indonesia": "ID", "Philippines": "PH",
-    "Bangladesh": "BD", "Pakistan": "PK", "Nepal": "NP", "Sri Lanka": "LK",
-    "South Africa": "ZA", "Kenya": "KE", "Nigeria": "NG",
-    "Mexico": "MX", "Argentina": "AR", "Colombia": "CO",
-}
-
-
-def _nights(booking) -> int:
-    """Safe night-count that always returns at least 1 (handles walk-ins and backdated bookings)."""
-    try:
-        return max(1, (booking.check_out - booking.check_in).days)
-    except Exception:
-        return 1
+from .utils import _COUNTRY_CODES, _nights, calculate_performance_metrics
 
 
 @router.get("/dashboard")
@@ -58,7 +40,11 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         # --- 1. Raw data fetch (3 queries total, no N+1) ---
         sessions = (await session.execute(
             select(AnalyticsSession)
-            .where(AnalyticsSession.hotel_id == hotel_id, AnalyticsSession.started_at >= start)
+            .where(
+                AnalyticsSession.hotel_id == hotel_id,
+                AnalyticsSession.started_at >= start,
+                AnalyticsSession.device_type != "bot"
+            )
             .options(selectinload(AnalyticsSession.events))
         )).scalars().unique().all()
 
@@ -131,8 +117,9 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         # --- 7. Traffic heatmap (hotel's local timezone) ---
         from zoneinfo import ZoneInfo
         from app.models.hotel import Hotel
+        from .utils import get_hotel_timezone
         hotel_obj = await session.get(Hotel, hotel_id)
-        tz_name = (hotel_obj.settings or {}).get("timezone", "Asia/Kolkata") if hotel_obj else "Asia/Kolkata"
+        tz_name = get_hotel_timezone(hotel_obj.settings if hotel_obj else {})
         target_tz = ZoneInfo(tz_name)
         heatmap_counts: dict[str, int] = {}
         for s in sessions:
@@ -145,12 +132,25 @@ async def get_analytics_dashboard(current_user: CurrentUser, session: DbSession,
         ]
 
         # --- 8. Revenue KPIs (ADR / RevPAR / occupancy) ---
+        # Note: Performance metrics (ADR/Occ) should be calculated based on bookings occurring in the period,
+        # while Revenue Total usually refers to pickup (bookings made in the period).
         revenue_total = sum(float(b.total_amount or 0) for b in active_bookings)
-        total_room_nights = sum(len(b.rooms or []) * _nights(b) for b in active_bookings)
-        total_available = total_inventory * days
-        avg_daily_rate = round(revenue_total / total_room_nights, 2) if total_room_nights else 0
-        rev_par = round(revenue_total / total_available, 2) if total_available else 0
-        occupancy_rate = round(min(100.0, total_room_nights / total_available * 100), 2) if total_available else 0
+
+        # For ADR/Occupancy, we fetch bookings overlapping the period
+        end_date = datetime.now(timezone.utc).date()
+        start_date = start.date()
+        performance_bookings = (await session.execute(
+            select(Booking).where(
+                Booking.hotel_id == hotel_id,
+                Booking.check_in < end_date,
+                Booking.check_out > start_date,
+                Booking.status != BookingStatus.CANCELLED
+            )
+        )).scalars().all()
+
+        avg_daily_rate, rev_par, occupancy_rate = calculate_performance_metrics(
+            performance_bookings, total_inventory, days, start_date, end_date
+        )
 
         # --- 9. AI efficiency ---
         from app.models.lead import Lead

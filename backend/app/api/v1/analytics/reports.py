@@ -20,24 +20,7 @@ from app.models.room import RoomType
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-_COUNTRY_CODES: dict[str, str] = {
-    "India": "IN", "United States": "US", "United Kingdom": "GB",
-    "Germany": "DE", "France": "FR", "Australia": "AU", "Canada": "CA",
-    "Singapore": "SG", "UAE": "AE", "United Arab Emirates": "AE",
-    "Japan": "JP", "China": "CN", "Russia": "RU", "Brazil": "BR",
-    "Italy": "IT", "Spain": "ES", "Netherlands": "NL", "Thailand": "TH",
-    "Malaysia": "MY", "Indonesia": "ID", "Philippines": "PH",
-    "Bangladesh": "BD", "Pakistan": "PK", "Nepal": "NP", "Sri Lanka": "LK",
-    "South Africa": "ZA", "Kenya": "KE", "Nigeria": "NG",
-    "Mexico": "MX", "Argentina": "AR", "Colombia": "CO",
-}
-
-
-def _nights(b) -> int:
-    try:
-        return max(1, (b.check_out - b.check_in).days)
-    except Exception:
-        return 1
+from .utils import _COUNTRY_CODES, _nights, calculate_performance_metrics
 
 
 @router.get("/dashboard/overview")
@@ -53,7 +36,11 @@ async def get_analytics_overview(current_user: CurrentUser, session: DbSession, 
 
         sessions = (await session.execute(
             select(AnalyticsSession)
-            .where(AnalyticsSession.hotel_id == hotel_id, AnalyticsSession.started_at >= start)
+            .where(
+                AnalyticsSession.hotel_id == hotel_id,
+                AnalyticsSession.started_at >= start,
+                AnalyticsSession.device_type != "bot"
+            )
             .options(selectinload(AnalyticsSession.events))
         )).scalars().unique().all()
 
@@ -127,24 +114,36 @@ async def get_analytics_revenue(current_user: CurrentUser, session: DbSession, d
         if not hotel_id:
             return {"error": "No hotel linked"}
 
-        start = (datetime.now(timezone.utc) - timedelta(days=days)).replace(tzinfo=None)
-        bookings = (await session.execute(
-            select(Booking).where(Booking.hotel_id == hotel_id, Booking.created_at >= start)
+        start = (datetime.now(timezone.utc) - timedelta(days=days)).date()
+        end = datetime.now(timezone.utc).date()
+
+        # PICKUP DATA (Bookings made in the period)
+        pickup_bookings = (await session.execute(
+            select(Booking).where(Booking.hotel_id == hotel_id, Booking.created_at >= datetime.combine(start, datetime.min.time()))
         )).scalars().all()
+
+        # PERFORMANCE DATA (Bookings occurring in the period for accurate ADR/Occ)
+        performance_bookings = (await session.execute(
+            select(Booking).where(
+                Booking.hotel_id == hotel_id,
+                Booking.check_in < end,
+                Booking.check_out > start,
+                Booking.status != BookingStatus.CANCELLED
+            )
+        )).scalars().all()
+
         room_types = (await session.execute(select(RoomType).where(RoomType.hotel_id == hotel_id))).scalars().all()
         total_inventory = sum(r.total_inventory for r in room_types) or 1
 
-        active = [b for b in bookings if b.status != BookingStatus.CANCELLED]
-        revenue_total = sum(float(b.total_amount or 0) for b in active)
-        total_room_nights = sum(len(b.rooms or []) * _nights(b) for b in active)
-        total_available = total_inventory * days
+        active_pickup = [b for b in pickup_bookings if b.status != BookingStatus.CANCELLED]
+        revenue_total = sum(float(b.total_amount or 0) for b in active_pickup)
 
-        avg_daily_rate = round(revenue_total / total_room_nights, 2) if total_room_nights else 0
-        rev_par = round(revenue_total / total_available, 2) if total_available else 0
-        occupancy_rate = round(min(100.0, total_room_nights / total_available * 100), 2) if total_available else 0
+        avg_daily_rate, rev_par, occupancy_rate = calculate_performance_metrics(
+            performance_bookings, total_inventory, days, start, end
+        )
 
         room_stats = {r.id: {"id": r.id, "name": r.name, "bookings": 0, "revenue": 0} for r in room_types}
-        for b in active:
+        for b in active_pickup:
             for rm in b.rooms:
                 rt_id = rm.get("room_type_id")
                 if rt_id in room_stats:
@@ -153,7 +152,7 @@ async def get_analytics_revenue(current_user: CurrentUser, session: DbSession, d
         sorted_rooms = sorted(room_stats.values(), key=lambda x: x["bookings"], reverse=True)
 
         promo_counts: dict[str, int] = {}
-        for b in bookings:
+        for b in pickup_bookings:
             if b.promo_code:
                 promo_counts[b.promo_code] = promo_counts.get(b.promo_code, 0) + 1
 
@@ -176,6 +175,9 @@ async def get_analytics_revenue(current_user: CurrentUser, session: DbSession, d
         ]
 
         today = datetime.utcnow().date()
+        today_pickup = sum(1 for b in pickup_bookings if b.created_at.date() == today)
+        yesterday_pickup = sum(1 for b in pickup_bookings if b.created_at.date() == today - timedelta(days=1))
+
         return {
             "revenue_total": revenue_total,
             "avg_daily_rate": avg_daily_rate,
@@ -187,9 +189,9 @@ async def get_analytics_revenue(current_user: CurrentUser, session: DbSession, d
             "promo_stats": [{"code": k, "bookings": v} for k, v in promo_counts.items()],
             "occupancy_forecast": forecast,
             "pickup_stats": {
-                "today": sum(1 for b in bookings if b.created_at.date() == today),
-                "yesterday": sum(1 for b in bookings if b.created_at.date() == today - timedelta(days=1)),
-                "trend": "up" if sum(1 for b in bookings if b.created_at.date() == today) >= sum(1 for b in bookings if b.created_at.date() == today - timedelta(days=1)) else "down",
+                "today": today_pickup,
+                "yesterday": yesterday_pickup,
+                "trend": "up" if today_pickup >= yesterday_pickup else "down",
             },
             "commission_saved": round(revenue_total * 0.15, 2),
         }
@@ -209,7 +211,11 @@ async def get_analytics_traffic(current_user: CurrentUser, session: DbSession, d
 
         start = (datetime.now(timezone.utc) - timedelta(days=days)).replace(tzinfo=None)
         sessions = (await session.execute(
-            select(AnalyticsSession).where(AnalyticsSession.hotel_id == hotel_id, AnalyticsSession.started_at >= start)
+            select(AnalyticsSession).where(
+                AnalyticsSession.hotel_id == hotel_id,
+                AnalyticsSession.started_at >= start,
+                AnalyticsSession.device_type != "bot"
+            )
         )).scalars().all()
         bookings = (await session.execute(
             select(Booking).where(Booking.hotel_id == hotel_id, Booking.created_at >= start)
@@ -243,8 +249,9 @@ async def get_analytics_traffic(current_user: CurrentUser, session: DbSession, d
 
         from zoneinfo import ZoneInfo
         from app.models.hotel import Hotel
+        from .utils import get_hotel_timezone
         hotel_obj = await session.get(Hotel, hotel_id)
-        tz_name = (hotel_obj.settings or {}).get("timezone", "Asia/Kolkata") if hotel_obj else "Asia/Kolkata"
+        tz_name = get_hotel_timezone(hotel_obj.settings if hotel_obj else {})
         target_tz = ZoneInfo(tz_name)
         heatmap_counts: dict[str, int] = {}
         for s in sessions:
@@ -378,6 +385,7 @@ async def get_analytics_kpis(current_user: CurrentUser, session: DbSession, days
             select(func.count(AnalyticsSession.id)).where(
                 AnalyticsSession.hotel_id == hotel_id,
                 AnalyticsSession.started_at >= start,
+                AnalyticsSession.device_type != "bot"
             )
         )).scalar() or 0
 
@@ -392,14 +400,30 @@ async def get_analytics_kpis(current_user: CurrentUser, session: DbSession, days
         total_room_nights = sum(len(b.rooms or []) * _nights(b) for b in active)
         total_available = total_inventory * days
 
+        # Performance metrics should use stay-based data
+        end_date = datetime.now(timezone.utc).date()
+        start_date = start.date()
+        performance_bookings = (await session.execute(
+            select(Booking).where(
+                Booking.hotel_id == hotel_id,
+                Booking.check_in < end_date,
+                Booking.check_out > start_date,
+                Booking.status != BookingStatus.CANCELLED
+            )
+        )).scalars().all()
+
+        avg_daily_rate, rev_par, occupancy_rate = calculate_performance_metrics(
+            performance_bookings, total_inventory, days, start_date, end_date
+        )
+
         return {
             "total_visitors": total_visitors,
             "total_conversions": len(active),
             "conversion_rate": round(len(active) / total_visitors * 100, 2) if total_visitors else 0,
             "revenue_total": revenue_total,
-            "avg_daily_rate": round(revenue_total / total_room_nights, 2) if total_room_nights else 0,
-            "rev_par": round(revenue_total / total_available, 2) if total_available else 0,
-            "occupancy_rate": round(min(100.0, total_room_nights / total_available * 100), 2) if total_available else 0,
+            "avg_daily_rate": avg_daily_rate,
+            "rev_par": rev_par,
+            "occupancy_rate": occupancy_rate,
         }
     except Exception as e:
         logger.error("KPIs analytics error: %s", e)
