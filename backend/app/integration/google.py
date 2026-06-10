@@ -269,7 +269,13 @@ async def get_google_reviews(request: Request, current_user: CurrentUser, sessio
             locations_resp = await client.get(
                 f"https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{account_id}/locations",
                 headers=headers,
+                params={"readMask": "name,title,storefrontAddress"},
             )
+            if locations_resp.status_code != 200:
+                raise HTTPException(
+                    status_code=locations_resp.status_code,
+                    detail=f"Failed to fetch locations: {locations_resp.text}",
+                )
             locations = locations_resp.json().get("locations", [])
             if not locations:
                 raise HTTPException(status_code=404, detail="No Google Business locations found.")
