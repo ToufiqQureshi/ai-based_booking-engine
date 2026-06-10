@@ -81,14 +81,14 @@ async def get_current_user(
     
     # 2. Fallback: Agar ID se nahi mila, toh email se check karo (Linking logic)
     if user is None:
-        logger.info(f"User not found by ID {supabase_id}, checking by email {email}")
+        logger.debug(f"User not found by ID {supabase_id}, checking by email {email}")
         if email:
             query = select(User).where(User.email == email).options(selectinload(User.hotel))
             result = await session.execute(query)
             user = result.scalar_one_or_none()
             
             if user:
-                logger.info(f"Linking existing user {email} with Supabase ID {supabase_id}")
+                logger.debug(f"Linking existing user {email} with Supabase ID {supabase_id}")
                 user.supabase_id = supabase_id
                 session.add(user)
                 await session.commit()
@@ -106,14 +106,14 @@ async def get_current_user(
         
         if links:
             # If links exist, just use the first one as active context
-            logger.info(f"Auto-healing user {email}: Setting hotel_id from existing UserHotelLink")
+            logger.debug(f"Auto-healing user {email}: Setting hotel_id from existing UserHotelLink")
             user.hotel_id = links[0].hotel_id
             session.add(user)
             await session.commit()
             await session.refresh(user)
         else:
             # 2. Truly orphaned user (legacy signup or corrupted state) - Create default hotel
-            logger.info(f"Auto-healing missing hotel for user {email}: Creating new default hotel")
+            logger.debug(f"Auto-healing missing hotel for user {email}: Creating new default hotel")
             hotel_name = payload.get("user_metadata", {}).get("hotel_name", f"{user.name or 'My'}'s Hotel")
             hotel_slug = f"hotel-{str(uuid.uuid4())[:8]}"
             hotel = Hotel(name=hotel_name, slug=hotel_slug)
@@ -147,7 +147,7 @@ async def get_current_user(
                 raise e
             logger.warning(f"Failed to query auth.users schema during auto-registration check: {e}")
 
-        logger.info(f"Starting auto-registration for {email}")
+        logger.debug(f"Starting auto-registration for {email}")
         from app.models.hotel import Hotel
         import uuid
         
@@ -184,7 +184,7 @@ async def get_current_user(
             await session.commit()
             # Explicitly load hotel to avoid MissingGreenlet error in get_current_active_user
             await session.refresh(user, ["hotel"])
-            logger.info(f"Auto-registration successful for {email}")
+            logger.debug(f"Auto-registration successful for {email}")
         except Exception as e:
             logger.error(f"Auto-Sync Error for {email}: {str(e)}")
             raise credentials_exception
@@ -204,7 +204,7 @@ async def get_current_user(
         session.add(user)
         await session.commit()
         await session.refresh(user)
-        logger.info(f"MASTER ADMIN AUTO-PROMOTED: {effective_email}")
+        logger.info("MASTER ADMIN AUTO-PROMOTED (user_id=%s)", user.id)
 
     return user
 

@@ -29,6 +29,13 @@ from app.core.tools.analytics import (
     logic_get_upsell_opportunities,
 )
 
+import logging
+
+# AI-FIX: module-level logger. This was referenced (e.g. in the smart tool
+# selector) but never defined, so any non-empty hotelier query raised a
+# NameError and the assistant 500'd on every message. Define it once here.
+logger = logging.getLogger(__name__)
+
 # System Prompt specialized for Staybooker
 SYSTEM_PROMPT = """You are 'Staybooker AI', a smart hotel assistant.
 GOAL: Help the hotelier manage bookings, revenue, and tasks directly and professionally.
@@ -564,17 +571,30 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         Search the web for real-time information (Events, Weather, Trends).
         Use this when you need external context to explain 'WHY' (e.g. "Is there a concert in Mumbai today?").
         """
-        try:
+        # AI-FIX: DuckDuckGo's client is synchronous and has no SLA. Running it
+        # inline on the event loop blocked the whole worker, and a slow/hung
+        # response could stall every concurrent user. Offload to a thread and
+        # cap it with a hard timeout so one bad search can't freeze the agent.
+        import asyncio
+
+        def _search() -> list:
             from duckduckgo_search import DDGS
-            results = DDGS().text(query, max_results=3)
+            return DDGS().text(query, max_results=3)
+
+        try:
+            results = await asyncio.wait_for(asyncio.to_thread(_search), timeout=8.0)
             if not results:
                 return "No web results found."
             summary = "🌐 **Web Search Results:**\n"
             for r in results:
                 summary += f"- {r['title']}: {r['body']}\n"
             return summary
+        except asyncio.TimeoutError:
+            logger.warning("search_web timed out for query: %s", query)
+            return "Web search timed out. Please proceed without live web data."
         except Exception as e:
-            return f"Web search failed: {str(e)}"
+            logger.warning("search_web failed: %s", e)
+            return "Web search is temporarily unavailable. Please proceed without live web data."
 
     # --- ADVANCED ANALYTICS TOOLS ---
 
