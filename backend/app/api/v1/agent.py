@@ -66,7 +66,11 @@ async def chat_with_agent(
         return ChatResponse(response=result.content or "")
 
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Config-level problems (e.g. missing AI key) — safe, actionable message.
+        logger.warning(f"Agent config error: {e}")
+        raise HTTPException(status_code=503, detail="AI Assistant is not configured. Please contact support.")
     except Exception as e:
-        logger.error(f"Agent Error: {e}")
-        raise HTTPException(status_code=500, detail=f"AI Agent Error: {str(e)}")
+        # AI-FIX: don't leak internal exception text (stack/library detail) to the
+        # client. Log the detail server-side, return a generic message.
+        logger.error(f"Agent Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="The AI Assistant hit a temporary error. Please try again.")

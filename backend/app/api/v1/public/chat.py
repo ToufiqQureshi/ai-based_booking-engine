@@ -316,7 +316,12 @@ async def chat_with_guest_ai(
                     from agno.models.openai import OpenAILike
                     default_base = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
                     fallback_llm = OpenAILike(
-                        id=ai_model_name or ("llama-3.3-70b-versatile" if effective_provider == "groq" else "gpt-4o-mini"),
+                        # AI-FIX: the no-tools fallback runs AFTER a failed paid
+                        # call, so it must stay on the CHEAP 8B model. It used to
+                        # default to the ~10x pricier 70B model, which meant every
+                        # transient error doubled spend AND jumped to a costlier
+                        # model — exactly the wrong direction during an error storm.
+                        id=ai_model_name or ("llama-3.1-8b-instant" if effective_provider == "groq" else "gpt-4o-mini"),
                         api_key=target_api_key,
                         base_url=ai_base_url_val or default_base,
                         max_tokens=fallback_max_tokens,

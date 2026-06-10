@@ -1,10 +1,11 @@
 name: Backend CI
 
+# Runs on PRs (any target) and on pushes to the main/develop/feature branches,
+# so regressions are caught before merge rather than after deploy.
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop", "claude/**" ]
   pull_request:
-    branches: [ "main" ]
 
 jobs:
   test:
@@ -27,6 +28,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    - name: Compile check (fail fast on syntax / import errors)
+      run: python -m compileall -q app main.py
 
     - name: Run tests
       env:
