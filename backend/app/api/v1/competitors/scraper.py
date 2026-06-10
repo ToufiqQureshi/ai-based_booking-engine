@@ -84,13 +84,16 @@ def clean_makemytrip_url(url: str, checkin: str, checkout: str) -> str:
 def update_url_dates(url: str, offset: int) -> str:
     checkin, checkout = get_dynamic_dates(offset)
     if "makemytrip.com" in url.lower():
-        return clean_makemytrip_url(url, checkin, checkout)
+        url = clean_makemytrip_url(url, checkin, checkout)
+        if "_ucurrency=" not in url.lower():
+            url += "&_uCurrency=INR"
+        return url
     url = re.sub(r"checkin=\d{8}", f"checkin={checkin}", url)
     url = re.sub(r"checkout=\d{8}", f"checkout={checkout}", url)
     return url
 
 
-async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None) -> dict:
+async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None, geo: str = "India") -> dict:
     """
     Fetch one day's rate from MMT via Decodo Scraper API + Scrapling.
 
@@ -115,8 +118,7 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             "url": url,
             "proxy_pool": "premium",
             "headless": "html",
-            "geo": "India",
-            "xhr": True,
+            "geo": geo,
             "device_type": "desktop_chrome",
             "browser_actions": [
                 {"type": "wait", "wait_time_s": str(MMT_RENDER_WAIT_SECONDS)},
@@ -165,7 +167,7 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             logger.warning(f"Decodo 613 (blocked, results[0]) for {url[:60]}")
             return {"status": "failed", "reason": "decodo_613_target_blocked"}
 
-        html_content = first_result.get("content", "")
+        html_content = first_result.get("content") or ""
 
         if "access denied" in html_content.lower() or "access-denied" in html_content.lower() or "reference id" in html_content.lower():
             logger.error("Blocked by Akamai (Access Denied / Reference ID)")

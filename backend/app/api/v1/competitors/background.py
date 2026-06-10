@@ -32,12 +32,12 @@ MAX_613_RETRIES = 2
 INTER_DAY_PAUSE_SECONDS = 2.5
 
 
-async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> dict:
+async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str, geo: str = "India") -> dict:
     """Wrap scrape_mmt_hotel_rate with 613-specific retry + exponential backoff."""
     delay = 4.0
     result = {}
     for attempt in range(MAX_613_RETRIES + 1):
-        result = await scrape_mmt_hotel_rate(url, hotel_id, session_id=session_id)
+        result = await scrape_mmt_hotel_rate(url, hotel_id, session_id=session_id, geo=geo)
         if result.get("reason") != "decodo_613_target_blocked":
             return result
         if attempt < MAX_613_RETRIES:
@@ -103,6 +103,7 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
             # One session_id per run so all 7 days share the same Decodo proxy IP.
             # Requests are sequential + inter-day pause so Akamai sees gradual traffic.
             scrape_session_id = uuid.uuid4().hex[:12]
+            current_geo = "India"
 
             success_count = 0
             has_errors = False
@@ -126,15 +127,23 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                 updated_url = update_url_dates(url, offset)
                 attempted += 1
 
-                rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
+                rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id, geo=current_geo)
 
-                # Decodo killed the proxy session (IP flagged) — rotate to a fresh session
-                # and retry this day once. New session is used for remaining days too.
-                if rate_data.get("reason") == "decodo_session_failed":
-                    logger.info(f"Rotating Decodo session (old={scrape_session_id}) and retrying day {offset + 1}/7")
+                # Decodo session died, is blocked, or got stuck — rotate and retry this day once.
+                if rate_data.get("reason") in (
+                    "decodo_session_failed",
+                    "API_status_400",
+                    "API_status_422",
+                    "decodo_613_target_blocked",
+                ):
+                    logger.info(
+                        f"Rotating Decodo session due to {rate_data.get('reason')} (old={scrape_session_id}) "
+                        f"and retrying day {offset + 1}/7 using United Kingdom geo"
+                    )
                     scrape_session_id = uuid.uuid4().hex[:12]
+                    current_geo = "United Kingdom"
                     await asyncio.sleep(3.0)
-                    rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
+                    rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id, geo=current_geo)
 
                 if rate_data.get("status") == "success":
                     price = rate_data["price"]
@@ -203,6 +212,8 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                     logger.warning(
                         f"Failed to scrape {comp.name} on {check_in_date_obj.isoformat()}: {last_error_reason}"
                     )
+                    # Rotate session ID so the next day starts with a fresh session
+                    scrape_session_id = uuid.uuid4().hex[:12]
 
                 # Inter-day pause so the warmed-up proxy IP looks human to Akamai.
                 if offset < 6 and not was_stopped:
