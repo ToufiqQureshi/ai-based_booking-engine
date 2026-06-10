@@ -155,7 +155,7 @@ async def whatsapp_webhook_receive(
                     select(IntegrationSettings).where(IntegrationSettings.hotel_id == target_hotel.id)
                 )
                 int_settings = int_res.scalar_one_or_none()
-                if not int_settings or not int_settings.ai_api_key:
+                if not int_settings or (not int_settings.ai_api_key and not int_settings.ai_api_key_vault_id):
                     debug_log.append("SKIP: AI not configured for hotel")
                     continue
 
@@ -250,11 +250,13 @@ async def whatsapp_webhook_receive(
                     )
                     int_settings = int_res.scalar_one_or_none()
                     effective_provider = (getattr(int_settings, "ai_provider", None) or getattr(resolved_hotel, "ai_provider", None))
-                    effective_api_key = (getattr(int_settings, "ai_api_key", None) or getattr(resolved_hotel, "ai_api_key", None))
+                    from app.core.vault import get_hotel_ai_key
+                    effective_api_key = await get_hotel_ai_key(session, int_settings, resolved_hotel)
                     effective_model = (getattr(int_settings, "ai_model", None) or getattr(resolved_hotel, "ai_model", None))
                     effective_base_url = (getattr(int_settings, "ai_base_url", None) or getattr(resolved_hotel, "ai_base_url", None))
 
                     if not effective_api_key:
+                        debug_log.append("SKIP: AI API key not resolved (vault or plaintext)")
                         continue
 
                     redis_key = f"whatsapp:session:{resolved_hotel.id}:{sender_phone}"
