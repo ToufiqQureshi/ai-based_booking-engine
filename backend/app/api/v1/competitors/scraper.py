@@ -195,13 +195,20 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         container = page
         mmt_hotel_id = _extract_mmt_hotel_id(url)
         if mmt_hotel_id:
-            xpath_query = f"//div[contains(@class, 'listingRow') and .//*[contains(@id, '{mmt_hotel_id}')]]"
+            xpath_query = (
+                f"//div[contains(@class, 'listingRow') and ("
+                f"contains(@id, '{mmt_hotel_id}') or "
+                f".//*[contains(@id, '{mmt_hotel_id}')] or "
+                f".//a[contains(@href, '{mmt_hotel_id}')]"
+                f")]"
+            )
             card = page.xpath(xpath_query).first
             if card:
                 logger.info(f"Successfully scoped parsing to hotel card container for MMT hotel ID: {mmt_hotel_id}")
                 container = card
             else:
-                logger.warning(f"Could not find scoped card container for MMT hotel ID: {mmt_hotel_id}, falling back to full page")
+                logger.warning(f"Could not find scoped card container for MMT hotel ID: {mmt_hotel_id}")
+                return {"status": "failed", "reason": "hotel_card_not_found"}
         else:
             logger.info("No MMT hotel ID found in URL; parsing full page")
 
