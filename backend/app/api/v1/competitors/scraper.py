@@ -28,7 +28,7 @@ MMT_RENDER_WAIT_SECONDS = 12
 
 # httpx read timeout for a single Decodo call. Must exceed Decodo's own
 # (render + MMT_RENDER_WAIT_SECONDS) processing time, with headroom.
-DECODO_HTTP_TIMEOUT_SECONDS = 60.0
+DECODO_HTTP_TIMEOUT_SECONDS = 120.0
 
 # Past this age a "running" competitor row is treated as an orphaned/crashed
 # worker rather than active work-in-progress — no other process ever revisits it.
@@ -106,7 +106,7 @@ def _extract_mmt_hotel_id(url: str) -> Optional[str]:
     return None
 
 
-async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None, geo: str = "India") -> dict:
+async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None) -> dict:
     """
     Fetch one day's rate from MMT via Decodo Scraper API + Scrapling.
 
@@ -125,17 +125,17 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}... (session={session_id})")
 
         # proxy_pool:"premium" → 193-country pool that includes India. "standard"
-        # only covers 8 countries (no India), so dropping this silently routed
-        # MMT requests through non-Indian IPs and caused blocks.
+        # only covers 8 countries (no India). To bypass Akamai blocks, we do NOT
+        # set 'geo' to India, but instead pass INR cookies to force INR currency display.
         payload: dict = {
             "url": url,
             "proxy_pool": "premium",
             "headless": "html",
-            "geo": geo,
-            "device_type": "desktop_chrome",
-            "browser_actions": [
-                {"type": "wait", "wait_time_s": str(MMT_RENDER_WAIT_SECONDS)},
+            "cookies": [
+                {"key": "currency", "value": "INR"},
+                {"key": "amadeus.user.currency", "value": "INR"}
             ],
+            "force_cookies": True,
         }
         if session_id:
             payload["session_id"] = session_id

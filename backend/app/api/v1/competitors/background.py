@@ -32,12 +32,12 @@ MAX_613_RETRIES = 2
 INTER_DAY_PAUSE_SECONDS = 2.5
 
 
-async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str, geo: str = "India") -> dict:
+async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> dict:
     """Wrap scrape_mmt_hotel_rate with 613-specific retry + exponential backoff."""
     delay = 4.0
     result = {}
     for attempt in range(MAX_613_RETRIES + 1):
-        result = await scrape_mmt_hotel_rate(url, hotel_id, session_id=session_id, geo=geo)
+        result = await scrape_mmt_hotel_rate(url, hotel_id, session_id=session_id)
         if result.get("reason") != "decodo_613_target_blocked":
             return result
         if attempt < MAX_613_RETRIES:
@@ -124,7 +124,7 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                 updated_url = update_url_dates(url, offset)
                 attempted += 1
 
-                rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id, geo=current_geo)
+                rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
 
                 # Decodo session died, is blocked, or got stuck — rotate and retry this day once.
                 if rate_data.get("reason") in (
@@ -137,12 +137,11 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                 ):
                     logger.warning(
                         f"Rotating Decodo session due to {rate_data.get('reason')} (old={scrape_session_id}) "
-                        f"and retrying day {offset + 1}/7 using United Kingdom geo"
+                        f"and retrying day {offset + 1}/7"
                     )
                     scrape_session_id = uuid.uuid4().hex[:12]
-                    current_geo = "United Kingdom"
                     await asyncio.sleep(3.0)
-                    rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id, geo=current_geo)
+                    rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
 
                 if rate_data.get("status") == "success":
                     price = rate_data["price"]
