@@ -93,6 +93,19 @@ def update_url_dates(url: str, offset: int) -> str:
     return url
 
 
+def _extract_mmt_hotel_id(url: str) -> Optional[str]:
+    import urllib.parse
+    parsed = urllib.parse.urlparse(url)
+    qs = urllib.parse.parse_qs(parsed.query)
+    for key in ["topHtlId", "hotelId", "htlId"]:
+        if key in qs:
+            return qs[key][0]
+    match = re.search(r"(?:topHtlId|hotelId|htlId)=(\d+)", url)
+    if match:
+        return match.group(1)
+    return None
+
+
 async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None, geo: str = "India") -> dict:
     """
     Fetch one day's rate from MMT via Decodo Scraper API + Scrapling.
@@ -178,16 +191,30 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
 
         page = Selector(html_content)
 
-        sold_out_check = page.css("p.font14.appendBottom5.redText.latoBold.lineHight17").first
+        # Scoping logic to target hotel container
+        container = page
+        mmt_hotel_id = _extract_mmt_hotel_id(url)
+        if mmt_hotel_id:
+            xpath_query = f"//div[contains(@class, 'listingRow') and .//*[contains(@id, '{mmt_hotel_id}')]]"
+            card = page.xpath(xpath_query).first
+            if card:
+                logger.info(f"Successfully scoped parsing to hotel card container for MMT hotel ID: {mmt_hotel_id}")
+                container = card
+            else:
+                logger.warning(f"Could not find scoped card container for MMT hotel ID: {mmt_hotel_id}, falling back to full page")
+        else:
+            logger.info("No MMT hotel ID found in URL; parsing full page")
+
+        sold_out_check = container.css("p.font14.appendBottom5.redText.latoBold.lineHight17").first
         if sold_out_check and "You Just Missed It" in sold_out_check.text:
             return {"status": "success", "price": 0.0, "is_sold_out": True}
 
         # Primary selector, ID fallback, then data-attribute fallback
-        price_el = page.css('p.priceText.latoBlack.font22.blackText.appendBottom5[id="hlistpg_hotel_shown_price"]').first
+        price_el = container.css('p.priceText.latoBlack.font22.blackText.appendBottom5[id="hlistpg_hotel_shown_price"]').first
         if not price_el:
-            price_el = page.css('#hlistpg_hotel_shown_price').first
+            price_el = container.css('#hlistpg_hotel_shown_price').first
         if not price_el:
-            price_el = page.css('[data-cy="hotel-price"]').first
+            price_el = container.css('[data-cy="hotel-price"]').first
 
         if not price_el:
             logger.warning(

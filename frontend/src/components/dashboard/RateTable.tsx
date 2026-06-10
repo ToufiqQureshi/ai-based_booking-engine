@@ -51,7 +51,7 @@ export function RateTable({ data, competitors }: RateTableProps) {
                                 if (!compData) {
                                     return (
                                         <TableCell key={compName}>
-                                            <Badge variant="destructive" className="px-1 py-0 text-[10px]">SOLD OUT</Badge>
+                                            <span className="text-muted-foreground">-</span>
                                         </TableCell>
                                     );
                                 }

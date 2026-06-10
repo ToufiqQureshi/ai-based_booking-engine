@@ -128,7 +128,6 @@ async def run_due_auto_scrapes(session) -> None:
     hotels_res = await session.execute(
         select(Hotel.id, Hotel.settings).where(Hotel.feature_rate_shopper == True)
     )
-    r = redis_client.get_instance()
 
     for hotel_id, hotel_settings in hotels_res.all():
         hotel_settings = hotel_settings or {}
@@ -147,7 +146,7 @@ async def run_due_auto_scrapes(session) -> None:
 
         dedupe_key = f"rate_shopper_auto_scrape:{hotel_id}:{local_now.strftime('%Y%m%d')}:{local_now.hour}"
         try:
-            if not r or not r.set(dedupe_key, "1", nx=True, ex=AUTO_SCRAPE_DEDUPE_TTL):
+            if not await redis_client.set_nx_ex(dedupe_key, "1", expire=AUTO_SCRAPE_DEDUPE_TTL):
                 continue
         except Exception as exc:
             logger.warning(f"Auto-scrape dedupe check failed for hotel {hotel_id}: {exc}")

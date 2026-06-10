@@ -52,20 +52,19 @@ async def trigger_scrape(
         )
 
     cooldown_key = f"scrape_cooldown:{comp_id}"
-    r = redis_client.get_instance()
-    if r:
-        try:
-            if not r.set(cooldown_key, "1", nx=True, ex=MANUAL_SCRAPE_COOLDOWN_SECONDS):
-                ttl = r.ttl(cooldown_key)
-                wait_minutes = max(1, ((ttl if ttl and ttl > 0 else MANUAL_SCRAPE_COOLDOWN_SECONDS) // 60) + 1)
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=f"Please wait about {wait_minutes} more minute(s) before refreshing this competitor again.",
-                )
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.warning(f"Scrape cooldown check failed (failing open): {exc}")
+    try:
+        if not await redis_client.set_nx_ex(cooldown_key, "1", MANUAL_SCRAPE_COOLDOWN_SECONDS):
+            r = redis_client.get_instance()
+            ttl = r.ttl(cooldown_key) if r else MANUAL_SCRAPE_COOLDOWN_SECONDS
+            wait_minutes = max(1, ((ttl if ttl and ttl > 0 else MANUAL_SCRAPE_COOLDOWN_SECONDS) // 60) + 1)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Please wait about {wait_minutes} more minute(s) before refreshing this competitor again.",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning(f"Scrape cooldown check failed (failing open): {exc}")
 
     comp.last_scrape_status = "running"
     comp.last_scrape_error = None
@@ -103,13 +102,11 @@ async def stop_scrape(comp_id: str, current_user: CurrentUser, session: DbSessio
             detail="No scrape is currently running for this competitor.",
         )
 
-    r = redis_client.get_instance()
-    if r:
-        try:
-            r.set(f"scrape_cancel:{comp_id}", "1", ex=600)
-        except Exception as exc:
-            logger.warning(f"Failed to set scrape cancel flag for {comp_id}: {exc}")
-            raise HTTPException(status_code=503, detail="Could not request stop right now. Please try again.")
+    try:
+        redis_client.set_value(f"scrape_cancel:{comp_id}", "1", expire=600)
+    except Exception as exc:
+        logger.warning(f"Failed to set scrape cancel flag for {comp_id}: {exc}")
+        raise HTTPException(status_code=503, detail="Could not request stop right now. Please try again.")
 
     # Force-update status so frontend stops polling immediately. The background
     # task checks the cancel flag on its next iteration and exits without overwriting this.
@@ -135,11 +132,8 @@ async def get_scrape_progress(comp_id: str, current_user: CurrentUser, session: 
     if not comp or comp.hotel_id != current_user.hotel_id:
         raise HTTPException(status_code=404, detail="Competitor not found")
 
-    r = redis_client.get_instance()
-    if not r:
-        return []
     try:
-        raw = r.get(f"scrape_progress:{comp_id}")
+        raw = redis_client.get_value(f"scrape_progress:{comp_id}")
         return json.loads(raw) if raw else []
     except Exception:
         return []
