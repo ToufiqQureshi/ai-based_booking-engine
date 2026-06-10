@@ -234,6 +234,10 @@ async def init_db():
     for idx_sql in [
         "CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings (created_at)",
         "CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings (hotel_id, check_in, check_out)",
+        # Availability is the hottest public query (overlap by hotel + status +
+        # date range). Adding status to the composite lets Postgres filter on the
+        # active statuses inside the index instead of scanning then filtering.
+        "CREATE INDEX IF NOT EXISTS idx_bookings_hotel_status_dates ON bookings (hotel_id, status, check_in, check_out)",
         "CREATE INDEX IF NOT EXISTS idx_room_rates_lookup ON room_rates (room_type_id, date_from, date_to)",
         "CREATE INDEX IF NOT EXISTS idx_competitor_rates_lookup ON competitor_rates (competitor_id, check_in_date, fetched_at)",
         # Enforce DB-level uniqueness on users — the model declares unique=True

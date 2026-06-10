@@ -50,6 +50,9 @@ export default function BookingSelection() {
     const [addons, setAddons] = useState<AddOn[]>([]);
     const [hotel, setHotel] = useState<Hotel | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    // Tracks a failure of the critical rooms/hotel fetch so the guest sees a
+    // retry affordance instead of a silent blank page.
+    const [loadError, setLoadError] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState<PublicRoomSearchResult | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRateInfo, setSelectedRateInfo] = useState<RateOption | null>(null);
@@ -317,6 +320,7 @@ export default function BookingSelection() {
             }
             try {
                 setIsLoading(true);
+                setLoadError(false);
                 // Clear any cached checkout state if we are starting a fresh search
                 sessionStorage.removeItem(`checkout_state:${hotelSlug}`);
                 const queryGuests = paramGuests || (adults + children).toString() || '1';
@@ -333,15 +337,23 @@ export default function BookingSelection() {
                     promo_code: urlPromo || ''
                 }).toString();
 
-                const [roomsData, addonsData, hotelData] = await Promise.all([
+                // Rooms + hotel are critical; add-ons are an optional upsell.
+                const [roomsData, hotelData] = await Promise.all([
                     apiClient.get<PublicRoomSearchResult[]>(`/public/hotels/${hotelSlug}/rooms?${query}`),
-                    apiClient.get<AddOn[]>(`/public/hotels/${hotelSlug}/addons`),
                     apiClient.get<Hotel>(`/public/hotels/${hotelSlug}`)
                 ]);
 
                 setRooms(roomsData);
-                setAddons(addonsData.filter(a => a.is_active !== false));
                 setHotel(hotelData);
+
+                // Add-ons must never blank the page if their endpoint fails.
+                try {
+                    const addonsData = await apiClient.get<AddOn[]>(`/public/hotels/${hotelSlug}/addons`);
+                    setAddons(addonsData.filter(a => a.is_active !== false));
+                } catch (addonErr) {
+                    console.error('Failed to fetch add-ons:', addonErr);
+                    setAddons([]);
+                }
 
                 if (roomsData.length === 0) {
                     try {
@@ -358,6 +370,7 @@ export default function BookingSelection() {
 
             } catch (error) {
                 console.error('Failed to fetch data:', error);
+                setLoadError(true);
             } finally {
                 setIsLoading(false);
             }
@@ -543,6 +556,26 @@ export default function BookingSelection() {
                 <div className="flex flex-col items-center animate-pulse gap-4 mt-12">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     <p className="text-slate-400 font-medium tracking-wide text-sm uppercase">Checking Availability...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Critical rooms/hotel fetch failed — show a clear, recoverable error instead
+    // of a silent blank page (distinct from a genuine "no rooms for these dates").
+    if (loadError) {
+        return (
+            <div className="flex flex-col items-center justify-center p-20 min-h-[600px] bg-slate-50">
+                <BookingStepper currentStep={2} />
+                <div className="flex flex-col items-center gap-4 mt-12 text-center max-w-md">
+                    <p className="text-slate-700 font-semibold text-lg">We couldn't load rooms right now</p>
+                    <p className="text-slate-500 text-sm">This is usually a temporary connection issue. Please try again.</p>
+                    <button
+                        onClick={() => fetchDataRef.current?.()}
+                        className="mt-2 px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm shadow-sm hover:opacity-90 transition"
+                    >
+                        Retry
+                    </button>
                 </div>
             </div>
         );

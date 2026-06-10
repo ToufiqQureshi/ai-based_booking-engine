@@ -132,6 +132,12 @@ export function useBookingWidgetState() {
     }, [config]);
 
     const handleSearch = () => {
+        // Require a valid date range before navigating — never send an empty or
+        // inverted range downstream (which would render an empty results page).
+        if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
+            setIsCalendarOpen(true);
+            return;
+        }
         const targetUrl = `${window.location.origin}/book/${hotelSlug}/rooms`;
 
         const totalGuests = adults + children;
