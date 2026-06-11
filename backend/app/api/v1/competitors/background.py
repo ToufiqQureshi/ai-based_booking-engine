@@ -105,6 +105,7 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
 
             success_count = 0
             has_errors = False
+            failed_dates: list[str] = []
             last_error_reason = None
             was_stopped = False
             cancel_key = f"scrape_cancel:{comp_id}"
@@ -199,6 +200,7 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                 else:
                     has_errors = True
                     last_error_reason = rate_data.get("reason", "unknown")
+                    failed_dates.append(check_in_date_obj.isoformat())
                     logger.warning(
                         f"Failed to scrape {comp.name} on {check_in_date_obj.isoformat()}: {last_error_reason}"
                     )
@@ -217,9 +219,10 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                     if was_stopped:
                         comp.last_scrape_error = f"Stopped by you — saved {success_count} day(s) fetched so far."
                     elif has_errors:
+                        failed_str = ", ".join(failed_dates) if failed_dates else "unknown dates"
                         comp.last_scrape_error = (
-                            f"Successfully scraped {success_count}/7 days. "
-                            f"Some dates failed: {last_error_reason}"
+                            f"Fetched {success_count}/7 days. "
+                            f"Failed on: {failed_str} ({last_error_reason})"
                         )
                     else:
                         comp.last_scrape_error = None

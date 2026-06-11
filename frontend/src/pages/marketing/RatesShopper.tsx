@@ -68,7 +68,7 @@ export default function RatesShopper() {
         queryFn: async () => {
             const [rateRes, analysisRes] = await Promise.all([
                 apiClient.get('/competitors/rates/comparison', { start_date: startDate }),
-                apiClient.get('/competitors/analysis', { start_date: startDate, days: '7' }),
+                apiClient.get('/competitors/analysis', { start_date: startDate, days: 7 }),
             ]);
             return {
                 chartData: (rateRes as any).chart_data,
