@@ -536,10 +536,42 @@ async def razorpay_webhook(
 
             await session.commit()
             logger.info(f"Webhook CONFIRMED booking {booking.id} via {event_type}")
+            try:
+                import sentry_sdk
+                sentry_sdk.add_breadcrumb(
+                    category="payment",
+                    message="payment_success",
+                    level="info",
+                    data={
+                        "booking_id": str(booking.id),
+                        "hotel_id": str(booking.hotel_id),
+                        "amount": float(booking.total_amount),
+                        "event": event_type,
+                    },
+                )
+            except Exception:
+                pass
         return {"status": "ok", "booking_id": booking.id, "event": event_type}
 
     if event_type in ("payment.failed", "order.payment_failed"):
         logger.info(f"Webhook {event_type} for booking {booking.id} (no DB change — status remains PENDING)")
+        try:
+            import sentry_sdk
+            with sentry_sdk.new_scope() as scope:
+                scope.set_tag("hotel_id", str(booking.hotel_id))
+                scope.set_tag("payment_event", event_type)
+                scope.set_context("payment", {
+                    "booking_id": str(booking.id),
+                    "hotel_id": str(booking.hotel_id),
+                    "amount": float(booking.total_amount),
+                    "razorpay_order_id": razorpay_order_id,
+                })
+                sentry_sdk.capture_message(
+                    f"Payment failed: {event_type} for booking {booking.id}",
+                    level="warning",
+                )
+        except Exception:
+            pass
         return {"status": "ok", "event": event_type}
 
     # Other events (refund.processed, dispute.created, etc.) are acknowledged but
