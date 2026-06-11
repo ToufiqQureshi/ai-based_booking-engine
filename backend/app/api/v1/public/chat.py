@@ -5,6 +5,7 @@ from sqlmodel import select, and_, or_
 from pydantic import BaseModel, EmailStr
 import uuid
 import logging
+import threading
 
 from app.core.database import get_session
 from app.api.deps import DbSession
@@ -27,27 +28,58 @@ logger = logging.getLogger(__name__)
 AI_CHAT_DAILY_CAP_PER_HOTEL = 1000
 
 
+# AI-08: in-process fallback counters so the per-hotel cost cap does NOT fully
+# disappear when Redis is unavailable. Per-process (so the effective cap during a
+# Redis outage is cap x workers), but that is a bounded floor instead of the
+# previous unbounded fail-open. Reset when the UTC day rolls over.
+_fallback_lock = threading.Lock()
+_fallback_counts: dict[str, int] = {}
+_fallback_day: Optional[str] = None
+
+
+def _enforce_inprocess_ai_quota(hotel_id: str, day: str) -> None:
+    """Conservative per-process daily cap used only when Redis is unreachable."""
+    global _fallback_day
+    with _fallback_lock:
+        if _fallback_day != day:
+            _fallback_day = day
+            _fallback_counts.clear()
+        count = _fallback_counts.get(hotel_id, 0) + 1
+        _fallback_counts[hotel_id] = count
+    if count > AI_CHAT_DAILY_CAP_PER_HOTEL:
+        raise HTTPException(
+            status_code=429,
+            detail="Daily AI chat limit reached for this property. Please try again later.",
+        )
+
+
 def _enforce_hotel_ai_quota(hotel_id: str) -> None:
-    """Increment + check a per-hotel, per-day request counter in Redis.
-    Fails open if Redis is unavailable so legitimate guests aren't blocked."""
+    """Increment + check a per-hotel, per-day request counter.
+
+    Prefers Redis (shared across workers). If Redis is unavailable it now falls
+    back to a conservative per-process counter so an abuse spike during a Redis
+    outage can't burn unbounded LLM spend — instead of silently failing open.
+    """
+    day = utcnow().strftime("%Y%m%d")
     try:
         r = redis_client.get_instance()
-        if not r:
+        if r:
+            key = f"ai_chat_quota:{hotel_id}:{day}"
+            count = r.incr(key)
+            if count == 1:
+                r.expire(key, 86400)
+            if count > AI_CHAT_DAILY_CAP_PER_HOTEL:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Daily AI chat limit reached for this property. Please try again later.",
+                )
             return
-        day = utcnow().strftime("%Y%m%d")
-        key = f"ai_chat_quota:{hotel_id}:{day}"
-        count = r.incr(key)
-        if count == 1:
-            r.expire(key, 86400)
-        if count > AI_CHAT_DAILY_CAP_PER_HOTEL:
-            raise HTTPException(
-                status_code=429,
-                detail="Daily AI chat limit reached for this property. Please try again later.",
-            )
     except HTTPException:
         raise
     except Exception:
-        return
+        pass  # Redis error — fall through to the in-process floor below.
+    # Redis unavailable: enforce the conservative in-process cap (fail-closed-ish).
+    _enforce_inprocess_ai_quota(hotel_id, day)
 
 class RateOption(BaseModel):
     id: str # rate_plan_id

@@ -11,6 +11,18 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
 
+// Restrict postMessage to the embedding parent's origin when it can be derived
+// from the referrer. Falls back to '*' only when the referrer is unavailable so
+// existing embeds keep working — but guest/booking data is no longer broadcast
+// to an arbitrary wildcard origin.
+const PARENT_ORIGIN: string = (() => {
+    try {
+        return document.referrer ? new URL(document.referrer).origin : '*';
+    } catch {
+        return '*';
+    }
+})();
+
 interface Message {
     role: 'user' | 'assistant';
     content: string;
@@ -138,7 +150,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
     // Notify parent window about state changes for resizing
     useEffect(() => {
         const message = isOpen ? 'CHAT_OPEN' : 'CHAT_CLOSE';
-        window.parent.postMessage({ type: message, hotelSlug }, '*');
+        window.parent.postMessage({ type: message, hotelSlug }, PARENT_ORIGIN);
     }, [isOpen, hotelSlug]);
 
     const handleSend = async () => {
@@ -424,7 +436,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
 
                                                                     <Button
                                                                         onClick={() => {
-                                                                            window.parent.postMessage({ type: 'CHECKOUT_REDIRECT', data: bookingData }, '*');
+                                                                            window.parent.postMessage({ type: 'CHECKOUT_REDIRECT', data: bookingData }, PARENT_ORIGIN);
                                                                         }}
                                                                         className="w-full text-white font-bold py-5 shadow-sm rounded-xl flex items-center justify-center gap-1.5 group transition-all text-xs"
                                                                         style={{

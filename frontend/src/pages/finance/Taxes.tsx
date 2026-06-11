@@ -69,6 +69,26 @@ export default function Taxes() {
   };
 
   const handleSave = async () => {
+    // Validate before persisting so an invalid tax configuration (negative
+    // amounts, out-of-range rate, or an inverted slab range) can't be saved.
+    const slabs = formData.room_tax_slabs;
+    for (let i = 0; i < slabs.length; i++) {
+      const f = Number(slabs[i].from), t = Number(slabs[i].to), r = Number(slabs[i].rate);
+      if (f < 0 || t < 0 || r < 0 || r > 100) {
+        toast({ variant: 'destructive', title: 'Invalid tax slab', description: `Slab ${i + 1}: amounts must be ≥ 0 and rate between 0 and 100%.` });
+        return;
+      }
+      // "to = 0" means no upper limit; otherwise the range must be valid.
+      if (t !== 0 && t < f) {
+        toast({ variant: 'destructive', title: 'Invalid tax slab', description: `Slab ${i + 1}: "to" (${t}) must be ≥ "from" (${f}), or 0 for no upper limit.` });
+        return;
+      }
+    }
+    const roomRate = Number(formData.room_tax_rate), addonRate = Number(formData.addon_tax_rate);
+    if (roomRate < 0 || roomRate > 100 || addonRate < 0 || addonRate > 100) {
+      toast({ variant: 'destructive', title: 'Invalid tax rate', description: 'Tax rates must be between 0 and 100%.' });
+      return;
+    }
     try {
       setIsSaving(true);
       const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', {
@@ -130,7 +150,9 @@ export default function Taxes() {
   let roomSubtotal = sampleRoomPrice;
   let roomTaxAmount = 0;
   if (formData.room_tax_type === 'inclusive') {
-    roomSubtotal = sampleRoomPrice / (1 + calculatedRoomTaxRate / 100);
+    // Guard the denominator so a malformed rate can never produce NaN/Infinity.
+    const divisor = 1 + calculatedRoomTaxRate / 100;
+    roomSubtotal = divisor > 0 ? sampleRoomPrice / divisor : sampleRoomPrice;
     roomTaxAmount = sampleRoomPrice - roomSubtotal;
   } else {
     roomTaxAmount = sampleRoomPrice * (calculatedRoomTaxRate / 100);
