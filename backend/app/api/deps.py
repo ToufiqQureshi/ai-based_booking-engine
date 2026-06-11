@@ -237,6 +237,17 @@ async def get_current_active_user(
     except Exception:
         pass  # Never block auth because of session tracking failure
 
+    try:
+        import sentry_sdk
+        sentry_sdk.set_user({
+            "id": str(current_user.id),
+            "role": str(current_user.role),
+        })
+        if current_user.hotel_id:
+            sentry_sdk.set_tag("hotel_id", str(current_user.hotel_id))
+    except Exception:
+        pass
+
     return current_user
 
 
