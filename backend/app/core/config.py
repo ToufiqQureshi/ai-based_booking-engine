@@ -108,6 +108,12 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
 
+    # Number of trusted reverse proxies in front of the app (e.g. Cloudflare +
+    # Railway = 2). Used to pick the real client IP from X-Forwarded-For instead
+    # of trusting the spoofable left-most hop. Default 0 keeps the legacy
+    # behavior; set this in production to make IP rate limits non-spoofable.
+    TRUSTED_PROXY_COUNT: int = 0
+
     # Razorpay Payment Gateway
     RAZORPAY_KEY_ID: Optional[str] = None
     RAZORPAY_KEY_SECRET: Optional[str] = None
