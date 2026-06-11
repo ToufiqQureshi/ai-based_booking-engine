@@ -5,10 +5,9 @@ from sqlmodel import select, and_, or_
 from pydantic import BaseModel, EmailStr
 import uuid
 import logging
-import threading
-
 from app.core.database import get_session
 from app.api.deps import DbSession
+from app.core.ai_usage import enforce_ai_token_quota, record_ai_usage as _record_ai_usage
 from app.models.hotel import Hotel, HotelRead
 from app.models.room import RoomType, RoomTypeRead, RoomBlock
 from app.models.booking import Booking, BookingStatus, Guest
@@ -21,65 +20,6 @@ from app.core.time import utcnow
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
-
-# AI-01: hard daily cap on anonymous AI chat requests per hotel. The IP-based
-# slowapi limit is spoofable via X-Forwarded-For, so this per-hotel budget is
-# the real backstop against an attacker burning a hotel's LLM spend.
-AI_CHAT_DAILY_CAP_PER_HOTEL = 1000
-
-
-# AI-08: in-process fallback counters so the per-hotel cost cap does NOT fully
-# disappear when Redis is unavailable. Per-process (so the effective cap during a
-# Redis outage is cap x workers), but that is a bounded floor instead of the
-# previous unbounded fail-open. Reset when the UTC day rolls over.
-_fallback_lock = threading.Lock()
-_fallback_counts: dict[str, int] = {}
-_fallback_day: Optional[str] = None
-
-
-def _enforce_inprocess_ai_quota(hotel_id: str, day: str) -> None:
-    """Conservative per-process daily cap used only when Redis is unreachable."""
-    global _fallback_day
-    with _fallback_lock:
-        if _fallback_day != day:
-            _fallback_day = day
-            _fallback_counts.clear()
-        count = _fallback_counts.get(hotel_id, 0) + 1
-        _fallback_counts[hotel_id] = count
-    if count > AI_CHAT_DAILY_CAP_PER_HOTEL:
-        raise HTTPException(
-            status_code=429,
-            detail="Daily AI chat limit reached for this property. Please try again later.",
-        )
-
-
-def _enforce_hotel_ai_quota(hotel_id: str) -> None:
-    """Increment + check a per-hotel, per-day request counter.
-
-    Prefers Redis (shared across workers). If Redis is unavailable it now falls
-    back to a conservative per-process counter so an abuse spike during a Redis
-    outage can't burn unbounded LLM spend — instead of silently failing open.
-    """
-    day = utcnow().strftime("%Y%m%d")
-    try:
-        r = redis_client.get_instance()
-        if r:
-            key = f"ai_chat_quota:{hotel_id}:{day}"
-            count = r.incr(key)
-            if count == 1:
-                r.expire(key, 86400)
-            if count > AI_CHAT_DAILY_CAP_PER_HOTEL:
-                raise HTTPException(
-                    status_code=429,
-                    detail="Daily AI chat limit reached for this property. Please try again later.",
-                )
-            return
-    except HTTPException:
-        raise
-    except Exception:
-        pass  # Redis error — fall through to the in-process floor below.
-    # Redis unavailable: enforce the conservative in-process cap (fail-closed-ish).
-    _enforce_inprocess_ai_quota(hotel_id, day)
 
 class RateOption(BaseModel):
     id: str # rate_plan_id
@@ -200,7 +140,7 @@ class GuestChatResponse(BaseModel):
 
 from fastapi import Request
 from fastapi.responses import StreamingResponse
-from app.core.limiter import limiter
+from app.core.limiter import limiter, get_real_ip
 
 
 # ---------------------------------------------------------------------------
@@ -258,8 +198,8 @@ async def chat_with_guest_ai(
                 detail="Guest chatbot feature is not enabled for this hotel"
             )
 
-        # AI-01: per-hotel daily budget backstop (IP limit is spoofable).
-        _enforce_hotel_ai_quota(hotel.id)
+        # AI-01: enforce per-agent daily token budget from subscription (IP limit is spoofable).
+        await enforce_ai_token_quota("guest", hotel.id, session)
 
         # Fetch integration settings for dynamic AI provider/keys
         from app.models.integration import IntegrationSettings
@@ -303,9 +243,10 @@ async def chat_with_guest_ai(
         # 4. Invoke Agent
         try:
             result = await agent.arun(messages)
-            # AI-03: record per-hotel token spend for cost visibility.
-            from app.core.ai_usage import record_ai_usage
-            record_ai_usage(hotel.id, result)
+            # Identify the guest by email if shared, else by client IP, so we
+            # can report real distinct-visitor counts (not token estimates).
+            _guest_id = payload.guest_email or get_real_ip(request)
+            _record_ai_usage(hotel.id, result, agent_type="guest", user_identifier=_guest_id)
             ai_response = result.content or ""
             return GuestChatResponse(response=ai_response)
         except Exception as invoke_err:
@@ -422,8 +363,8 @@ async def stream_guest_ai(
                 detail="Guest chatbot feature is not enabled for this hotel",
             )
 
-        # AI-01: per-hotel daily budget backstop (IP limit is spoofable).
-        _enforce_hotel_ai_quota(hotel.id)
+        # AI-01: enforce per-agent daily token budget from subscription (IP limit is spoofable).
+        await enforce_ai_token_quota("guest", hotel.id, session)
 
         from app.models.integration import IntegrationSettings
         int_res = await session.execute(
@@ -475,6 +416,10 @@ async def stream_guest_ai(
 
     import json as _json
 
+    # Capture the guest identity for usage accounting before entering the
+    # generator (request object is still in scope here).
+    _stream_guest_id = payload.guest_email or get_real_ip(request)
+
     async def _event_gen():
         try:
             from agno.agent import RunContentEvent
@@ -485,6 +430,13 @@ async def stream_guest_ai(
             logger.error("Stream event error: %s", exc)
             yield f"data: {_json.dumps({'error': 'Stream interrupted'})}\n\n"
         finally:
+            # Record usage once the stream finishes. Agno stores the completed
+            # run (with token metrics) on the agent after streaming.
+            try:
+                _final = getattr(agent, "run_response", None)
+                _record_ai_usage(hotel.id, _final, agent_type="guest", user_identifier=_stream_guest_id)
+            except Exception:
+                pass
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(

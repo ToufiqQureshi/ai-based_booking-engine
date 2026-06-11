@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, Query, Request, status, Depends
 from typing import List
+from datetime import timedelta
 from pydantic import BaseModel
 import logging
 
@@ -9,20 +10,118 @@ from app.core.feature_flags import require_feature
 # importing app.core.agent at module load pulls in pandas + matplotlib (~150MB
 # RSS) into every worker at boot even when the agent is never used.
 from app.core.agent import create_agent_executor
+from app.core.limiter import limiter
+from app.core.ai_usage import enforce_ai_token_quota, record_ai_usage
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agent", tags=["AI Agent"])
 
+# Rough average tokens per guest conversation — used only for the "estimated
+# conversations" display metric shown to hoteliers. Not used in billing logic.
+_AVG_TOKENS_PER_CONVERSATION = 800
+
+
 class ChatRequest(BaseModel):
     message: str
-    history: List[List[str]] = [] # [[role, content], ...]
+    history: List[List[str]] = []  # [[role, content], ...]
+
 
 class ChatResponse(BaseModel):
     response: str
 
-from fastapi import Request
-from app.core.limiter import limiter
+
+@router.get("/usage")
+async def get_ai_usage(
+    current_user: CurrentUser,
+    session: DbSession,
+    days: int = Query(default=7, ge=1, le=30),
+):
+    """Return this hotel's AI usage breakdown for the last N days (max 30).
+
+    Shows per-agent token spend, daily limits, % used today, and estimated
+    number of guest conversations so hoteliers understand their AI bill.
+    """
+    from app.core.redis_client import redis_client
+    from app.core.time import utcnow
+    from sqlmodel import select
+    from app.models.subscription import Subscription
+
+    hotel_id = current_user.hotel_id
+
+    sub = (await session.execute(
+        select(Subscription).where(Subscription.hotel_id == hotel_id)
+    )).scalar_one_or_none()
+
+    limits = {
+        "hotelier": sub.ai_hotelier_daily_limit if sub else 0,
+        "guest":    sub.ai_guest_chat_daily_limit if sub else 0,
+        "whatsapp": sub.ai_whatsapp_daily_limit if sub else 0,
+    }
+
+    r = redis_client.get_instance()
+    today = utcnow().date()
+    today_iso = today.isoformat()
+
+    agents = {
+        "hotelier": {"label": "Dashboard AI (you)"},
+        "guest":    {"label": "Guest Chat Widget"},
+        "whatsapp": {"label": "WhatsApp Bot"},
+    }
+
+    for agent_type, info in agents.items():
+        info["daily_history"] = {}        # date -> tokens
+        info["messages_today"] = 0        # AI message exchanges today
+        info["unique_users_today"] = 0    # distinct people who talked today
+        for i in range(days):
+            day = today - timedelta(days=i)
+            day_str = day.strftime("%Y%m%d")
+            tokens = 0
+            if r:
+                raw = r.get(f"ai_tokens:{agent_type}:{hotel_id}:{day_str}")
+                tokens = int(raw) if raw else 0
+            info["daily_history"][day.isoformat()] = tokens
+        info["today_tokens"] = info["daily_history"].get(today_iso, 0)
+
+        if r:
+            today_str = today.strftime("%Y%m%d")
+            runs_raw = r.get(f"ai_runs:{agent_type}:{hotel_id}:{today_str}")
+            info["messages_today"] = int(runs_raw) if runs_raw else 0
+            try:
+                info["unique_users_today"] = r.scard(f"ai_users:{agent_type}:{hotel_id}:{today_str}")
+            except Exception:
+                info["unique_users_today"] = 0
+
+    def _build_agent_summary(agent_type: str, info: dict) -> dict:
+        today_tokens = info["today_tokens"]
+        limit = limits[agent_type]
+        pct = round((today_tokens / limit * 100), 1) if limit > 0 else None
+        period_total = sum(info["daily_history"].values())
+        return {
+            "label": info["label"],
+            "today_tokens": today_tokens,
+            "daily_limit": limit,
+            "pct_of_limit_used_today": pct,
+            # Real counts from Redis — not token-based estimates.
+            "messages_today": info["messages_today"],
+            "unique_users_today": info["unique_users_today"],
+            # Backward-compat: real unique-user count, falling back to a token
+            # estimate only when no per-user data exists for the day.
+            "estimated_conversations_today": info["unique_users_today"] or round(today_tokens / _AVG_TOKENS_PER_CONVERSATION),
+            "period_total_tokens": period_total,
+            "daily_history": info["daily_history"],
+        }
+
+    return {
+        "hotel_id": hotel_id,
+        "period_days": days,
+        "data_available": r is not None,
+        "agents": {
+            agent_type: _build_agent_summary(agent_type, info)
+            for agent_type, info in agents.items()
+        },
+    }
+
 
 @router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_feature("feature_ai_agent"))])
 @limiter.limit("15/minute")
@@ -38,6 +137,9 @@ async def chat_with_agent(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="AI Assistant feature is not enabled for your subscription plan"
         )
+
+    # AI-QUOTA: enforce per-agent subscription daily token budget before spending any tokens
+    await enforce_ai_token_quota("hotelier", current_user.hotel_id, session)
 
     try:
         # 1. Initialize Agent (lazy import — see INF-01 note at top of file)
@@ -60,9 +162,7 @@ async def chat_with_agent(
 
         # 4. Run agent
         result = await agent.arun(input_messages)
-        # AI-03: record per-hotel token spend for cost visibility.
-        from app.core.ai_usage import record_ai_usage
-        record_ai_usage(current_user.hotel_id, result)
+        record_ai_usage(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
         return ChatResponse(response=result.content or "")
 
     except ValueError as e:

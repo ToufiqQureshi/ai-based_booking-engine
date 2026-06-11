@@ -26,7 +26,9 @@ class BulkActionPayload(BaseModel):
     plan_name: str | None = None
     whatsapp_credits: int | None = None
     sms_credits: int | None = None
-    ai_usage_limit: int | None = None
+    ai_hotelier_daily_limit: int | None = None
+    ai_guest_chat_daily_limit: int | None = None
+    ai_whatsapp_daily_limit: int | None = None
 
 
 @router.post("/hotels/bulk")
@@ -101,8 +103,12 @@ async def bulk_hotel_action(
                     sub.whatsapp_credits = payload.whatsapp_credits
                 if payload.sms_credits is not None:
                     sub.sms_credits = payload.sms_credits
-                if payload.ai_usage_limit is not None:
-                    sub.ai_usage_limit = payload.ai_usage_limit
+                if payload.ai_hotelier_daily_limit is not None:
+                    sub.ai_hotelier_daily_limit = payload.ai_hotelier_daily_limit
+                if payload.ai_guest_chat_daily_limit is not None:
+                    sub.ai_guest_chat_daily_limit = payload.ai_guest_chat_daily_limit
+                if payload.ai_whatsapp_daily_limit is not None:
+                    sub.ai_whatsapp_daily_limit = payload.ai_whatsapp_daily_limit
                 sub.updated_at = datetime.utcnow()
                 session.add(sub)
 

@@ -2,9 +2,9 @@
 Super Admin — Subscriptions, quotas, plan features, broadcasts, audit logs.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlmodel import select
 
 from app.api.deps import DbSession
@@ -12,7 +12,7 @@ from app.models.audit import AuditLog, SystemBroadcast
 from app.models.hotel import Hotel
 from app.models.subscription import Subscription
 from app.models.user import User
-from .hotels import get_super_admin, load_plan_features, save_plan_features, _get_client_ip
+from .hotels import get_super_admin, load_plan_features, save_plan_features, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -21,7 +21,7 @@ router = APIRouter()
 @router.post("/hotels/{hotel_id}/subscription")
 async def update_subscription(
     hotel_id: str, sub_data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.write")),
 ):
     """Create or update a hotel's subscription and sync feature flags."""
     hotel = await session.get(Hotel, hotel_id)
@@ -66,14 +66,16 @@ async def update_subscription(
 @router.patch("/hotels/{hotel_id}/quotas")
 async def update_quotas(
     hotel_id: str, request: Request, data: dict, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.write")),
 ):
     sub = (await session.execute(select(Subscription).where(Subscription.hotel_id == hotel_id))).scalar_one_or_none()
     if not sub:
         sub = Subscription(hotel_id=hotel_id)
     if "whatsapp_credits" in data: sub.whatsapp_credits = data["whatsapp_credits"]
     if "sms_credits" in data: sub.sms_credits = data["sms_credits"]
-    if "ai_usage_limit" in data: sub.ai_usage_limit = data["ai_usage_limit"]
+    if "ai_hotelier_daily_limit" in data: sub.ai_hotelier_daily_limit = data["ai_hotelier_daily_limit"]
+    if "ai_guest_chat_daily_limit" in data: sub.ai_guest_chat_daily_limit = data["ai_guest_chat_daily_limit"]
+    if "ai_whatsapp_daily_limit" in data: sub.ai_whatsapp_daily_limit = data["ai_whatsapp_daily_limit"]
     sub.updated_at = datetime.utcnow()
     session.add(sub)
 
@@ -81,22 +83,83 @@ async def update_quotas(
     session.add(AuditLog(
         user_id=super_admin.id, user_email=super_admin.email, hotel_id=hotel_id,
         action="UPDATE_QUOTAS",
-        description=f"Updated quotas for hotel '{hotel.name if hotel else hotel_id}': WA={sub.whatsapp_credits}, SMS={sub.sms_credits}, AI={sub.ai_usage_limit}",
+        description=f"Updated quotas for hotel '{hotel.name if hotel else hotel_id}': WA={sub.whatsapp_credits}, SMS={sub.sms_credits}, AI_hotelier={sub.ai_hotelier_daily_limit}, AI_guest={sub.ai_guest_chat_daily_limit}, AI_whatsapp={sub.ai_whatsapp_daily_limit}",
         ip_address=_get_client_ip(request),
     ))
     await session.commit()
     return {"message": "Quotas updated successfully", "quotas": sub}
 
 
+@router.get("/hotels/{hotel_id}/ai-usage")
+async def get_hotel_ai_usage(
+    hotel_id: str,
+    session: DbSession,
+    days: int = Query(default=7, ge=1, le=35, description="Number of past days to return (max 35)"),
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.read")),
+):
+    """Return per-agent, per-day token usage and subscription limits for a hotel.
+
+    Reads daily counters from Redis (key: ai_tokens:{agent_type}:{hotel_id}:{YYYYMMDD}).
+    Returns zeroes for days with no recorded usage.
+    """
+    from app.core.redis_client import redis_client
+    from app.core.time import utcnow
+
+    r = redis_client.get_instance()
+    today = utcnow().date()
+    today_iso = today.isoformat()
+
+    agent_types = ["hotelier", "guest", "whatsapp"]
+
+    # Build per-agent daily breakdown
+    per_agent: dict[str, dict] = {}
+    for agent in agent_types:
+        daily: dict[str, int] = {}
+        total = 0
+        for i in range(days):
+            day = today - timedelta(days=i)
+            day_str = day.strftime("%Y%m%d")
+            tokens = 0
+            if r:
+                raw = r.get(f"ai_tokens:{agent}:{hotel_id}:{day_str}")
+                tokens = int(raw) if raw else 0
+            daily[day.isoformat()] = tokens
+            total += tokens
+        per_agent[agent] = {
+            "today_tokens": daily.get(today_iso, 0),
+            "period_total": total,
+            "daily_usage": daily,
+        }
+
+    sub = (await session.execute(
+        select(Subscription).where(Subscription.hotel_id == hotel_id)
+    )).scalar_one_or_none()
+
+    return {
+        "hotel_id": hotel_id,
+        "period_days": days,
+        "redis_available": r is not None,
+        "limits": {
+            "hotelier": sub.ai_hotelier_daily_limit if sub else 0,
+            "guest":    sub.ai_guest_chat_daily_limit if sub else 0,
+            "whatsapp": sub.ai_whatsapp_daily_limit if sub else 0,
+        },
+        "usage": per_agent,
+    }
+
+
 @router.get("/plan-features")
-async def get_plan_features(super_admin: User = Depends(get_super_admin)):
+async def get_plan_features(
+    session: DbSession,
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.read")),
+):
     return load_plan_features()
 
 
 @router.post("/plan-features")
 async def update_plan_features(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.write")),
 ):
     """Update plan-to-features mapping and sync all matching hotels."""
     current = load_plan_features()

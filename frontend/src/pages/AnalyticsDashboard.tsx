@@ -59,6 +59,26 @@ interface LiveEvent {
   amount?: number;
 }
 
+interface AgentUsageInfo {
+  label: string;
+  today_tokens: number;
+  daily_limit: number;
+  pct_of_limit_used_today: number | null;
+  messages_today: number;
+  unique_users_today: number;
+  estimated_conversations_today: number;
+  daily_history: Record<string, number>;
+}
+
+interface AIUsageData {
+  data_available: boolean;
+  agents: {
+    hotelier: AgentUsageInfo;
+    guest: AgentUsageInfo;
+    whatsapp: AgentUsageInfo;
+  };
+}
+
 const CHART_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6'];
 
 const FUNNEL_COLORS = ['#1e293b', '#4f46e5', '#0ea5e9', '#10b981'];
@@ -220,6 +240,15 @@ export const AnalyticsDashboard: React.FC = () => {
     enabled: activeTab === 'cancellations',
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
+  });
+
+  // AI token usage — loads only when AI tab is active, 5-min stale (changes per conversation)
+  const { data: aiUsageData } = useQuery<AIUsageData>({
+    queryKey: ['agentUsage'],
+    queryFn: () => api.get<AIUsageData>('/agent/usage?days=7'),
+    enabled: activeTab === 'ai',
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
   });
 
   // Get active query error if any
@@ -898,6 +927,94 @@ export const AnalyticsDashboard: React.FC = () => {
                   )}
                 </SectionCard>
               </div>
+            )}
+
+            {/* AI Agent Token Usage — only shown when AI data + Redis both available */}
+            {!isAiLoading && aiData && aiUsageData?.data_available && (
+                <SectionCard
+                  title="AI Agent Usage Today"
+                  subtitle="Token budget per guest-facing agent — resets midnight UTC · ~800 tokens = 1 conversation"
+                  icon={<MessageCircle className="w-4 h-4" />}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {([
+                      { key: 'guest' as const, color: '#10b981' },
+                      { key: 'whatsapp' as const, color: '#f59e0b' },
+                    ] as const).map(({ key, color }) => {
+                      const info = aiUsageData.agents[key];
+                      const pct = info.pct_of_limit_used_today ?? 0;
+                      const remaining = Math.max(0, info.daily_limit - info.today_tokens);
+                      const barColor = pct > 90 ? '#ef4444' : pct > 70 ? '#f59e0b' : '#10b981';
+                      const badgeCls = pct > 90
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        : pct > 70
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+                      const chartData = Object.entries(info.daily_history)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([date, tokens]) => ({ day: date.slice(5), tokens }));
+                      return (
+                        <div key={key} className="bg-muted/30 rounded-2xl border border-border p-5 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                              <span className="text-sm font-bold text-foreground">{info.label}</span>
+                            </div>
+                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${badgeCls}`}>
+                              {pct}% used
+                            </span>
+                          </div>
+
+                          {/* Progress bar */}
+                          <div>
+                            <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                              <span>{info.today_tokens.toLocaleString()} tokens used</span>
+                              <span>{remaining.toLocaleString()} remaining</span>
+                            </div>
+                            <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: barColor }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Real interaction counts today */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-background rounded-xl p-3 border border-border text-center">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Guests Today</p>
+                              <p className="text-2xl font-black text-foreground mt-1">{info.unique_users_today}</p>
+                            </div>
+                            <div className="bg-background rounded-xl p-3 border border-border text-center">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Messages</p>
+                              <p className="text-2xl font-black text-foreground mt-1">{info.messages_today}</p>
+                            </div>
+                            <div className="bg-background rounded-xl p-3 border border-border text-center">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Limit</p>
+                              <p className="text-2xl font-black text-foreground mt-1">{(info.daily_limit / 1000).toFixed(0)}k</p>
+                              <p className="text-[10px] text-muted-foreground">tokens</p>
+                            </div>
+                          </div>
+
+                          {/* 7-day sparkline */}
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Last 7 days</p>
+                            <ResponsiveContainer width="100%" height={56}>
+                              <BarChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="day" tick={{ fontSize: 8 }} axisLine={false} tickLine={false} />
+                                <Tooltip
+                                  formatter={(v: number) => [v.toLocaleString(), 'tokens']}
+                                  contentStyle={{ borderRadius: '8px', fontSize: 11, border: 'none' }}
+                                />
+                                <Bar dataKey="tokens" fill={color} radius={[2, 2, 0, 0]} opacity={0.85} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SectionCard>
             )}
           </TabsContent>
 
