@@ -5,11 +5,12 @@ from collections import defaultdict
 from datetime import date, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.cache import cache_response
+from app.core.limiter import limiter
 from app.models.booking import Booking, BookingStatus
 from app.models.room import RoomType
 
@@ -33,6 +34,7 @@ def _build_occupied_per_date(bookings, start_date: date, end_date: date) -> dict
 
 
 @router.get("/dashboard")
+@limiter.limit("30/minute")
 @cache_response(expire=1800, key_prefix="reports_dashboard")
 async def get_dashboard_stats(
     request: Request,
@@ -97,6 +99,7 @@ async def get_dashboard_stats(
 
 
 @router.get("/occupancy")
+@limiter.limit("30/minute")
 @cache_response(expire=1800, key_prefix="reports_occupancy")
 async def get_occupancy_report(
     request: Request,
@@ -110,6 +113,10 @@ async def get_occupancy_report(
         end_date = date.today()
     if not start_date:
         start_date = end_date - timedelta(days=30)
+
+    # Cap range to 365 days to prevent unbounded DB scans
+    if (end_date - start_date).days > 365:
+        raise HTTPException(status_code=400, detail="Date range cannot exceed 365 days")
 
     inventory_res = await session.execute(
         select(func.sum(RoomType.total_inventory)).where(RoomType.hotel_id == current_user.hotel_id)
