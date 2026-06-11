@@ -40,6 +40,19 @@ STALE_SCRAPE_MINUTES = 15
 # prevents rapid re-clicks from multiplying the third-party bill.
 MANUAL_SCRAPE_COOLDOWN_SECONDS = 5 * 60
 
+# Per-process semaphore: caps concurrent ScrapingBee calls so multiple hoteliers
+# clicking "Refresh Rates" simultaneously don't burst past the plan's concurrent
+# request limit and trigger 429s.  3 is conservative — raise if the plan allows more.
+# NOTE: this is per-worker; with multiple Railway replicas multiply accordingly.
+_SCRAPINGBEE_SEMAPHORE: Optional[asyncio.Semaphore] = None
+
+
+def _get_semaphore() -> asyncio.Semaphore:
+    global _SCRAPINGBEE_SEMAPHORE
+    if _SCRAPINGBEE_SEMAPHORE is None:
+        _SCRAPINGBEE_SEMAPHORE = asyncio.Semaphore(3)
+    return _SCRAPINGBEE_SEMAPHORE
+
 
 def _get_api_key() -> Optional[str]:
     """
@@ -132,8 +145,9 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             "window_height": "1080",
         }
         try:
-            async with httpx.AsyncClient(timeout=SCRAPINGBEE_HTTP_TIMEOUT_SECONDS) as client:
-                response = await client.get(SCRAPINGBEE_URL, params=params)
+            async with _get_semaphore():
+                async with httpx.AsyncClient(timeout=SCRAPINGBEE_HTTP_TIMEOUT_SECONDS) as client:
+                    response = await client.get(SCRAPINGBEE_URL, params=params)
         except httpx.HTTPError as e:
             record_scrapingbee_request(hotel_id)
             logger.error(f"ScrapingBee request failed: {e}")
