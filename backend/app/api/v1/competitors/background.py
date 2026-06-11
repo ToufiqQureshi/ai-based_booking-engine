@@ -126,11 +126,14 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
 
                 rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
 
-                # Decodo session died, is blocked, or got stuck — rotate and retry this day once.
+                # Decodo session died, is blocked, got rate-limited, or got stuck — rotate and retry this day once.
                 if rate_data.get("reason") in (
                     "decodo_session_failed",
                     "API_status_400",
                     "API_status_422",
+                    "API_status_429",
+                    "API_status_502",
+                    "API_status_503",
                     "decodo_613_target_blocked",
                     "empty_html_content",
                     "shield_blocked",
