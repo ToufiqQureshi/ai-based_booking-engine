@@ -37,6 +37,16 @@ function getApiUrl(): string {
     return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
 }
 
+// Target the embedding parent's origin (derived from the referrer) instead of a
+// wildcard '*'. Falls back to '*' only when the referrer is unavailable.
+const PARENT_ORIGIN: string = (() => {
+    try {
+        return document.referrer ? new URL(document.referrer).origin : '*';
+    } catch {
+        return '*';
+    }
+})();
+
 export default function ChainBookingWidget() {
     const { chainSlug } = useParams<{ chainSlug: string }>();
     const widgetRef = useRef<HTMLDivElement>(null);
@@ -140,8 +150,8 @@ export default function ChainBookingWidget() {
                 ? Math.max(el.scrollHeight + 16, 860)
                 : el.scrollHeight + 16;
             if (window.parent !== window) {
-                window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, '*');
-                window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, '*');
+                window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, PARENT_ORIGIN);
+                window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, PARENT_ORIGIN);
             }
         };
         sendHeight();
@@ -154,6 +164,11 @@ export default function ChainBookingWidget() {
     const handleSearch = () => {
         if (!selectedProperty) {
             setIsPropertyOpen(true);
+            return;
+        }
+        // Require a valid date range before navigating to the property's rooms page.
+        if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
+            setIsCalendarOpen(true);
             return;
         }
         const params = new URLSearchParams();
@@ -448,20 +463,17 @@ export default function ChainBookingWidget() {
                                                     );
                                                 }
                                                 
-                                                let price = startingPrice > 0 ? startingPrice : 4200;
-                                                const day = date.getDay();
-                                                const isWeekend = day === 5 || day === 6;
-                                                price = price + (isWeekend ? 500 : 0);
-                                                const isSoldOut = date.getDate() === 13;
+                                                // Show the property's real starting ("from") rate only when
+                                                // known. No fabricated weekend surcharge and no fake per-day
+                                                // "Sold Out": real price & availability are confirmed on the
+                                                // next step against live inventory.
+                                                const showPrice = !isPast && startingPrice > 0;
                                                 return (
                                                     <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
                                                         <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                                        {!isPast && (
-                                                            <span className={cn(
-                                                                "text-[9px] font-extrabold leading-none mt-1",
-                                                                isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
-                                                            )}>
-                                                                {isSoldOut ? "Sold Out" : `₹${price}`}
+                                                        {showPrice && (
+                                                            <span className="text-[9px] font-extrabold leading-none mt-1 text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold">
+                                                                ₹{startingPrice}
                                                             </span>
                                                         )}
                                                     </div>
@@ -471,7 +483,7 @@ export default function ChainBookingWidget() {
                                     />
                                     {selectedProperty && (
                                         <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                                            <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
+                                            Starting (&ldquo;from&rdquo;) rates &middot; final price &amp; availability confirmed at the next step
                                         </div>
                                     )}
                                 </div>

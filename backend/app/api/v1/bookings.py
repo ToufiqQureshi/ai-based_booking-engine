@@ -374,6 +374,24 @@ async def create_booking(
         hotel_settings=h_settings
     )
     
+    try:
+        import sentry_sdk
+        sentry_sdk.add_breadcrumb(
+            category="booking",
+            message="booking_created",
+            level="info",
+            data={
+                "booking_id": str(booking.id),
+                "booking_number": booking.booking_number,
+                "hotel_id": str(booking.hotel_id),
+                "total_amount": float(booking.total_amount),
+                "source": str(booking.source),
+                "rooms_count": len(rooms_list),
+            },
+        )
+    except Exception:
+        pass
+
     response = booking.model_dump()
     response["guest"] = guest.model_dump()
     return response

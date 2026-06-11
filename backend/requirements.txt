@@ -40,4 +40,6 @@ supabase
 user-agents
 scrapling
 uvicorn
+scrapingbee>=1.0.1
+
 

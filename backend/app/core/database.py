@@ -219,6 +219,11 @@ async def init_db():
         "ALTER TABLE integration_settings ADD COLUMN webhook_secret_vault_id VARCHAR(255)",
         "ALTER TABLE chains ADD COLUMN primary_color VARCHAR(50) DEFAULT '#4f46e5'",
         "ALTER TABLE chains ADD COLUMN is_active BOOLEAN DEFAULT TRUE",
+        # DB-03: hotel pause fields (added 2026-06-01 — Alembic migration
+        # 20260601_1230 exists but deploys use create_all, not alembic upgrade)
+        "ALTER TABLE hotels ADD COLUMN is_paused BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE hotels ADD COLUMN pause_reason TEXT",
+        "ALTER TABLE hotels ADD COLUMN paused_at TIMESTAMPTZ",
     ]:
         try:
             async with engine.begin() as conn:
@@ -234,6 +239,10 @@ async def init_db():
     for idx_sql in [
         "CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings (created_at)",
         "CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings (hotel_id, check_in, check_out)",
+        # Availability is the hottest public query (overlap by hotel + status +
+        # date range). Adding status to the composite lets Postgres filter on the
+        # active statuses inside the index instead of scanning then filtering.
+        "CREATE INDEX IF NOT EXISTS idx_bookings_hotel_status_dates ON bookings (hotel_id, status, check_in, check_out)",
         "CREATE INDEX IF NOT EXISTS idx_room_rates_lookup ON room_rates (room_type_id, date_from, date_to)",
         "CREATE INDEX IF NOT EXISTS idx_competitor_rates_lookup ON competitor_rates (competitor_id, check_in_date, fetched_at)",
         # Enforce DB-level uniqueness on users — the model declares unique=True

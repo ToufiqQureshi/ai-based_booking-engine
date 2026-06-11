@@ -2,7 +2,6 @@ import React from 'react';
 import { format } from 'date-fns';
 import { Search, Calendar as CalendarIcon, Users, ChevronDown, Minus, Plus, ArrowRight, X } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 import { Popover, PopoverTrigger } from '@/components/ui/popover';
 
 export function ModernFloatingLayout(props: any) {
@@ -98,20 +97,17 @@ export function ModernFloatingLayout(props: any) {
                                         DayContent: ({ date }: any) => {
                                             const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
                                             const isPast = date < todayObj;
-                                            let price = startingPrice > 0 ? startingPrice : 4200;
-                                            const day = date.getDay();
-                                            const isWeekend = day === 5 || day === 6;
-                                            price = price + (isWeekend ? 500 : 0);
-                                            const isSoldOut = date.getDate() === 13;
+                                            // Show the hotel's real starting ("from") rate only when it is
+                                            // known. No fabricated weekend surcharge and no fake per-day
+                                            // "Sold Out": this widget has no live per-day inventory — real
+                                            // price & availability are confirmed on the next step.
+                                            const showPrice = !isPast && startingPrice > 0;
                                             return (
                                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
                                                     <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                                    {!isPast && (
-                                                        <span className={cn(
-                                                            "text-[9px] font-extrabold leading-none mt-1",
-                                                            isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
-                                                        )}>
-                                                            {isSoldOut ? "Sold Out" : `₹${price}`}
+                                                    {showPrice && (
+                                                        <span className="text-[9px] font-extrabold leading-none mt-1 text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold">
+                                                            ₹{startingPrice}
                                                         </span>
                                                     )}
                                                 </div>
@@ -120,7 +116,7 @@ export function ModernFloatingLayout(props: any) {
                                     }}
                                 />
                                 <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
+                                    Starting (&ldquo;from&rdquo;) rates &middot; final price &amp; availability confirmed at the next step
                                 </div>
                             </div>
                         </div>

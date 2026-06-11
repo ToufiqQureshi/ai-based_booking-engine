@@ -2,12 +2,10 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Depends
 import os
 import uuid
 import io
-import aiofiles
 import logging
-from typing import List
-from pathlib import Path
 from PIL import Image, UnidentifiedImageError
 from app.core.supabase import get_supabase
+from app.core.limiter import limiter
 from app.api.deps import get_current_active_user
 
 logger = logging.getLogger(__name__)
@@ -53,7 +51,9 @@ def _detect_safe_content_type(contents: bytes, original_ext: str) -> str:
 
 
 @router.post("", response_model=dict)
+@limiter.limit("20/hour")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     current_user = Depends(get_current_active_user)
 ):

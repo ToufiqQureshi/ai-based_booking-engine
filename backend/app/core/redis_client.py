@@ -11,52 +11,80 @@ _logger = logging.getLogger(__name__)
 
 class RedisClient:
     _instance: Optional[redis.Redis] = None
-    _is_disabled: bool = False
+    # Epoch ts before which we skip Redis and serve from local memory. After a
+    # failure we back off for _RETRY_COOLDOWN_SECONDS and then transparently
+    # retry, so a worker recovers ON ITS OWN once Redis comes back — no process
+    # restart needed. (The old behavior disabled Redis PERMANENTLY on the first
+    # failure: a single blip at boot left that worker degraded to per-process
+    # memory for life, silently breaking shared rate limits, distributed locks
+    # and payment idempotency across workers.)
+    _retry_after: float = 0.0
+    _RETRY_COOLDOWN_SECONDS: int = 300
     _local_memory_cache = {} # Format: {key: (value, expire_at)}
     _local_nx_locks: dict[str, asyncio.Lock] = {}
     _local_nx_locks_guard: Optional[asyncio.Lock] = None
 
     @classmethod
+    def _mark_failed(cls, e: Exception) -> None:
+        """Drop the dead connection and back off before the next attempt.
+
+        Called both on connect failure and on a mid-flight operation failure so
+        we don't pay the socket timeout on every subsequent call while Redis is
+        down — we serve from memory for the cooldown, then retry once.
+        """
+        cls._instance = None
+        cls._retry_after = time.time() + cls._RETRY_COOLDOWN_SECONDS
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            _logger.warning(f"Redis unavailable in test environment. Using Local Memory. Error: {e}")
+        else:
+            _logger.error(
+                f"Redis unavailable; serving from local memory for {cls._RETRY_COOLDOWN_SECONDS}s "
+                f"then retrying. Error: {e}"
+            )
+
+    @classmethod
     def get_instance(cls) -> Optional[redis.Redis]:
-        if cls._is_disabled:
+        # Healthy cached connection — reuse it.
+        if cls._instance is not None:
+            return cls._instance
+
+        # In the back-off window after a recent failure: stay on memory so we
+        # don't hammer a down Redis (and eat 2s timeouts) on every request.
+        if time.time() < cls._retry_after:
             return None
-            
-        if cls._instance is None:
-            from app.core.config import get_settings
-            settings = get_settings()
-            
-            try:
-                # If REDIS_URL is provided (typical for Railway/Heroku), use it directly
-                if settings.REDIS_URL:
-                    cls._instance = redis.Redis.from_url(
-                        settings.REDIS_URL,
-                        decode_responses=True,
-                        socket_timeout=2,
-                        socket_connect_timeout=2,
-                        retry_on_timeout=True
-                    )
-                else:
-                    # Fallback to discrete parameters
-                    cls._instance = redis.Redis(
-                        host=settings.REDIS_HOST,
-                        port=settings.REDIS_PORT,
-                        password=settings.REDIS_PASSWORD,
-                        db=0,
-                        decode_responses=True,
-                        socket_timeout=2,
-                        socket_connect_timeout=2,
-                        retry_on_timeout=True
-                    )
-                # Ping test to verify connection
-                cls._instance.ping()
-            except Exception as e:
-                if "PYTEST_CURRENT_TEST" in os.environ:
-                    _logger.warning(f"Redis Connection Failed in test environment. Using Local Memory. Error: {e}")
-                else:
-                    _logger.error(f"Redis Connection Failed. Disabling Redis for this worker. Using Local Memory. Error: {e}")
-                cls._instance = None
-                cls._is_disabled = True
-                
+
+        from app.core.config import get_settings
+        settings = get_settings()
+
+        try:
+            # If REDIS_URL is provided (typical for Railway/Heroku), use it directly
+            if settings.REDIS_URL:
+                inst = redis.Redis.from_url(
+                    settings.REDIS_URL,
+                    decode_responses=True,
+                    socket_timeout=2,
+                    socket_connect_timeout=2,
+                    retry_on_timeout=True
+                )
+            else:
+                # Fallback to discrete parameters
+                inst = redis.Redis(
+                    host=settings.REDIS_HOST,
+                    port=settings.REDIS_PORT,
+                    password=settings.REDIS_PASSWORD,
+                    db=0,
+                    decode_responses=True,
+                    socket_timeout=2,
+                    socket_connect_timeout=2,
+                    retry_on_timeout=True
+                )
+            # Ping test to verify connection before we trust it.
+            inst.ping()
+            cls._instance = inst
+            cls._retry_after = 0.0  # recovered — clear the back-off
+        except Exception as e:
+            cls._mark_failed(e)
+
         return cls._instance
 
     @classmethod
@@ -67,8 +95,8 @@ class RedisClient:
                 r.setex(key, expire, value)
                 return
             except Exception as e:
-                _logger.warning(f"Redis set failed, using local memory: {e}")
-        
+                cls._mark_failed(e)
+
         # Memory Fallback
         cls._local_memory_cache[key] = (value, time.time() + expire)
 
@@ -87,7 +115,7 @@ class RedisClient:
                         return val.decode('utf-8')
                     return val
             except Exception as e:
-                _logger.warning(f"Redis get failed, using local memory: {e}")
+                cls._mark_failed(e)
         
         # Memory Fallback
         if key in cls._local_memory_cache:
@@ -110,7 +138,7 @@ class RedisClient:
             try:
                 r.delete(key)
             except Exception as e:
-                _logger.warning(f"Redis delete failed for key {key}: {e}")
+                cls._mark_failed(e)
         if key in cls._local_memory_cache:
             try:
                 del cls._local_memory_cache[key]
@@ -128,7 +156,7 @@ class RedisClient:
                 if keys:
                     r.delete(*keys)
             except Exception as e:
-                _logger.error(f"Redis delete pattern failed: {e}")
+                cls._mark_failed(e)
 
         # Local Memory Pattern Delete
         keys_to_del = [k for k in cls._local_memory_cache.keys() if fnmatch.fnmatch(k, pattern)]
@@ -169,7 +197,7 @@ class RedisClient:
                 result = r.set(key, value, nx=True, ex=expire)
                 return bool(result)
             except Exception as e:
-                _logger.warning(f"Redis SET NX EX failed, using local memory: {e}")
+                cls._mark_failed(e)
 
         # In-memory fallback: use a per-key asyncio.Lock to make the check-then-set
         # atomic across coroutines on this worker. Across workers / instances, the

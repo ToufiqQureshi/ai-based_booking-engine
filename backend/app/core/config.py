@@ -92,6 +92,7 @@ class Settings(BaseSettings):
     JULES_API_KEY: str | None = None
     SCRAPINGBEE_API_KEY: Optional[str] = None  # Railway env var: SCRAPINGBEE_API_KEY
 
+
     # Central WhatsApp Config
     CENTRAL_WHATSAPP_PHONE_ID: Optional[str] = None
     CENTRAL_WHATSAPP_TOKEN: Optional[str] = None
@@ -107,6 +108,12 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
+
+    # Number of trusted reverse proxies in front of the app (e.g. Cloudflare +
+    # Railway = 2). Used to pick the real client IP from X-Forwarded-For instead
+    # of trusting the spoofable left-most hop. Default 0 keeps the legacy
+    # behavior; set this in production to make IP rate limits non-spoofable.
+    TRUSTED_PROXY_COUNT: int = 0
 
     # Razorpay Payment Gateway
     RAZORPAY_KEY_ID: Optional[str] = None
