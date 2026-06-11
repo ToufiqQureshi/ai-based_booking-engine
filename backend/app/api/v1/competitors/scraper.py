@@ -212,8 +212,7 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             logger.info("No MMT hotel ID in URL; parsing full page")
 
         sold_out_check = container.css("p.font14.appendBottom5.redText.latoBold.lineHight17").first
-        if sold_out_check and "You Just Missed It" in sold_out_check.text:
-            return {"status": "success", "price": 0.0, "is_sold_out": True}
+        has_you_just_missed_it = sold_out_check and "You Just Missed It" in sold_out_check.text
 
         # Primary selector → ID fallback → data-attribute fallback
         price_el = container.css('p.priceText.latoBlack.font22.blackText.appendBottom5[id="hlistpg_hotel_shown_price"]').first
@@ -221,6 +220,12 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             price_el = container.css('#hlistpg_hotel_shown_price').first
         if not price_el:
             price_el = container.css('[data-cy="hotel-price"]').first
+
+        # "You Just Missed It" on MMT means the *cheapest* room is sold out, but
+        # the hotel can still have other available rooms with a visible price.
+        # Only mark as sold-out when there is no price element at all.
+        if has_you_just_missed_it and not price_el:
+            return {"status": "success", "price": 0.0, "is_sold_out": True}
 
         if not price_el:
             logger.warning(
