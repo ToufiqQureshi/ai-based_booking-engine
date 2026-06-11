@@ -131,6 +131,8 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             "url": url,
             "proxy_pool": "premium",
             "headless": "html",
+            "device_type": "desktop_chrome",
+            "force_headers": True,
             "cookies": [
                 {"key": "currency", "value": "INR"},
                 {"key": "amadeus.user.currency", "value": "INR"}
