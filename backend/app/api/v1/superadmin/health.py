@@ -136,7 +136,9 @@ async def _hotel_health(session, hotel: Hotel) -> dict:
         "subscription_status": subscription.status if subscription else "none",
         "subscription_end_date": subscription.end_date.isoformat() if subscription and subscription.end_date else None,
         "whatsapp_credits": subscription.whatsapp_credits if subscription else 0,
-        "ai_usage_limit": subscription.ai_usage_limit if subscription else 0,
+        "ai_hotelier_daily_limit": subscription.ai_hotelier_daily_limit if subscription else 0,
+        "ai_guest_chat_daily_limit": subscription.ai_guest_chat_daily_limit if subscription else 0,
+        "ai_whatsapp_daily_limit": subscription.ai_whatsapp_daily_limit if subscription else 0,
         "onboarding": {
             "steps": onboarding_steps,
             "score": onboarding_score,

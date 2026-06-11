@@ -199,7 +199,9 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_
                 "end_date": sub.end_date.isoformat() if sub and sub.end_date else None,
                 "whatsapp_credits": sub.whatsapp_credits if sub else 1000,
                 "sms_credits": sub.sms_credits if sub else 1000,
-                "ai_usage_limit": sub.ai_usage_limit if sub else 50000,
+                "ai_hotelier_daily_limit": sub.ai_hotelier_daily_limit if sub else 50000,
+                "ai_guest_chat_daily_limit": sub.ai_guest_chat_daily_limit if sub else 100000,
+                "ai_whatsapp_daily_limit": sub.ai_whatsapp_daily_limit if sub else 100000,
             },
         })
     return final_result

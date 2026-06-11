@@ -60,21 +60,27 @@ class TestQuotas:
     async def test_super_admin_can_update_quotas(self, super_admin_client: AsyncClient, seeded_hotel: Hotel):
         r = await super_admin_client.patch(
             f"/api/v1/superadmin/hotels/{seeded_hotel.id}/quotas",
-            json={"whatsapp_credits": 5000, "sms_credits": 2000, "ai_usage_limit": 100000},
+            json={
+                "whatsapp_credits": 5000,
+                "sms_credits": 2000,
+                "ai_hotelier_daily_limit": 75000,
+                "ai_guest_chat_daily_limit": 150000,
+                "ai_whatsapp_daily_limit": 150000,
+            },
         )
         assert r.status_code == 200
 
     async def test_partial_quota_update_works(self, super_admin_client: AsyncClient, seeded_hotel: Hotel):
         r = await super_admin_client.patch(
             f"/api/v1/superadmin/hotels/{seeded_hotel.id}/quotas",
-            json={"ai_usage_limit": 999},
+            json={"ai_hotelier_daily_limit": 25000},
         )
         assert r.status_code == 200
 
     async def test_regular_user_cannot_update_quotas(self, auth_client: AsyncClient, seeded_hotel: Hotel):
         r = await auth_client.patch(
             f"/api/v1/superadmin/hotels/{seeded_hotel.id}/quotas",
-            json={"ai_usage_limit": 999},
+            json={"ai_hotelier_daily_limit": 999},
         )
         assert r.status_code == 403
 
