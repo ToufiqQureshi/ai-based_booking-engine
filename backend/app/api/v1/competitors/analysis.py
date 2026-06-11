@@ -94,7 +94,8 @@ async def get_market_analysis(
             key = (rate.competitor_id, rate.check_in_date)
             if key not in seen_keys:
                 seen_keys.add(key)
-                rates_by_date.setdefault(rate.check_in_date, []).append(rate.price)
+                if not rate.is_sold_out and rate.price and rate.price > 0:
+                    rates_by_date.setdefault(rate.check_in_date, []).append(rate.price)
 
     results = []
     for i in range(days):

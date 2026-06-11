@@ -90,8 +90,7 @@ class Settings(BaseSettings):
     OLLAMA_HOST: str = "http://localhost:11434"
     GROQ_API_KEY: str | None = None
     JULES_API_KEY: str | None = None
-    DECODO_AUTH_TOKEN: Optional[str] = None
-    SCRAPINGBEE_API_KEY: Optional[str] = None
+    SCRAPINGBEE_API_KEY: Optional[str] = None  # Railway env var: SCRAPINGBEE_API_KEY
 
 
     # Central WhatsApp Config

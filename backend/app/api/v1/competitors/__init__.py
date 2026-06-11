@@ -2,12 +2,12 @@
 Competitor Rates package.
 Splits the original monolithic competitors.py into focused sub-modules:
   crud.py          — list / add / delete / toggle-schedule endpoints
-  scraper.py       — Decodo API client + HTML parsing (no router)
+  scraper.py       — ScrapingBee API client + HTML parsing (no router)
   background.py    — 7-day scrape loop (no router)
   scrape_control.py — trigger / stop / progress endpoints
   analysis.py      — market analysis + rate comparison endpoints
   schedule.py      — auto-scrape schedule endpoints + hourly scheduler tick
-  usage.py         — Decodo usage endpoint
+  usage.py         — ScrapingBee usage endpoint
 """
 from fastapi import APIRouter
 

@@ -26,6 +26,12 @@ router = APIRouter(prefix="/competitors", tags=["Competitor Rates"])
 # ticks hourly and the hour matches for >1 tick (DST edge cases etc.).
 AUTO_SCRAPE_DEDUPE_TTL = 23 * 3600
 
+# Maximum competitors the auto-scrape processes in a single scheduler tick.
+# Prevents a large hotel count from blocking the event loop for many hours.
+# Each competitor takes ~2 min; 15 ≈ 30 min, well within the 1-hour tick interval.
+# Increase if the ScrapingBee plan has more capacity.
+MAX_COMPETITORS_PER_TICK = 15
+
 
 class ScrapeScheduleResponse(BaseModel):
     scrape_hours: List[int] = []   # up to 4 local hours (0-23) per day
@@ -120,6 +126,11 @@ async def run_due_auto_scrapes(session) -> None:
 
     Per-hour dedupe key (per hotel, per day, per hour) so both a 9 AM and a 3 PM
     slot can fire independently on the same calendar day.
+
+    Total competitors processed per tick is capped at MAX_COMPETITORS_PER_TICK so
+    the scheduler doesn't run for many hours when the hotel count is large. Hotels
+    whose hour slot matched but were not reached this tick will be processed in the
+    next matching tick (the dedupe key prevents double-billing on reruns).
     """
     from zoneinfo import ZoneInfo
 
@@ -129,7 +140,16 @@ async def run_due_auto_scrapes(session) -> None:
         select(Hotel.id, Hotel.settings).where(Hotel.feature_rate_shopper == True)
     )
 
+    total_scheduled = 0
+
     for hotel_id, hotel_settings in hotels_res.all():
+        if total_scheduled >= MAX_COMPETITORS_PER_TICK:
+            logger.warning(
+                f"Auto-scrape: reached MAX_COMPETITORS_PER_TICK={MAX_COMPETITORS_PER_TICK}. "
+                f"Remaining hotels deferred to next tick."
+            )
+            break
+
         hotel_settings = hotel_settings or {}
         scrape_hours = _read_scrape_hours(hotel_settings)
         if not scrape_hours:
@@ -167,4 +187,7 @@ async def run_due_auto_scrapes(session) -> None:
             f"(local hour {local_now.hour}, tz {tz_name}, slots: {scrape_hours})"
         )
         for comp_id in comp_ids:
+            if total_scheduled >= MAX_COMPETITORS_PER_TICK:
+                break
             await run_background_scrape(comp_id)
+            total_scheduled += 1

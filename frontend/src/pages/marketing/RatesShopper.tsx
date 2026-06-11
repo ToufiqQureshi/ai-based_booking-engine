@@ -68,7 +68,7 @@ export default function RatesShopper() {
         queryFn: async () => {
             const [rateRes, analysisRes] = await Promise.all([
                 apiClient.get('/competitors/rates/comparison', { start_date: startDate }),
-                apiClient.get('/competitors/analysis', { start_date: startDate, days: '7' }),
+                apiClient.get('/competitors/analysis', { start_date: startDate, days: 7 }),
             ]);
             return {
                 chartData: (rateRes as any).chart_data,
@@ -90,7 +90,7 @@ export default function RatesShopper() {
             const err = compError as any;
             const status = err?.status;
             if (status === 503) {
-                setPageError({ type: 'service', title: 'Rate Sync Service Unavailable', message: err.message || 'Decodo API is not configured. Contact your administrator.' });
+                setPageError({ type: 'service', title: 'Rate Sync Service Unavailable', message: err.message || 'Rate sync service is not configured. Contact your administrator.' });
             } else if (!navigator.onLine || err?.name === 'AbortError') {
                 setPageError({ type: 'network', title: 'Network Error', message: 'Could not reach the server. Check your connection.' });
             } else {
@@ -102,17 +102,19 @@ export default function RatesShopper() {
     // Maps backend error reason codes to human-readable messages shown in the card
     const friendlyError = (raw: string | null | undefined): string => {
         if (!raw) return 'Unknown error occurred';
-        if (raw.includes('decodo_not_configured') || raw.includes('not configured')) return 'Rate sync API key is not set up — contact your administrator.';
-        if (raw.includes('decodo_613') || raw.includes('target_blocked')) return 'Blocked by OTA anti-bot protection. Try again in a few hours.';
+        if (raw.includes('not_configured') || raw.includes('not configured')) return 'Rate sync API key is not set up — contact your administrator.';
+        if (raw.includes('target_blocked') || raw.includes('scrapingbee_rate_limited')) return 'Blocked by OTA anti-bot protection. Try again in a few hours.';
         if (raw.includes('shield_blocked') || raw.includes('Access Denied')) return 'OTA security (Akamai) blocked the request. Try again later.';
+        if (raw.includes('captcha_page')) return 'OTA served a CAPTCHA. Try again in a few hours.';
         if (raw.includes('price_element_not_found')) return 'Could not find the price on the OTA page. The URL may be outdated — try re-adding the competitor.';
         if (raw.includes('price_parse_failed')) return 'Found the price element but could not read the value. OTA may have changed their layout.';
-        if (raw.includes('empty_api_results')) return 'Scraper returned no data. The OTA page may have changed or the URL is invalid.';
-        if (raw.includes('decodo_session_failed')) return 'Scraper session was reset mid-run (proxy IP was blocked). Click Refresh to retry.';
-        if (raw.includes('request_error')) return 'Network request to Decodo failed. This is usually temporary — try again.';
-        if (raw.includes('API_status_')) {
-            const code = raw.match(/API_status_(\d+)/)?.[1];
-            return `Decodo returned HTTP ${code}. This is usually temporary — try again in a few minutes.`;
+        if (raw.includes('hotel_card_not_found')) return 'Could not locate this hotel on the OTA search results page. The URL may be outdated — try re-adding the competitor.';
+        if (raw.includes('empty_html_content') || raw.includes('empty_api_results')) return 'Scraper returned no data. The OTA page may have changed or the URL is invalid.';
+        if (raw.includes('scrapingbee_auth_failed')) return 'Rate sync service authentication failed. Contact your administrator.';
+        if (raw.includes('request_error')) return 'Network request to rate sync service failed. This is usually temporary — try again.';
+        if (raw.includes('scrapingbee_status_')) {
+            const code = raw.match(/scrapingbee_status_(\d+)/)?.[1];
+            return `Rate sync service returned HTTP ${code}. This is usually temporary — try again in a few minutes.`;
         }
         if (raw.includes('timed out') || raw.includes('timeout')) return 'Scrape timed out. The server may have restarted — click Refresh to retry.';
         if (raw.includes('Stopped by you')) return raw; // user-initiated, show as-is
@@ -341,7 +343,7 @@ export default function RatesShopper() {
                     setPageError({
                         type: 'service',
                         title: 'Rate Sync Service Unavailable',
-                        message: error.message || 'The Decodo scraping API is not configured or is down. Please contact your administrator to set up the API key.',
+                        message: error.message || 'The rate sync service is not configured or is down. Please contact your administrator to set up the API key.',
                     });
                 } else if (error.status === 429) {
                     setPageError({

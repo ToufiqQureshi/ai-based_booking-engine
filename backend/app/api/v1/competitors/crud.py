@@ -12,6 +12,7 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.redis_client import redis_client
 from app.models.competitor import Competitor, CompetitorSource
 
 from .scraper import _is_stale_running
@@ -126,15 +127,37 @@ async def delete_competitor(comp_id: str, current_user: CurrentUser, session: Db
     if comp.hotel_id != current_user.hotel_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    from app.models.competitor import CompetitorRate
+    from app.models.competitor import CompetitorRate, ScraperUsage
+
+    # Delete child rows in dependency order before deleting the parent.
+    # Supabase enforces FK constraints — skipping either delete causes a
+    # "violates foreign key constraint" error.
     rates_res = await session.execute(
         select(CompetitorRate).where(CompetitorRate.competitor_id == comp_id)
     )
     for r in rates_res.scalars().all():
         await session.delete(r)
 
+    usage_res = await session.execute(
+        select(ScraperUsage).where(ScraperUsage.competitor_id == comp_id)
+    )
+    for u in usage_res.scalars().all():
+        await session.delete(u)
+
     await session.delete(comp)
     await session.commit()
+
+    # Clean up any live Redis keys for this competitor (progress, cooldown, cancel).
+    for key in (
+        f"scrape_progress:{comp_id}",
+        f"scrape_cancel:{comp_id}",
+        f"scrape_cooldown:{comp_id}",
+    ):
+        try:
+            redis_client.delete_value(key)
+        except Exception:
+            pass
+
     return {"message": "Competitor deleted successfully"}
 
 

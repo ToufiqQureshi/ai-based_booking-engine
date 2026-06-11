@@ -23,25 +23,32 @@ from .scraper import (
 
 logger = logging.getLogger(__name__)
 
-# Max retries on Decodo 613 (Akamai bot-block) per day.
+# Max retries per day when ScrapingBee reports a block/captcha.
 # 3 attempts = 1 original + 2 retries. Retry delay starts at 4s then 8s.
-MAX_613_RETRIES = 2
+MAX_BLOCK_RETRIES = 2
 
-# Gap between sequential day scrapes — gives Akamai time to see the IP as
-# "legitimate". Concurrent burst = same IP = 613 on all days.
+# Gap between sequential day scrapes — prevents bursting 7 requests at once
+# which can trip rate limits on ScrapingBee or the target site.
 INTER_DAY_PAUSE_SECONDS = 2.5
 
 
+_BLOCK_REASONS = {
+    "scrapingbee_target_blocked",
+    "shield_blocked",
+    "captcha_page",
+    "scrapingbee_rate_limited",
+}
+
 async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> dict:
-    """Wrap scrape_mmt_hotel_rate with 613-specific retry + exponential backoff."""
+    """Wrap scrape_mmt_hotel_rate with block-specific retry + exponential backoff."""
     delay = 4.0
     result = {}
-    for attempt in range(MAX_613_RETRIES + 1):
+    for attempt in range(MAX_BLOCK_RETRIES + 1):
         result = await scrape_mmt_hotel_rate(url, hotel_id, session_id=session_id)
-        if result.get("reason") != "decodo_613_target_blocked":
+        if result.get("reason") not in _BLOCK_REASONS:
             return result
-        if attempt < MAX_613_RETRIES:
-            logger.info(f"613 on attempt {attempt + 1}, retrying in {delay:.0f}s…")
+        if attempt < MAX_BLOCK_RETRIES:
+            logger.info(f"Blocked ({result.get('reason')}) on attempt {attempt + 1}, retrying in {delay:.0f}s…")
             await asyncio.sleep(delay)
             delay *= 2
     return result
@@ -49,7 +56,7 @@ async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> di
 
 async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> None:
     """
-    Scrape the next 7 days of rates for one competitor using Decodo + Scrapling.
+    Scrape the next 7 days of rates for one competitor using ScrapingBee + Scrapling.
     Commits each day individually so frontend polling shows live progress.
 
     status_pre_set=True when trigger_scrape already committed status="running"
@@ -98,13 +105,16 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
 
             logger.info(f"Scraping MakeMyTrip URL for competitor: {comp.name} ({comp_id})")
 
-            # One session_id per run so all 7 days share the same Decodo proxy IP.
-            # Requests are sequential + inter-day pause so Akamai sees gradual traffic.
+            # session_id is kept for rotation tracking (used on block detection).
+            # stealth_proxy ignores it at the ScrapingBee layer — each call gets
+            # a fresh fingerprint internally — but we rotate it locally to get
+            # a different session bucket on retries.
             scrape_session_id = uuid.uuid4().hex[:12]
             current_geo = "India"
 
             success_count = 0
             has_errors = False
+            failed_dates: list[str] = []
             last_error_reason = None
             was_stopped = False
             cancel_key = f"scrape_cancel:{comp_id}"
@@ -124,24 +134,20 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                 updated_url = update_url_dates(url, offset)
                 attempted += 1
 
-                rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id)
+                rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
 
-                # ScrapingBee got blocked, rate-limited, or hit transient server issues — wait and retry this day once.
-                if rate_data.get("reason") in (
-                    "API_status_400",
-                    "API_status_429",
-                    "API_status_500",
-                    "API_status_502",
-                    "API_status_503",
-                    "API_status_504",
+                # Session is blocked or stale — rotate IP and retry this day once.
+                if rate_data.get("reason") in _BLOCK_REASONS or rate_data.get("reason") in (
+                    "scrapingbee_auth_failed",
                     "empty_html_content",
-                    "shield_blocked",
                 ):
                     logger.warning(
-                        f"Retrying ScrapingBee call for day {offset + 1}/7 due to transient error: {rate_data.get('reason')}"
+                        f"Rotating session due to {rate_data.get('reason')} (old={scrape_session_id}) "
+                        f"and retrying day {offset + 1}/7"
                     )
-                    await asyncio.sleep(5.0)
-                    rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id)
+                    scrape_session_id = uuid.uuid4().hex[:12]
+                    await asyncio.sleep(3.0)
+                    rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
 
                 if rate_data.get("status") == "success":
                     price = rate_data["price"]
@@ -199,6 +205,7 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                 else:
                     has_errors = True
                     last_error_reason = rate_data.get("reason", "unknown")
+                    failed_dates.append(check_in_date_obj.isoformat())
                     logger.warning(
                         f"Failed to scrape {comp.name} on {check_in_date_obj.isoformat()}: {last_error_reason}"
                     )
@@ -217,9 +224,10 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                     if was_stopped:
                         comp.last_scrape_error = f"Stopped by you — saved {success_count} day(s) fetched so far."
                     elif has_errors:
+                        failed_str = ", ".join(failed_dates) if failed_dates else "unknown dates"
                         comp.last_scrape_error = (
-                            f"Successfully scraped {success_count}/7 days. "
-                            f"Some dates failed: {last_error_reason}"
+                            f"Fetched {success_count}/7 days. "
+                            f"Failed on: {failed_str} ({last_error_reason})"
                         )
                     else:
                         comp.last_scrape_error = None
