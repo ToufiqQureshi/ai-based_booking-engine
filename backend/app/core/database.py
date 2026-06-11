@@ -219,6 +219,11 @@ async def init_db():
         "ALTER TABLE integration_settings ADD COLUMN webhook_secret_vault_id VARCHAR(255)",
         "ALTER TABLE chains ADD COLUMN primary_color VARCHAR(50) DEFAULT '#4f46e5'",
         "ALTER TABLE chains ADD COLUMN is_active BOOLEAN DEFAULT TRUE",
+        # DB-03: hotel pause fields (added 2026-06-01 — Alembic migration
+        # 20260601_1230 exists but deploys use create_all, not alembic upgrade)
+        "ALTER TABLE hotels ADD COLUMN is_paused BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE hotels ADD COLUMN pause_reason TEXT",
+        "ALTER TABLE hotels ADD COLUMN paused_at TIMESTAMPTZ",
     ]:
         try:
             async with engine.begin() as conn:
