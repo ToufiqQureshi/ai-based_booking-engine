@@ -19,10 +19,14 @@ logger = logging.getLogger(__name__)
 # --- ScrapingBee API constants ---
 SCRAPINGBEE_URL = "https://app.scrapingbee.com/api/v1/"
 
-# MMT renders its price client-side via an async XHR after the initial DOM is
-# ready. We ask ScrapingBee's headless browser to wait this many ms so that
-# the price node exists before the HTML snapshot is captured.
-MMT_RENDER_WAIT_MS = 12000
+# CSS selector ScrapingBee waits for before returning the page snapshot.
+# MMT loads prices via an async XHR — we wait until the price node appears in
+# the DOM rather than using a fixed delay.
+MMT_PRICE_WAIT_FOR = "#hlistpg_hotel_shown_price"
+
+# Additional fixed wait (ms) after the wait_for element appears — lets late-loading
+# price values settle inside the already-visible element.
+MMT_POST_RENDER_WAIT_MS = 3000
 
 # httpx read timeout for a single ScrapingBee call.
 # ScrapingBee's own max is 140s; we add headroom for network.
@@ -97,13 +101,12 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
     """
     Fetch one day's rate from MMT via ScrapingBee API + Scrapling parser.
 
-    ScrapingBee handles the headless browser, JS rendering, and premium proxy
-    rotation. We use premium_proxy=True + country_code=in so the request
-    appears to originate from India (required for INR pricing on MMT).
+    Uses stealth_proxy (ScrapingBee's highest tier) because MakeMyTrip has
+    advanced bot protection (Akamai). stealth_proxy is incompatible with
+    session_id — IP rotation is handled internally by ScrapingBee.
 
-    session_id: ScrapingBee routes all requests with the same session_id
-    through the same IP for 5 minutes — this is an INTEGER between 0-10M.
-    We convert our hex string to an int in the valid range.
+    wait_for waits until the price DOM node appears rather than a fixed delay,
+    which is more reliable and avoids unnecessary billing time.
 
     Retry logic lives in _scrape_mmt_with_retry (background.py caller).
     """
@@ -112,32 +115,22 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
         return {"status": "failed", "reason": "scrapingbee_not_configured"}
 
     try:
-        logger.info(f"Fetching via ScrapingBee: {url[:60]}... (session={session_id})")
-
-        # Convert hex session_id to an integer in ScrapingBee's valid range (0-10M)
-        sb_session_id = None
-        if session_id:
-            try:
-                sb_session_id = int(session_id, 16) % 10_000_000
-            except (ValueError, TypeError):
-                sb_session_id = None
+        logger.info(f"Fetching via ScrapingBee (stealth): {url[:60]}...")
 
         params: dict = {
             "api_key": api_key,
             "url": url,
-            "render_js": "true",           # headless browser — MMT prices need JS
-            "premium_proxy": "true",        # residential proxies — bypass bot protection
-            "country_code": "in",           # India IP → INR prices on MMT
-            "wait": str(MMT_RENDER_WAIT_MS),  # wait for XHR price to load (ms)
-            "block_resources": "false",     # allow CSS/images so price XHR fires
+            "render_js": "true",                      # headless browser — MMT prices need JS
+            "stealth_proxy": "true",                   # required for MMT's Akamai bot protection
+            "country_code": "in",                      # India IP → INR prices on MMT
+            "wait_for": MMT_PRICE_WAIT_FOR,            # wait until price element exists in DOM
+            "wait": str(MMT_POST_RENDER_WAIT_MS),      # extra settle time after element appears
+            "block_resources": "false",                # load all resources so price XHR fires
             "block_ads": "true",
             "device": "desktop",
             "window_width": "1920",
             "window_height": "1080",
         }
-        if sb_session_id is not None:
-            params["session_id"] = str(sb_session_id)
-
         try:
             async with httpx.AsyncClient(timeout=SCRAPINGBEE_HTTP_TIMEOUT_SECONDS) as client:
                 response = await client.get(SCRAPINGBEE_URL, params=params)

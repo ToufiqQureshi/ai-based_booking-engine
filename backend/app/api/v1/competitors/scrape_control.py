@@ -44,7 +44,7 @@ async def trigger_scrape(
         )
 
     # Prevent concurrent scrapes for the same competitor to avoid racing writes
-    # and stop double-clicks from doubling the paid Decodo API calls.
+    # and stop double-clicks from multiplying paid ScrapingBee API calls.
     if comp.last_scrape_status == "running" and not _is_stale_running(comp):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

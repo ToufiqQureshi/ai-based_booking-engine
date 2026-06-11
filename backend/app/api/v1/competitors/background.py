@@ -23,12 +23,12 @@ from .scraper import (
 
 logger = logging.getLogger(__name__)
 
-# Max retries on Decodo 613 (Akamai bot-block) per day.
+# Max retries per day when ScrapingBee reports a block/captcha.
 # 3 attempts = 1 original + 2 retries. Retry delay starts at 4s then 8s.
-MAX_613_RETRIES = 2
+MAX_BLOCK_RETRIES = 2
 
-# Gap between sequential day scrapes — gives Akamai time to see the IP as
-# "legitimate". Concurrent burst = same IP = 613 on all days.
+# Gap between sequential day scrapes — prevents bursting 7 requests at once
+# which can trip rate limits on ScrapingBee or the target site.
 INTER_DAY_PAUSE_SECONDS = 2.5
 
 
@@ -43,11 +43,11 @@ async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> di
     """Wrap scrape_mmt_hotel_rate with block-specific retry + exponential backoff."""
     delay = 4.0
     result = {}
-    for attempt in range(MAX_613_RETRIES + 1):
+    for attempt in range(MAX_BLOCK_RETRIES + 1):
         result = await scrape_mmt_hotel_rate(url, hotel_id, session_id=session_id)
         if result.get("reason") not in _BLOCK_REASONS:
             return result
-        if attempt < MAX_613_RETRIES:
+        if attempt < MAX_BLOCK_RETRIES:
             logger.info(f"Blocked ({result.get('reason')}) on attempt {attempt + 1}, retrying in {delay:.0f}s…")
             await asyncio.sleep(delay)
             delay *= 2
@@ -56,7 +56,7 @@ async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> di
 
 async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> None:
     """
-    Scrape the next 7 days of rates for one competitor using Decodo + Scrapling.
+    Scrape the next 7 days of rates for one competitor using ScrapingBee + Scrapling.
     Commits each day individually so frontend polling shows live progress.
 
     status_pre_set=True when trigger_scrape already committed status="running"
@@ -105,8 +105,10 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
 
             logger.info(f"Scraping MakeMyTrip URL for competitor: {comp.name} ({comp_id})")
 
-            # One session_id per run so all 7 days share the same Decodo proxy IP.
-            # Requests are sequential + inter-day pause so Akamai sees gradual traffic.
+            # session_id is kept for rotation tracking (used on block detection).
+            # stealth_proxy ignores it at the ScrapingBee layer — each call gets
+            # a fresh fingerprint internally — but we rotate it locally to get
+            # a different session bucket on retries.
             scrape_session_id = uuid.uuid4().hex[:12]
             current_geo = "India"
 
