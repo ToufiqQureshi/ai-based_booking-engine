@@ -25,6 +25,16 @@ class RedisClient:
     _local_nx_locks_guard: Optional[asyncio.Lock] = None
 
     @classmethod
+    def _cooldown_seconds(cls) -> int:
+        """Back-off window (env-driven). Short by default so a deploy-time DNS
+        blip doesn't keep a worker on memory-only mode for minutes."""
+        try:
+            from app.core.config import get_settings
+            return max(1, int(get_settings().REDIS_RETRY_COOLDOWN_SECONDS))
+        except Exception:
+            return cls._RETRY_COOLDOWN_SECONDS
+
+    @classmethod
     def _mark_failed(cls, e: Exception) -> None:
         """Drop the dead connection and back off before the next attempt.
 
@@ -33,12 +43,13 @@ class RedisClient:
         down — we serve from memory for the cooldown, then retry once.
         """
         cls._instance = None
-        cls._retry_after = time.time() + cls._RETRY_COOLDOWN_SECONDS
+        cooldown = cls._cooldown_seconds()
+        cls._retry_after = time.time() + cooldown
         if "PYTEST_CURRENT_TEST" in os.environ:
             _logger.warning(f"Redis unavailable in test environment. Using Local Memory. Error: {e}")
         else:
             _logger.error(
-                f"Redis unavailable; serving from local memory for {cls._RETRY_COOLDOWN_SECONDS}s "
+                f"Redis unavailable; serving from local memory for {cooldown}s "
                 f"then retrying. Error: {e}"
             )
 
