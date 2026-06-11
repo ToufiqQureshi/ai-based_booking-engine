@@ -153,6 +153,7 @@ TAB_PERMISSIONS = {
     "users": "superadmin.users.read",
     "brands": "superadmin.hotels.read",
     "plans": "superadmin.hotels.read",
+    "subscriptions": "superadmin.subscriptions.read",
     "kyc": "superadmin.kyc.read",
     "commissions": "superadmin.commissions.read",
     "payouts": "superadmin.payouts.read",

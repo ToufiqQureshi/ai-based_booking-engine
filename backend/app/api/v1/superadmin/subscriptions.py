@@ -2,9 +2,9 @@
 Super Admin — Subscriptions, quotas, plan features, broadcasts, audit logs.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlmodel import select
 
 from app.api.deps import DbSession
@@ -12,7 +12,7 @@ from app.models.audit import AuditLog, SystemBroadcast
 from app.models.hotel import Hotel
 from app.models.subscription import Subscription
 from app.models.user import User
-from .hotels import get_super_admin, load_plan_features, save_plan_features, _get_client_ip
+from .hotels import get_super_admin, load_plan_features, save_plan_features, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -21,7 +21,7 @@ router = APIRouter()
 @router.post("/hotels/{hotel_id}/subscription")
 async def update_subscription(
     hotel_id: str, sub_data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.write")),
 ):
     """Create or update a hotel's subscription and sync feature flags."""
     hotel = await session.get(Hotel, hotel_id)
@@ -66,7 +66,7 @@ async def update_subscription(
 @router.patch("/hotels/{hotel_id}/quotas")
 async def update_quotas(
     hotel_id: str, request: Request, data: dict, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.write")),
 ):
     sub = (await session.execute(select(Subscription).where(Subscription.hotel_id == hotel_id))).scalar_one_or_none()
     if not sub:
@@ -88,15 +88,65 @@ async def update_quotas(
     return {"message": "Quotas updated successfully", "quotas": sub}
 
 
+@router.get("/hotels/{hotel_id}/ai-usage")
+async def get_hotel_ai_usage(
+    hotel_id: str,
+    session: DbSession,
+    days: int = Query(default=7, ge=1, le=35, description="Number of past days to return (max 35)"),
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.read")),
+):
+    """Return per-day token usage and the subscription limit for a hotel.
+
+    Reads daily counters from Redis (key: ai_tokens:{hotel_id}:{YYYYMMDD}).
+    Returns zeroes for days with no recorded usage — this is expected when
+    Redis was unavailable or the hotel simply did not use the AI that day.
+    """
+    from app.core.redis_client import redis_client
+    from app.core.time import utcnow
+
+    r = redis_client.get_instance()
+    today = utcnow().date()
+
+    daily_usage: dict[str, int] = {}
+    total_tokens = 0
+    for i in range(days):
+        day = today - timedelta(days=i)
+        day_str = day.strftime("%Y%m%d")
+        tokens = 0
+        if r:
+            raw = r.get(f"ai_tokens:{hotel_id}:{day_str}")
+            tokens = int(raw) if raw else 0
+        daily_usage[day.isoformat()] = tokens
+        total_tokens += tokens
+
+    sub = (await session.execute(
+        select(Subscription).where(Subscription.hotel_id == hotel_id)
+    )).scalar_one_or_none()
+
+    today_iso = today.isoformat()
+    return {
+        "hotel_id": hotel_id,
+        "ai_usage_limit": sub.ai_usage_limit if sub else None,
+        "today_tokens": daily_usage.get(today_iso, 0),
+        "period_total_tokens": total_tokens,
+        "period_days": days,
+        "daily_usage": daily_usage,
+        "redis_available": r is not None,
+    }
+
+
 @router.get("/plan-features")
-async def get_plan_features(super_admin: User = Depends(get_super_admin)):
+async def get_plan_features(
+    session: DbSession,
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.read")),
+):
     return load_plan_features()
 
 
 @router.post("/plan-features")
 async def update_plan_features(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.subscriptions.write")),
 ):
     """Update plan-to-features mapping and sync all matching hotels."""
     current = load_plan_features()
