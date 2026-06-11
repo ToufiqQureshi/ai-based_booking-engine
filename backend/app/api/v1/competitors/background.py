@@ -32,16 +32,23 @@ MAX_613_RETRIES = 2
 INTER_DAY_PAUSE_SECONDS = 2.5
 
 
+_BLOCK_REASONS = {
+    "scrapingbee_target_blocked",
+    "shield_blocked",
+    "captcha_page",
+    "scrapingbee_rate_limited",
+}
+
 async def _scrape_mmt_with_retry(url: str, hotel_id: str, session_id: str) -> dict:
-    """Wrap scrape_mmt_hotel_rate with 613-specific retry + exponential backoff."""
+    """Wrap scrape_mmt_hotel_rate with block-specific retry + exponential backoff."""
     delay = 4.0
     result = {}
     for attempt in range(MAX_613_RETRIES + 1):
         result = await scrape_mmt_hotel_rate(url, hotel_id, session_id=session_id)
-        if result.get("reason") != "decodo_613_target_blocked":
+        if result.get("reason") not in _BLOCK_REASONS:
             return result
         if attempt < MAX_613_RETRIES:
-            logger.info(f"613 on attempt {attempt + 1}, retrying in {delay:.0f}s…")
+            logger.info(f"Blocked ({result.get('reason')}) on attempt {attempt + 1}, retrying in {delay:.0f}s…")
             await asyncio.sleep(delay)
             delay *= 2
     return result
@@ -127,17 +134,13 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
 
                 rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
 
-                # Decodo session died, is blocked, or got stuck — rotate and retry this day once.
-                if rate_data.get("reason") in (
-                    "decodo_session_failed",
-                    "API_status_400",
-                    "API_status_422",
-                    "decodo_613_target_blocked",
+                # Session is blocked or stale — rotate IP and retry this day once.
+                if rate_data.get("reason") in _BLOCK_REASONS or rate_data.get("reason") in (
+                    "scrapingbee_auth_failed",
                     "empty_html_content",
-                    "shield_blocked",
                 ):
                     logger.warning(
-                        f"Rotating Decodo session due to {rate_data.get('reason')} (old={scrape_session_id}) "
+                        f"Rotating session due to {rate_data.get('reason')} (old={scrape_session_id}) "
                         f"and retrying day {offset + 1}/7"
                     )
                     scrape_session_id = uuid.uuid4().hex[:12]

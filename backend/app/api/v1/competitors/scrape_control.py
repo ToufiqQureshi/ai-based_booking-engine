@@ -37,7 +37,7 @@ async def trigger_scrape(
         raise HTTPException(status_code=404, detail="Competitor not found")
 
     settings = get_settings()
-    if not settings.DECODO_AUTH_TOKEN:
+    if not settings.SCRAPINGBEE_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Rate sync is temporarily unavailable. Our team has been notified — please try again shortly.",

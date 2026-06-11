@@ -7,7 +7,7 @@ Coverage:
 - Mass-assignment prevention on POST /competitors (CompetitorCreate schema)
 - URL/name validation on CompetitorCreate
 - _is_stale_running staleness detection
-- Decodo usage accounting (record_decodo_request / get_usage_summary) — Redis
+- ScrapingBee usage accounting (record_scrapingbee_request / get_usage_summary) — Redis
   is unavailable in the test env, so these exercise the fail-safe defaults
 - GET/PUT /competitors/schedule — hotelier-configurable auto-scrape hour,
   including OWNER/MANAGER role gating and input validation
@@ -286,27 +286,27 @@ def test_is_stale_running_true_when_long_running():
 
 
 # ---------------------------------------------------------------------------
-# Decodo usage accounting (Redis unavailable in test env -> fail-safe defaults)
+# ScrapingBee usage accounting (Redis unavailable in test env -> fail-safe defaults)
 # ---------------------------------------------------------------------------
 
-def test_record_decodo_request_never_raises_without_redis():
-    from app.core.decodo_usage import record_decodo_request
+def test_record_scrapingbee_request_never_raises_without_redis():
+    from app.core.scrapingbee_usage import record_scrapingbee_request
 
     # Must be a no-op, not an exception, when Redis is unreachable.
-    record_decodo_request("some-hotel-id")
-    record_decodo_request("", count=5)       # blank hotel_id -> no-op
-    record_decodo_request("some-hotel-id", count=0)  # non-positive count -> no-op
+    record_scrapingbee_request("some-hotel-id")
+    record_scrapingbee_request("", count=5)       # blank hotel_id -> no-op
+    record_scrapingbee_request("some-hotel-id", count=0)  # non-positive count -> no-op
 
 
 def test_get_usage_summary_fails_safe_to_zeros():
-    from app.core.decodo_usage import get_usage_summary
+    from app.core.scrapingbee_usage import get_usage_summary
 
     summary = get_usage_summary("some-hotel-id")
     assert summary == {"today": 0, "last_30_days": 0, "daily": []}
 
 
 def test_get_usage_summary_empty_for_blank_hotel_id():
-    from app.core.decodo_usage import get_usage_summary
+    from app.core.scrapingbee_usage import get_usage_summary
 
     assert get_usage_summary("") == {"today": 0, "last_30_days": 0, "daily": []}
 

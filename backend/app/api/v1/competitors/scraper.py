@@ -1,9 +1,8 @@
 """
-Competitor scraper: Decodo API client + Scrapling HTML parser for MakeMyTrip.
+Competitor scraper: ScrapingBee API client + Scrapling HTML parser for MakeMyTrip.
 No FastAPI router here — pure scraping logic consumed by background.py.
 """
 import re
-import uuid
 import logging
 import asyncio
 from datetime import datetime, timedelta
@@ -13,53 +12,45 @@ import httpx
 from scrapling import Selector
 
 from app.core.config import get_settings
-from app.core.decodo_usage import record_decodo_request
+from app.core.scrapingbee_usage import record_scrapingbee_request
 
 logger = logging.getLogger(__name__)
 
-# --- Decodo API constants ---
-
-DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
+# --- ScrapingBee API constants ---
+SCRAPINGBEE_URL = "https://app.scrapingbee.com/api/v1/"
 
 # MMT renders its price client-side via an async XHR after the initial DOM is
-# ready. We ask Decodo's headless browser to wait this many seconds so that the
-# price node exists before the HTML snapshot is captured.
-MMT_RENDER_WAIT_SECONDS = 12
+# ready. We ask ScrapingBee's headless browser to wait this many ms so that
+# the price node exists before the HTML snapshot is captured.
+MMT_RENDER_WAIT_MS = 12000
 
-# httpx read timeout for a single Decodo call. Must exceed Decodo's own
-# (render + MMT_RENDER_WAIT_SECONDS) processing time, with headroom.
-DECODO_HTTP_TIMEOUT_SECONDS = 120.0
+# httpx read timeout for a single ScrapingBee call.
+# ScrapingBee's own max is 140s; we add headroom for network.
+SCRAPINGBEE_HTTP_TIMEOUT_SECONDS = 150.0
 
 # Past this age a "running" competitor row is treated as an orphaned/crashed
-# worker rather than active work-in-progress — no other process ever revisits it.
+# worker rather than active work-in-progress.
 STALE_SCRAPE_MINUTES = 15
 
-# Each manual "Refresh" click burns ~7 paid Decodo requests. This cooldown
+# Each manual "Refresh" click burns ~7 paid ScrapingBee requests. This cooldown
 # prevents rapid re-clicks from multiplying the third-party bill.
 MANUAL_SCRAPE_COOLDOWN_SECONDS = 5 * 60
 
 
-def _decodo_auth_header() -> Optional[str]:
+def _get_api_key() -> Optional[str]:
     """
-    Build the Decodo Basic-auth header from config.
-
-    IMPORTANT: no hardcoded fallback. A prior version shipped a real credential
-    as a default value — same class of bug as the leaked Razorpay secret in
-    CLAUDE.md. Missing config must surface as a clear error.
+    Read ScrapingBee API key from config (Railway env var: SCRAPINGBEE_API_KEY).
+    No hardcoded fallback — missing config must surface as a clear error.
     """
-    token = get_settings().DECODO_AUTH_TOKEN
-    if not token:
-        return None
-    return token if token.startswith("Basic ") else f"Basic {token}"
+    return get_settings().SCRAPINGBEE_API_KEY or None
 
 
 def _is_stale_running(comp) -> bool:
-    """A 'running' row with no progress for STALE_SCRAPE_MINUTES is orphaned
-    (worker restarted/crashed mid-scrape) — surface it as failed/retryable."""
+    """A 'running' row with no progress for STALE_SCRAPE_MINUTES is orphaned."""
     if comp.last_scrape_status != "running":
         return False
     if not comp.scrape_started_at:
-        return True  # legacy rows from before we tracked start time
+        return True
     return datetime.utcnow() - comp.scrape_started_at > timedelta(minutes=STALE_SCRAPE_MINUTES)
 
 
@@ -71,11 +62,7 @@ def get_dynamic_dates(offset: int):
 
 
 def clean_makemytrip_url(url: str, checkin: str, checkout: str) -> str:
-    """
-    Replace checkin/checkout date tokens while preserving ALL other query params.
-    The old implementation stripped params like topHtlId/locusId which broke
-    region-based resort listings.
-    """
+    """Replace checkin/checkout date tokens while preserving ALL other query params."""
     url = re.sub(r"checkin=\d{8}", f"checkin={checkin}", url)
     url = re.sub(r"checkout=\d{8}", f"checkout={checkout}", url)
     return url
@@ -108,90 +95,95 @@ def _extract_mmt_hotel_id(url: str) -> Optional[str]:
 
 async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None) -> dict:
     """
-    Fetch one day's rate from MMT via Decodo Scraper API + Scrapling.
+    Fetch one day's rate from MMT via ScrapingBee API + Scrapling parser.
 
-    session_id: Decodo reuses the same proxy IP for the entire scrape session
-    (up to 10 min). Sequential requests with 2-3s gaps let Akamai's first
-    challenge resolve before the next request lands — this is why we do NOT
-    fire all 7 days concurrently (concurrent burst = same IP = bot-block on all).
+    ScrapingBee handles the headless browser, JS rendering, and premium proxy
+    rotation. We use premium_proxy=True + country_code=in so the request
+    appears to originate from India (required for INR pricing on MMT).
 
-    613 handling: returns raw result; retry logic lives in _scrape_mmt_with_retry.
+    session_id: ScrapingBee routes all requests with the same session_id
+    through the same IP for 5 minutes — this is an INTEGER between 0-10M.
+    We convert our hex string to an int in the valid range.
+
+    Retry logic lives in _scrape_mmt_with_retry (background.py caller).
     """
-    auth_header = _decodo_auth_header()
-    if not auth_header:
-        return {"status": "failed", "reason": "decodo_not_configured"}
+    api_key = _get_api_key()
+    if not api_key:
+        return {"status": "failed", "reason": "scrapingbee_not_configured"}
 
     try:
-        logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}... (session={session_id})")
+        logger.info(f"Fetching via ScrapingBee: {url[:60]}... (session={session_id})")
 
-        # proxy_pool:"premium" → 193-country pool that includes India. "standard"
-        # only covers 8 countries (no India). To bypass Akamai blocks, we do NOT
-        # set 'geo' to India, but instead pass INR cookies to force INR currency display.
-        payload: dict = {
-            "url": url,
-            "proxy_pool": "premium",
-            "headless": "html",
-            "cookies": [
-                {"key": "currency", "value": "INR"},
-                {"key": "amadeus.user.currency", "value": "INR"}
-            ],
-            "force_cookies": True,
-        }
+        # Convert hex session_id to an integer in ScrapingBee's valid range (0-10M)
+        sb_session_id = None
         if session_id:
-            payload["session_id"] = session_id
+            try:
+                sb_session_id = int(session_id, 16) % 10_000_000
+            except (ValueError, TypeError):
+                sb_session_id = None
 
-        headers = {
-            "accept": "application/json",
-            "content-type": "application/json",
-            "authorization": auth_header,
+        params: dict = {
+            "api_key": api_key,
+            "url": url,
+            "render_js": "true",           # headless browser — MMT prices need JS
+            "premium_proxy": "true",        # residential proxies — bypass bot protection
+            "country_code": "in",           # India IP → INR prices on MMT
+            "wait": str(MMT_RENDER_WAIT_MS),  # wait for XHR price to load (ms)
+            "block_resources": "false",     # allow CSS/images so price XHR fires
+            "block_ads": "true",
+            "device": "desktop",
+            "window_width": "1920",
+            "window_height": "1080",
         }
+        if sb_session_id is not None:
+            params["session_id"] = str(sb_session_id)
 
         try:
-            async with httpx.AsyncClient(timeout=DECODO_HTTP_TIMEOUT_SECONDS) as client:
-                response = await client.post(DECODO_URL, json=payload, headers=headers)
+            async with httpx.AsyncClient(timeout=SCRAPINGBEE_HTTP_TIMEOUT_SECONDS) as client:
+                response = await client.get(SCRAPINGBEE_URL, params=params)
         except httpx.HTTPError as e:
-            record_decodo_request(hotel_id)
-            logger.error(f"Decodo API request failed before a response: {e}")
+            record_scrapingbee_request(hotel_id)
+            logger.error(f"ScrapingBee request failed: {e}")
             return {"status": "failed", "reason": f"request_error_{type(e).__name__}"}
 
-        record_decodo_request(hotel_id)
+        # Always record the attempt (we are billed per attempt)
+        record_scrapingbee_request(hotel_id)
+
+        # ScrapingBee returns 200 on success; non-200 = billing/auth/service issue
+        if response.status_code == 401:
+            logger.error("ScrapingBee: invalid API key or out of credits")
+            return {"status": "failed", "reason": "scrapingbee_auth_failed"}
+
+        if response.status_code == 429:
+            logger.warning("ScrapingBee: too many concurrent requests")
+            return {"status": "failed", "reason": "scrapingbee_rate_limited"}
 
         if response.status_code != 200:
             body_text = response.text[:300]
-            if response.status_code == 400 and "has failed" in body_text.lower() and "session" in body_text.lower():
-                logger.warning(f"Decodo session '{session_id}' invalidated (400 session-failed) for {url[:60]}")
-                return {"status": "failed", "reason": "decodo_session_failed"}
-            logger.error(f"Decodo API returned {response.status_code}: {body_text}")
-            return {"status": "failed", "reason": f"API_status_{response.status_code}"}
+            logger.error(f"ScrapingBee returned {response.status_code}: {body_text}")
+            # 500 from ScrapingBee often means the target site blocked the request
+            if response.status_code == 500:
+                return {"status": "failed", "reason": "scrapingbee_target_blocked"}
+            return {"status": "failed", "reason": f"scrapingbee_status_{response.status_code}"}
 
-        res_json = response.json()
-
-        if not res_json.get("results") or len(res_json["results"]) == 0:
-            top_status = res_json.get("status_code")
-            if top_status == 613:
-                logger.warning(f"Decodo 613 (blocked, top-level) for {url[:60]}")
-                return {"status": "failed", "reason": "decodo_613_target_blocked"}
-            logger.error(f"Decodo API: empty results. top-level status={top_status}, body={str(res_json)[:200]}")
-            return {"status": "failed", "reason": "empty_api_results"}
-
-        first_result = res_json["results"][0]
-        result_status = first_result.get("status_code")
-        if result_status == 613:
-            logger.warning(f"Decodo 613 (blocked, results[0]) for {url[:60]}")
-            return {"status": "failed", "reason": "decodo_613_target_blocked"}
-
-        html_content = first_result.get("content") or ""
-        if not html_content.strip():
-            logger.warning(f"Decodo returned empty HTML content for {url[:60]}")
+        html_content = response.text
+        if not html_content or not html_content.strip():
+            logger.warning(f"ScrapingBee returned empty HTML for {url[:60]}")
             return {"status": "failed", "reason": "empty_html_content"}
 
-        if "access denied" in html_content.lower() or "access-denied" in html_content.lower() or "reference id" in html_content.lower():
-            logger.error("Blocked by Akamai (Access Denied / Reference ID)")
+        # Check for bot-block / access denied in the returned page
+        lc = html_content.lower()
+        if "access denied" in lc or "access-denied" in lc or "reference id" in lc:
+            logger.error("Blocked by Akamai (Access Denied / Reference ID in HTML)")
             return {"status": "blocked", "reason": "shield_blocked"}
+
+        if "captcha" in lc or "are you a robot" in lc:
+            logger.warning("CAPTCHA page returned from ScrapingBee")
+            return {"status": "failed", "reason": "captcha_page"}
 
         page = Selector(html_content)
 
-        # Scoping logic to target hotel container
+        # Scope parsing to the hotel's own listing card
         container = page
         mmt_hotel_id = _extract_mmt_hotel_id(url)
         if mmt_hotel_id:
@@ -204,19 +196,19 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             )
             card = page.xpath(xpath_query).first
             if card:
-                logger.info(f"Successfully scoped parsing to hotel card container for MMT hotel ID: {mmt_hotel_id}")
+                logger.info(f"Scoped to hotel card for MMT ID: {mmt_hotel_id}")
                 container = card
             else:
-                logger.warning(f"Could not find scoped card container for MMT hotel ID: {mmt_hotel_id}")
+                logger.warning(f"Hotel card not found for MMT ID: {mmt_hotel_id}")
                 return {"status": "failed", "reason": "hotel_card_not_found"}
         else:
-            logger.info("No MMT hotel ID found in URL; parsing full page")
+            logger.info("No MMT hotel ID in URL; parsing full page")
 
         sold_out_check = container.css("p.font14.appendBottom5.redText.latoBold.lineHight17").first
         if sold_out_check and "You Just Missed It" in sold_out_check.text:
             return {"status": "success", "price": 0.0, "is_sold_out": True}
 
-        # Primary selector, ID fallback, then data-attribute fallback
+        # Primary selector → ID fallback → data-attribute fallback
         price_el = container.css('p.priceText.latoBlack.font22.blackText.appendBottom5[id="hlistpg_hotel_shown_price"]').first
         if not price_el:
             price_el = container.css('#hlistpg_hotel_shown_price').first
@@ -231,7 +223,6 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             return {"status": "failed", "reason": "price_element_not_found"}
 
         price_text = price_el.text or ""
-
         if not re.search(r"\d", price_text):
             for child in price_el.css("*"):
                 child_text = child.text or ""
@@ -250,7 +241,7 @@ async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[st
             return {"status": "failed", "reason": "price_parse_failed"}
 
         price = float(price_digits)
-        logger.info(f"Parsed price: Rs.{price:,.0f} from text {price_text!r}")
+        logger.info(f"Parsed price: Rs.{price:,.0f} from {price_text!r}")
         return {"status": "success", "price": price, "is_sold_out": False}
 
     except Exception as e:
