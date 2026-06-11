@@ -49,6 +49,8 @@ interface AgentUsageInfo {
     today_tokens: number;
     daily_limit: number;
     pct_of_limit_used_today: number | null;
+    messages_today: number;
+    unique_users_today: number;
     estimated_conversations_today: number;
     period_total_tokens: number;
     daily_history: Record<string, number>;
@@ -225,9 +227,20 @@ const AgentUsageCard = ({
                         <span className={`font-semibold ${textColor}`}>
                             {info.pct_of_limit_used_today !== null ? `${pct}% used` : '—'}
                         </span>
-                        <span className="text-muted-foreground">
-                            ~{info.estimated_conversations_today} conversations
-                        </span>
+                    </div>
+                </div>
+
+                {/* Real interaction counts today */}
+                <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-muted/40 border rounded-xl p-2.5 text-center">
+                        <p className="text-lg font-black text-foreground leading-none">{info.unique_users_today}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                            {agentKey === 'hotelier' ? 'staff today' : 'people today'}
+                        </p>
+                    </div>
+                    <div className="bg-muted/40 border rounded-xl p-2.5 text-center">
+                        <p className="text-lg font-black text-foreground leading-none">{info.messages_today}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">messages today</p>
                     </div>
                 </div>
 

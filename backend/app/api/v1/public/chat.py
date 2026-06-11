@@ -140,7 +140,7 @@ class GuestChatResponse(BaseModel):
 
 from fastapi import Request
 from fastapi.responses import StreamingResponse
-from app.core.limiter import limiter
+from app.core.limiter import limiter, get_real_ip
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +243,10 @@ async def chat_with_guest_ai(
         # 4. Invoke Agent
         try:
             result = await agent.arun(messages)
-            _record_ai_usage(hotel.id, result, agent_type="guest")
+            # Identify the guest by email if shared, else by client IP, so we
+            # can report real distinct-visitor counts (not token estimates).
+            _guest_id = payload.guest_email or get_real_ip(request)
+            _record_ai_usage(hotel.id, result, agent_type="guest", user_identifier=_guest_id)
             ai_response = result.content or ""
             return GuestChatResponse(response=ai_response)
         except Exception as invoke_err:
@@ -413,6 +416,10 @@ async def stream_guest_ai(
 
     import json as _json
 
+    # Capture the guest identity for usage accounting before entering the
+    # generator (request object is still in scope here).
+    _stream_guest_id = payload.guest_email or get_real_ip(request)
+
     async def _event_gen():
         try:
             from agno.agent import RunContentEvent
@@ -423,6 +430,13 @@ async def stream_guest_ai(
             logger.error("Stream event error: %s", exc)
             yield f"data: {_json.dumps({'error': 'Stream interrupted'})}\n\n"
         finally:
+            # Record usage once the stream finishes. Agno stores the completed
+            # run (with token metrics) on the agent after streaming.
+            try:
+                _final = getattr(agent, "run_response", None)
+                _record_ai_usage(hotel.id, _final, agent_type="guest", user_identifier=_stream_guest_id)
+            except Exception:
+                pass
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(

@@ -68,3 +68,82 @@ def test_inprocess_fallback_is_per_agent_type(monkeypatch):
         ai_usage._enforce_inprocess_fallback("guest", "hotel-A", day, limit)
     # Same hotel but different agent type has its own counter — must not raise.
     ai_usage._enforce_inprocess_fallback("whatsapp", "hotel-A", day, limit)
+
+
+# ─── Real message / unique-user accounting (AI-09) ──────────────────────────────
+
+class _FakePipeline:
+    """Minimal Redis pipeline that applies ops on execute()."""
+    def __init__(self, store, sets):
+        self._store, self._sets, self._ops = store, sets, []
+
+    def incr(self, key):
+        self._ops.append(("incr", key)); return self
+
+    def incrby(self, key, amount):
+        self._ops.append(("incrby", key, amount)); return self
+
+    def sadd(self, key, member):
+        self._ops.append(("sadd", key, member)); return self
+
+    def expire(self, key, ttl):
+        return self  # TTL is a no-op in the fake
+
+    def execute(self):
+        for op in self._ops:
+            if op[0] == "incr":
+                self._store[op[1]] = self._store.get(op[1], 0) + 1
+            elif op[0] == "incrby":
+                self._store[op[1]] = self._store.get(op[1], 0) + op[2]
+            elif op[0] == "sadd":
+                self._sets.setdefault(op[1], set()).add(op[2])
+        self._ops.clear()
+
+
+class _FakeRedis:
+    def __init__(self):
+        self.store, self.sets = {}, {}
+
+    def pipeline(self):
+        return _FakePipeline(self.store, self.sets)
+
+    def get(self, key):
+        v = self.store.get(key)
+        return str(v) if v is not None else None
+
+    def scard(self, key):
+        return len(self.sets.get(key, set()))
+
+
+class _FakeResult:
+    def __init__(self, total_tokens):
+        self.metrics = {"total_tokens": total_tokens}
+
+
+def test_record_ai_usage_tracks_messages_and_unique_users(monkeypatch):
+    fake = _FakeRedis()
+    monkeypatch.setattr(ai_usage.redis_client, "get_instance", lambda: fake)
+    monkeypatch.setattr(ai_usage, "utcnow", lambda: __import__("datetime").datetime(2026, 6, 11))
+
+    day = "20260611"
+    # Two messages from the same guest "+91999" -> 2 messages, 1 unique user.
+    ai_usage.record_ai_usage("hotel-X", _FakeResult(300), agent_type="whatsapp", user_identifier="+91999")
+    ai_usage.record_ai_usage("hotel-X", _FakeResult(200), agent_type="whatsapp", user_identifier="+91999")
+    # A different guest -> unique users becomes 2.
+    ai_usage.record_ai_usage("hotel-X", _FakeResult(100), agent_type="whatsapp", user_identifier="+91888")
+
+    assert fake.store[f"ai_runs:whatsapp:hotel-X:{day}"] == 3
+    assert fake.store[f"ai_tokens:whatsapp:hotel-X:{day}"] == 600
+    assert fake.scard(f"ai_users:whatsapp:hotel-X:{day}") == 2
+
+
+def test_record_ai_usage_hashes_identifier(monkeypatch):
+    """Raw PII (phone/email) must never be stored — only its hash."""
+    fake = _FakeRedis()
+    monkeypatch.setattr(ai_usage.redis_client, "get_instance", lambda: fake)
+    monkeypatch.setattr(ai_usage, "utcnow", lambda: __import__("datetime").datetime(2026, 6, 11))
+
+    ai_usage.record_ai_usage("hotel-X", _FakeResult(50), agent_type="guest", user_identifier="guest@example.com")
+    members = fake.sets[f"ai_users:guest:hotel-X:20260611"]
+    assert "guest@example.com" not in members
+    assert ai_usage._hash_id("guest@example.com") in members

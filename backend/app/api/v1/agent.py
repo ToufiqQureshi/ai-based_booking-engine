@@ -64,12 +64,15 @@ async def get_ai_usage(
     today_iso = today.isoformat()
 
     agents = {
-        "hotelier": {"label": "Dashboard AI (you)", "daily_history": {}, "today_tokens": 0},
-        "guest":    {"label": "Guest Chat Widget",   "daily_history": {}, "today_tokens": 0},
-        "whatsapp": {"label": "WhatsApp Bot",        "daily_history": {}, "today_tokens": 0},
+        "hotelier": {"label": "Dashboard AI (you)"},
+        "guest":    {"label": "Guest Chat Widget"},
+        "whatsapp": {"label": "WhatsApp Bot"},
     }
 
     for agent_type, info in agents.items():
+        info["daily_history"] = {}        # date -> tokens
+        info["messages_today"] = 0        # AI message exchanges today
+        info["unique_users_today"] = 0    # distinct people who talked today
         for i in range(days):
             day = today - timedelta(days=i)
             day_str = day.strftime("%Y%m%d")
@@ -80,18 +83,31 @@ async def get_ai_usage(
             info["daily_history"][day.isoformat()] = tokens
         info["today_tokens"] = info["daily_history"].get(today_iso, 0)
 
+        if r:
+            today_str = today.strftime("%Y%m%d")
+            runs_raw = r.get(f"ai_runs:{agent_type}:{hotel_id}:{today_str}")
+            info["messages_today"] = int(runs_raw) if runs_raw else 0
+            try:
+                info["unique_users_today"] = r.scard(f"ai_users:{agent_type}:{hotel_id}:{today_str}")
+            except Exception:
+                info["unique_users_today"] = 0
+
     def _build_agent_summary(agent_type: str, info: dict) -> dict:
         today_tokens = info["today_tokens"]
         limit = limits[agent_type]
         pct = round((today_tokens / limit * 100), 1) if limit > 0 else None
-        est_conversations = round(today_tokens / _AVG_TOKENS_PER_CONVERSATION)
         period_total = sum(info["daily_history"].values())
         return {
             "label": info["label"],
             "today_tokens": today_tokens,
             "daily_limit": limit,
             "pct_of_limit_used_today": pct,
-            "estimated_conversations_today": est_conversations,
+            # Real counts from Redis — not token-based estimates.
+            "messages_today": info["messages_today"],
+            "unique_users_today": info["unique_users_today"],
+            # Backward-compat: real unique-user count, falling back to a token
+            # estimate only when no per-user data exists for the day.
+            "estimated_conversations_today": info["unique_users_today"] or round(today_tokens / _AVG_TOKENS_PER_CONVERSATION),
             "period_total_tokens": period_total,
             "daily_history": info["daily_history"],
         }
@@ -146,7 +162,7 @@ async def chat_with_agent(
 
         # 4. Run agent
         result = await agent.arun(input_messages)
-        record_ai_usage(current_user.hotel_id, result, agent_type="hotelier")
+        record_ai_usage(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
         return ChatResponse(response=result.content or "")
 
     except ValueError as e:

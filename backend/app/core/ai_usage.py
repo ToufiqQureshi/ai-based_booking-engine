@@ -10,6 +10,7 @@ infrastructure errors so hoteliers are never blocked by Redis/DB issues.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import threading
 from typing import Optional
@@ -79,26 +80,59 @@ def extract_total_tokens(result) -> int:
     return int(total)
 
 
-def record_ai_usage(hotel_id: str, result, agent_type: str = "hotelier") -> int:
-    """Accumulate this run's token usage for the given agent type.
+def _hash_id(value: str) -> str:
+    """Hash a guest identifier (phone/email/IP) before storing it so the
+    unique-participant set never holds raw PII (CLAUDE.md §8). Truncated
+    sha256 keeps collision risk negligible at hotel-day scale."""
+    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()[:16]
 
-    Redis key: ai_tokens:{agent_type}:{hotel_id}:{YYYYMMDD}
-    Returns the number of tokens recorded (0 if unavailable). Never raises.
+
+def record_ai_usage(
+    hotel_id: str,
+    result,
+    agent_type: str = "hotelier",
+    user_identifier: Optional[str] = None,
+) -> int:
+    """Record one AI run: tokens, message count, and unique participant.
+
+    Daily Redis keys (all expire after ~5 weeks):
+      - ai_tokens:{agent}:{hotel}:{YYYYMMDD}  — cumulative tokens (billing)
+      - ai_runs:{agent}:{hotel}:{YYYYMMDD}    — message-exchange counter
+      - ai_users:{agent}:{hotel}:{YYYYMMDD}   — SET of hashed participant ids
+
+    `user_identifier` is the guest's phone (WhatsApp), email/IP (guest chat),
+    or staff user id (hotelier). Stored hashed so no raw PII lands in Redis.
+    Returns tokens recorded (0 if unavailable). Never raises.
     """
     try:
         if not hotel_id:
             return 0
-        tokens = extract_total_tokens(result)
-        if tokens <= 0:
-            return 0
         r = redis_client.get_instance()
+        tokens = extract_total_tokens(result)
         if not r:
             return tokens
         day = utcnow().strftime("%Y%m%d")
-        key = f"ai_tokens:{agent_type}:{hotel_id}:{day}"
-        new_total = r.incrby(key, tokens)
-        if new_total == tokens:  # first write today -> set expiry
-            r.expire(key, _TOKEN_KEY_TTL)
+
+        # One pipeline round-trip for all three counters. Expiry is (re)set on
+        # every write — cheap, and the date-stamped key stops growing once the
+        # day rolls over, so it still ages out 35 days later.
+        pipe = r.pipeline()
+
+        runs_key = f"ai_runs:{agent_type}:{hotel_id}:{day}"
+        pipe.incr(runs_key)
+        pipe.expire(runs_key, _TOKEN_KEY_TTL)
+
+        if user_identifier:
+            users_key = f"ai_users:{agent_type}:{hotel_id}:{day}"
+            pipe.sadd(users_key, _hash_id(user_identifier))
+            pipe.expire(users_key, _TOKEN_KEY_TTL)
+
+        if tokens > 0:
+            tokens_key = f"ai_tokens:{agent_type}:{hotel_id}:{day}"
+            pipe.incrby(tokens_key, tokens)
+            pipe.expire(tokens_key, _TOKEN_KEY_TTL)
+
+        pipe.execute()
         return tokens
     except Exception as exc:  # pragma: no cover - telemetry must never break a request
         logger.debug("record_ai_usage failed for hotel %s agent %s: %s", hotel_id, agent_type, exc)

@@ -64,6 +64,8 @@ interface AgentUsageInfo {
   today_tokens: number;
   daily_limit: number;
   pct_of_limit_used_today: number | null;
+  messages_today: number;
+  unique_users_today: number;
   estimated_conversations_today: number;
   daily_history: Record<string, number>;
 }
@@ -977,14 +979,18 @@ export const AnalyticsDashboard: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Conversations + limit */}
-                          <div className="grid grid-cols-2 gap-3">
+                          {/* Real interaction counts today */}
+                          <div className="grid grid-cols-3 gap-2">
                             <div className="bg-background rounded-xl p-3 border border-border text-center">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Conversations Today</p>
-                              <p className="text-2xl font-black text-foreground mt-1">{info.estimated_conversations_today}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Guests Today</p>
+                              <p className="text-2xl font-black text-foreground mt-1">{info.unique_users_today}</p>
                             </div>
                             <div className="bg-background rounded-xl p-3 border border-border text-center">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Daily Limit</p>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Messages</p>
+                              <p className="text-2xl font-black text-foreground mt-1">{info.messages_today}</p>
+                            </div>
+                            <div className="bg-background rounded-xl p-3 border border-border text-center">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Limit</p>
                               <p className="text-2xl font-black text-foreground mt-1">{(info.daily_limit / 1000).toFixed(0)}k</p>
                               <p className="text-[10px] text-muted-foreground">tokens</p>
                             </div>

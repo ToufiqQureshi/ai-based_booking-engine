@@ -283,7 +283,8 @@ async def whatsapp_webhook_receive(
                             if not agent_reply:
                                 input_messages = chat_history + [Message(role="user", content=user_message)]
                                 result = await agent.arun(input_messages)
-                                record_ai_usage(resolved_hotel.id, result, agent_type="whatsapp")
+                                # sender_phone identifies the guest -> real unique-guest count
+                                record_ai_usage(resolved_hotel.id, result, agent_type="whatsapp", user_identifier=sender_phone)
                                 agent_reply = result.content or ""
 
                             if "ACTION:BOOKING_LINK|" in agent_reply:
