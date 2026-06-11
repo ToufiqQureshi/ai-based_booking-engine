@@ -73,7 +73,9 @@ async def update_quotas(
         sub = Subscription(hotel_id=hotel_id)
     if "whatsapp_credits" in data: sub.whatsapp_credits = data["whatsapp_credits"]
     if "sms_credits" in data: sub.sms_credits = data["sms_credits"]
-    if "ai_usage_limit" in data: sub.ai_usage_limit = data["ai_usage_limit"]
+    if "ai_hotelier_daily_limit" in data: sub.ai_hotelier_daily_limit = data["ai_hotelier_daily_limit"]
+    if "ai_guest_chat_daily_limit" in data: sub.ai_guest_chat_daily_limit = data["ai_guest_chat_daily_limit"]
+    if "ai_whatsapp_daily_limit" in data: sub.ai_whatsapp_daily_limit = data["ai_whatsapp_daily_limit"]
     sub.updated_at = datetime.utcnow()
     session.add(sub)
 
@@ -81,7 +83,7 @@ async def update_quotas(
     session.add(AuditLog(
         user_id=super_admin.id, user_email=super_admin.email, hotel_id=hotel_id,
         action="UPDATE_QUOTAS",
-        description=f"Updated quotas for hotel '{hotel.name if hotel else hotel_id}': WA={sub.whatsapp_credits}, SMS={sub.sms_credits}, AI={sub.ai_usage_limit}",
+        description=f"Updated quotas for hotel '{hotel.name if hotel else hotel_id}': WA={sub.whatsapp_credits}, SMS={sub.sms_credits}, AI_hotelier={sub.ai_hotelier_daily_limit}, AI_guest={sub.ai_guest_chat_daily_limit}, AI_whatsapp={sub.ai_whatsapp_daily_limit}",
         ip_address=_get_client_ip(request),
     ))
     await session.commit()
@@ -95,43 +97,54 @@ async def get_hotel_ai_usage(
     days: int = Query(default=7, ge=1, le=35, description="Number of past days to return (max 35)"),
     super_admin: User = Depends(require_permission("superadmin.subscriptions.read")),
 ):
-    """Return per-day token usage and the subscription limit for a hotel.
+    """Return per-agent, per-day token usage and subscription limits for a hotel.
 
-    Reads daily counters from Redis (key: ai_tokens:{hotel_id}:{YYYYMMDD}).
-    Returns zeroes for days with no recorded usage — this is expected when
-    Redis was unavailable or the hotel simply did not use the AI that day.
+    Reads daily counters from Redis (key: ai_tokens:{agent_type}:{hotel_id}:{YYYYMMDD}).
+    Returns zeroes for days with no recorded usage.
     """
     from app.core.redis_client import redis_client
     from app.core.time import utcnow
 
     r = redis_client.get_instance()
     today = utcnow().date()
+    today_iso = today.isoformat()
 
-    daily_usage: dict[str, int] = {}
-    total_tokens = 0
-    for i in range(days):
-        day = today - timedelta(days=i)
-        day_str = day.strftime("%Y%m%d")
-        tokens = 0
-        if r:
-            raw = r.get(f"ai_tokens:{hotel_id}:{day_str}")
-            tokens = int(raw) if raw else 0
-        daily_usage[day.isoformat()] = tokens
-        total_tokens += tokens
+    agent_types = ["hotelier", "guest", "whatsapp"]
+
+    # Build per-agent daily breakdown
+    per_agent: dict[str, dict] = {}
+    for agent in agent_types:
+        daily: dict[str, int] = {}
+        total = 0
+        for i in range(days):
+            day = today - timedelta(days=i)
+            day_str = day.strftime("%Y%m%d")
+            tokens = 0
+            if r:
+                raw = r.get(f"ai_tokens:{agent}:{hotel_id}:{day_str}")
+                tokens = int(raw) if raw else 0
+            daily[day.isoformat()] = tokens
+            total += tokens
+        per_agent[agent] = {
+            "today_tokens": daily.get(today_iso, 0),
+            "period_total": total,
+            "daily_usage": daily,
+        }
 
     sub = (await session.execute(
         select(Subscription).where(Subscription.hotel_id == hotel_id)
     )).scalar_one_or_none()
 
-    today_iso = today.isoformat()
     return {
         "hotel_id": hotel_id,
-        "ai_usage_limit": sub.ai_usage_limit if sub else None,
-        "today_tokens": daily_usage.get(today_iso, 0),
-        "period_total_tokens": total_tokens,
         "period_days": days,
-        "daily_usage": daily_usage,
         "redis_available": r is not None,
+        "limits": {
+            "hotelier": sub.ai_hotelier_daily_limit if sub else 0,
+            "guest":    sub.ai_guest_chat_daily_limit if sub else 0,
+            "whatsapp": sub.ai_whatsapp_daily_limit if sub else 0,
+        },
+        "usage": per_agent,
     }
 
 

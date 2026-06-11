@@ -23,47 +23,7 @@ class ChatResponse(BaseModel):
 
 from fastapi import Request
 from app.core.limiter import limiter
-
-
-async def _enforce_hotelier_ai_token_quota(hotel_id: str, session) -> None:
-    """Block the request if today's token spend has hit the subscription's ai_usage_limit.
-
-    Fails open on Redis unavailability or missing subscription so legitimate
-    requests are never blocked by infrastructure errors.
-    """
-    try:
-        from sqlmodel import select
-        from app.models.subscription import Subscription
-        from app.core.redis_client import redis_client
-        from app.core.time import utcnow
-
-        sub = (await session.execute(
-            select(Subscription).where(Subscription.hotel_id == hotel_id)
-        )).scalar_one_or_none()
-
-        if not sub or sub.ai_usage_limit <= 0:
-            return  # No subscription or unlimited — pass through
-
-        r = redis_client.get_instance()
-        if not r:
-            return  # Redis down — fail open, quota check is best-effort
-
-        day = utcnow().strftime("%Y%m%d")
-        raw = r.get(f"ai_tokens:{hotel_id}:{day}")
-        used = int(raw) if raw else 0
-
-        if used >= sub.ai_usage_limit:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=(
-                    f"Daily AI token quota exceeded ({used:,}/{sub.ai_usage_limit:,} tokens). "
-                    "Please contact support to upgrade your plan."
-                ),
-            )
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.debug("Hotelier token quota check failed for hotel %s: %s", hotel_id, exc)
+from app.core.ai_usage import enforce_ai_token_quota, record_ai_usage
 
 
 @router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_feature("feature_ai_agent"))])
@@ -81,8 +41,8 @@ async def chat_with_agent(
             detail="AI Assistant feature is not enabled for your subscription plan"
         )
 
-    # AI-QUOTA: enforce subscription daily token budget before spending any tokens
-    await _enforce_hotelier_ai_token_quota(current_user.hotel_id, session)
+    # AI-QUOTA: enforce per-agent subscription daily token budget before spending any tokens
+    await enforce_ai_token_quota("hotelier", current_user.hotel_id, session)
 
     try:
         # 1. Initialize Agent (lazy import — see INF-01 note at top of file)
@@ -105,9 +65,7 @@ async def chat_with_agent(
 
         # 4. Run agent
         result = await agent.arun(input_messages)
-        # AI-03: record per-hotel token spend for cost visibility.
-        from app.core.ai_usage import record_ai_usage
-        record_ai_usage(current_user.hotel_id, result)
+        record_ai_usage(current_user.hotel_id, result, agent_type="hotelier")
         return ChatResponse(response=result.content or "")
 
     except ValueError as e:

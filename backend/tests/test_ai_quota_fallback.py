@@ -1,50 +1,70 @@
 """
-Tests for the in-process AI-chat quota fallback (AI-08).
+Tests for the in-process AI quota fallback (AI-08).
 
-When Redis is unavailable the per-hotel daily cost cap must NOT silently fail
-open. The in-process fallback enforces a conservative per-process floor instead.
+When Redis is unavailable the per-agent daily cost cap must NOT silently fail
+open. The in-process fallback in ai_usage.py enforces a conservative per-process
+floor instead, keyed by agent_type + hotel_id.
 """
 import pytest
 from fastapi import HTTPException
 
-import app.api.v1.public.chat as chat
+import app.core.ai_usage as ai_usage
 
 
 def _reset_fallback():
-    chat._fallback_day = None
-    chat._fallback_counts.clear()
+    ai_usage._fb_day = None
+    ai_usage._fb_counts.clear()
 
 
 def test_inprocess_fallback_enforces_cap(monkeypatch):
     _reset_fallback()
-    monkeypatch.setattr(chat, "AI_CHAT_DAILY_CAP_PER_HOTEL", 3)
+    # Override token estimate so per_process_cap = max(5, limit // 10)
+    # With limit=60: cap = max(5, 6) = 6
+    monkeypatch.setattr(ai_usage, "_APPROX_TOKENS_PER_REQ", 1)
     day = "20260610"
+    limit = 60  # per_process_cap = max(5, 60 // 10) = 6
 
-    # Up to the cap: no error.
-    for _ in range(3):
-        chat._enforce_inprocess_ai_quota("hotel-A", day)
+    for _ in range(6):
+        ai_usage._enforce_inprocess_fallback("guest", "hotel-A", day, limit)
 
-    # Over the cap: 429.
     with pytest.raises(HTTPException) as exc:
-        chat._enforce_inprocess_ai_quota("hotel-A", day)
+        ai_usage._enforce_inprocess_fallback("guest", "hotel-A", day, limit)
     assert exc.value.status_code == 429
 
 
 def test_inprocess_fallback_is_per_hotel(monkeypatch):
     _reset_fallback()
-    monkeypatch.setattr(chat, "AI_CHAT_DAILY_CAP_PER_HOTEL", 2)
+    monkeypatch.setattr(ai_usage, "_APPROX_TOKENS_PER_REQ", 1)
     day = "20260610"
+    limit = 50  # per_process_cap = max(5, 5) = 5
 
-    chat._enforce_inprocess_ai_quota("hotel-A", day)
-    chat._enforce_inprocess_ai_quota("hotel-A", day)
-    # A different hotel has its own independent counter.
-    chat._enforce_inprocess_ai_quota("hotel-B", day)  # must not raise
+    for _ in range(5):
+        ai_usage._enforce_inprocess_fallback("guest", "hotel-A", day, limit)
+    # Different hotel has its own independent counter — must not raise.
+    ai_usage._enforce_inprocess_fallback("guest", "hotel-B", day, limit)
 
 
 def test_inprocess_fallback_resets_on_new_day(monkeypatch):
     _reset_fallback()
-    monkeypatch.setattr(chat, "AI_CHAT_DAILY_CAP_PER_HOTEL", 1)
+    monkeypatch.setattr(ai_usage, "_APPROX_TOKENS_PER_REQ", 1)
+    limit = 50  # per_process_cap = 5
 
-    chat._enforce_inprocess_ai_quota("hotel-A", "20260610")
-    # New day -> counter resets, so this is allowed again.
-    chat._enforce_inprocess_ai_quota("hotel-A", "20260611")
+    for _ in range(5):
+        ai_usage._enforce_inprocess_fallback("guest", "hotel-A", "20260610", limit)
+    with pytest.raises(HTTPException):
+        ai_usage._enforce_inprocess_fallback("guest", "hotel-A", "20260610", limit)
+
+    # New day -> counter resets, must not raise.
+    ai_usage._enforce_inprocess_fallback("guest", "hotel-A", "20260611", limit)
+
+
+def test_inprocess_fallback_is_per_agent_type(monkeypatch):
+    _reset_fallback()
+    monkeypatch.setattr(ai_usage, "_APPROX_TOKENS_PER_REQ", 1)
+    day = "20260610"
+    limit = 50  # per_process_cap = 5
+
+    for _ in range(5):
+        ai_usage._enforce_inprocess_fallback("guest", "hotel-A", day, limit)
+    # Same hotel but different agent type has its own counter — must not raise.
+    ai_usage._enforce_inprocess_fallback("whatsapp", "hotel-A", day, limit)
