@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Code, Key, Globe, Search, MessageCircle, Loader2, BarChart3, Sparkles } from 'lucide-react';
+import { Code, Key, Globe, Search, MessageCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageShell } from '@/components/layout/PageShell';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ApiKeysTab } from '@/components/integration/ApiKeysTab';
-import { WhatsappTab } from '@/components/integration/WhatsappTab';
 import { ExternalServicesTab } from '@/components/integration/ExternalServicesTab';
 import { BookingWidgetTab } from '@/components/integration/BookingWidgetTab';
 import { ChatWidgetTab } from '@/components/integration/ChatWidgetTab';
 import { SearchWidgetTab } from '@/components/integration/SearchWidgetTab';
-import { UsageTab } from '@/components/integration/UsageTab';
 
 interface ApiKey {
     id: string;
@@ -83,9 +81,11 @@ const IntegrationPage = () => {
     useEffect(() => {
         if (activeTab === 'widget' || activeTab === 'search-widget') {
             loadWidgetData();
-        } else if (activeTab === 'chat-widget' || activeTab === 'settings') {
+        }
+        if (activeTab === 'search-widget' || activeTab === 'chat-widget' || activeTab === 'settings') {
             loadSettingsData();
-        } else if (activeTab === 'api-keys' || activeTab === 'usage') {
+        }
+        if (activeTab === 'api-keys') {
             if (apiKeys.length === 0) {
                 loadKeysData();
             }
@@ -212,9 +212,7 @@ const IntegrationPage = () => {
                     <TabsTrigger value="search-widget" className="gap-2"><Search className="w-4 h-4" />Search Widget</TabsTrigger>
                     <TabsTrigger value="chat-widget" className="gap-2"><MessageCircle className="w-4 h-4" />Chat Widget</TabsTrigger>
                     <TabsTrigger value="api-keys" className="gap-2"><Key className="w-4 h-4" />API Keys</TabsTrigger>
-                    <TabsTrigger value="ai-usage" className="gap-2"><Sparkles className="w-4 h-4" />AI Usage</TabsTrigger>
                     {isSuperAdmin && <TabsTrigger value="settings" className="gap-2"><Globe className="w-4 h-4" />External Services</TabsTrigger>}
-                    {!isSuperAdmin && <TabsTrigger value="usage" className="gap-2"><BarChart3 className="w-4 h-4" />Usage</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="widget" className="mt-0">
@@ -279,21 +277,6 @@ const IntegrationPage = () => {
                     </TabsContent>
                 )}
 
-                <TabsContent value="ai-usage" className="mt-0">
-                    <WhatsappTab hotel={hotel} />
-                </TabsContent>
-
-                {!isSuperAdmin && (
-                    <TabsContent value="usage" className="mt-0">
-                        {loadingKeys ? (
-                            <div className="flex items-center justify-center h-48">
-                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <UsageTab hotel={hotel} />
-                        )}
-                    </TabsContent>
-                )}
             </Tabs>
         </PageShell>
     );

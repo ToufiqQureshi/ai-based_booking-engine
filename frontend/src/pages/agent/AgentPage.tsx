@@ -582,13 +582,19 @@ const AgentPage = () => {
                                 </div>
                             )}
 
-                            {usageData && (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <AgentUsageCard agentKey="hotelier" info={usageData.agents.hotelier} />
-                                    <AgentUsageCard agentKey="guest" info={usageData.agents.guest} />
-                                    <AgentUsageCard agentKey="whatsapp" info={usageData.agents.whatsapp} />
-                                </div>
-                            )}
+                            {usageData && (() => {
+                                const cards: Array<{ key: keyof typeof AGENT_COLORS; info: AgentUsageInfo }> = [];
+                                if (hotel?.feature_ai_assistant !== false) cards.push({ key: 'hotelier', info: usageData.agents.hotelier });
+                                if (hotel?.feature_guest_bot) cards.push({ key: 'guest', info: usageData.agents.guest });
+                                if (hotel?.feature_ai_agent) cards.push({ key: 'whatsapp', info: usageData.agents.whatsapp });
+                                if (cards.length === 0) cards.push({ key: 'hotelier', info: usageData.agents.hotelier });
+                                const cols = cards.length === 1 ? 'grid-cols-1 max-w-sm' : cards.length === 2 ? 'grid-cols-1 md:grid-cols-2 max-w-2xl' : 'grid-cols-1 md:grid-cols-3';
+                                return (
+                                    <div className={`grid ${cols} gap-4`}>
+                                        {cards.map(c => <AgentUsageCard key={c.key} agentKey={c.key} info={c.info} />)}
+                                    </div>
+                                );
+                            })()}
 
                             {/* Explanation */}
                             {usageData && (
