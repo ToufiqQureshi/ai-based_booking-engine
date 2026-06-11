@@ -138,18 +138,7 @@ async def init_db():
         except Exception:
             pass
 
-    for col, col_type in [
-        ("last_scrape_status", "VARCHAR(50) DEFAULT NULL"),
-        ("last_scrape_error", "TEXT DEFAULT NULL"),
-        ("last_scraped_at", "TIMESTAMP DEFAULT NULL"),
-        ("scrape_started_at", "TIMESTAMP DEFAULT NULL"),
-        ("is_scheduled", "BOOLEAN DEFAULT FALSE"),
-    ]:
-        try:
-            async with engine.begin() as conn:
-                await conn.execute(text(f"ALTER TABLE competitors ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+
 
     # Chain-wide features migrations
     for table_alter in [
@@ -212,7 +201,6 @@ async def init_db():
     # except block swallows the "column already exists" error from Postgres).
     for col_sql in [
         "ALTER TABLE hotels ADD COLUMN ai_max_tokens INTEGER",
-        "ALTER TABLE hotels ADD COLUMN max_competitors INTEGER DEFAULT 5",
         "ALTER TABLE hotels ADD COLUMN ai_api_key_vault_id VARCHAR(255)",
         "ALTER TABLE integration_settings ADD COLUMN ai_max_tokens INTEGER",
         "ALTER TABLE integration_settings ADD COLUMN ai_api_key_vault_id VARCHAR(255)",
@@ -244,7 +232,6 @@ async def init_db():
         # active statuses inside the index instead of scanning then filtering.
         "CREATE INDEX IF NOT EXISTS idx_bookings_hotel_status_dates ON bookings (hotel_id, status, check_in, check_out)",
         "CREATE INDEX IF NOT EXISTS idx_room_rates_lookup ON room_rates (room_type_id, date_from, date_to)",
-        "CREATE INDEX IF NOT EXISTS idx_competitor_rates_lookup ON competitor_rates (competitor_id, check_in_date, fetched_at)",
         # Enforce DB-level uniqueness on users — the model declares unique=True
         # but create_all won't retroactively add the index to an existing table.
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email)",

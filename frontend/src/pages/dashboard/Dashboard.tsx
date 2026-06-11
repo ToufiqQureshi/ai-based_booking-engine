@@ -1,4 +1,4 @@
-﻿// Dashboard Home Page - Clean & Professional Design
+// Dashboard Home Page - Clean & Professional Design
 import { useEffect, useRef, useCallback } from 'react';
 import {
   ArrowDownRight,
@@ -82,21 +82,7 @@ export function DashboardPage() {
     staleTime: 1000 * 60 * 1, // 1 minute — bookings change more often
   });
 
-  // 3. Fetch AI Analysis Summary
-  const { data: rateAnalysis = null } = useQuery<any | null>({
-    queryKey: ['competitorAnalysis'],
-    queryFn: async () => {
-      try {
-        const res = await apiClient.get<any[]>('/competitors/analysis', { days: '1' });
-        return res.length > 0 ? res[0] : null;
-      } catch {
-        return null;
-      }
-    },
-    staleTime: 300000,
-    refetchOnWindowFocus: false
-  });
-  
+
   // 4. Fetch Integration Settings
   const { data: integration } = useQuery<any>({
     queryKey: ['integrationSettings'],
@@ -301,41 +287,6 @@ export function DashboardPage() {
 
         {/* Side Panel */}
         <div className="space-y-6">
-          {/* Rate Analysis */}
-          <Card className="shadow-none border-border bg-muted/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-                Market Insight
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {rateAnalysis ? (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-xs text-muted-foreground uppercase">Your Price</span>
-                    <span className="text-xl font-bold text-foreground">₹{rateAnalysis.my_price}</span>
-                  </div>
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-xs text-muted-foreground uppercase">Market Avg</span>
-                    <span className="text-sm font-medium text-muted-foreground">₹{rateAnalysis.average_market_price}</span>
-                  </div>
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground leading-relaxed italic">
-                      "{rateAnalysis.suggestion}"
-                    </p>
-                  </div>
-                  <Button variant="link" className="p-0 h-auto text-blue-600 text-xs font-bold uppercase" asChild>
-                    <Link to="/rate-shopper">View Competitors →</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-xs text-muted-foreground">No market data yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Action Required */}
           <Card className="shadow-none border-border border-l-4 border-l-blue-600">

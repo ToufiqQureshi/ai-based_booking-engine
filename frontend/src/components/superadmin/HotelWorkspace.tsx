@@ -34,7 +34,6 @@ const FEATURE_FLAGS = [
     { id: 'feature_ai_agent',       label: 'AI Agent',           desc: 'AI booking assistant on WhatsApp & chat',  icon: BrainCircuit, color: 'text-purple-600 bg-purple-50' },
     { id: 'feature_guest_bot',      label: 'Guest Bot',          desc: 'Automated guest messaging & responses',    icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
     { id: 'feature_ai_assistant',   label: 'AI Assistant',       desc: 'Dashboard AI assistant for hotel staff',   icon: BrainCircuit, color: 'text-indigo-600 bg-indigo-50' },
-    { id: 'feature_rate_shopper',   label: 'Rate Shopper',       desc: 'Competitor rate tracking & analysis',      icon: BarChart3,    color: 'text-emerald-600 bg-emerald-50' },
     { id: 'feature_new_booking',    label: 'Booking Engine',     desc: 'Public booking page & widget',             icon: Globe,        color: 'text-indigo-600 bg-indigo-50' },
     { id: 'feature_color_palette',  label: 'Color Palette',      desc: 'Custom brand colors on booking page',      icon: Palette,      color: 'text-pink-600 bg-pink-50' },
     { id: 'feature_custom_logo',    label: 'Custom Logo',        desc: 'Upload hotel logo on booking widget',      icon: Image,        color: 'text-amber-600 bg-amber-50' },
@@ -48,7 +47,6 @@ const AVAILABLE_ROUTES = [
     { path: '/agent', label: 'AI Chat Agent' },
     { path: '/rooms', label: 'Rooms' },
     { path: '/rates', label: 'Rates' },
-    { path: '/rate-shopper', label: 'Rate Shopper' },
     { path: '/availability', label: 'Availability' },
     { path: '/bookings', label: 'Bookings' },
     { path: '/guests', label: 'Guests' },
@@ -79,7 +77,7 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
     const [permissions, setPermissions] = useState<Record<string, string[]>>(() => {
         return hotel.settings?.role_permissions || {
             OWNER: [
-                "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper",
+                "/dashboard", "/analytics", "/agent", "/rooms", "/rates",
                 "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
                 "/channel-settings", "/integration", "/settings",
             ],

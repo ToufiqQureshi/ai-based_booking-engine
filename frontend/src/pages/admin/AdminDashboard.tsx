@@ -126,11 +126,7 @@ export default function AdminDashboard() {
         return <div className="p-8 text-rose-500 font-black">Access Denied or Failed to load System Stats.</div>;
     }
 
-    const scrapeData = stats ? [
-        { name: 'Agoda', value: stats.scraping?.sources?.Agoda || 0 },
-        { name: 'MMT', value: stats.scraping?.sources?.MakeMyTrip || 0 },
-        { name: 'Direct', value: (stats.hotels?.total || 0) * 5 },
-    ] : [];
+
 
     return (
         <div className="p-6 sm:p-10 space-y-10 bg-indigo-50/30 min-h-screen pb-20">
@@ -187,7 +183,7 @@ export default function AdminDashboard() {
                     {section === 'overview' && stats && (
                         <>
                             {/* High-Impact Stats Grid */}
-                            <div className="grid gap-6 md:grid-cols-3">
+                            <div className="grid gap-6 md:grid-cols-2">
                                 <Card className="rounded-[32px] border-none bg-background/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] overflow-hidden relative group">
                                     <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
                                         <Users className="h-20 w-20 text-indigo-600" />
@@ -219,57 +215,9 @@ export default function AdminDashboard() {
                                         </div>
                                     </CardContent>
                                 </Card>
-
-                                <Card className="rounded-[32px] border-none bg-background/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] overflow-hidden relative group">
-                                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <Zap className="h-20 w-20 text-amber-600" />
-                                    </div>
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">Scraping Velocity</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-4xl font-black text-indigo-950 tracking-tighter mb-1">{stats.scraping?.total_rates_24h || 0}</div>
-                                        <div className="flex items-center gap-2 text-xs font-bold text-amber-600">
-                                            <Activity className="w-3 h-3" />
-                                            Health Index: {stats.scraping?.health || 'UNKNOWN'}
-                                        </div>
-                                    </CardContent>
-                                </Card>
                             </div>
 
-                            <div className="grid gap-8 md:grid-cols-2">
-                                {/* Intelligence Charts */}
-                                <Card className="rounded-[40px] border-none bg-background/80 backdrop-blur-xl shadow-xl p-6">
-                                    <CardHeader className="px-0 pt-0 pb-6">
-                                        <CardTitle className="text-lg font-black text-indigo-950 tracking-tight flex items-center gap-3">
-                                            <Globe className="w-5 h-5 text-indigo-500" />
-                                            Market Source Distribution
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="h-[350px] p-0">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={scrapeData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                                                <defs>
-                                                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor="#4f46e5" stopOpacity={1} />
-                                                        <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.8} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontWeight: 'bold', fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontWeight: 'bold', fontSize: 12 }} />
-                                                <Tooltip 
-                                                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
-                                                />
-                                                <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={60}>
-                                                    {scrapeData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill="url(#barGradient)" />
-                                                    ))}
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
+                            <div className="grid gap-8 md:grid-cols-1">
 
                                 <Card className="rounded-[40px] border-none bg-background/80 backdrop-blur-xl shadow-xl p-6 overflow-hidden">
                                      <div className="absolute top-0 right-0 p-8">
@@ -317,7 +265,6 @@ export default function AdminDashboard() {
                                         <TableRow className="hover:bg-transparent border-indigo-50 px-8">
                                             <TableHead className="pl-8 py-6 text-[10px] font-black uppercase tracking-widest text-indigo-400">Entity Details</TableHead>
                                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-indigo-400">System Status</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Market Intel</TableHead>
                                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Neural Engine</TableHead>
                                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Guest Logic</TableHead>
                                             <TableHead className="pr-8 text-[10px] font-black uppercase tracking-widest text-indigo-400">Administration</TableHead>
@@ -337,13 +284,6 @@ export default function AdminDashboard() {
                                                         checked={h.is_active}
                                                         onCheckedChange={(c) => handleHotelUpdate(h.id, 'is_active', c)}
                                                         className="data-[state=checked]:bg-emerald-500"
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Switch
-                                                        checked={h.feature_rate_shopper}
-                                                        onCheckedChange={(c) => handleHotelUpdate(h.id, 'feature_rate_shopper', c)}
-                                                        className="data-[state=checked]:bg-indigo-600"
                                                     />
                                                 </TableCell>
                                                 <TableCell>

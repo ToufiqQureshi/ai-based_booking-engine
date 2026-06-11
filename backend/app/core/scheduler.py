@@ -55,13 +55,6 @@ async def _job_subscription_expiry() -> None:
     await check_subscription_expiry()
 
 
-async def _job_rate_shopper_auto_scrape() -> None:
-    from app.core.database import async_session
-    from app.api.v1.competitors import run_due_auto_scrapes
-    async with async_session() as session:
-        await run_due_auto_scrapes(session)
-
-
 async def _tick_social_proof() -> None:
     # lock TTL < interval so a crashed run releases before the next tick
     await _run_locked("social_proof", 600, _job_social_proof)
@@ -69,11 +62,6 @@ async def _tick_social_proof() -> None:
 
 async def _tick_subscription_expiry() -> None:
     await _run_locked("subscription_expiry", 3600, _job_subscription_expiry)
-
-
-async def _tick_rate_shopper_auto_scrape() -> None:
-    # lock TTL < 1h interval so a crashed run releases before the next tick
-    await _run_locked("rate_shopper_auto_scrape", 1800, _job_rate_shopper_auto_scrape)
 
 
 def start_scheduler() -> None:
@@ -85,13 +73,10 @@ def start_scheduler() -> None:
                   id="social_proof", max_instances=1, coalesce=True)
     sched.add_job(_tick_subscription_expiry, "interval", hours=24,
                   id="subscription_expiry", max_instances=1, coalesce=True)
-    sched.add_job(_tick_rate_shopper_auto_scrape, "cron", minute=10,
-                  id="rate_shopper_auto_scrape", max_instances=1, coalesce=True)
     sched.start()
     _scheduler = sched
     logger.info(
-        "Background scheduler started (social_proof=15m, subscription_expiry=24h, "
-        "rate_shopper_auto_scrape=hourly:10)"
+        "Background scheduler started (social_proof=15m, subscription_expiry=24h)"
     )
 
 

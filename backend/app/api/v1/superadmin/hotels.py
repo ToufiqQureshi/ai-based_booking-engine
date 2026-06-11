@@ -136,7 +136,7 @@ def save_plan_features(data: dict) -> bool:
 
 DEFAULT_ROLE_PERMISSIONS = {
     "OWNER": [
-        "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper",
+        "/dashboard", "/analytics", "/agent", "/rooms", "/rates",
         "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
         "/channel-settings", "/integration", "/settings",
     ],
@@ -186,7 +186,6 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_
             "owner_name": owner.name if owner else "N/A",
             "feature_ai_agent": hotel.feature_ai_agent,
             "feature_guest_bot": hotel.feature_guest_bot,
-            "feature_rate_shopper": hotel.feature_rate_shopper,
             "feature_new_booking": getattr(hotel, "feature_new_booking", True),
             "feature_color_palette": getattr(hotel, "feature_color_palette", True),
             "feature_custom_logo": getattr(hotel, "feature_custom_logo", True),
@@ -289,7 +288,6 @@ async def delete_hotel(
     users_to_delete = (await session.execute(select(User).where(User.hotel_id == hotel_id))).scalars().all()
 
     deep_queries = [
-        "DELETE FROM competitor_rates WHERE competitor_id IN (SELECT id FROM competitors WHERE hotel_id = :id)",
         "DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)",
         "DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)",
         "DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)",
@@ -298,7 +296,7 @@ async def delete_hotel(
     ]
     tables = [
         "channel_logs", "channel_room_mappings", "room_rates", "room_blocks", "room_rate_links",
-        "bookings", "guests", "rate_plans", "room_types", "competitors", "analytics_sessions",
+        "bookings", "guests", "rate_plans", "room_types", "analytics_sessions",
         "addons", "amenities", "api_keys", "channel_manager_settings",
         "integration_settings", "leads", "promo_codes", "user_hotel_links", "subscriptions",
     ]

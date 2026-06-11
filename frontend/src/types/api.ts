@@ -55,7 +55,6 @@ export interface Hotel {
   settings: HotelSettings;
   photos: RoomPhoto[];
   amenities: string[];
-  feature_rate_shopper?: boolean;
   feature_ai_agent?: boolean;
   feature_guest_bot?: boolean;
   feature_ai_assistant?: boolean;

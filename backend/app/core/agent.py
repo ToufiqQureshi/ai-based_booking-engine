@@ -8,7 +8,6 @@ from app.models.timeline import BookingTimeline
 from app.models.booking import Booking, BookingStatus, BookingSource, Guest
 from app.models.room import RoomType
 from app.models.user import User
-from app.models.competitor import Competitor, CompetitorRate
 
 # Import New Smart Tools
 from app.core.tools.weather import get_weather_forecast
@@ -236,56 +235,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
 
         return f"Booking {booking_number} has been successfully cancelled."
 
-    async def analyze_rate_competitiveness(days: int = 7) -> str:
-        """
-        Analyzes the hotel's rates against competitors for the next few days.
-        Returns a summary of market position (Premium/Budget) and price suggestions.
-        """
-        today = date.today()
-        end_date = today + timedelta(days=days)
 
-        # 1. My Price (Base)
-        rt_query = select(RoomType).where(RoomType.hotel_id == user.hotel_id)
-        rt_res = await session.execute(rt_query)
-        room_type = rt_res.scalars().first()
-        if not room_type:
-            return "No room types defined for this hotel."
-        my_price = room_type.base_price
-
-        # 2. Competitor Rates
-        comp_subquery = select(Competitor.id).where(Competitor.hotel_id == user.hotel_id)
-        rate_query = select(CompetitorRate).where(
-            CompetitorRate.competitor_id.in_(comp_subquery),
-            CompetitorRate.check_in_date >= today,
-            CompetitorRate.check_in_date < end_date
-        )
-        rates_res = await session.execute(rate_query)
-        all_rates = rates_res.scalars().all()
-
-        if not all_rates:
-            return "No competitor data found. Please ask user to ingest rates via Chrome Extension."
-
-        # Analysis
-        prices = [r.price for r in all_rates]
-        avg_price = sum(prices) / len(prices)
-        min_price = min(prices)
-        max_price = max(prices)
-
-        analysis = f"""
-        Market Analysis for next {days} days:
-        - My Base Price: {my_price}
-        - Market Average: {int(avg_price)}
-        - Market Range: {min_price} - {max_price}
-        """
-
-        if my_price > avg_price * 1.15:
-             analysis += "\nYour rates are significantly HIGHER (>15%) than market average. Strategy: Premium positioning."
-        elif my_price < avg_price * 0.85:
-             analysis += "\nYour rates are significantly LOWER (>15%) than market average. Strategy: Budget/Volume driver."
-        else:
-             analysis += "\nYour rates are COMPETITIVE (within 15% of market average)."
-
-        return analysis
 
     async def update_room_price(room_name: str, new_price: float) -> str:
         """
@@ -679,7 +629,6 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         search_bookings,
         get_booking_details,
         cancel_booking,
-        analyze_rate_competitiveness,
         get_weather_forecast,
         get_local_events,
         generate_pdf_report,
@@ -737,7 +686,6 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
             selected_tools.extend([
                 update_room_price,
                 create_promo_code,
-                analyze_rate_competitiveness,
                 get_room_inventory
             ])
             

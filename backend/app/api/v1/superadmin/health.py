@@ -146,7 +146,6 @@ async def _hotel_health(session, hotel: Hotel) -> dict:
         "features": {
             "ai_agent": hotel.feature_ai_agent,
             "guest_bot": hotel.feature_guest_bot,
-            "rate_shopper": hotel.feature_rate_shopper,
             "google_ads": hotel.feature_google_ads,
         },
     }

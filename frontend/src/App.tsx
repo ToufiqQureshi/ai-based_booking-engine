@@ -27,7 +27,6 @@ const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
 const IntegrationPage = lazy(() => import("@/pages/settings/Integration"));
 const ChannelSettings = lazy(() => import("@/pages/dashboard/ChannelSettings"));
 const TaxesPage = lazy(() => import("@/pages/finance/Taxes"));
-const RatesShopper = lazy(() => import("@/pages/marketing/RatesShopper"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AgentPage = lazy(() => import("@/pages/agent/AgentPage").then(m => ({ default: m.default })));
 const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
@@ -120,7 +119,6 @@ const App = () => {
                       <Route path="/analytics/:tab" element={<AnalyticsDashboard />} />
                       <Route path="/bookings" element={<BookingsPage />} />
                       <Route path="/guests" element={<GuestsPage />} />
-                      <Route path="/rate-shopper" element={<RatesShopper />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/addons" element={<AddonsPage />} />
                       <Route path="/taxes" element={<TaxesPage />} />

@@ -162,7 +162,7 @@ def mask_hotel_for_hotelier(hotel: Any) -> Dict[str, Any]:
         }
         # Add feature flags explicitly
         for f in (
-            "feature_rate_shopper", "feature_ai_agent", "feature_guest_bot",
+            "feature_ai_agent", "feature_guest_bot",
             "feature_ai_assistant", "feature_new_booking", "feature_color_palette",
             "feature_custom_logo", "feature_custom_widget", "feature_google_ads",
         ):

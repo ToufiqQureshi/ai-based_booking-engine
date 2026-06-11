@@ -221,16 +221,6 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="bg-white/5 border border-white/5 rounded-2xl p-8 hover:bg-white/[0.08] hover:border-white/10 hover:-translate-y-1 transition-all duration-300">
-              <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 mb-6">
-                <BarChart3 className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Rate Shopper</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Real-time competitor analysis tells you if you are underpricing or overpricing compared to local competitors.
-              </p>
-            </div>
 
             {/* Feature 3 */}
             <div className="bg-white/5 border border-white/5 rounded-2xl p-8 hover:bg-white/[0.08] hover:border-white/10 hover:-translate-y-1 transition-all duration-300">

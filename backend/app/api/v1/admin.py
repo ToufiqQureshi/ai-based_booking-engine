@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, DbSession
 from app.models.user import User, UserRole
-from app.models.competitor import Competitor, CompetitorRate
 from app.models.hotel import Hotel
 from app.models.subscription import Subscription
 
@@ -39,16 +38,6 @@ async def get_admin_stats(
     active_subscriptions = (await session.execute(
         select(func.count(Subscription.id)).where(Subscription.status == "active")
     )).one()[0]
-    
-    # 3. Scrape Stats (Rates fetched in last 24h)
-    yesterday = datetime.utcnow() - timedelta(days=1)
-    recent_scrapes = (await session.execute(
-        select(func.count(CompetitorRate.id)).where(CompetitorRate.fetched_at >= yesterday)
-    )).one()[0]
-    
-    # 4. Competitor Distribution
-    agoda_count = (await session.execute(select(func.count(Competitor.id)).where(Competitor.source == "AGODA"))).one()[0]
-    mmt_count = (await session.execute(select(func.count(Competitor.id)).where(Competitor.source == "MAKEMYTRIP"))).one()[0]
 
     return {
         "users": {
@@ -58,14 +47,6 @@ async def get_admin_stats(
         "hotels": {
             "total": total_hotels,
             "subscribed": active_subscriptions
-        },
-        "scraping": {
-            "total_rates_24h": recent_scrapes,
-            "sources": {
-                "Agoda": agoda_count,
-                "MakeMyTrip": mmt_count
-            },
-            "health": "98%"
         },
         "system_status": "Operational"
     }
@@ -138,7 +119,6 @@ async def list_all_hotels(
 
 class HotelAdminUpdate(BaseModel):
     is_active: bool = None
-    feature_rate_shopper: bool = None
     feature_ai_agent: bool = None
     feature_guest_bot: bool = None
 
@@ -158,8 +138,6 @@ async def update_hotel_status(
         
     if update_data.is_active is not None:
         hotel.is_active = update_data.is_active
-    if update_data.feature_rate_shopper is not None:
-        hotel.feature_rate_shopper = update_data.feature_rate_shopper
     if update_data.feature_ai_agent is not None:
         hotel.feature_ai_agent = update_data.feature_ai_agent
     if update_data.feature_guest_bot is not None:

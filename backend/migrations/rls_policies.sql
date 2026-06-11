@@ -93,21 +93,6 @@ CREATE POLICY "payments_tenant_isolation" ON payments
   USING (hotel_id = public.current_hotel_id())
   WITH CHECK (hotel_id = public.current_hotel_id());
 
-ALTER TABLE competitors ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "competitors_tenant_isolation" ON competitors;
-CREATE POLICY "competitors_tenant_isolation" ON competitors
-  USING (hotel_id = public.current_hotel_id())
-  WITH CHECK (hotel_id = public.current_hotel_id());
-
-ALTER TABLE competitor_rates ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "competitor_rates_tenant_isolation" ON competitor_rates;
-CREATE POLICY "competitor_rates_tenant_isolation" ON competitor_rates
-  USING (
-    competitor_id IN (
-      SELECT id FROM competitors WHERE hotel_id = public.current_hotel_id()
-    )
-  );
-
 ALTER TABLE integration_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "integration_settings_tenant_isolation" ON integration_settings;
 CREATE POLICY "integration_settings_tenant_isolation" ON integration_settings

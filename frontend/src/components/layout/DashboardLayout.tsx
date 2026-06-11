@@ -219,14 +219,12 @@ export function DashboardLayout() {
 
     // Check hotel specific feature locks
     if (currentPath === '/agent' && !hotel?.feature_ai_agent) return false;
-    if (currentPath === '/rate-shopper' && !hotel?.feature_rate_shopper) return false;
 
     return true;
   };
 
   const allowedPaths = permissions.filter((p: string) => {
     if (p === '/agent' && !hotel?.feature_ai_agent) return false;
-    if (p === '/rate-shopper' && !hotel?.feature_rate_shopper) return false;
     return true;
   });
   
