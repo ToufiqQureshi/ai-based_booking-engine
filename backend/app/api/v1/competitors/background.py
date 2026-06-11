@@ -124,27 +124,24 @@ async def run_background_scrape(comp_id: str, status_pre_set: bool = False) -> N
                 updated_url = update_url_dates(url, offset)
                 attempted += 1
 
-                rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
+                rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id)
 
-                # Decodo session died, is blocked, got rate-limited, or got stuck — rotate and retry this day once.
+                # ScrapingBee got blocked, rate-limited, or hit transient server issues — wait and retry this day once.
                 if rate_data.get("reason") in (
-                    "decodo_session_failed",
                     "API_status_400",
-                    "API_status_422",
                     "API_status_429",
+                    "API_status_500",
                     "API_status_502",
                     "API_status_503",
-                    "decodo_613_target_blocked",
+                    "API_status_504",
                     "empty_html_content",
                     "shield_blocked",
                 ):
                     logger.warning(
-                        f"Rotating Decodo session due to {rate_data.get('reason')} (old={scrape_session_id}) "
-                        f"and retrying day {offset + 1}/7"
+                        f"Retrying ScrapingBee call for day {offset + 1}/7 due to transient error: {rate_data.get('reason')}"
                     )
-                    scrape_session_id = uuid.uuid4().hex[:12]
-                    await asyncio.sleep(3.0)
-                    rate_data = await _scrape_mmt_with_retry(updated_url, hotel_id, scrape_session_id)
+                    await asyncio.sleep(5.0)
+                    rate_data = await scrape_mmt_hotel_rate(updated_url, hotel_id)
 
                 if rate_data.get("status") == "success":
                     price = rate_data["price"]

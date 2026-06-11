@@ -91,6 +91,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str | None = None
     JULES_API_KEY: str | None = None
     DECODO_AUTH_TOKEN: Optional[str] = None
+    SCRAPINGBEE_API_KEY: Optional[str] = None
+
 
     # Central WhatsApp Config
     CENTRAL_WHATSAPP_PHONE_ID: Optional[str] = None

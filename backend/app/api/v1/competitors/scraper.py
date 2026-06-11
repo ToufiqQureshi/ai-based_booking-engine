@@ -1,7 +1,3 @@
-"""
-Competitor scraper: Decodo API client + Scrapling HTML parser for MakeMyTrip.
-No FastAPI router here — pure scraping logic consumed by background.py.
-"""
 import re
 import uuid
 import logging
@@ -9,7 +5,7 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
 
-import httpx
+from scrapingbee import ScrapingBeeClient
 from scrapling import Selector
 
 from app.core.config import get_settings
@@ -17,40 +13,22 @@ from app.core.decodo_usage import record_decodo_request
 
 logger = logging.getLogger(__name__)
 
-# --- Decodo API constants ---
-
-DECODO_URL = "https://scraper-api.decodo.com/v2/scrape"
-
-# MMT renders its price client-side via an async XHR after the initial DOM is
-# ready. We ask Decodo's headless browser to wait this many seconds so that the
-# price node exists before the HTML snapshot is captured.
-MMT_RENDER_WAIT_SECONDS = 12
-
-# httpx read timeout for a single Decodo call. Must exceed Decodo's own
-# (render + MMT_RENDER_WAIT_SECONDS) processing time, with headroom.
-DECODO_HTTP_TIMEOUT_SECONDS = 120.0
+# --- ScrapingBee API constants ---
 
 # Past this age a "running" competitor row is treated as an orphaned/crashed
 # worker rather than active work-in-progress — no other process ever revisits it.
 STALE_SCRAPE_MINUTES = 15
 
-# Each manual "Refresh" click burns ~7 paid Decodo requests. This cooldown
+# Each manual "Refresh" click burns ~7 paid requests. This cooldown
 # prevents rapid re-clicks from multiplying the third-party bill.
 MANUAL_SCRAPE_COOLDOWN_SECONDS = 5 * 60
 
 
 def _decodo_auth_header() -> Optional[str]:
     """
-    Build the Decodo Basic-auth header from config.
-
-    IMPORTANT: no hardcoded fallback. A prior version shipped a real credential
-    as a default value — same class of bug as the leaked Razorpay secret in
-    CLAUDE.md. Missing config must surface as a clear error.
+    Deprecated Decodo credentials checker.
     """
-    token = "VTAwMDA0MjYwNTU6UFdfMTg0MjdiMzk3MmU3N2EzNWVlZWM3OGQ2ODhkZmIwY2Yw"
-    if not token:
-        return None
-    return token if token.startswith("Basic ") else f"Basic {token}"
+    return get_settings().DECODO_AUTH_TOKEN
 
 
 def _is_stale_running(comp) -> bool:
@@ -108,83 +86,43 @@ def _extract_mmt_hotel_id(url: str) -> Optional[str]:
 
 async def scrape_mmt_hotel_rate(url: str, hotel_id: str, session_id: Optional[str] = None) -> dict:
     """
-    Fetch one day's rate from MMT via Decodo Scraper API + Scrapling.
-
-    session_id: Decodo reuses the same proxy IP for the entire scrape session
-    (up to 10 min). Sequential requests with 2-3s gaps let Akamai's first
-    challenge resolve before the next request lands — this is why we do NOT
-    fire all 7 days concurrently (concurrent burst = same IP = bot-block on all).
-
-    613 handling: returns raw result; retry logic lives in _scrape_mmt_with_retry.
+    Fetch one day's rate from MMT via ScrapingBee Client + Scrapling.
     """
-    auth_header = _decodo_auth_header()
-    if not auth_header:
-        return {"status": "failed", "reason": "decodo_not_configured"}
+    api_key = get_settings().SCRAPINGBEE_API_KEY
+    if not api_key:
+        logger.error("ScrapingBee API key not configured")
+        return {"status": "failed", "reason": "scrapingbee_not_configured"}
 
     try:
-        logger.info(f"Fetching Hotel URL via Decodo API: {url[:60]}... (session={session_id})")
+        logger.info(f"Fetching Hotel URL via ScrapingBee: {url[:60]}...")
 
-        # proxy_pool:"premium" → 193-country pool that includes India. "standard"
-        # only covers 8 countries (no India). To bypass Akamai blocks, we do NOT
-        # set 'geo' to India, but instead pass INR cookies to force INR currency display.
-        payload: dict = {
-            "url": url,
-            "proxy_pool": "premium",
-            "headless": "html",
-            "device_type": "desktop_chrome",
-            "force_headers": True,
-            "cookies": [
-                {"key": "currency", "value": "INR"},
-                {"key": "amadeus.user.currency", "value": "INR"}
-            ],
-            "force_cookies": True,
-        }
-        if session_id:
-            payload["session_id"] = session_id
+        import requests
 
-        headers = {
-            "accept": "application/json",
-            "content-type": "application/json",
-            "authorization": auth_header,
-        }
+        import urllib.parse
+        encoded_target_url = urllib.parse.quote(url, safe='')
 
-        try:
-            async with httpx.AsyncClient(timeout=DECODO_HTTP_TIMEOUT_SECONDS) as client:
-                response = await client.post(DECODO_URL, json=payload, headers=headers)
-        except httpx.HTTPError as e:
-            record_decodo_request(hotel_id)
-            logger.error(f"Decodo API request failed before a response: {e}")
-            return {"status": "failed", "reason": f"request_error_{type(e).__name__}"}
+        # We execute the HTTP request asynchronously by using asyncio.to_thread since
+        # requests.get makes a blocking network call.
+        def perform_scrapingbee_call():
+            # We set block_resources to True to avoid downloading heavy images/media.
+            # This speeds up the loading process and prevents 120s timeouts.
+            # Passing manually-encoded target URL directly to query params ensures proper formatting.
+            # Using stealth_proxy=True resolves heavy Akamai proxy locks that trigger timeouts.
+            return requests.get(
+                f"https://app.scrapingbee.com/api/v1/?api_key={api_key}&url={encoded_target_url}&render_js=True&stealth_proxy=True&wait_for=.listingRow&block_resources=False",
+                timeout=120.0
+            )
 
+        response = await asyncio.to_thread(perform_scrapingbee_call)
         record_decodo_request(hotel_id)
 
         if response.status_code != 200:
-            body_text = response.text[:300]
-            if response.status_code == 400 and "has failed" in body_text.lower() and "session" in body_text.lower():
-                logger.warning(f"Decodo session '{session_id}' invalidated (400 session-failed) for {url[:60]}")
-                return {"status": "failed", "reason": "decodo_session_failed"}
-            logger.error(f"Decodo API returned {response.status_code}: {body_text}")
+            logger.error(f"ScrapingBee returned status code {response.status_code}: {response.text[:300]}")
             return {"status": "failed", "reason": f"API_status_{response.status_code}"}
 
-        res_json = response.json()
-
-        if not res_json.get("results") or len(res_json["results"]) == 0:
-            top_status = res_json.get("status_code")
-            if top_status == 613:
-                logger.warning(f"Decodo 613 (blocked, top-level) for {url[:60]}")
-                return {"status": "failed", "reason": "decodo_613_target_blocked"}
-            logger.error(f"Decodo API: empty results. top-level status={top_status}, body={str(res_json)[:200]}")
-            return {"status": "failed", "reason": "empty_api_results"}
-
-        first_result = res_json["results"][0]
-        result_status = first_result.get("status_code")
-        if result_status == 613:
-            logger.warning(f"Decodo 613 (blocked, results[0]) for {url[:60]}")
-            return {"status": "failed", "reason": "decodo_613_target_blocked"}
-
-        html_content = first_result.get("content") or ""
+        html_content = response.text or ""
         if not html_content.strip():
-            logger.warning(f"Decodo returned empty HTML content for {url[:60]}")
+            logger.warning(f"ScrapingBee returned empty HTML content for {url[:60]}")
             return {"status": "failed", "reason": "empty_html_content"}
 
         if "access denied" in html_content.lower() or "access-denied" in html_content.lower() or "reference id" in html_content.lower():
