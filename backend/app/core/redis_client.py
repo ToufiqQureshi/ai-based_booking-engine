@@ -19,7 +19,7 @@ class RedisClient:
     # memory for life, silently breaking shared rate limits, distributed locks
     # and payment idempotency across workers.)
     _retry_after: float = 0.0
-    _RETRY_COOLDOWN_SECONDS: int = 30
+    _RETRY_COOLDOWN_SECONDS: int = 300
     _local_memory_cache = {} # Format: {key: (value, expire_at)}
     _local_nx_locks: dict[str, asyncio.Lock] = {}
     _local_nx_locks_guard: Optional[asyncio.Lock] = None
