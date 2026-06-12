@@ -7,7 +7,11 @@ import uuid
 import logging
 from app.core.database import get_session
 from app.api.deps import DbSession
-from app.core.ai_usage import enforce_ai_token_quota, record_ai_usage as _record_ai_usage
+from app.core.ai_usage import (
+    enforce_ai_token_quota,
+    record_ai_usage as _record_ai_usage,
+    persist_ai_usage_db as _persist_ai_usage_db,
+)
 from app.models.hotel import Hotel, HotelRead
 from app.models.room import RoomType, RoomTypeRead, RoomBlock
 from app.models.booking import Booking, BookingStatus, Guest
@@ -247,6 +251,7 @@ async def chat_with_guest_ai(
             # can report real distinct-visitor counts (not token estimates).
             _guest_id = payload.guest_email or get_real_ip(request)
             _record_ai_usage(hotel.id, result, agent_type="guest", user_identifier=_guest_id)
+            await _persist_ai_usage_db(hotel.id, result, agent_type="guest", user_identifier=_guest_id)
             ai_response = result.content or ""
             return GuestChatResponse(response=ai_response)
         except Exception as invoke_err:
@@ -435,6 +440,7 @@ async def stream_guest_ai(
             try:
                 _final = getattr(agent, "run_response", None)
                 _record_ai_usage(hotel.id, _final, agent_type="guest", user_identifier=_stream_guest_id)
+                await _persist_ai_usage_db(hotel.id, _final, agent_type="guest", user_identifier=_stream_guest_id)
             except Exception:
                 pass
             yield "data: [DONE]\n\n"
