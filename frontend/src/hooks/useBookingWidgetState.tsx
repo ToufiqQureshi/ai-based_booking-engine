@@ -99,18 +99,16 @@ export function useBookingWidgetState() {
         const sendHeight = () => {
             const isOpen = isCalendarOpen || isGuestOpen;
             if (window.parent === window) return;
-            if (isOpen) {
-                // Tell the embed script to lift the iframe into a fixed full-viewport
-                // overlay (the calendar floats over a dim backdrop, host page frozen).
-                window.parent.postMessage({ type: 'RESIZE_OVERLAY', open: true }, '*');
-                // The dashboard live-preview iframe only resizes; grow it so the
-                // modal isn't clipped inside the preview pane.
-                window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height: Math.max(el.scrollHeight + 16, 860) }, '*');
-            } else {
-                const height = el.scrollHeight + 16; // +16px breathing room
-                window.parent.postMessage({ type: 'RESIZE_OVERLAY', open: false, height }, '*');
-                window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, '*');
-            }
+            // When the calendar/guest picker opens, the iframe must be tall enough
+            // to show the dropdown. The embed script grows the iframe DOWNWARD only
+            // (the search bar stays put, the spacer keeps host layout frozen), so
+            // the calendar floats over the page content below the bar — the hero
+            // and everything else stay exactly where they are. No full-screen takeover.
+            const height = isOpen
+                ? Math.max(el.scrollHeight + 16, 860)
+                : el.scrollHeight + 16;
+            window.parent.postMessage({ type: 'RESIZE_OVERLAY', height, open: isOpen }, '*');
+            window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, '*');
         };
 
         // Send height immediately
@@ -181,7 +179,7 @@ export function useBookingWidgetState() {
             style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px', transform: 'translateZ(0)', willChange: 'transform, opacity' }}
             align="center"
             side="bottom"
-            avoidCollisions={true}
+            avoidCollisions={false}
             sideOffset={8}
         >
             {/* Header */}
@@ -259,7 +257,7 @@ export function useBookingWidgetState() {
 
 
     const guestPopoverContent = (
-        <PopoverContent className="z-[2147483100] w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="bottom" avoidCollisions={true}>
+        <PopoverContent className="z-[2147483100] w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="bottom" avoidCollisions={false}>
             <div className="space-y-6">
                 {/* Rooms Counter */}
                 <div className="flex items-center justify-between">
