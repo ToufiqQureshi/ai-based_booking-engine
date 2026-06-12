@@ -52,16 +52,17 @@
         spacer.style.height = defaultHeight;
         spacer.style.display = 'block';
 
-        // 2. Iframe — sits inline (absolute over the spacer) in its closed state.
-        //    When the calendar opens it is lifted to a fixed full-viewport overlay
-        //    (see the message handler below) so the popup floats above the host
-        //    page without disturbing it.
+        // 2. Iframe — anchored at top:0 over the spacer. When the calendar opens it
+        //    grows DOWNWARD only: the search bar stays exactly where it is and the
+        //    calendar drops below it, floating over the host page content beneath
+        //    the bar. The spacer never changes size, so the hero and every other
+        //    section of the host page stay frozen in place — nothing moves.
         var iframe = document.createElement('iframe');
         iframe.src = frontendUrl + '/book/' + hotelSlug + '/widget';
         iframe.title = 'Hotel Booking Search';
         iframe.loading = 'eager'; // Above-the-fold widget must load immediately, not wait for scroll
         iframe.style.position = 'absolute';
-        iframe.style.bottom = '0';
+        iframe.style.top = '0';        // grow downward on expand — bar stays put
         iframe.style.left = '0';
         iframe.style.width = '100%';
         iframe.style.height = defaultHeight;
@@ -71,43 +72,23 @@
         iframe.style.backgroundColor = 'transparent';
         iframe.allowTransparency = 'true';
         iframe.scrolling = 'no';
-        iframe.style.transition = 'height 0.25s ease';
+        iframe.style.transition = 'height 0.2s ease';
 
         container.innerHTML = '';
         container.appendChild(spacer);
         container.appendChild(iframe);
 
-        // When the calendar / guest picker opens, lift the iframe out to a FIXED
-        // full-viewport overlay so the calendar floats ABOVE the host page (over a
-        // dim backdrop rendered inside the iframe) without moving a single pixel of
-        // host content — the spacer keeps the page layout frozen in place. On close
-        // the iframe collapses straight back to the inline search bar. This is the
-        // only way an iframe widget can show a floating popup without either being
-        // clipped by its own bounds or pushing/covering the host page.
+        // Resize the iframe (never the spacer) when the calendar / guest picker
+        // opens. The iframe is top:0 anchored, so the extra height extends DOWNWARD
+        // and the floating calendar lands over the host content below the bar. While
+        // open we raise the z-index so the calendar sits above the host page; the
+        // transparent iframe lets the rest of the page show through unchanged.
         window.addEventListener('message', function (event) {
             if (!event.data || event.data.type !== 'RESIZE_OVERLAY') return;
-
-            if (event.data.open) {
-                // Expand to a fixed, full-viewport modal layer.
-                iframe.style.position = 'fixed';
-                iframe.style.top = '0';
-                iframe.style.left = '0';
-                iframe.style.right = '0';
-                iframe.style.bottom = '0';
-                iframe.style.width = '100%';
-                iframe.style.height = '100%';
-                iframe.style.zIndex = '2147483000';
-            } else {
-                // Collapse back to the inline search bar in the page flow.
-                iframe.style.position = 'absolute';
-                iframe.style.top = 'auto';
-                iframe.style.right = 'auto';
-                iframe.style.bottom = '0';
-                iframe.style.left = '0';
-                iframe.style.width = '100%';
-                iframe.style.height = (event.data.height ? event.data.height + 'px' : defaultHeight);
-                iframe.style.zIndex = '9999';
+            if (event.data.height) {
+                iframe.style.height = event.data.height + 'px';
             }
+            iframe.style.zIndex = event.data.open ? '2147483000' : '9999';
         });
     }
 
