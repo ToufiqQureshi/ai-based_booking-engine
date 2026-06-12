@@ -33,7 +33,9 @@
         var openHeight = widgetLayout === 'classic' ? 750 : 550;
 
         // ── Container styles ──────────────────────────────────────────────
-        container.style.setProperty('position', 'relative', 'important');
+        container.style.setProperty('position', 'fixed', 'important');
+        container.style.setProperty('bottom', '0', 'important');
+        container.style.setProperty('left', '0', 'important');
         container.style.setProperty('z-index', '999999', 'important');
         container.style.setProperty('height', barHeight + 'px', 'important');
         container.style.setProperty('min-height', barHeight + 'px', 'important');
