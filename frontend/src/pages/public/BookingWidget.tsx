@@ -75,6 +75,7 @@ export default function BookingWidget() {
                     flex-direction: column !important;
                     justify-content: flex-end !important;
                     background-color: transparent !important;
+                    overflow: visible !important;
                 }
                 ` : ''}
 

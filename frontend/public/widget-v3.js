@@ -29,165 +29,136 @@
     }
 
     function renderWidget(container, hotelSlug, frontendUrl, widgetLayout) {
-        var defaultHeight = '100px';
+        // ── Bar height per layout — the container ALWAYS stays this height ──
+        var barHeight = 100;
         if (widgetLayout === 'classic') {
-            defaultHeight = '360px';
+            barHeight = 360;
         } else if (widgetLayout === 'minimal') {
-            defaultHeight = '85px';
+            barHeight = 85;
         }
+        // When the calendar / guest picker is open the iframe must be tall
+        // enough to contain both the bar AND the popover that opens upward.
+        var openHeight = widgetLayout === 'classic' ? 750 : 550;
 
-        // Force container styles with high specificity to ensure layout sits on top
+        // ── Container — occupies exactly barHeight in the page flow ──────────
+        // position:relative so the absolutely-positioned iframe stays anchored.
+        // overflow:visible lets the iframe extend above the container box.
+        // height is FIXED and NEVER changes → zero layout shift.
         container.style.setProperty('position', 'relative', 'important');
         container.style.setProperty('z-index', '999999', 'important');
-        container.style.setProperty('height', defaultHeight, 'important');
+        container.style.setProperty('height', barHeight + 'px', 'important');
         container.style.setProperty('display', 'block', 'important');
         container.style.setProperty('overflow', 'visible', 'important');
 
-        // Safeguard against parent stacking contexts and clipping (up to 3 levels)
+        // ── Fix ancestor clipping (up to 5 levels) ──────────────────────────
         try {
             var parent = container.parentElement;
             var depth = 0;
-            while (parent && depth < 3) {
-                if (parent.tagName === 'BODY' || parent.tagName === 'HTML') {
-                    break;
-                }
-                var compStyle = window.getComputedStyle(parent);
-                if (
-                    compStyle.overflow === 'hidden' ||
-                    compStyle.overflowX === 'hidden' ||
-                    compStyle.overflowY === 'hidden'
-                ) {
+            while (parent && depth < 5) {
+                if (parent.tagName === 'BODY' || parent.tagName === 'HTML') break;
+                var cs = window.getComputedStyle(parent);
+                if (cs.overflow === 'hidden' || cs.overflowX === 'hidden' || cs.overflowY === 'hidden') {
                     parent.style.setProperty('overflow', 'visible', 'important');
-                    parent.style.setProperty('overflow-x', 'visible', 'important');
-                    parent.style.setProperty('overflow-y', 'visible', 'important');
-                    console.warn('Staybooker Booking Widget: Overriding parent overflow:hidden to visible on parent element to prevent clipping.', parent);
                 }
-                // Also ensure parents have a stacking context that permits visibility if they have z-indices
-                if (compStyle.position === 'static' && compStyle.zIndex !== 'auto') {
+                if (cs.position === 'static' && cs.zIndex !== 'auto') {
                     parent.style.setProperty('position', 'relative', 'important');
                 }
                 parent = parent.parentElement;
                 depth++;
             }
-        } catch (e) {
-            console.error('Staybooker Booking Widget: Error traversing parents', e);
-        }
+        } catch (e) { /* best effort */ }
 
-        // 1. Spacer — occupies the bar height in the page flow so layout never
-        //    shifts. It NEVER changes size; the iframe floats above/over it.
-        var spacer = document.createElement('div');
-        spacer.style.width = '100%';
-        spacer.style.height = defaultHeight;
-        spacer.style.display = 'block';
-
-        // 2. Iframe — anchored at top:0 over the spacer. When the calendar opens it
-        //    grows DOWNWARD only: the search bar stays exactly where it is and the
-        //    calendar drops below it, floating over the host page content beneath
-        //    the bar. The spacer never changes size, so the hero and every other
-        //    section of the host page stay frozen in place — nothing moves.
-        var maxIframeHeight = 850;
-        var barHeight = parseInt(defaultHeight) || 100;
-        var offsetTop = -(maxIframeHeight - barHeight);
-
+        // ── Iframe ──────────────────────────────────────────────────────────
+        // Anchored at bottom:0 of the container. When closed its height equals
+        // barHeight so it exactly covers the container. When the calendar opens
+        // we increase its height — because it is bottom-anchored it grows
+        // UPWARD, and because the container has overflow:visible the extra
+        // height paints above the container, floating over the hero/banner.
+        // The container height never changes → host page content never moves.
         var iframe = document.createElement('iframe');
         iframe.src = frontendUrl + '/book/' + hotelSlug + '/widget';
         iframe.title = 'Hotel Booking Search';
-        iframe.loading = 'eager'; // Above-the-fold widget must load immediately, not wait for scroll
-        iframe.style.position = 'absolute';
-        iframe.style.top = offsetTop + 'px'; // Offset upward so widget bar sits exactly on spacer and calendar opens upward
-        iframe.style.left = '0';
-        iframe.style.width = '100%';
-        iframe.style.height = maxIframeHeight + 'px'; // Fixed large height to accommodate calendar popover without clipping
-        iframe.style.border = 'none';
-        iframe.style.overflow = 'visible';
-        iframe.style.zIndex = '9999';
-        iframe.style.backgroundColor = 'transparent';
-        iframe.allowTransparency = 'true';
-        iframe.scrolling = 'no';
-        iframe.style.pointerEvents = 'none'; // Allow clicking through transparent parts when closed
+        iframe.loading = 'eager';
+        iframe.style.cssText = [
+            'position: absolute',
+            'bottom: 0',
+            'left: 0',
+            'width: 100%',
+            'height: ' + barHeight + 'px',
+            'border: none',
+            'z-index: 9999',
+            'background-color: transparent',
+            'transition: height 0.25s ease'
+        ].join('; ');
+        iframe.setAttribute('allowtransparency', 'true');
+        iframe.setAttribute('scrolling', 'no');
 
         container.innerHTML = '';
-        container.appendChild(spacer);
         container.appendChild(iframe);
 
-        var calendarIsOpen = false;
-        var isHovered = false;
+        // ── State ───────────────────────────────────────────────────────────
+        var overlayOpen = false;
         var parentOriginalStyles = [];
 
-        function updateParentStackingContext(open) {
+        function setParentStacking(open) {
             if (open) {
                 try {
-                    var parent = container.parentElement;
-                    var depth = 0;
+                    var p = container.parentElement;
+                    var d = 0;
                     parentOriginalStyles = [];
-                    while (parent && depth < 4) {
-                        if (parent.tagName === 'BODY' || parent.tagName === 'HTML') {
-                            break;
-                        }
-                        var compStyle = window.getComputedStyle(parent);
+                    while (p && d < 5) {
+                        if (p.tagName === 'BODY' || p.tagName === 'HTML') break;
                         parentOriginalStyles.push({
-                            element: parent,
-                            zIndex: parent.style.zIndex,
-                            position: parent.style.position
+                            el: p,
+                            zIndex: p.style.zIndex,
+                            position: p.style.position
                         });
-                        parent.style.setProperty('z-index', '2147483647', 'important');
-                        if (compStyle.position === 'static') {
-                            parent.style.setProperty('position', 'relative', 'important');
+                        p.style.setProperty('z-index', '2147483647', 'important');
+                        var pcs = window.getComputedStyle(p);
+                        if (pcs.position === 'static') {
+                            p.style.setProperty('position', 'relative', 'important');
                         }
-                        parent = parent.parentElement;
-                        depth++;
+                        p = p.parentElement;
+                        d++;
                     }
-                } catch (e) {
-                    console.error('Staybooker Booking Widget: Error updating parent stacking context', e);
-                }
+                } catch (e) { /* best effort */ }
             } else {
                 for (var i = 0; i < parentOriginalStyles.length; i++) {
                     var item = parentOriginalStyles[i];
                     if (item.zIndex) {
-                        item.element.style.setProperty('z-index', item.zIndex);
+                        item.el.style.setProperty('z-index', item.zIndex);
                     } else {
-                        item.element.style.removeProperty('z-index');
+                        item.el.style.removeProperty('z-index');
                     }
                     if (item.position) {
-                        item.element.style.setProperty('position', item.position);
+                        item.el.style.setProperty('position', item.position);
                     } else {
-                        item.element.style.removeProperty('position');
+                        item.el.style.removeProperty('position');
                     }
                 }
                 parentOriginalStyles = [];
             }
         }
 
-        // Toggle pointerEvents when mouse enters/leaves the widget bar area
-        container.addEventListener('mouseenter', function () {
-            isHovered = true;
-            iframe.style.pointerEvents = 'auto';
-        });
-
-        container.addEventListener('mouseleave', function () {
-            isHovered = false;
-            if (!calendarIsOpen) {
-                iframe.style.pointerEvents = 'none';
-            }
-        });
-
-        // Listen for message events to raise z-index and handle pointer-events when calendar opens
+        // ── Listen for RESIZE_OVERLAY from the widget React app ─────────────
         window.addEventListener('message', function (event) {
             if (!event.data || event.data.type !== 'RESIZE_OVERLAY') return;
-            var wasOpen = calendarIsOpen;
-            calendarIsOpen = !!event.data.open;
-            iframe.style.zIndex = calendarIsOpen ? '2147483647' : '9999';
-            
-            if (calendarIsOpen !== wasOpen) {
-                updateParentStackingContext(calendarIsOpen);
-            }
-            
-            if (calendarIsOpen) {
-                iframe.style.pointerEvents = 'auto';
+
+            var wasOpen = overlayOpen;
+            overlayOpen = !!event.data.open;
+
+            if (overlayOpen === wasOpen) return; // no change
+
+            if (overlayOpen) {
+                // Grow iframe upward to show calendar
+                iframe.style.height = openHeight + 'px';
+                iframe.style.zIndex = '2147483647';
+                setParentStacking(true);
             } else {
-                if (!isHovered) {
-                    iframe.style.pointerEvents = 'none';
-                }
+                // Shrink back to bar only
+                iframe.style.height = barHeight + 'px';
+                iframe.style.zIndex = '9999';
+                setParentStacking(false);
             }
         });
     }
