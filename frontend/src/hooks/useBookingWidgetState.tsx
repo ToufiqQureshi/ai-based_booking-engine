@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { format, addDays } from 'date-fns';
+import { format, addDays, addMonths, startOfMonth } from 'date-fns';
 import { useTheme } from '@/contexts/ThemeContext';
 import { PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { X, Minus, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function useBookingWidgetState() {
     const { hotelSlug } = useParams<{ hotelSlug: string }>();
@@ -13,6 +14,9 @@ export function useBookingWidgetState() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [config, setConfig] = useState<any>(null); // Config state kept for future extensibility
     const [startingPrice, setStartingPrice] = useState<number>(4200);
+    const [calendarData, setCalendarData] = useState<Record<string, any>>({});
+    const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
+    const fetchedMonths = useRef<Set<string>>(new Set());
 
     // Fetch Widget Configuration and Starting Price
     useEffect(() => {
@@ -68,6 +72,44 @@ export function useBookingWidgetState() {
             document.documentElement.style.backgroundColor = '';
         };
     }, []);
+
+    // Fetch calendar rates dynamically
+    useEffect(() => {
+        if (!hotelSlug) return;
+        const getApiUrl = () => {
+            const hostname = window.location.hostname;
+            if (hostname.includes('staybooker.ai')) {
+                return 'https://api.staybooker.ai/api/v1';
+            }
+            if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+            return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
+        };
+        const apiUrl = getApiUrl();
+
+        const fetchMonth = async (monthStr: string) => {
+            try {
+                const res = await fetch(`${apiUrl}/public/hotels/${hotelSlug}/calendar?month=${monthStr}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setCalendarData(prev => ({ ...prev, ...data }));
+                }
+            } catch (err) {
+                console.error("Failed to fetch calendar month:", err);
+            }
+        };
+
+        const months = [
+            format(displayMonth, 'yyyy-MM'),
+            format(addMonths(displayMonth, 1), 'yyyy-MM'),
+        ];
+
+        months.forEach(m => {
+            if (!fetchedMonths.current.has(m)) {
+                fetchedMonths.current.add(m);
+                fetchMonth(m);
+            }
+        });
+    }, [hotelSlug, displayMonth]);
 
     // State
     const [checkInDate, setCheckInDate] = useState<Date | undefined>(new Date());
@@ -150,6 +192,12 @@ export function useBookingWidgetState() {
     const widgetTheme = urlParams.get('preview_theme') || config?.widget_theme || 'light';
     const isBgLight = bgColor.toLowerCase() === '#ffffff' || bgColor.toLowerCase() === '#fff' || bgColor.toLowerCase() === '#f8fafc';
 
+    const currency = config?.currency || 'INR';
+    const formatPrice = (price: number) => {
+        if (currency === 'INR') return `₹${Math.round(price).toLocaleString('en-IN')}`;
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(price);
+    };
+
     // Calendar popover — same design as public booking page
     const calendarPopoverContent = (
         <PopoverContent
@@ -202,23 +250,29 @@ export function useBookingWidgetState() {
                     modifiersStyles={{
                         selected: { backgroundColor: primaryHex, color: '#fff' }
                     }}
+                    onMonthChange={(month: Date) => setDisplayMonth(startOfMonth(month))}
                     components={{
                         DayContent: ({ date }: any) => {
                             const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
                             const isPast = date < todayObj;
-                            // Show the hotel's real starting ("from") rate only when
-                            // known. No fabricated weekend surcharge and no fake
-                            // per-day "Sold Out" (the old code marked EVERY month's
-                            // 13th as sold out and added a made-up ₹500 weekend
-                            // markup). Real price & availability are confirmed on the
-                            // next step against live inventory.
-                            const showPrice = !isPast && startingPrice > 0;
+                            const key = format(date, 'yyyy-MM-dd');
+                            const dayData = calendarData[key];
+                            const isSoldOut = dayData ? !dayData.available : false;
+                            const price = dayData?.min_price ?? null;
+
                             return (
                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
                                     <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                    {showPrice && (
-                                        <span className="text-[9px] font-extrabold leading-none mt-1 text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold">
-                                            ₹{startingPrice}
+                                    {!isPast && (
+                                        <span className={cn(
+                                            "text-[9px] font-extrabold leading-none mt-1",
+                                            isSoldOut
+                                                ? "text-red-400 font-bold"
+                                                : price !== null
+                                                    ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
+                                                    : "text-slate-300"
+                                        )}>
+                                            {isSoldOut ? "Sold" : price !== null ? formatPrice(price) : ''}
                                         </span>
                                     )}
                                 </div>
@@ -227,7 +281,7 @@ export function useBookingWidgetState() {
                     }}
                 />
                 <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                    Starting (&ldquo;from&rdquo;) rates &middot; final price &amp; availability confirmed at the next step
+                    <span className="text-red-400 font-extrabold">Sold</span> = No rooms &nbsp;·&nbsp; Prices shown are starting rates
                 </div>
             </div>
         </PopoverContent>
