@@ -220,8 +220,11 @@ export function RoomSearchHeader({
                                 to: checkOutDate
                             }}
                             onSelect={(range: any) => {
-                                if (range?.from) setCheckInDate(range.from);
-                                if (range?.to) setCheckOutDate(range.to);
+                                // Mirror the computed range exactly so a new check-in
+                                // click clears the old check-out and starts a fresh
+                                // range instead of producing an inverted/locked range.
+                                setCheckInDate(range?.from);
+                                setCheckOutDate(range?.to);
                                 if (range?.from && range?.to) {
                                     setIsCalendarOpen(false);
                                 }
