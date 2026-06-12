@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { CheckCircle2, Loader2, Save, Building2, Hotel } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle2, Loader2, Save, Building2, Hotel, Code } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { ChainWidgetTab } from '@/components/integration/ChainWidgetTab';
@@ -17,6 +18,12 @@ interface IntegrationSettings {
     widget_theme?: string;
 }
 
+interface WidgetCode {
+    html_code: string;
+    javascript_code: string;
+    instructions: string;
+}
+
 interface SearchWidgetTabProps {
     settings: IntegrationSettings | null;
     hotel: any;
@@ -25,6 +32,10 @@ interface SearchWidgetTabProps {
     isSavingSettings: boolean;
     onUpdateSettings: (updates: Partial<IntegrationSettings>) => void;
     onSaveSettings: () => Promise<void>;
+    // Embed code (search-bar widget) — shown right under the live preview so the
+    // hotelier customises, previews AND copies the snippet in one place.
+    widgetCode?: WidgetCode | null;
+    copyToClipboard: (text: string) => void;
     // Chain props — only provided when user belongs to a chain
     chainSlug?: string;
     chainName?: string;
@@ -38,6 +49,8 @@ export const SearchWidgetTab = ({
     isSavingSettings,
     onUpdateSettings,
     onSaveSettings,
+    widgetCode,
+    copyToClipboard,
     chainSlug,
     chainName,
 }: SearchWidgetTabProps) => {
@@ -245,6 +258,60 @@ export const SearchWidgetTab = ({
                                     title="Widget Preview"
                                 />
                             </div>
+                        </div>
+
+                        {/* Embed code lives right here — same tab where the hotelier
+                            customised and previewed, so there's no hunting across
+                            tabs for "where's my code?". Premium-gated on
+                            feature_custom_widget: not entitled → clear upgrade
+                            notice (never a blurred overlay). */}
+                        <div className="pt-6 border-t space-y-4">
+                            <div>
+                                <Label className="text-sm font-semibold flex items-center gap-2">
+                                    <Code className="w-4 h-4" /> Embed Code
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Paste this into your website&apos;s HTML to show the search bar above.
+                                </p>
+                            </div>
+
+                            {!hotel?.feature_custom_widget ? (
+                                <PremiumLockNotice
+                                    title="One-click embed code is a Pro feature"
+                                    description="Upgrade to drop the search widget straight into your own website with a copy-paste HTML & JavaScript snippet. Your customisation above is saved either way."
+                                    bullets={[
+                                        'Copy-paste HTML & JavaScript snippet',
+                                        'Search bar embedded on your own site',
+                                        'Calendar opens in place — no redirect',
+                                    ]}
+                                />
+                            ) : widgetCode ? (
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label className="mb-2 block text-xs">HTML</Label>
+                                        <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-xs font-mono">
+                                            {widgetCode.html_code}
+                                        </pre>
+                                        <Button size="sm" variant="outline" className="mt-2" onClick={() => copyToClipboard(widgetCode.html_code)}>Copy HTML</Button>
+                                    </div>
+                                    <div>
+                                        <Label className="mb-2 block text-xs">JavaScript</Label>
+                                        <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-xs font-mono">
+                                            {widgetCode.javascript_code}
+                                        </pre>
+                                        <Button size="sm" variant="outline" className="mt-2" onClick={() => copyToClipboard(widgetCode.javascript_code)}>Copy JS</Button>
+                                    </div>
+                                    {widgetCode.instructions && (
+                                        <Alert>
+                                            <AlertDescription>
+                                                <pre className="whitespace-pre-wrap text-xs font-sans">{widgetCode.instructions}</pre>
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">Loading embed code…</p>
+                            )}
                         </div>
 
                         <div className="flex justify-end gap-2 pt-4">
