@@ -1,21 +1,24 @@
-import React from 'react';
 import { format } from 'date-fns';
 import { Search, Calendar as CalendarIcon, Users, ChevronDown, Minus, Plus, ArrowRight, X } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 1. MODERN FLOATING CARD LAYOUT (DEFAULT)
+// ═══════════════════════════════════════════════════════════════════════════
 
 export function ModernFloatingLayout(props: any) {
     const {
-        config, setConfig, startingPrice, setStartingPrice, checkInDate, setCheckInDate,
+        config, startingPrice, checkInDate, setCheckInDate,
         checkOutDate, setCheckOutDate, roomsCount, setRoomsCount, adults, setAdults,
         children, setChildren, promoCode, setPromoCode, isCalendarOpen, setIsCalendarOpen,
-        isGuestOpen, setIsGuestOpen, isMobile, setIsMobile, handleSearch, updateParentIframeHeight,
+        isGuestOpen, setIsGuestOpen, isMobile, handleSearch,
         primaryHex, bgColor, isBgLight, widgetTheme, layout,
-        widgetRef, calendarPopoverContent, guestPopoverContent
+        calendarPopoverContent, guestPopoverContent
     } = props;
     return (
         <>
-            {/* 1. MODERN FLOATING CARD LAYOUT (DEFAULT) */}
             {layout === 'modern' && isMobile && (
                 /* ── MOBILE: vertical stack with INLINE calendar ── */
                 <div className="bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-4 w-full flex flex-col gap-3 border border-white/60"
@@ -73,12 +76,8 @@ export function ModernFloatingLayout(props: any) {
                                     numberOfMonths={1}
                                     selected={{ from: checkInDate, to: checkOutDate }}
                                     onSelect={(range: any) => {
-                                        // Mirror the computed range exactly so a new
-                                        // check-in click clears the old check-out and
-                                        // starts a fresh range (see useBookingWidgetState).
                                         setCheckInDate(range?.from);
                                         setCheckOutDate(range?.to);
-                                        // Calendar stays open until guest explicitly hits X
                                     }}
                                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                                     className="p-0"
@@ -100,10 +99,6 @@ export function ModernFloatingLayout(props: any) {
                                         DayContent: ({ date }: any) => {
                                             const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
                                             const isPast = date < todayObj;
-                                            // Show the hotel's real starting ("from") rate only when it is
-                                            // known. No fabricated weekend surcharge and no fake per-day
-                                            // "Sold Out": this widget has no live per-day inventory — real
-                                            // price & availability are confirmed on the next step.
                                             const showPrice = !isPast && startingPrice > 0;
                                             return (
                                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
@@ -382,6 +377,278 @@ export function ModernFloatingLayout(props: any) {
                 </div>
             )}
 
+        </>
+    );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2. CLASSIC STACKED LAYOUT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function ClassicStackedLayout(props: any) {
+    const {
+        checkInDate, checkOutDate, roomsCount, adults,
+        children, promoCode, setPromoCode, isCalendarOpen, setIsCalendarOpen,
+        isGuestOpen, setIsGuestOpen, handleSearch,
+        primaryHex, bgColor, layout,
+        calendarPopoverContent, guestPopoverContent
+    } = props;
+    return (
+        <>
+            {layout === 'classic' && (
+                <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 w-full max-w-md flex flex-col gap-4"
+                     style={{ backgroundColor: bgColor }}>
+                    <div className="text-center pb-2 border-b border-slate-100">
+                        <h3 className="font-extrabold text-lg text-slate-800 dark:text-slate-200">
+                            Book Your Stay
+                        </h3>
+                        <p className="text-xs text-slate-400 font-medium mt-0.5">Select check-in &amp; check-out dates</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="flex flex-col text-left">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">Dates</span>
+                            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                                <PopoverTrigger asChild>
+                                    <button className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200 hover:border-primary transition-all text-left bg-white text-slate-800 cursor-pointer"
+                                            style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                                        <div className="flex items-center gap-2">
+                                            <CalendarIcon className="w-4 h-4 custom-theme-text" />
+                                            <span className="text-xs font-extrabold">
+                                                {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Check In"}
+                                            </span>
+                                        </div>
+                                        <ArrowRight className="w-4 h-4 text-slate-300" />
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-extrabold">
+                                                {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Check Out"}
+                                            </span>
+                                            <CalendarIcon className="w-4 h-4 custom-theme-text" />
+                                        </div>
+                                    </button>
+                                </PopoverTrigger>
+                                {calendarPopoverContent}
+                            </Popover>
+                        </div>
+
+                        <div className="flex flex-col text-left">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">Guests &amp; Rooms</span>
+                            <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
+                                <PopoverTrigger asChild>
+                                    <button className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200 hover:border-primary transition-all text-left bg-white text-slate-800 cursor-pointer"
+                                            style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                                        <div className="flex items-center gap-2">
+                                            <Users className="w-4 h-4 custom-theme-text" />
+                                            <span className="text-xs font-extrabold">
+                                                {adults + children} Guest{adults + children > 1 ? 's' : ''} / {roomsCount} Room{roomsCount > 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        <Plus className="w-4 h-4 text-slate-400" />
+                                    </button>
+                                </PopoverTrigger>
+                                {guestPopoverContent}
+                            </Popover>
+                        </div>
+
+                        <div className="flex flex-col text-left">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 pl-1">Promo Code</span>
+                            <div className="flex items-center p-3.5 rounded-xl border border-slate-200 bg-white"
+                                 style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
+                                <input
+                                    className="bg-transparent border-0 font-extrabold text-xs focus:outline-none placeholder:text-slate-400 placeholder:font-medium text-slate-800 w-full"
+                                    placeholder="Enter optional code"
+                                    value={promoCode}
+                                    onChange={(e) => setPromoCode(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <Button
+                        className="w-full py-4 h-12 rounded-xl custom-theme-btn font-extrabold text-sm shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer border-0 mt-2"
+                        onClick={handleSearch}
+                    >
+                        <Search className="w-4 h-4" />
+                        Search Rooms / Packages
+                    </Button>
+                </div>
+            )}
+        </>
+    );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3. MINIMAL BAR LAYOUT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function MinimalBarLayout(props: any) {
+    const {
+        checkInDate, checkOutDate, roomsCount, adults,
+        children, promoCode, setPromoCode, isCalendarOpen, setIsCalendarOpen,
+        isGuestOpen, setIsGuestOpen, handleSearch,
+        primaryHex, bgColor, layout,
+        calendarPopoverContent, guestPopoverContent
+    } = props;
+    return (
+        <>
+            {layout === 'minimal' && (
+                <div className="w-full max-w-5xl flex flex-col sm:flex-row items-center gap-4 py-2 px-4 border-b border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-950/40 rounded-xl"
+                     style={{ backgroundColor: bgColor === '#ffffff' ? 'transparent' : bgColor }}>
+                    
+                    {/* Dates */}
+                    <div className="flex-1 w-full text-left">
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <button className="w-full flex items-center justify-between py-1 px-2 text-left bg-transparent text-slate-800 dark:text-slate-200 cursor-pointer">
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Select Dates</span>
+                                        <span className="text-xs font-extrabold">
+                                            {checkInDate ? format(checkInDate, "dd MMM") : "In"} - {checkOutDate ? format(checkOutDate, "dd MMM") : "Out"}
+                                        </span>
+                                    </div>
+                                    <CalendarIcon className="w-4 h-4 custom-theme-text" />
+                                </button>
+                            </PopoverTrigger>
+                            {calendarPopoverContent}
+                        </Popover>
+                    </div>
+
+                    <div className="hidden sm:block h-8 w-px bg-slate-200 dark:bg-slate-800" />
+
+                    {/* Guests */}
+                    <div className="flex-1 w-full text-left">
+                        <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
+                            <PopoverTrigger asChild>
+                                <button className="w-full flex items-center justify-between py-1 px-2 text-left bg-transparent text-slate-800 dark:text-slate-200 cursor-pointer">
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Guests & Rooms</span>
+                                        <span className="text-xs font-extrabold">
+                                            {adults + children} Guest{adults + children > 1 ? 's' : ''}, {roomsCount} R
+                                        </span>
+                                    </div>
+                                    <Users className="w-4 h-4 custom-theme-text" />
+                                </button>
+                            </PopoverTrigger>
+                            {guestPopoverContent}
+                        </Popover>
+                    </div>
+
+                    <div className="hidden sm:block h-8 w-px bg-slate-200 dark:bg-slate-800" />
+
+                    {/* Promo */}
+                    <div className="w-full sm:w-32 flex flex-col justify-center text-left py-1 px-2">
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Promo Code</span>
+                        <input
+                            className="bg-transparent border-0 font-extrabold text-xs focus:outline-none placeholder:text-slate-400 placeholder:font-medium text-slate-800 dark:text-slate-100 w-full"
+                            placeholder="Optional code"
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Button */}
+                    <Button
+                        className="w-full sm:w-auto px-6 h-10 rounded-lg custom-theme-btn font-extrabold text-xs shadow-sm hover:shadow hover:scale-[1.01] transition-all flex items-center justify-center gap-1.5 cursor-pointer border-0"
+                        onClick={handleSearch}
+                    >
+                        <Search className="w-3.5 h-3.5" />
+                        Search
+                    </Button>
+                </div>
+            )}
+        </>
+    );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 4. PREMIUM CAPSULE LAYOUT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function PremiumCapsuleLayout(props: any) {
+    const {
+        checkInDate, checkOutDate, adults,
+        children, promoCode, setPromoCode, isCalendarOpen, setIsCalendarOpen,
+        isGuestOpen, setIsGuestOpen, handleSearch,
+        primaryHex, bgColor, layout,
+        calendarPopoverContent, guestPopoverContent
+    } = props;
+    return (
+        <>
+            {layout === 'premium' && (
+                <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-center gap-2 p-2 sm:p-2 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl sm:rounded-full shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] border border-slate-700/50"
+                     style={{ backgroundColor: bgColor === '#ffffff' ? 'rgba(15,23,42,0.95)' : bgColor }}>
+                    
+                    {/* Dates */}
+                    <div className="flex-[1.5] w-full text-left pl-2 sm:pl-6 py-2">
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <button className="w-full flex items-center gap-4 text-left bg-transparent text-slate-100 cursor-pointer group">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                                         style={{ backgroundColor: `${primaryHex}20`, color: primaryHex }}>
+                                        <CalendarIcon className="w-4 h-4" />
+                                    </div>
+                                    <div className="flex flex-col flex-1">
+                                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest group-hover:text-slate-300 transition-colors">Dates</span>
+                                        <span className="text-sm font-extrabold tracking-wide">
+                                            {checkInDate ? format(checkInDate, "dd MMM") : "Check In"} – {checkOutDate ? format(checkOutDate, "dd MMM") : "Out"}
+                                        </span>
+                                    </div>
+                                </button>
+                            </PopoverTrigger>
+                            {calendarPopoverContent}
+                        </Popover>
+                    </div>
+
+                    <div className="hidden sm:block h-10 w-px bg-slate-700/50" />
+
+                    {/* Guests */}
+                    <div className="flex-1 w-full text-left pl-2 py-2">
+                        <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
+                            <PopoverTrigger asChild>
+                                <button className="w-full flex items-center gap-4 text-left bg-transparent text-slate-100 cursor-pointer group">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                                         style={{ backgroundColor: `${primaryHex}20`, color: primaryHex }}>
+                                        <Users className="w-4 h-4" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest group-hover:text-slate-300 transition-colors">Guests</span>
+                                        <span className="text-sm font-extrabold tracking-wide">
+                                            {adults + children} Guest{adults + children > 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                </button>
+                            </PopoverTrigger>
+                            {guestPopoverContent}
+                        </Popover>
+                    </div>
+
+                    <div className="hidden sm:block h-10 w-px bg-slate-700/50" />
+
+                    {/* Promo */}
+                    <div className="w-full sm:w-40 flex flex-col justify-center text-left pl-2 py-2">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mb-0.5">Promo</span>
+                        <input
+                            className="bg-transparent border-0 font-extrabold text-sm focus:outline-none placeholder:text-slate-500 text-slate-100 w-full"
+                            placeholder="Optional code"
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Button */}
+                    <Button
+                        className="w-full sm:w-auto px-8 h-14 sm:h-14 rounded-2xl sm:rounded-full font-extrabold text-sm shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border-0 sm:ml-2 mt-2 sm:mt-0"
+                        style={{ backgroundColor: primaryHex, color: '#fff' }}
+                        onClick={handleSearch}
+                    >
+                        <Search className="w-4 h-4" />
+                        Search
+                    </Button>
+                </div>
+            )}
         </>
     );
 }
