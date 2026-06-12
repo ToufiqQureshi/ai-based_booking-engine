@@ -30,8 +30,28 @@ export default function BookingWidget() {
         widgetRef, calendarPopoverContent, guestPopoverContent
     } = stateBag;
 
+    // When the calendar / guest picker is open, the embed script has lifted the
+    // iframe to a fixed full-viewport overlay. Mirror that here: dim the host page
+    // behind a backdrop and centre the search bar near the top, so the popup reads
+    // as an intentional modal and the host page never shifts.
+    const isOverlayOpen = isCalendarOpen || isGuestOpen;
+
     return (
-        <div ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4">
+        <div
+            ref={widgetRef}
+            className={cn(
+                'light font-sans',
+                isOverlayOpen
+                    ? 'fixed inset-0 z-[2147483000] flex items-start justify-center overflow-y-auto px-3 py-[7vh]'
+                    : 'w-full flex justify-center p-2 lg:p-4'
+            )}
+        >
+            {isOverlayOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-900/50 z-[-1]"
+                    onClick={() => { setIsCalendarOpen(false); setIsGuestOpen(false); }}
+                />
+            )}
             <style>{`
                 .custom-theme-btn {
                     background-color: ${primaryHex} !important;
@@ -124,6 +144,17 @@ export default function BookingWidget() {
                 .rdp-day_selected,
                 .rdp-day_selected.custom-theme-text,
                 .rdp-day_selected.rdp-day_today {
+                    color: white !important;
+                }
+                /* When check-in/check-out lands on TODAY, the "today" styling
+                   (light bg + border) fought the selected pill and clipped/hid
+                   the day number. Force the selected pill to fully win: dark bg,
+                   white text, no border. */
+                .rdp-day_selected.rdp-day_today {
+                    background-color: ${primaryHex} !important;
+                    border-color: transparent !important;
+                }
+                .rdp-day_selected.rdp-day_today span {
                     color: white !important;
                 }
             `}</style>
