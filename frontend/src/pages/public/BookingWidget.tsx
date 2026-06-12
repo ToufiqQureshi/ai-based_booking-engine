@@ -37,7 +37,7 @@ export default function BookingWidget() {
                     background-color: ${primaryHex} !important;
                     color: white !important;
                 }
-                .custom-theme-text {
+                .custom-theme-text:not(.rdp-day_selected) {
                     color: ${primaryHex} !important;
                 }
                 .custom-theme-bg-light {
