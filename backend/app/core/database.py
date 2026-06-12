@@ -212,6 +212,14 @@ async def init_db():
         "ALTER TABLE hotels ADD COLUMN is_paused BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE hotels ADD COLUMN pause_reason TEXT",
         "ALTER TABLE hotels ADD COLUMN paused_at TIMESTAMPTZ",
+        # DB-04: per-agent AI daily token limits (added 2026-06-11 to the
+        # Subscription model). The subscriptions table already existed, so
+        # create_all never added these columns — every /agent/usage read and
+        # every quota check threw "column ... does not exist" in production.
+        # Defaults mirror the model (50k hotelier / 100k guest / 100k whatsapp).
+        "ALTER TABLE subscriptions ADD COLUMN ai_hotelier_daily_limit INTEGER NOT NULL DEFAULT 50000",
+        "ALTER TABLE subscriptions ADD COLUMN ai_guest_chat_daily_limit INTEGER NOT NULL DEFAULT 100000",
+        "ALTER TABLE subscriptions ADD COLUMN ai_whatsapp_daily_limit INTEGER NOT NULL DEFAULT 100000",
     ]:
         try:
             async with engine.begin() as conn:
