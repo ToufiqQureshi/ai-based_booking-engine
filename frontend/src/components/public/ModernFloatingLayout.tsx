@@ -73,8 +73,11 @@ export function ModernFloatingLayout(props: any) {
                                     numberOfMonths={1}
                                     selected={{ from: checkInDate, to: checkOutDate }}
                                     onSelect={(range: any) => {
-                                        if (range?.from) setCheckInDate(range.from);
-                                        if (range?.to) setCheckOutDate(range.to);
+                                        // Mirror the computed range exactly so a new
+                                        // check-in click clears the old check-out and
+                                        // starts a fresh range (see useBookingWidgetState).
+                                        setCheckInDate(range?.from);
+                                        setCheckOutDate(range?.to);
                                         if (range?.from && range?.to) setIsCalendarOpen(false);
                                     }}
                                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}

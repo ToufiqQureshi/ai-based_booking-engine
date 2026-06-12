@@ -6,7 +6,6 @@ import { PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { X, Minus, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export function useBookingWidgetState() {
     const { hotelSlug } = useParams<{ hotelSlug: string }>();
@@ -196,8 +195,14 @@ export function useBookingWidgetState() {
                     numberOfMonths={isMobile ? 1 : 2}
                     selected={{ from: checkInDate, to: checkOutDate }}
                     onSelect={(range: any) => {
-                        if (range?.from) setCheckInDate(range.from);
-                        if (range?.to) setCheckOutDate(range.to);
+                        // Mirror react-day-picker's computed range EXACTLY (assign
+                        // both ends even when one is undefined). The old code set
+                        // each end only "if present", so a stale check-out was never
+                        // cleared: once a full range existed, clicking a new check-in
+                        // left the previous check-out in place → an inverted/locked
+                        // range. Now a fresh click starts a brand-new range.
+                        setCheckInDate(range?.from);
+                        setCheckOutDate(range?.to);
                         if (range?.from && range?.to) setIsCalendarOpen(false);
                     }}
                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
@@ -220,20 +225,19 @@ export function useBookingWidgetState() {
                         DayContent: ({ date }: any) => {
                             const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
                             const isPast = date < todayObj;
-                            let price = startingPrice > 0 ? startingPrice : 4200;
-                            const day = date.getDay();
-                            const isWeekend = day === 5 || day === 6;
-                            price = price + (isWeekend ? 500 : 0);
-                            const isSoldOut = date.getDate() === 13;
+                            // Show the hotel's real starting ("from") rate only when
+                            // known. No fabricated weekend surcharge and no fake
+                            // per-day "Sold Out" (the old code marked EVERY month's
+                            // 13th as sold out and added a made-up ₹500 weekend
+                            // markup). Real price & availability are confirmed on the
+                            // next step against live inventory.
+                            const showPrice = !isPast && startingPrice > 0;
                             return (
                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
                                     <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                    {!isPast && (
-                                        <span className={cn(
-                                            "text-[9px] font-extrabold leading-none mt-1",
-                                            isSoldOut ? "text-red-500 font-bold" : "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
-                                        )}>
-                                            {isSoldOut ? "Sold Out" : `₹${price}`}
+                                    {showPrice && (
+                                        <span className="text-[9px] font-extrabold leading-none mt-1 text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold">
+                                            ₹{startingPrice}
                                         </span>
                                     )}
                                 </div>
@@ -242,7 +246,7 @@ export function useBookingWidgetState() {
                     }}
                 />
                 <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                    <X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> SOLD OUT &nbsp;·&nbsp; Weekend rates slightly higher
+                    Starting (&ldquo;from&rdquo;) rates &middot; final price &amp; availability confirmed at the next step
                 </div>
             </div>
         </PopoverContent>
