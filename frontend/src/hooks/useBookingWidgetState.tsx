@@ -201,12 +201,13 @@ export function useBookingWidgetState() {
     // Calendar popover — same design as public booking page
     const calendarPopoverContent = (
         <PopoverContent
-            className="z-[2147483100] p-0 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 overflow-hidden calendar-container"
+            className="z-[2147483647] p-0 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 overflow-hidden calendar-container"
             style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px', transform: 'translateZ(0)', willChange: 'transform, opacity' }}
             align="center"
-            side="bottom"
+            side="top"
             avoidCollisions={false}
-            sideOffset={8}
+            collisionPadding={0}
+            sideOffset={10}
         >
             {/* Header */}
             <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
@@ -289,7 +290,7 @@ export function useBookingWidgetState() {
 
 
     const guestPopoverContent = (
-        <PopoverContent className="z-[2147483100] w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="bottom" avoidCollisions={false}>
+        <PopoverContent className="z-[2147483647] w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="top" avoidCollisions={false} collisionPadding={0} sideOffset={10}>
             <div className="space-y-6">
                 {/* Rooms Counter */}
                 <div className="flex items-center justify-between">

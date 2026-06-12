@@ -85,15 +85,19 @@
         //    calendar drops below it, floating over the host page content beneath
         //    the bar. The spacer never changes size, so the hero and every other
         //    section of the host page stay frozen in place — nothing moves.
+        var maxIframeHeight = 850;
+        var barHeight = parseInt(defaultHeight) || 100;
+        var offsetTop = -(maxIframeHeight - barHeight);
+
         var iframe = document.createElement('iframe');
         iframe.src = frontendUrl + '/book/' + hotelSlug + '/widget';
         iframe.title = 'Hotel Booking Search';
         iframe.loading = 'eager'; // Above-the-fold widget must load immediately, not wait for scroll
         iframe.style.position = 'absolute';
-        iframe.style.top = '0';        // grow downward on expand — bar stays put
+        iframe.style.top = offsetTop + 'px'; // Offset upward so widget bar sits exactly on spacer and calendar opens upward
         iframe.style.left = '0';
         iframe.style.width = '100%';
-        iframe.style.height = '850px'; // Fixed large height to accommodate calendar popover without clipping
+        iframe.style.height = maxIframeHeight + 'px'; // Fixed large height to accommodate calendar popover without clipping
         iframe.style.border = 'none';
         iframe.style.overflow = 'visible';
         iframe.style.zIndex = '9999';
@@ -126,7 +130,7 @@
                             zIndex: parent.style.zIndex,
                             position: parent.style.position
                         });
-                        parent.style.setProperty('z-index', '2147483000', 'important');
+                        parent.style.setProperty('z-index', '2147483647', 'important');
                         if (compStyle.position === 'static') {
                             parent.style.setProperty('position', 'relative', 'important');
                         }
@@ -172,7 +176,7 @@
             if (!event.data || event.data.type !== 'RESIZE_OVERLAY') return;
             var wasOpen = calendarIsOpen;
             calendarIsOpen = !!event.data.open;
-            iframe.style.zIndex = calendarIsOpen ? '2147483000' : '9999';
+            iframe.style.zIndex = calendarIsOpen ? '2147483647' : '9999';
             
             if (calendarIsOpen !== wasOpen) {
                 updateParentStackingContext(calendarIsOpen);

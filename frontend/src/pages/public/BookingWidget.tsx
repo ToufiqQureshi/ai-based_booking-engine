@@ -66,6 +66,18 @@ export default function BookingWidget() {
                     color: #94a3b8 !important;
                 }
 
+                ${window.self !== window.parent ? `
+                html, body, #root {
+                    height: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    justify-content: flex-end !important;
+                    background-color: transparent !important;
+                }
+                ` : ''}
+
                 /* Calendar Theme Overrides */
                 ${widgetTheme === 'dark' ? `
                     .calendar-container {

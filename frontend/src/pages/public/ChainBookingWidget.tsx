@@ -241,6 +241,18 @@ export default function ChainBookingWidget() {
                 .rdp-day_selected.rdp-day_today span {
                     color: white !important;
                 }
+
+                ${window.self !== window.parent ? `
+                html, body, #root {
+                    height: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    justify-content: flex-end !important;
+                    background-color: transparent !important;
+                }
+                ` : ''}
             `}</style>
 
             {/* ── Chain branding header ────────────────────────────────── */}
