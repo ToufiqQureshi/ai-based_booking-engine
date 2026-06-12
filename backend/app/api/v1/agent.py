@@ -65,7 +65,28 @@ async def get_ai_usage(
         "whatsapp": "WhatsApp Bot",
     }
 
-    usage = await read_ai_usage_db(hotel_id, days)
+    # Durable read is the source of truth, but a transient DB hiccup (or the
+    # usage tables not yet existing in the seconds after a fresh deploy) must
+    # not 500 the dashboard — that left the frontend spinning "Loading usage…"
+    # forever. Degrade to an empty, clearly-flagged payload instead.
+    try:
+        usage = await read_ai_usage_db(hotel_id, days)
+    except Exception:
+        logger.warning("read_ai_usage_db failed for hotel %s; returning empty usage", hotel_id, exc_info=True)
+        return {
+            "hotel_id": hotel_id,
+            "period_days": days,
+            "data_available": False,
+            "agents": {
+                a: {
+                    "label": labels[a], "today_tokens": 0, "daily_limit": limits[a],
+                    "pct_of_limit_used_today": None, "messages_today": 0,
+                    "unique_users_today": 0, "estimated_conversations_today": 0,
+                    "period_total_tokens": 0, "daily_history": {},
+                }
+                for a in ("hotelier", "guest", "whatsapp")
+            },
+        }
     today_iso = utcnow().date().isoformat()
 
     def _build_agent_summary(agent_type: str) -> dict:

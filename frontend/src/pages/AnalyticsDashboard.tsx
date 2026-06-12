@@ -243,12 +243,21 @@ export const AnalyticsDashboard: React.FC = () => {
   });
 
   // AI token usage — loads only when AI tab is active, 5-min stale (changes per conversation)
-  const { data: aiUsageData } = useQuery<AIUsageData>({
+  const {
+    data: aiUsageData,
+    isFetching: isAiUsageFetching,
+    isError: isAiUsageError,
+    refetch: refetchAiUsage,
+  } = useQuery<AIUsageData>({
     queryKey: ['agentUsage'],
     queryFn: () => api.get<AIUsageData>('/agent/usage?days=7'),
     enabled: activeTab === 'ai',
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
+    // One quick retry, then surface the error — never spin forever (the request
+    // already has a 30s client timeout, so 3 default retries left the spinner
+    // stuck for minutes when /agent/usage was failing).
+    retry: 1,
   });
 
   // Get active query error if any
@@ -937,10 +946,25 @@ export const AnalyticsDashboard: React.FC = () => {
                   subtitle="How many guests talked to each AI agent today, and how much of the daily token budget is left · ~800 tokens = 1 conversation"
                   icon={<MessageCircle className="w-4 h-4" />}
                 >
-                  {!aiUsageData ? (
+                  {!aiUsageData && isAiUsageError ? (
+                    // Request failed (timeout / server error). Show a clear,
+                    // retryable state instead of an endless "Loading…" spinner.
+                    <div className="flex flex-col items-center justify-center gap-3 py-8 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                        Couldn't load usage data right now.
+                      </div>
+                      <button
+                        onClick={() => refetchAiUsage()}
+                        className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : !aiUsageData ? (
                     <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
                       <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
-                      Loading usage…
+                      {isAiUsageFetching ? 'Loading usage…' : 'No usage data yet.'}
                     </div>
                   ) : !aiUsageData.data_available ? (
                     <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-400">
