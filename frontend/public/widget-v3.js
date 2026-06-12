@@ -2,11 +2,6 @@
     'use strict';
 
     function init(config) {
-        // Intentionally do NOT call console.clear() here — clearing the host
-        // page's console would destroy any debugging information the hotelier's
-        // developer has already logged, and is universally considered hostile
-        // behaviour for a third-party widget.
-
         var hotelSlug = config ? config.hotelSlug : null;
         var frontendUrl = config && config.frontendUrl ? config.frontendUrl : window.location.origin;
         var widgetLayout = config && config.widgetLayout ? config.widgetLayout : 'modern';
@@ -29,30 +24,47 @@
     }
 
     function renderWidget(container, hotelSlug, frontendUrl, widgetLayout) {
-        // ── Bar height per layout — the container ALWAYS stays this height ──
-        var barHeight = 130;
+        var barHeight = 100;
         if (widgetLayout === 'classic') {
             barHeight = 360;
         } else if (widgetLayout === 'minimal') {
             barHeight = 85;
         }
-        // When the calendar / guest picker is open the iframe must be tall
-        // enough to contain both the bar AND the popover that opens upward.
         var openHeight = widgetLayout === 'classic' ? 750 : 550;
 
-        // ── Container — occupies exactly barHeight in the page flow ──────────
+        // ── Container styles ──────────────────────────────────────────────
         container.style.setProperty('position', 'relative', 'important');
         container.style.setProperty('z-index', '999999', 'important');
         container.style.setProperty('height', barHeight + 'px', 'important');
+        container.style.setProperty('min-height', barHeight + 'px', 'important');
+        container.style.setProperty('width', '100%', 'important');
         container.style.setProperty('display', 'block', 'important');
         container.style.setProperty('overflow', 'visible', 'important');
 
-        // NOTE: We do NOT touch parent elements on page load. Modifying the
-        // host site's overflow/position at init time breaks their layout and
-        // creates blank spaces. Parent overrides are applied ONLY while the
-        // calendar overlay is open and reverted immediately when it closes.
+        // ── Fix parent overflow/stacking on page load ─────────────────────
+        // Kisi bhi parent element ka overflow:hidden widget ko clip kar sakta hai
+        // isliye page load pe hi fix kar dete hain
+        (function fixParentOverflow() {
+            var p = container.parentElement;
+            var d = 0;
+            while (p && d < 10) {
+                if (p.tagName === 'BODY' || p.tagName === 'HTML') break;
+                var pcs = window.getComputedStyle(p);
+                if (pcs.overflow === 'hidden' || pcs.overflowY === 'hidden') {
+                    p.style.setProperty('overflow', 'visible', 'important');
+                }
+                if (pcs.overflowX === 'hidden') {
+                    p.style.setProperty('overflow-x', 'visible', 'important');
+                }
+                if (pcs.position === 'static') {
+                    p.style.setProperty('position', 'relative', 'important');
+                }
+                p = p.parentElement;
+                d++;
+            }
+        })();
 
-        // ── Iframe ──────────────────────────────────────────────────────────
+        // ── Iframe ────────────────────────────────────────────────────────
         var iframe = document.createElement('iframe');
         iframe.src = frontendUrl + '/book/' + hotelSlug + '/widget';
         iframe.title = 'Hotel Booking Search';
@@ -74,7 +86,7 @@
         container.innerHTML = '';
         container.appendChild(iframe);
 
-        // ── State ───────────────────────────────────────────────────────────
+        // ── State ─────────────────────────────────────────────────────────
         var overlayOpen = false;
         var parentOriginalStyles = [];
 
@@ -84,30 +96,32 @@
                     var p = container.parentElement;
                     var d = 0;
                     parentOriginalStyles = [];
-                    while (p && d < 5) {
+                    while (p && d < 10) {   // 5 → 10 (deep nested layouts ke liye)
                         if (p.tagName === 'BODY' || p.tagName === 'HTML') break;
                         var pcs = window.getComputedStyle(p);
                         parentOriginalStyles.push({
                             el: p,
                             zIndex: p.style.zIndex,
                             position: p.style.position,
-                            overflow: p.style.overflow
+                            overflow: p.style.overflow,
+                            overflowX: p.style.overflowX,
+                            overflowY: p.style.overflowY
                         });
-                        // Raise stacking context so calendar floats above everything
                         p.style.setProperty('z-index', '2147483647', 'important');
                         if (pcs.position === 'static') {
                             p.style.setProperty('position', 'relative', 'important');
                         }
-                        // Prevent clipping the iframe that extends above the container
                         if (pcs.overflow === 'hidden' || pcs.overflowY === 'hidden') {
                             p.style.setProperty('overflow', 'visible', 'important');
+                        }
+                        if (pcs.overflowX === 'hidden') {
+                            p.style.setProperty('overflow-x', 'visible', 'important');
                         }
                         p = p.parentElement;
                         d++;
                     }
                 } catch (e) { /* best effort */ }
             } else {
-                // Restore every parent to its original inline styles
                 for (var i = 0; i < parentOriginalStyles.length; i++) {
                     var item = parentOriginalStyles[i];
                     if (item.zIndex) {
@@ -125,27 +139,35 @@
                     } else {
                         item.el.style.removeProperty('overflow');
                     }
+                    if (item.overflowX) {
+                        item.el.style.setProperty('overflow-x', item.overflowX);
+                    } else {
+                        item.el.style.removeProperty('overflow-x');
+                    }
+                    if (item.overflowY) {
+                        item.el.style.setProperty('overflow-y', item.overflowY);
+                    } else {
+                        item.el.style.removeProperty('overflow-y');
+                    }
                 }
                 parentOriginalStyles = [];
             }
         }
 
-        // ── Listen for RESIZE_OVERLAY from the widget React app ─────────────
+        // ── Listen for RESIZE_OVERLAY from the widget React app ───────────
         window.addEventListener('message', function (event) {
             if (!event.data || event.data.type !== 'RESIZE_OVERLAY') return;
 
             var wasOpen = overlayOpen;
             overlayOpen = !!event.data.open;
 
-            if (overlayOpen === wasOpen) return; // no change
+            if (overlayOpen === wasOpen) return;
 
             if (overlayOpen) {
-                // Grow iframe upward to show calendar
                 iframe.style.height = openHeight + 'px';
                 iframe.style.zIndex = '2147483647';
                 setParentStacking(true);
             } else {
-                // Shrink back to bar only
                 iframe.style.height = barHeight + 'px';
                 iframe.style.zIndex = '9999';
                 setParentStacking(false);
@@ -160,25 +182,15 @@
         chatIframe.id = 'hotelier-chat-widget';
         chatIframe.src = frontendUrl + '/book/' + hotelSlug + '/chat';
         chatIframe.title = 'Hotel AI Concierge Chat';
-        // Lazy-load the chat iframe so it does not block or compete with the
-        // hotel website's initial render. The chat button is not visible until
-        // the page is interactive anyway.
         chatIframe.loading = 'lazy';
 
         var DESKTOP_RIGHT = '20px';
         var MOBILE_RIGHT = '10px';
         var MOBILE_BOTTOM = '16px';
-
-        // Only push the chat button up by 110 px if the booking-search widget is
-        // also present on this page (to avoid overlapping it when both are used
-        // together). When only the chat is embedded, sit 24 px from the bottom.
         var DESKTOP_BOTTOM = document.getElementById('hotelier-booking-widget')
             ? '110px'
             : '24px';
 
-        // Closed state: sized to match the actual button pill (~250 × 64 px) with
-        // a small buffer. Keeping the iframe tight prevents an invisible dead-zone
-        // that silently swallows host-page clicks on elements below the button.
         var BTN_WIDTH = '280px';
         var BTN_HEIGHT = '76px';
 
@@ -234,7 +246,6 @@
         });
     }
 
-    // Expose global object
     window.HotelierWidget = {
         init: init
     };
