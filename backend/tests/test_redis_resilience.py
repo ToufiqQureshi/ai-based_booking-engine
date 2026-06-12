@@ -130,3 +130,20 @@ def test_midflight_failure_falls_back_and_arms_cooldown(monkeypatch):
     assert RedisClient._instance is None
     assert RedisClient._retry_after > time.time()
     assert RedisClient.get_value("k") == "v2"
+
+
+# ─── Connection-level retry config (AI-11) ──────────────────────────────────────
+# Railway's private DNS (redis.railway.internal) flaps ~40x/day with "Name or
+# service not known". redis-py is now configured to retry transient connect
+# blips in-place before the cooldown fallback kicks in.
+
+def test_connection_kwargs_have_retry_and_no_deprecated_flag():
+    from redis.retry import Retry
+    from app.core.redis_client import _connection_kwargs
+
+    kw = _connection_kwargs()
+    assert isinstance(kw["retry"], Retry)
+    assert kw["retry_on_error"]  # ConnectionError / TimeoutError are retried
+    assert kw["health_check_interval"] == 30
+    # The deprecated flag (removed in redis-py 6+) must be gone.
+    assert "retry_on_timeout" not in kw
