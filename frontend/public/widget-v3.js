@@ -30,7 +30,7 @@
 
     function renderWidget(container, hotelSlug, frontendUrl, widgetLayout) {
         // ── Bar height per layout — the container ALWAYS stays this height ──
-        var barHeight = 100;
+        var barHeight = 130;
         if (widgetLayout === 'classic') {
             barHeight = 360;
         } else if (widgetLayout === 'minimal') {
@@ -166,7 +166,7 @@
         chatIframe.loading = 'lazy';
 
         var DESKTOP_RIGHT = '20px';
-        var MOBILE_RIGHT  = '10px';
+        var MOBILE_RIGHT = '10px';
         var MOBILE_BOTTOM = '16px';
 
         // Only push the chat button up by 110 px if the booking-search widget is
@@ -179,7 +179,7 @@
         // Closed state: sized to match the actual button pill (~250 × 64 px) with
         // a small buffer. Keeping the iframe tight prevents an invisible dead-zone
         // that silently swallows host-page clicks on elements below the button.
-        var BTN_WIDTH  = '280px';
+        var BTN_WIDTH = '280px';
         var BTN_HEIGHT = '76px';
 
         chatIframe.style.cssText = `
@@ -206,19 +206,19 @@
             var isMobile = window.innerWidth <= 768;
 
             if (event.data.type === 'CHAT_OPEN') {
-                var openWidth  = isMobile ? '90vw'  : '400px';
-                var openHeight = isMobile ? '80vh'  : '650px';
+                var openWidth = isMobile ? '90vw' : '400px';
+                var openHeight = isMobile ? '80vh' : '650px';
 
-                chatIframe.style.width        = openWidth;
-                chatIframe.style.height       = openHeight;
+                chatIframe.style.width = openWidth;
+                chatIframe.style.height = openHeight;
                 chatIframe.style.borderRadius = '16px';
-                chatIframe.style.boxShadow    = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
+                chatIframe.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
 
             } else if (event.data.type === 'CHAT_CLOSE') {
-                chatIframe.style.width        = BTN_WIDTH;
-                chatIframe.style.height       = BTN_HEIGHT;
+                chatIframe.style.width = BTN_WIDTH;
+                chatIframe.style.height = BTN_HEIGHT;
                 chatIframe.style.borderRadius = '0';
-                chatIframe.style.boxShadow    = 'none';
+                chatIframe.style.boxShadow = 'none';
 
             } else if (event.data.type === 'CHECKOUT_REDIRECT') {
                 if (event.data.data && event.data.data.booking_id) {
@@ -230,7 +230,7 @@
         window.addEventListener('resize', function () {
             var isMobile = window.innerWidth <= 768;
             chatIframe.style.bottom = isMobile ? MOBILE_BOTTOM : DESKTOP_BOTTOM;
-            chatIframe.style.right  = isMobile ? MOBILE_RIGHT  : DESKTOP_RIGHT;
+            chatIframe.style.right = isMobile ? MOBILE_RIGHT : DESKTOP_RIGHT;
         });
     }
 
