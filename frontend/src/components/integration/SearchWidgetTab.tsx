@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Lock, CheckCircle2, Loader2, Save, Building2, Hotel } from 'lucide-react';
+import { CheckCircle2, Loader2, Save, Building2, Hotel } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { ChainWidgetTab } from '@/components/integration/ChainWidgetTab';
+import { PremiumLockNotice } from '@/components/integration/PremiumLockNotice';
 
 interface IntegrationSettings {
     widget_enabled: boolean;
@@ -166,15 +167,17 @@ export const SearchWidgetTab = ({
                     />
                 </div>
 
-                <div className="relative">
+                <div className="space-y-6">
+                    {/* Editing colours/theme/layout is premium. Show a clear,
+                        intentional notice instead of a blurred overlay — and keep
+                        the live preview below ALWAYS visible so every hotelier can
+                        see what their widget looks like (and what they'd unlock). */}
                     {!hotel?.feature_color_palette && (
-                        <div className="absolute inset-0 z-10 backdrop-blur-sm bg-white/40 rounded-xl flex flex-col items-center justify-center border border-dashed border-indigo-200 p-6 text-center">
-                            <Lock className="w-6 h-6 text-indigo-600 mb-2" />
-                            <span className="text-sm font-black">Styles Locked</span>
-                            <span className="text-xs text-slate-500 mt-1">Upgrade your plan to customize colors and layouts.</span>
-                        </div>
+                        <PremiumLockNotice
+                            title="Custom colours, themes & layouts"
+                            description="Make the booking widget match your brand. The live preview below always shows your widget — upgrade to edit colours, calendar theme and layout."
+                        />
                     )}
-                    <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label>Primary Color</Label>
@@ -251,7 +254,6 @@ export const SearchWidgetTab = ({
                                 Save Widget Settings
                             </Button>
                         </div>
-                    </div>
                 </div>
             </CardContent>
         </Card>
