@@ -207,7 +207,10 @@ const IntegrationPage = () => {
             subtitle="Connect your hotel website and manage API access"
         >
             <Tabs value={activeTab} onValueChange={(val) => navigate(`/integration/${val}`)} className="space-y-6">
-                <TabsList className="bg-muted/50 p-1">
+                {/* On phones the 5 tabs overflow the viewport. Allow horizontal
+                    scroll and left-align so no tab (API Keys / External Services)
+                    gets clipped and unreachable. */}
+                <TabsList className="bg-muted/50 p-1 w-full max-w-full justify-start overflow-x-auto">
                     <TabsTrigger value="widget" className="gap-2"><Code className="w-4 h-4" />Full Page Link</TabsTrigger>
                     <TabsTrigger value="search-widget" className="gap-2"><Search className="w-4 h-4" />Search Widget</TabsTrigger>
                     <TabsTrigger value="chat-widget" className="gap-2"><MessageCircle className="w-4 h-4" />Chat Widget</TabsTrigger>
@@ -249,6 +252,8 @@ const IntegrationPage = () => {
                             isSavingSettings={isSavingSettings}
                             onUpdateSettings={updateSettings}
                             onSaveSettings={handleSaveSettings}
+                            widgetCode={widgetCode}
+                            copyToClipboard={copyToClipboard}
                             chainSlug={chainSlug || undefined}
                             chainName={chainName || undefined}
                         />
