@@ -153,6 +153,34 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
         window.parent.postMessage({ type: message, hotelSlug }, PARENT_ORIGIN);
     }, [isOpen, hotelSlug]);
 
+    // Loader is signal pe apna placeholder hata ke real iframe dikhata hai
+    useEffect(() => {
+        if (window.parent === window) return;
+        window.parent.postMessage({ type: 'CHAT_READY', hotelSlug }, PARENT_ORIGIN);
+    }, [hotelSlug]);
+
+    // AI booking → checkout: state sessionStorage se travel karti hai kyunki
+    // window.open() same-origin tab mein sessionStorage copy karta hai. Pehle
+    // yeh CHECKOUT_REDIRECT postMessage tha jo na loader handle kar pata tha
+    // (booking_id kabhi hota hi nahi) na /checkout/:id route exist karta hai.
+    const openCheckout = (bookingData: BookingData) => {
+        try {
+            sessionStorage.setItem('pending_booking_state', JSON.stringify({
+                ...bookingData,
+                source: 'ai_agent',
+                guest_prefill: bookingData.guest_info,
+            }));
+        } catch { /* storage blocked — checkout apne fallbacks pe chalega */ }
+        const checkoutUrl = `${window.location.origin}/book/${hotelSlug}/checkout`;
+        if (window.parent !== window) {
+            // NOTE: 'noopener' yahan use nahi kar sakte — woh sessionStorage
+            // copy hone se rok deta hai (same-origin page hai, risk nahi)
+            window.open(checkoutUrl, '_blank');
+        } else {
+            window.location.href = checkoutUrl;
+        }
+    };
+
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
 
@@ -435,9 +463,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                                                                     )}
 
                                                                     <Button
-                                                                        onClick={() => {
-                                                                            window.parent.postMessage({ type: 'CHECKOUT_REDIRECT', data: bookingData }, PARENT_ORIGIN);
-                                                                        }}
+                                                                        onClick={() => openCheckout(bookingData!)}
                                                                         className="w-full text-white font-bold py-5 shadow-sm rounded-xl flex items-center justify-center gap-1.5 group transition-all text-xs"
                                                                         style={{
                                                                             background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`
