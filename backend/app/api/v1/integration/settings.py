@@ -197,14 +197,14 @@ async def get_widget_code(current_user: CurrentUser, session: DbSession):
     api_url = config.API_URL
     frontend_url = config.FRONTEND_URL
     slug = hotel.slug
-    theme = int_settings.widget_theme
     color = int_settings.widget_primary_color
     layout = getattr(int_settings, "widget_layout", "modern")
 
+    # Sirf wohi params jo loader sach mein use karta hai (theme widget-config
+    # API se aata hai). data-* attributes se loader auto-init bhi kar leta hai.
     html_code = f'''<!-- Staybooker Booking Widget -->
 <div id="hotelier-booking-widget"
      data-hotel-slug="{slug}"
-     data-theme="{theme}"
      data-color="{color}"
      data-widget-layout="{layout}">
 </div>'''
@@ -218,7 +218,6 @@ async def get_widget_code(current_user: CurrentUser, session: DbSession):
       HotelierWidget.init({{
         hotelSlug: '{slug}',
         primaryColor: '{color}',
-        theme: '{theme}',
         widgetLayout: '{layout}',
         apiUrl: '{api_url}',
         frontendUrl: '{frontend_url}'
@@ -231,9 +230,8 @@ async def get_widget_code(current_user: CurrentUser, session: DbSession):
     css_code = '''<style>
   #hotelier-booking-widget {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    position: relative !important;
-    z-index: 999999 !important;
-    overflow: visible !important;
+    position: relative;
+    overflow: visible;
   }
 </style>'''
 

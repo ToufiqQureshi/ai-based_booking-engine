@@ -17,10 +17,21 @@ import {
     PremiumCapsuleLayout 
 } from './WidgetLayouts';
 
+// Embedding (hotelier) page ka origin referrer se nikaalte hain taaki
+// postMessage wildcard '*' pe broadcast na ho
+const PARENT_ORIGIN: string = (() => {
+    try {
+        return document.referrer ? new URL(document.referrer).origin : '*';
+    } catch {
+        return '*';
+    }
+})();
+
 export default function BookingWidget() {
     const { hotelSlug } = useParams<{ hotelSlug: string }>();
-    const [config, setConfig] = useState<any>(null); 
-    const [startingPrice, setStartingPrice] = useState<number>(4200);
+    const [config, setConfig] = useState<any>(null);
+    // 0 = abhi pata nahi; kabhi bhi fake placeholder price guest ko mat dikhao
+    const [startingPrice, setStartingPrice] = useState<number>(0);
     const [calendarData, setCalendarData] = useState<Record<string, any>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
     const fetchedMonths = useRef<Set<string>>(new Set());
@@ -140,11 +151,51 @@ export default function BookingWidget() {
 
     // Notify parent window when calendar or guest picker is open for styling/stacking adjustments
     const widgetRef = useRef<HTMLDivElement>(null);
+    const lastHeightRef = useRef(0);
+
+    // Loader ko apni asli content height bhejte rehte hain — hardcoded iframe
+    // heights ki jagah har layout/breakpoint pe exact fit. Popovers fixed-position
+    // hote hain isliye unka bottom alag se max() mein lete hain.
+    const postHeight = () => {
+        if (window.parent === window) return;
+        let h = document.body.scrollHeight;
+        document.querySelectorAll('[data-radix-popper-content-wrapper]').forEach((el) => {
+            h = Math.max(h, el.getBoundingClientRect().bottom + 16);
+        });
+        h = Math.ceil(h);
+        if (Math.abs(h - lastHeightRef.current) < 2) return;
+        lastHeightRef.current = h;
+        window.parent.postMessage({ type: 'WIDGET_HEIGHT', height: h }, PARENT_ORIGIN);
+    };
+
+    // Ready + height reporting (config render hone ke baad)
+    useEffect(() => {
+        if (window.parent === window || config === null) return;
+        window.parent.postMessage({ type: 'WIDGET_READY' }, PARENT_ORIGIN);
+        const raf = requestAnimationFrame(postHeight);
+        const ro = new ResizeObserver(() => requestAnimationFrame(postHeight));
+        ro.observe(document.body);
+        return () => {
+            cancelAnimationFrame(raf);
+            ro.disconnect();
+        };
+    }, [config]);
 
     useEffect(() => {
         if (window.parent === window) return;
         const isOpen = isCalendarOpen || isGuestOpen;
-        window.parent.postMessage({ type: 'RESIZE_OVERLAY', open: isOpen }, '*');
+        window.parent.postMessage({ type: 'RESIZE_OVERLAY', open: isOpen }, PARENT_ORIGIN);
+        if (isOpen) {
+            // Fixed-position popover body ResizeObserver mein nahi aata —
+            // open rehne tak halka poll (month change pe height badalti hai)
+            const id = setInterval(postHeight, 250);
+            const t = setTimeout(postHeight, 60);
+            return () => { clearInterval(id); clearTimeout(t); };
+        }
+        // Close hone par exit animation ke baad shrink report karo
+        const t1 = setTimeout(postHeight, 100);
+        const t2 = setTimeout(postHeight, 350);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
     }, [isCalendarOpen, isGuestOpen]);
 
     // Custom JS Code execution inside widget frame
@@ -434,15 +485,15 @@ export default function BookingWidget() {
                 }
 
                 ${window.self !== window.parent ? `
+                /* height:auto rakhna zaroori hai — body.scrollHeight se hi
+                   parent loader ko exact content height report hoti hai */
                 html, body, #root {
-                    height: 100% !important;
+                    height: auto !important;
                     margin: 0 !important;
                     padding: 0 !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    justify-content: flex-start !important;
                     background-color: transparent !important;
-                    overflow: visible !important;
+                    overflow-x: hidden !important;
+                    overflow-y: auto !important;
                 }
                 ` : ''}
 

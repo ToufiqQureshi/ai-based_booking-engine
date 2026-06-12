@@ -1,262 +1,383 @@
-(function (window) {
+(function (window, document) {
     'use strict';
 
-    function init(config) {
-        var hotelSlug = config ? config.hotelSlug : null;
-        var frontendUrl = config && config.frontendUrl ? config.frontendUrl : window.location.origin;
-        var widgetLayout = config && config.widgetLayout ? config.widgetLayout : 'modern';
-
-        var container = document.getElementById('hotelier-booking-widget');
-        if (container) {
-            hotelSlug = hotelSlug || container.getAttribute('data-hotel-slug');
-            widgetLayout = widgetLayout || container.getAttribute('data-widget-layout') || 'modern';
-            if (hotelSlug) {
-                renderWidget(container, hotelSlug, frontendUrl, widgetLayout);
-            }
+    // Loader ka origin uske apne <script src> se nikaalte hain — hotelier agar
+    // frontendUrl pass karna bhool jaye to bhi widget sahi host se load hota hai
+    var SCRIPT_ORIGIN = (function () {
+        try {
+            var src = document.currentScript && document.currentScript.src;
+            return src ? new URL(src).origin : null;
+        } catch (e) {
+            return null;
         }
+    })();
+
+    var booted = false;
+
+    function init(config) {
+        config = config || {};
+        var container = document.getElementById('hotelier-booking-widget');
+
+        var hotelSlug = config.hotelSlug
+            || (container && container.getAttribute('data-hotel-slug'))
+            || null;
+        var frontendUrl = config.frontendUrl || SCRIPT_ORIGIN || window.location.origin;
+        var widgetLayout = config.widgetLayout
+            || (container && container.getAttribute('data-widget-layout'))
+            || 'modern';
+        var primaryColor = sanitizeColor(
+            config.primaryColor || (container && container.getAttribute('data-color'))
+        );
 
         if (!hotelSlug) {
-            console.error('Hotelier Widget: Missing Hotel Slug in config or data-hotel-slug');
+            console.error('Hotelier Widget: missing hotel slug — pass init({ hotelSlug }) or set data-hotel-slug on #hotelier-booking-widget');
             return;
         }
+        if (booted) return;
+        booted = true;
 
-        renderChatWidget(hotelSlug, frontendUrl);
+        var widgetOrigin;
+        try {
+            widgetOrigin = new URL(frontendUrl).origin;
+        } catch (e) {
+            widgetOrigin = window.location.origin;
+        }
+
+        // Connection warm-up: iframe document + API dono ke TLS handshakes
+        // host page parse hote hi shuru ho jate hain
+        preconnect(frontendUrl, false);
+        if (config.apiUrl) {
+            try { preconnect(new URL(config.apiUrl).origin, true); } catch (e) { /* invalid apiUrl — skip */ }
+        }
+
+        injectLoaderStyles();
+
+        if (container) {
+            renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout);
+        } else {
+            console.warn('Hotelier Widget: #hotelier-booking-widget container not found — booking bar skipped, chat widget only');
+        }
+
+        renderChatWidget(hotelSlug, frontendUrl, widgetOrigin, primaryColor, !!container);
     }
 
-    function renderWidget(container, hotelSlug, frontendUrl, widgetLayout) {
-        var barHeight = 100;
-        if (widgetLayout === 'classic') {
-            barHeight = 360;
-        } else if (widgetLayout === 'minimal') {
-            barHeight = 85;
-        }
-        var openHeight = widgetLayout === 'classic' ? 750 : 550;
+    function sanitizeColor(col) {
+        return (col && /^#[0-9a-fA-F]{3,8}$/.test(col)) ? col : '#7c3aed';
+    }
 
-        // ── Container styles ──────────────────────────────────────────────
+    function preconnect(href, crossOrigin) {
+        try {
+            if (document.querySelector('link[rel="preconnect"][href="' + href + '"]')) return;
+            var link = document.createElement('link');
+            link.rel = 'preconnect';
+            link.href = href;
+            if (crossOrigin) link.crossOrigin = 'anonymous';
+            (document.head || document.documentElement).appendChild(link);
+        } catch (e) { /* best effort */ }
+    }
+
+    function injectLoaderStyles() {
+        if (document.getElementById('hotelier-widget-loader-css')) return;
+        var style = document.createElement('style');
+        style.id = 'hotelier-widget-loader-css';
+        style.textContent =
+            '@keyframes hotelier-shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}' +
+            '.hotelier-skeleton-line{background:linear-gradient(90deg,#eef2f7 25%,#f8fafc 37%,#eef2f7 63%);background-size:600px 100%;animation:hotelier-shimmer 1.3s ease-in-out infinite;border-radius:12px;}' +
+            '@media (max-width:768px){.hotelier-chat-skel-text{display:none !important}}';
+        (document.head || document.documentElement).appendChild(style);
+    }
+
+    // Booking bar ka instant skeleton — real iframe ready hone tak host page pe
+    // widget "pehle se loaded" feel deta hai
+    function buildSkeleton(barHeight) {
+        var skel = document.createElement('div');
+        skel.style.cssText =
+            'position:absolute;top:8px;left:8px;right:8px;height:' + Math.max(barHeight - 16, 56) + 'px;' +
+            'background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:24px;' +
+            'box-shadow:0 18px 45px -18px rgba(15,23,42,.18);' +
+            'display:flex;align-items:center;gap:12px;padding:0 20px;box-sizing:border-box;' +
+            'transition:opacity .3s ease;overflow:hidden;';
+        for (var i = 0; i < 3; i++) {
+            var line = document.createElement('div');
+            line.className = 'hotelier-skeleton-line';
+            line.style.cssText = (i === 2 ? 'flex:0 0 120px;' : 'flex:1;') + 'height:44px;max-height:60%;';
+            skel.appendChild(line);
+        }
+        return skel;
+    }
+
+    function renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout) {
+        if (container.getAttribute('data-hotelier-widget-ready') === '1') return;
+        container.setAttribute('data-hotelier-widget-ready', '1');
+
+        // Pehle paint ke liye layout-wise approximate height; iframe baad mein
+        // apni asli content height (WIDGET_HEIGHT) bhejta rehta hai
+        var barHeight = widgetLayout === 'classic' ? 360 : (widgetLayout === 'minimal' ? 85 : 110);
+        var provisionalOpenHeight = widgetLayout === 'classic' ? 750 : 550;
+
+        // Sirf apne container ko style karte hain. Host page ke parent elements
+        // ko KABHI mutate nahi karna — purane z-index/overflow hacks hotelier
+        // sites ke sliders/sticky headers tod dete the.
         container.style.setProperty('position', 'relative', 'important');
-        container.style.setProperty('z-index', '50', 'important');
-        container.style.setProperty('height', barHeight + 'px', 'important');
         container.style.setProperty('display', 'block', 'important');
+        container.style.setProperty('height', 'auto', 'important');
         container.style.setProperty('overflow', 'visible', 'important');
 
-        // ── Spacer (Fixed Height) ─────────────────────────────────────────
         var spacer = document.createElement('div');
-        spacer.style.width = '100%';
-        spacer.style.height = barHeight + 'px';
-        spacer.style.display = 'block';
+        spacer.style.cssText = 'display:block;width:100%;height:' + barHeight + 'px;transition:height .2s ease;';
 
-        // ── Fix parent overflow/stacking on page load ─────────────────────
-        // Kisi bhi parent element ka overflow:hidden widget ko clip kar sakta hai
-        // isliye page load pe hi fix kar dete hain
-        (function fixParentOverflow() {
-            var p = container.parentElement;
-            var d = 0;
-            while (p && d < 10) {
-                if (p.tagName === 'BODY' || p.tagName === 'HTML') break;
-                var pcs = window.getComputedStyle(p);
-                if (pcs.overflow === 'hidden' || pcs.overflowY === 'hidden') {
-                    p.style.setProperty('overflow', 'visible', 'important');
-                }
-                if (pcs.overflowX === 'hidden') {
-                    p.style.setProperty('overflow-x', 'visible', 'important');
-                }
-                if (pcs.position === 'static') {
-                    p.style.setProperty('position', 'relative', 'important');
-                }
-                p = p.parentElement;
-                d++;
-            }
-        })();
+        var skeleton = buildSkeleton(barHeight);
 
-        // ── Iframe ────────────────────────────────────────────────────────
         var iframe = document.createElement('iframe');
-        var iframeUrl = frontendUrl + '/book/' + hotelSlug + '/widget';
-        if (widgetLayout) {
-            iframeUrl += '?preview_layout=' + widgetLayout;
-        }
-        iframe.src = iframeUrl;
+        iframe.src = frontendUrl + '/book/' + encodeURIComponent(hotelSlug) + '/widget?preview_layout=' + encodeURIComponent(widgetLayout);
         iframe.title = 'Hotel Booking Search';
         iframe.loading = 'eager';
-        iframe.style.cssText = [
-            'position: absolute',
-            'top: 0',
-            'left: 0',
-            'width: 100%',
-            'height: ' + barHeight + 'px',
-            'border: none',
-            'z-index: 9999',
-            'background-color: transparent',
-            'transition: height 0.25s ease'
-        ].join('; ');
+        iframe.setAttribute('fetchpriority', 'high');
         iframe.setAttribute('allowtransparency', 'true');
-        iframe.setAttribute('scrolling', 'no');
+        iframe.style.cssText =
+            'position:absolute;top:0;left:0;width:100%;height:' + barHeight + 'px;' +
+            'border:none;z-index:9999;background:transparent;color-scheme:normal;' +
+            'opacity:0;transition:opacity .3s ease,height .2s ease;';
 
         container.innerHTML = '';
         container.appendChild(spacer);
+        container.appendChild(skeleton);
         container.appendChild(iframe);
 
-        // ── State ─────────────────────────────────────────────────────────
         var overlayOpen = false;
-        var parentOriginalStyles = [];
+        var contentHeight = barHeight;
+        var revealed = false;
 
-        function setParentStacking(open) {
-            if (open) {
-                try {
-                    var p = container.parentElement;
-                    var d = 0;
-                    parentOriginalStyles = [];
-                    while (p && d < 10) {   // deep nested layouts ke liye
-                        if (p.tagName === 'BODY' || p.tagName === 'HTML') break;
-                        var pcs = window.getComputedStyle(p);
-                        parentOriginalStyles.push({
-                            el: p,
-                            zIndex: p.style.zIndex,
-                            position: p.style.position,
-                            overflow: p.style.overflow,
-                            overflowX: p.style.overflowX,
-                            overflowY: p.style.overflowY
-                        });
-                        p.style.setProperty('z-index', '2147483647', 'important');
-                        if (pcs.position === 'static') {
-                            p.style.setProperty('position', 'relative', 'important');
-                        }
-                        if (pcs.overflow === 'hidden' || pcs.overflowY === 'hidden') {
-                            p.style.setProperty('overflow', 'visible', 'important');
-                        }
-                        if (pcs.overflowX === 'hidden') {
-                            p.style.setProperty('overflow-x', 'visible', 'important');
-                        }
-                        p = p.parentElement;
-                        d++;
-                    }
-                } catch (e) { /* best effort */ }
+        function reveal() {
+            if (revealed) return;
+            revealed = true;
+            iframe.style.opacity = '1';
+            skeleton.style.opacity = '0';
+            setTimeout(function () {
+                if (skeleton.parentNode) skeleton.parentNode.removeChild(skeleton);
+            }, 350);
+        }
+
+        // Purana app build WIDGET_READY na bheje to bhi load ke baad dikha dete hain
+        iframe.addEventListener('load', function () {
+            setTimeout(reveal, 800);
+        });
+
+        function viewportCap(topPx) {
+            return Math.max(window.innerHeight - topPx - 12, 200);
+        }
+
+        function applyHeights() {
+            if (overlayOpen) {
+                var top = parseFloat(iframe.style.top) || 0;
+                iframe.style.height = Math.min(contentHeight, viewportCap(top)) + 'px';
+                // Spacer frozen — overlay host content ke UPAR float karta hai,
+                // page layout ko push nahi karta
             } else {
-                for (var i = 0; i < parentOriginalStyles.length; i++) {
-                    var item = parentOriginalStyles[i];
-                    if (item.zIndex) {
-                        item.el.style.setProperty('z-index', item.zIndex);
-                    } else {
-                        item.el.style.removeProperty('z-index');
-                    }
-                    if (item.position) {
-                        item.el.style.setProperty('position', item.position);
-                    } else {
-                        item.el.style.removeProperty('position');
-                    }
-                    if (item.overflow) {
-                        item.el.style.setProperty('overflow', item.overflow);
-                    } else {
-                        item.el.style.removeProperty('overflow');
-                    }
-                    if (item.overflowX) {
-                        item.el.style.setProperty('overflow-x', item.overflowX);
-                    } else {
-                        item.el.style.removeProperty('overflow-x');
-                    }
-                    if (item.overflowY) {
-                        item.el.style.setProperty('overflow-y', item.overflowY);
-                    } else {
-                        item.el.style.removeProperty('overflow-y');
-                    }
-                }
-                parentOriginalStyles = [];
+                iframe.style.height = contentHeight + 'px';
+                spacer.style.height = contentHeight + 'px';
             }
         }
 
-        // ── Listen for RESIZE_OVERLAY from the widget React app ───────────
-        window.addEventListener('message', function (event) {
-            if (!event.data || event.data.type !== 'RESIZE_OVERLAY') return;
+        function syncOverlayPosition() {
+            var rect = spacer.getBoundingClientRect();
+            iframe.style.top = rect.top + 'px';
+            iframe.style.left = rect.left + 'px';
+            iframe.style.width = rect.width + 'px';
+            applyHeights();
+        }
 
-            var wasOpen = overlayOpen;
-            overlayOpen = !!event.data.open;
-
-            if (overlayOpen === wasOpen) return;
-
-            if (overlayOpen) {
-                iframe.style.height = openHeight + 'px';
+        function setOverlay(open) {
+            if (open === overlayOpen) return;
+            overlayOpen = open;
+            if (open) {
+                // Calendar/guest picker khulne par iframe viewport-fixed ho jata
+                // hai: host ke overflow:hidden ya stacking context se bahar nikal
+                // jata hai bina host page ki ek bhi style chhede
+                iframe.style.position = 'fixed';
                 iframe.style.zIndex = '2147483647';
-                setParentStacking(true);
+                contentHeight = Math.max(contentHeight, provisionalOpenHeight);
+                syncOverlayPosition();
+                window.addEventListener('scroll', syncOverlayPosition, true);
+                window.addEventListener('resize', syncOverlayPosition);
             } else {
-                iframe.style.height = barHeight + 'px';
+                window.removeEventListener('scroll', syncOverlayPosition, true);
+                window.removeEventListener('resize', syncOverlayPosition);
+                iframe.style.position = 'absolute';
+                iframe.style.top = '0';
+                iframe.style.left = '0';
+                iframe.style.width = '100%';
                 iframe.style.zIndex = '9999';
-                setParentStacking(false);
+                applyHeights();
+            }
+        }
+
+        window.addEventListener('message', function (event) {
+            // Sirf apne hi iframe ke messages — host page ke doosre iframes
+            // (ads/analytics) widget ko control nahi kar sakte
+            if (event.origin !== widgetOrigin || event.source !== iframe.contentWindow) return;
+            var data = event.data;
+            if (!data || typeof data !== 'object') return;
+
+            if (data.type === 'WIDGET_READY') {
+                reveal();
+            } else if (data.type === 'WIDGET_HEIGHT') {
+                var h = Number(data.height);
+                if (isFinite(h) && h > 40 && h < 4000) {
+                    contentHeight = Math.ceil(h);
+                    applyHeights();
+                }
+            } else if (data.type === 'RESIZE_OVERLAY') {
+                reveal();
+                setOverlay(!!data.open);
             }
         });
     }
 
-    function renderChatWidget(hotelSlug, frontendUrl) {
-        if (document.getElementById('hotelier-chat-widget')) return;
+    function renderChatWidget(hotelSlug, frontendUrl, widgetOrigin, primaryColor, hasBookingWidget) {
+        if (!document.body) {
+            // Script <head> mein async load hua aur body abhi parse nahi hui
+            document.addEventListener('DOMContentLoaded', function () {
+                renderChatWidget(hotelSlug, frontendUrl, widgetOrigin, primaryColor, hasBookingWidget);
+            });
+            return;
+        }
+        if (document.getElementById('hotelier-chat-widget') || document.getElementById('hotelier-chat-skeleton')) return;
 
-        var chatIframe = document.createElement('iframe');
-        chatIframe.id = 'hotelier-chat-widget';
-        chatIframe.src = frontendUrl + '/book/' + hotelSlug + '/chat';
-        chatIframe.title = 'Hotel AI Concierge Chat';
-        chatIframe.loading = 'lazy';
+        var BTN_W = '280px';
+        var BTN_H = '76px';
 
-        var DESKTOP_RIGHT = '20px';
-        var MOBILE_RIGHT = '10px';
-        var MOBILE_BOTTOM = '16px';
-        var DESKTOP_BOTTOM = document.getElementById('hotelier-booking-widget')
-            ? '110px'
-            : '24px';
+        function isMobileView() { return window.innerWidth <= 768; }
+        function bottomFor() { return isMobileView() ? 16 : (hasBookingWidget ? 110 : 24); }
+        function rightFor() { return isMobileView() ? 10 : 20; }
 
-        var BTN_WIDTH = '280px';
-        var BTN_HEIGHT = '76px';
+        // Placeholder pill — host page ke saath hi turant dikh jata hai, real
+        // chat iframe peeche idle time mein load hota hai. Position chat iframe
+        // ke andar wale button (bottom-4 right-4 = +16px inset) se match karti hai.
+        var skel = document.createElement('div');
+        skel.id = 'hotelier-chat-skeleton';
+        skel.style.cssText =
+            'position:fixed;z-index:99998;display:flex;align-items:center;gap:10px;' +
+            'background:rgba(255,255,255,.95);border:1px solid #f1f5f9;border-radius:9999px;' +
+            'padding:8px 22px 8px 10px;box-shadow:0 8px 30px rgba(0,0,0,.12);' +
+            'transition:opacity .3s ease;cursor:default;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
 
-        chatIframe.style.cssText = `
-            position: fixed !important;
-            bottom: ${window.innerWidth <= 768 ? MOBILE_BOTTOM : DESKTOP_BOTTOM} !important;
-            right: ${window.innerWidth <= 768 ? MOBILE_RIGHT : DESKTOP_RIGHT} !important;
-            left: auto !important;
-            top: auto !important;
-            width: ${BTN_WIDTH} !important;
-            height: ${BTN_HEIGHT} !important;
-            border: none !important;
-            z-index: 99999 !important;
-            overflow: visible !important;
-            background: transparent !important;
-            transition: width 0.3s ease, height 0.3s ease, right 0.3s ease, bottom 0.3s ease;
-            box-shadow: none !important;
-        `;
+        var icon = document.createElement('img');
+        icon.src = frontendUrl + '/webmerito-icon.png';
+        icon.alt = 'Chat';
+        icon.style.cssText = 'width:40px;height:40px;object-fit:contain;display:block;';
+        icon.onerror = function () { icon.style.visibility = 'hidden'; };
+        skel.appendChild(icon);
 
-        document.body.appendChild(chatIframe);
+        var text = document.createElement('div');
+        text.className = 'hotelier-chat-skel-text';
+        text.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;padding-right:6px;';
+        var label = document.createElement('span');
+        label.textContent = 'LIVE CONCIERGE';
+        label.style.cssText = 'font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.1em;line-height:1;margin-bottom:4px;';
+        var headline = document.createElement('span');
+        headline.textContent = 'How can I help?';
+        headline.style.cssText = 'font-size:15px;font-weight:900;letter-spacing:-.01em;line-height:1;color:' + primaryColor + ';';
+        text.appendChild(label);
+        text.appendChild(headline);
+        skel.appendChild(text);
 
-        window.addEventListener('message', function (event) {
-            if (!event.data) return;
+        function positionFloating() {
+            skel.style.bottom = (bottomFor() + 16) + 'px';
+            skel.style.right = (rightFor() + 16) + 'px';
+        }
+        positionFloating();
+        document.body.appendChild(skel);
 
-            var isMobile = window.innerWidth <= 768;
+        var chatIframe = null;
+        var chatRevealed = false;
 
-            if (event.data.type === 'CHAT_OPEN') {
-                var openWidth = isMobile ? '90vw' : '400px';
-                var openHeight = isMobile ? '80vh' : '650px';
+        function chatReveal() {
+            if (chatRevealed) return;
+            chatRevealed = true;
+            if (chatIframe) chatIframe.style.opacity = '1';
+            skel.style.opacity = '0';
+            setTimeout(function () {
+                if (skel.parentNode) skel.parentNode.removeChild(skel);
+            }, 350);
+        }
 
-                chatIframe.style.width = openWidth;
-                chatIframe.style.height = openHeight;
-                chatIframe.style.borderRadius = '16px';
-                chatIframe.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
+        function positionChat() {
+            if (!chatIframe) return;
+            chatIframe.style.bottom = bottomFor() + 'px';
+            chatIframe.style.right = rightFor() + 'px';
+        }
 
-            } else if (event.data.type === 'CHAT_CLOSE') {
-                chatIframe.style.width = BTN_WIDTH;
-                chatIframe.style.height = BTN_HEIGHT;
-                chatIframe.style.borderRadius = '0';
-                chatIframe.style.boxShadow = 'none';
+        function mountChatIframe() {
+            if (chatIframe) return;
+            chatIframe = document.createElement('iframe');
+            chatIframe.id = 'hotelier-chat-widget';
+            chatIframe.src = frontendUrl + '/book/' + encodeURIComponent(hotelSlug) + '/chat';
+            chatIframe.title = 'Hotel AI Concierge Chat';
+            chatIframe.style.cssText =
+                'position:fixed;left:auto;top:auto;width:' + BTN_W + ';height:' + BTN_H + ';' +
+                'border:none;z-index:99999;background:transparent;color-scheme:normal;box-shadow:none;' +
+                'opacity:0;transition:opacity .3s ease,width .3s ease,height .3s ease;';
+            positionChat();
+            document.body.appendChild(chatIframe);
 
-            } else if (event.data.type === 'CHECKOUT_REDIRECT') {
-                if (event.data.data && event.data.data.booking_id) {
-                    window.location.href = frontendUrl + '/checkout/' + event.data.data.booking_id;
+            // Safety net: app purana ho aur ready signal na aaye to bhi swap ho jaye
+            chatIframe.addEventListener('load', function () {
+                setTimeout(chatReveal, 1500);
+            });
+
+            window.addEventListener('message', function (event) {
+                if (event.origin !== widgetOrigin || event.source !== chatIframe.contentWindow) return;
+                var data = event.data;
+                if (!data || typeof data !== 'object') return;
+
+                if (data.type === 'CHAT_READY') {
+                    chatReveal();
+                } else if (data.type === 'CHAT_OPEN') {
+                    chatReveal();
+                    chatIframe.style.width = isMobileView() ? '95vw' : '400px';
+                    chatIframe.style.height = isMobileView() ? '80vh' : '650px';
+                    chatIframe.style.borderRadius = '16px';
+                    chatIframe.style.boxShadow = '0 25px 50px -12px rgba(0,0,0,.25)';
+                } else if (data.type === 'CHAT_CLOSE') {
+                    chatReveal();
+                    chatIframe.style.width = BTN_W;
+                    chatIframe.style.height = BTN_H;
+                    chatIframe.style.borderRadius = '0';
+                    chatIframe.style.boxShadow = 'none';
                 }
-            }
-        });
+            });
+        }
+
+        // Booking widget pehle network priority le, chat idle time mein aaye —
+        // placeholder ki wajah se user ko deri dikhti hi nahi
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(mountChatIframe, { timeout: 2500 });
+        } else {
+            setTimeout(mountChatIframe, 1200);
+        }
 
         window.addEventListener('resize', function () {
-            var isMobile = window.innerWidth <= 768;
-            chatIframe.style.bottom = isMobile ? MOBILE_BOTTOM : DESKTOP_BOTTOM;
-            chatIframe.style.right = isMobile ? MOBILE_RIGHT : DESKTOP_RIGHT;
+            positionFloating();
+            positionChat();
         });
+    }
+
+    // Single-tag embed: agar container pe data-hotel-slug hai to explicit
+    // init() call ke bina bhi widget khud boot ho jata hai
+    function autoInit() {
+        if (booted) return;
+        var container = document.getElementById('hotelier-booking-widget');
+        if (container && container.getAttribute('data-hotel-slug')) init({});
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', autoInit);
+    } else {
+        autoInit();
     }
 
     window.HotelierWidget = {
         init: init
     };
 
-})(window);
+})(window, document);
