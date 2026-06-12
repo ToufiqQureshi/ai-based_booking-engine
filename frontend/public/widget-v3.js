@@ -108,6 +108,51 @@
 
         var calendarIsOpen = false;
         var isHovered = false;
+        var parentOriginalStyles = [];
+
+        function updateParentStackingContext(open) {
+            if (open) {
+                try {
+                    var parent = container.parentElement;
+                    var depth = 0;
+                    parentOriginalStyles = [];
+                    while (parent && depth < 4) {
+                        if (parent.tagName === 'BODY' || parent.tagName === 'HTML') {
+                            break;
+                        }
+                        var compStyle = window.getComputedStyle(parent);
+                        parentOriginalStyles.push({
+                            element: parent,
+                            zIndex: parent.style.zIndex,
+                            position: parent.style.position
+                        });
+                        parent.style.setProperty('z-index', '2147483000', 'important');
+                        if (compStyle.position === 'static') {
+                            parent.style.setProperty('position', 'relative', 'important');
+                        }
+                        parent = parent.parentElement;
+                        depth++;
+                    }
+                } catch (e) {
+                    console.error('Staybooker Booking Widget: Error updating parent stacking context', e);
+                }
+            } else {
+                for (var i = 0; i < parentOriginalStyles.length; i++) {
+                    var item = parentOriginalStyles[i];
+                    if (item.zIndex) {
+                        item.element.style.setProperty('z-index', item.zIndex);
+                    } else {
+                        item.element.style.removeProperty('z-index');
+                    }
+                    if (item.position) {
+                        item.element.style.setProperty('position', item.position);
+                    } else {
+                        item.element.style.removeProperty('position');
+                    }
+                }
+                parentOriginalStyles = [];
+            }
+        }
 
         // Toggle pointerEvents when mouse enters/leaves the widget bar area
         container.addEventListener('mouseenter', function () {
@@ -125,8 +170,13 @@
         // Listen for message events to raise z-index and handle pointer-events when calendar opens
         window.addEventListener('message', function (event) {
             if (!event.data || event.data.type !== 'RESIZE_OVERLAY') return;
+            var wasOpen = calendarIsOpen;
             calendarIsOpen = !!event.data.open;
             iframe.style.zIndex = calendarIsOpen ? '2147483000' : '9999';
+            
+            if (calendarIsOpen !== wasOpen) {
+                updateParentStackingContext(calendarIsOpen);
+            }
             
             if (calendarIsOpen) {
                 iframe.style.pointerEvents = 'auto';
