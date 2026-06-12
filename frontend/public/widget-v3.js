@@ -36,14 +36,42 @@
             defaultHeight = '85px';
         }
 
-        // Container is relative so the iframe can float above page content when
-        // the calendar is open. overflow:visible lets the calendar expand above
-        // the container without being clipped.
-        container.style.position = 'relative';
-        container.style.zIndex = '9999';
-        container.style.height = defaultHeight;
-        container.style.display = 'block';
-        container.style.overflow = 'visible';
+        // Force container styles with high specificity to ensure layout sits on top
+        container.style.setProperty('position', 'relative', 'important');
+        container.style.setProperty('z-index', '999999', 'important');
+        container.style.setProperty('height', defaultHeight, 'important');
+        container.style.setProperty('display', 'block', 'important');
+        container.style.setProperty('overflow', 'visible', 'important');
+
+        // Safeguard against parent stacking contexts and clipping (up to 3 levels)
+        try {
+            var parent = container.parentElement;
+            var depth = 0;
+            while (parent && depth < 3) {
+                if (parent.tagName === 'BODY' || parent.tagName === 'HTML') {
+                    break;
+                }
+                var compStyle = window.getComputedStyle(parent);
+                if (
+                    compStyle.overflow === 'hidden' ||
+                    compStyle.overflowX === 'hidden' ||
+                    compStyle.overflowY === 'hidden'
+                ) {
+                    parent.style.setProperty('overflow', 'visible', 'important');
+                    parent.style.setProperty('overflow-x', 'visible', 'important');
+                    parent.style.setProperty('overflow-y', 'visible', 'important');
+                    console.warn('Staybooker Booking Widget: Overriding parent overflow:hidden to visible on parent element to prevent clipping.', parent);
+                }
+                // Also ensure parents have a stacking context that permits visibility if they have z-indices
+                if (compStyle.position === 'static' && compStyle.zIndex !== 'auto') {
+                    parent.style.setProperty('position', 'relative', 'important');
+                }
+                parent = parent.parentElement;
+                depth++;
+            }
+        } catch (e) {
+            console.error('Staybooker Booking Widget: Error traversing parents', e);
+        }
 
         // 1. Spacer — occupies the bar height in the page flow so layout never
         //    shifts. It NEVER changes size; the iframe floats above/over it.
@@ -78,16 +106,9 @@
         container.appendChild(spacer);
         container.appendChild(iframe);
 
-        // Resize the iframe (never the spacer) when the calendar / guest picker
-        // opens. The iframe is top:0 anchored, so the extra height extends DOWNWARD
-        // and the floating calendar lands over the host content below the bar. While
-        // open we raise the z-index so the calendar sits above the host page; the
-        // transparent iframe lets the rest of the page show through unchanged.
+        // Listen for message events to raise z-index when overlays (calendar/guest picker) are open
         window.addEventListener('message', function (event) {
             if (!event.data || event.data.type !== 'RESIZE_OVERLAY') return;
-            if (event.data.height) {
-                iframe.style.height = event.data.height + 'px';
-            }
             iframe.style.zIndex = event.data.open ? '2147483000' : '9999';
         });
     }

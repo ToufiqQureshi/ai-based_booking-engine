@@ -31,7 +31,7 @@ export default function BookingWidget() {
     } = stateBag;
 
     return (
-        <div ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4">
+        <div ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4 relative z-50 overflow-visible">
             <style>{`
                 .custom-theme-btn {
                     background-color: ${primaryHex} !important;

@@ -22,6 +22,7 @@ const mainNavItems = [
   { title: 'AI Assistant',    url: '/agent',            icon: Bot },
   { title: 'Rooms',           url: '/rooms',            icon: Bed },
   { title: 'Rate Plans',      url: '/rates',            icon: IndianRupee },
+  { title: 'Rate Shopper',     url: '/rate-shopper',     icon: TrendingUp },
   { title: 'Calendar',        url: '/availability',     icon: Calendar },
   { title: 'Bookings',        url: '/bookings',         icon: BookOpen },
   { title: 'Taxes',           url: '/taxes',            icon: Percent },
@@ -40,7 +41,7 @@ const settingsNavItems = [
 
 const DEFAULT_ROLE_PERMISSIONS = {
   OWNER: [
-    "/dashboard", "/analytics", "/agent", "/rooms", "/rates",
+    "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper",
     "/availability", "/bookings", "/taxes", "/guests", "/payments", "/addons",
     "/loyalty", "/reviews", "/channel-settings", "/integration", "/settings"
   ],

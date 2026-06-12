@@ -140,25 +140,13 @@ export default function ChainBookingWidget() {
         return () => window.removeEventListener('resize', check);
     }, []);
 
-    // ── Resize iframe height via postMessage ────────────────────────────────
+    // ── Notify parent window when calendar, property list or guest picker is open for styling/stacking adjustments ──
     useEffect(() => {
-        const el = widgetRef.current;
-        if (!el) return;
-        const sendHeight = () => {
+        if (window.parent !== window) {
             const isOpen = isPropertyOpen || isCalendarOpen || isGuestOpen;
-            const height = isOpen
-                ? Math.max(el.scrollHeight + 16, 860)
-                : el.scrollHeight + 16;
-            if (window.parent !== window) {
-                window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, PARENT_ORIGIN);
-                window.parent.postMessage({ type: 'RESIZE_OVERLAY', height }, PARENT_ORIGIN);
-            }
-        };
-        sendHeight();
-        const observer = new ResizeObserver(sendHeight);
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [isPropertyOpen, isCalendarOpen, isGuestOpen, isMobile]);
+            window.parent.postMessage({ type: 'RESIZE_OVERLAY', open: isOpen }, PARENT_ORIGIN);
+        }
+    }, [isPropertyOpen, isCalendarOpen, isGuestOpen]);
 
     // ── Search handler → redirect to hotel booking page ─────────────────────
     const handleSearch = () => {

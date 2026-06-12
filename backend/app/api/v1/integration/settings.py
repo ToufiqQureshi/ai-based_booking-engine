@@ -231,6 +231,9 @@ async def get_widget_code(current_user: CurrentUser, session: DbSession):
     css_code = '''<style>
   #hotelier-booking-widget {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    position: relative !important;
+    z-index: 999999 !important;
+    overflow: visible !important;
   }
 </style>'''
 

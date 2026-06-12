@@ -31,6 +31,7 @@ const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AgentPage = lazy(() => import("@/pages/agent/AgentPage").then(m => ({ default: m.default })));
 const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
+const RateShopperPage = lazy(() => import("@/pages/dashboard/RateShopper"));
 const SuperAdminDashboard = lazy(() => import("@/pages/superadmin/SuperAdminDashboard"));
 const GoogleReviewsPage = lazy(() => import("@/pages/marketing/GoogleReviews"));
 const LoyaltyProgramPage = lazy(() => import("@/pages/marketing/LoyaltyProgram"));
@@ -114,6 +115,7 @@ const App = () => {
                       <Route path="/dashboard" element={<DashboardPage />} />
                       <Route path="/rooms" element={<RoomsPage />} />
                       <Route path="/rates" element={<RatesPage />} />
+                      <Route path="/rate-shopper" element={<RateShopperPage />} />
                       <Route path="/availability" element={<AvailabilityPage />} />
                       <Route path="/analytics" element={<AnalyticsDashboard />} />
                       <Route path="/analytics/:tab" element={<AnalyticsDashboard />} />

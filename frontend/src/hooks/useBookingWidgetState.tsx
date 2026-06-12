@@ -89,36 +89,14 @@ export function useBookingWidgetState() {
         return () => window.removeEventListener('resize', check);
     }, []);
 
-    // Dynamic Resizing Logic — use ResizeObserver to send ACTUAL height
+    // Notify parent window when calendar or guest picker is open for styling/stacking adjustments
     const widgetRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const el = widgetRef.current;
-        if (!el) return;
-
-        const sendHeight = () => {
-            const isOpen = isCalendarOpen || isGuestOpen;
-            if (window.parent === window) return;
-            // When the calendar/guest picker opens, the iframe must be tall enough
-            // to show the dropdown. The embed script grows the iframe DOWNWARD only
-            // (the search bar stays put, the spacer keeps host layout frozen), so
-            // the calendar floats over the page content below the bar — the hero
-            // and everything else stay exactly where they are. No full-screen takeover.
-            const height = isOpen
-                ? Math.max(el.scrollHeight + 16, 860)
-                : el.scrollHeight + 16;
-            window.parent.postMessage({ type: 'RESIZE_OVERLAY', height, open: isOpen }, '*');
-            window.parent.postMessage({ type: 'RESIZE_SEARCH_WIDGET', height }, '*');
-        };
-
-        // Send height immediately
-        sendHeight();
-
-        // Watch for any layout changes
-        const observer = new ResizeObserver(sendHeight);
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [isCalendarOpen, isGuestOpen, config?.widget_layout, isMobile]);
+        if (window.parent === window) return;
+        const isOpen = isCalendarOpen || isGuestOpen;
+        window.parent.postMessage({ type: 'RESIZE_OVERLAY', open: isOpen }, '*');
+    }, [isCalendarOpen, isGuestOpen]);
 
     // Custom JS Code execution inside widget frame
     useEffect(() => {
