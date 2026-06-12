@@ -185,12 +185,7 @@ export const SearchWidgetTab = ({
                         intentional notice instead of a blurred overlay — and keep
                         the live preview below ALWAYS visible so every hotelier can
                         see what their widget looks like (and what they'd unlock). */}
-                    {!hotel?.feature_color_palette && (
-                        <PremiumLockNotice
-                            title="Custom colours, themes & layouts"
-                            description="Make the booking widget match your brand. The live preview below always shows your widget — upgrade to edit colours, calendar theme and layout."
-                        />
-                    )}
+                    {/* We no longer lock this behind feature_color_palette */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label>Primary Color</Label>
@@ -199,7 +194,6 @@ export const SearchWidgetTab = ({
                                     value={settings.widget_primary_color}
                                     onChange={(e) => onUpdateSettings({ widget_primary_color: e.target.value })}
                                     className="h-10 p-1"
-                                    disabled={!hotel?.feature_color_palette}
                                 />
                             </div>
                             <div>
@@ -209,7 +203,6 @@ export const SearchWidgetTab = ({
                                     value={settings.widget_background_color || '#ffffff'}
                                     onChange={(e) => onUpdateSettings({ widget_background_color: e.target.value })}
                                     className="h-10 p-1"
-                                    disabled={!hotel?.feature_color_palette}
                                 />
                             </div>
                         </div>
@@ -220,7 +213,6 @@ export const SearchWidgetTab = ({
                                 className="w-full mt-1 border border-input bg-background px-3 py-2 text-sm rounded-md"
                                 value={settings.widget_theme || 'light'}
                                 onChange={(e) => onUpdateSettings({ widget_theme: e.target.value })}
-                                disabled={!hotel?.feature_color_palette}
                             >
                                 <option value="light">Light</option>
                                 <option value="dark">Dark</option>
@@ -235,7 +227,7 @@ export const SearchWidgetTab = ({
                                     <div
                                         key={layout.id}
                                         className={`relative border-2 rounded-xl p-4 cursor-pointer hover:border-primary/50 transition-all ${settings.widget_layout === layout.id ? 'border-primary bg-primary/5' : 'border-border'}`}
-                                        onClick={() => hotel?.feature_color_palette && onUpdateSettings({ widget_layout: layout.id })}
+                                        onClick={() => onUpdateSettings({ widget_layout: layout.id })}
                                     >
                                         {settings.widget_layout === layout.id && <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-primary" />}
                                         <div className="h-8 bg-muted rounded mb-2" />

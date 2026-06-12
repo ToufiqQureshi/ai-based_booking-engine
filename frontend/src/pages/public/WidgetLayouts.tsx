@@ -171,6 +171,22 @@ export function ModernFloatingLayout(props: any) {
                         )}
                     </div>
 
+                    {/* Promo Code inline */}
+                    <div className="w-full flex items-center p-3.5 rounded-2xl border-2 transition-all bg-white" style={{ borderColor: '#f1f5f9' }}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${primaryHex}18`, color: primaryHex }}>
+                            <span className="font-bold">%</span>
+                        </div>
+                        <div className="flex-1 ml-3">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Promo Code</span>
+                            <input
+                                className="bg-transparent border-0 font-extrabold text-xs focus:outline-none placeholder:text-slate-300 text-slate-800 w-full p-0 mt-0.5"
+                                placeholder="Enter optional code"
+                                value={promoCode}
+                                onChange={(e) => setPromoCode(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
                     {/* Search button */}
                     <button
                         className="w-full h-[60px] mt-1 rounded-2xl text-white font-black text-[15px] tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
