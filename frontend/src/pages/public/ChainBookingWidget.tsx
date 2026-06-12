@@ -245,9 +245,13 @@ export default function ChainBookingWidget() {
                 .rdp-caption {
                     background-color: ${primaryColor} !important;
                 }
-                .rdp-day_today {
+                .rdp-day_today:not(.rdp-day_selected) {
                     color: ${primaryColor} !important;
                     border-color: ${primaryColor}80 !important;
+                }
+                .rdp-day_selected.rdp-day_today,
+                .rdp-day_selected.rdp-day_today span {
+                    color: white !important;
                 }
             `}</style>
 

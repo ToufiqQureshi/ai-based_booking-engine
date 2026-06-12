@@ -140,3 +140,49 @@ async def get_recent_bookings(current_user: CurrentUser, session: DbSession):
         response.append(booking_dict)
     
     return response
+
+
+@router.get("/rate-shopper")
+async def get_rate_shopper_matrix(current_user: CurrentUser, session: DbSession):
+    """
+    Reads the competitor rate shopper matrix from the database and returns it as JSON.
+    """
+    from app.models.competitor import Competitor, CompetitorRate
+    
+    # Get all competitors for this hotel
+    comp_query = select(Competitor).where(Competitor.hotel_id == current_user.hotel_id)
+    comp_res = await session.execute(comp_query)
+    competitors = comp_res.scalars().all()
+    comp_ids = [c.id for c in competitors]
+    
+    if not comp_ids:
+        return []
+        
+    # Get all competitor rates for these competitors, ordered by check_in_date
+    rates_query = (
+        select(CompetitorRate, Competitor)
+        .join(Competitor, CompetitorRate.competitor_id == Competitor.id)
+        .where(CompetitorRate.competitor_id.in_(comp_ids))
+        .order_by(CompetitorRate.check_in_date.asc())
+    )
+    rates_res = await session.execute(rates_query)
+    rows = rates_res.all()
+    
+    records = []
+    for rate, competitor in rows:
+        records.append({
+            "Hotel Name": competitor.name,
+            "Date": rate.check_in_date.strftime("%d-%m-%Y"),
+            "Status": rate.status,
+            "Room Type": rate.room_type,
+            "EP (Base)": str(rate.ep_base) if rate.ep_base is not None else "",
+            "EP (Total)": str(rate.ep_total) if rate.ep_total is not None else "",
+            "CP (Base)": str(rate.cp_base) if rate.cp_base is not None else "",
+            "CP (Total)": str(rate.cp_total) if rate.cp_total is not None else "",
+            "MAP (Base)": str(rate.map_base) if rate.map_base is not None else "",
+            "MAP (Total)": str(rate.map_total) if rate.map_total is not None else "",
+            "AP (Base)": str(rate.ap_base) if rate.ap_base is not None else "",
+            "AP (Total)": str(rate.ap_total) if rate.ap_total is not None else "",
+        })
+    return records
+

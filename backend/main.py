@@ -34,7 +34,7 @@ from app.core.database import init_db
 from app.core.limiter import limiter, _rate_limit_exceeded_handler, RateLimitExceeded
 
 # Import routers
-from app.api.v1 import auth, users, hotels, rooms, bookings, dashboard, rates, payments, availability, reports, public, integration, upload, addons, channel_manager, amenities, properties, admin, agent, promos, notifications, analytics, leads, superadmin, google_ads, loyalty
+from app.api.v1 import auth, users, hotels, rooms, bookings, dashboard, rates, payments, availability, reports, public, integration, upload, addons, channel_manager, amenities, properties, admin, agent, promos, notifications, analytics, leads, superadmin, google_ads, loyalty, competitors
 from app.api.v1.social_proof import router as social_proof_router
 from app.api.v1.public import sse as public_sse
 from app.api.v1.chain.dashboard import router as chain_router
@@ -221,6 +221,7 @@ app.include_router(social_proof_router, prefix=API_V1_PREFIX)
 app.include_router(public_sse.router, prefix=API_V1_PREFIX)
 app.include_router(chain_router, prefix=API_V1_PREFIX)
 app.include_router(ws_router, prefix=API_V1_PREFIX)
+app.include_router(competitors.router, prefix=API_V1_PREFIX)
 
 
 # Root endpoint

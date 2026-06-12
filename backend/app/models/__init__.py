@@ -58,9 +58,13 @@ from app.models.links import UserHotelLink
 from app.models.chain import Chain
 from app.models.loyalty import LoyaltyProgram, GuestLoyalty
 from app.models.ai_usage import AIUsageDaily, AIUsageParticipant
+from app.models.competitor import Competitor, CompetitorRate
+
 __all__.append("UserHotelLink")
 __all__.append("Chain")
 __all__.append("LoyaltyProgram")
 __all__.append("GuestLoyalty")
 __all__.append("AIUsageDaily")
 __all__.append("AIUsageParticipant")
+__all__.append("Competitor")
+__all__.append("CompetitorRate")
