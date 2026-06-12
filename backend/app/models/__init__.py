@@ -57,7 +57,10 @@ __all__ = [
 from app.models.links import UserHotelLink
 from app.models.chain import Chain
 from app.models.loyalty import LoyaltyProgram, GuestLoyalty
+from app.models.ai_usage import AIUsageDaily, AIUsageParticipant
 __all__.append("UserHotelLink")
 __all__.append("Chain")
 __all__.append("LoyaltyProgram")
 __all__.append("GuestLoyalty")
+__all__.append("AIUsageDaily")
+__all__.append("AIUsageParticipant")

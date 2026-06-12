@@ -1,17 +1,17 @@
 from fastapi import APIRouter, HTTPException, Query, Request, status, Depends
 from typing import List
-from datetime import timedelta
 from pydantic import BaseModel
 import logging
 
 from app.api.deps import CurrentUser, DbSession
+from app.core.time import utcnow
 from app.core.feature_flags import require_feature
 # NOTE: create_agent_executor is imported lazily inside the handler (INF-01) —
 # importing app.core.agent at module load pulls in pandas + matplotlib (~150MB
 # RSS) into every worker at boot even when the agent is never used.
 from app.core.agent import create_agent_executor
 from app.core.limiter import limiter
-from app.core.ai_usage import enforce_ai_token_quota, record_ai_usage
+from app.core.ai_usage import enforce_ai_token_quota, record_ai_usage, persist_ai_usage_db
 
 logger = logging.getLogger(__name__)
 
@@ -39,13 +39,13 @@ async def get_ai_usage(
 ):
     """Return this hotel's AI usage breakdown for the last N days (max 30).
 
-    Shows per-agent token spend, daily limits, % used today, and estimated
-    number of guest conversations so hoteliers understand their AI bill.
+    Reads from the durable Postgres usage tables (source of truth) so the
+    numbers always show even when Redis is down. Shows per-agent token spend,
+    daily limits, % used today, real message + unique-guest counts.
     """
-    from app.core.redis_client import redis_client
-    from app.core.time import utcnow
     from sqlmodel import select
     from app.models.subscription import Subscription
+    from app.core.ai_usage import read_ai_usage_db
 
     hotel_id = current_user.hotel_id
 
@@ -59,67 +59,42 @@ async def get_ai_usage(
         "whatsapp": sub.ai_whatsapp_daily_limit if sub else 0,
     }
 
-    r = redis_client.get_instance()
-    today = utcnow().date()
-    today_iso = today.isoformat()
-
-    agents = {
-        "hotelier": {"label": "Dashboard AI (you)"},
-        "guest":    {"label": "Guest Chat Widget"},
-        "whatsapp": {"label": "WhatsApp Bot"},
+    labels = {
+        "hotelier": "Dashboard AI (you)",
+        "guest":    "Guest Chat Widget",
+        "whatsapp": "WhatsApp Bot",
     }
 
-    for agent_type, info in agents.items():
-        info["daily_history"] = {}        # date -> tokens
-        info["messages_today"] = 0        # AI message exchanges today
-        info["unique_users_today"] = 0    # distinct people who talked today
-        for i in range(days):
-            day = today - timedelta(days=i)
-            day_str = day.strftime("%Y%m%d")
-            tokens = 0
-            if r:
-                raw = r.get(f"ai_tokens:{agent_type}:{hotel_id}:{day_str}")
-                tokens = int(raw) if raw else 0
-            info["daily_history"][day.isoformat()] = tokens
-        info["today_tokens"] = info["daily_history"].get(today_iso, 0)
+    usage = await read_ai_usage_db(hotel_id, days)
+    today_iso = utcnow().date().isoformat()
 
-        if r:
-            today_str = today.strftime("%Y%m%d")
-            runs_raw = r.get(f"ai_runs:{agent_type}:{hotel_id}:{today_str}")
-            info["messages_today"] = int(runs_raw) if runs_raw else 0
-            try:
-                info["unique_users_today"] = r.scard(f"ai_users:{agent_type}:{hotel_id}:{today_str}")
-            except Exception:
-                info["unique_users_today"] = 0
-
-    def _build_agent_summary(agent_type: str, info: dict) -> dict:
-        today_tokens = info["today_tokens"]
+    def _build_agent_summary(agent_type: str) -> dict:
+        u = usage[agent_type]
+        daily_history = u["daily_tokens"]
+        today_tokens = daily_history.get(today_iso, 0)
         limit = limits[agent_type]
         pct = round((today_tokens / limit * 100), 1) if limit > 0 else None
-        period_total = sum(info["daily_history"].values())
+        period_total = sum(daily_history.values())
+        unique_users = u["unique_users_today"]
         return {
-            "label": info["label"],
+            "label": labels[agent_type],
             "today_tokens": today_tokens,
             "daily_limit": limit,
             "pct_of_limit_used_today": pct,
-            # Real counts from Redis — not token-based estimates.
-            "messages_today": info["messages_today"],
-            "unique_users_today": info["unique_users_today"],
-            # Backward-compat: real unique-user count, falling back to a token
-            # estimate only when no per-user data exists for the day.
-            "estimated_conversations_today": info["unique_users_today"] or round(today_tokens / _AVG_TOKENS_PER_CONVERSATION),
+            # Real durable counts — not token-based estimates.
+            "messages_today": u["messages_today"],
+            "unique_users_today": unique_users,
+            "estimated_conversations_today": unique_users or round(today_tokens / _AVG_TOKENS_PER_CONVERSATION),
             "period_total_tokens": period_total,
-            "daily_history": info["daily_history"],
+            "daily_history": daily_history,
         }
 
     return {
         "hotel_id": hotel_id,
         "period_days": days,
-        "data_available": r is not None,
-        "agents": {
-            agent_type: _build_agent_summary(agent_type, info)
-            for agent_type, info in agents.items()
-        },
+        # DB-backed: always available, no longer gated on Redis.
+        "data_available": True,
+        "agents": {a: _build_agent_summary(a) for a in ("hotelier", "guest", "whatsapp")},
     }
 
 
@@ -163,6 +138,7 @@ async def chat_with_agent(
         # 4. Run agent
         result = await agent.arun(input_messages)
         record_ai_usage(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
+        await persist_ai_usage_db(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
         return ChatResponse(response=result.content or "")
 
     except ValueError as e:

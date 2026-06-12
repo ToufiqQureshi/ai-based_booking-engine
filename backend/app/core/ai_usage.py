@@ -182,11 +182,175 @@ async def enforce_ai_token_quota(agent_type: str, hotel_id: str, session) -> Non
                 )
             return  # Within budget
 
+        # Redis down: use the durable DB counter instead of guessing. This keeps
+        # the quota accurate during a Redis outage (the in-process cap below is
+        # only a last resort if the DB read also fails).
+        db_used = await _read_today_tokens_db(session, agent_type, hotel_id)
+        if db_used is not None:
+            if db_used >= limit:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=(
+                        f"Daily AI quota exceeded ({db_used:,}/{limit:,} tokens). "
+                        "Please try again tomorrow or contact support to upgrade."
+                    ),
+                )
+            return  # Within budget per the durable counter
+
     except HTTPException:
         raise
     except Exception as exc:
         logger.debug("enforce_ai_token_quota failed for hotel %s agent %s: %s", hotel_id, agent_type, exc)
         return  # Fail open on unexpected errors
 
-    # Redis unavailable: conservative in-process fallback
+    # Redis AND DB both unavailable: conservative in-process fallback
     _enforce_inprocess_fallback(agent_type, hotel_id, day, limit)
+
+
+async def _read_today_tokens_db(session, agent_type: str, hotel_id: str):
+    """Return today's recorded tokens from the durable table, or None on error."""
+    try:
+        from sqlmodel import select
+        from app.models.ai_usage import AIUsageDaily
+        today = utcnow().date()
+        row = (await session.execute(
+            select(AIUsageDaily.total_tokens).where(
+                AIUsageDaily.hotel_id == hotel_id,
+                AIUsageDaily.agent_type == agent_type,
+                AIUsageDaily.usage_date == today,
+            )
+        )).scalar_one_or_none()
+        return int(row or 0)
+    except Exception:
+        return None
+
+
+async def persist_ai_usage_db(
+    hotel_id: str,
+    result,
+    agent_type: str = "hotelier",
+    user_identifier: Optional[str] = None,
+) -> None:
+    """Durably record one AI run in Postgres (source of truth for the dashboard).
+
+    Opens its own short-lived session so it never entangles the request's
+    transaction, and swallows every error — usage telemetry must never break a
+    guest reply or webhook. Portable UPSERT works on both Postgres and SQLite.
+    """
+    try:
+        if not hotel_id:
+            return
+        from sqlalchemy import update
+        from sqlalchemy.exc import IntegrityError
+        from app.core.database import async_session
+        from app.models.ai_usage import AIUsageDaily, AIUsageParticipant
+
+        tokens = extract_total_tokens(result) or 0
+        today = utcnow().date()
+
+        async with async_session() as s:
+            # 1. Unique participant — insert-or-ignore; new insert => new person.
+            is_new_user = False
+            if user_identifier:
+                participant = AIUsageParticipant(
+                    hotel_id=hotel_id,
+                    agent_type=agent_type,
+                    usage_date=today,
+                    user_hash=_hash_id(user_identifier),
+                )
+                s.add(participant)
+                try:
+                    await s.commit()
+                    is_new_user = True
+                except IntegrityError:
+                    await s.rollback()  # already counted today
+
+            # 2. Aggregate row — atomic increment; insert if the day's row is new.
+            res = await s.execute(
+                update(AIUsageDaily)
+                .where(
+                    AIUsageDaily.hotel_id == hotel_id,
+                    AIUsageDaily.agent_type == agent_type,
+                    AIUsageDaily.usage_date == today,
+                )
+                .values(
+                    total_tokens=AIUsageDaily.total_tokens + tokens,
+                    message_count=AIUsageDaily.message_count + 1,
+                    unique_users=AIUsageDaily.unique_users + (1 if is_new_user else 0),
+                    updated_at=utcnow(),
+                )
+            )
+            if res.rowcount == 0:
+                s.add(AIUsageDaily(
+                    hotel_id=hotel_id,
+                    agent_type=agent_type,
+                    usage_date=today,
+                    total_tokens=tokens,
+                    message_count=1,
+                    unique_users=1 if is_new_user else 0,
+                ))
+                try:
+                    await s.commit()
+                except IntegrityError:
+                    # Lost the insert race — re-apply as an increment.
+                    await s.rollback()
+                    await s.execute(
+                        update(AIUsageDaily)
+                        .where(
+                            AIUsageDaily.hotel_id == hotel_id,
+                            AIUsageDaily.agent_type == agent_type,
+                            AIUsageDaily.usage_date == today,
+                        )
+                        .values(
+                            total_tokens=AIUsageDaily.total_tokens + tokens,
+                            message_count=AIUsageDaily.message_count + 1,
+                            unique_users=AIUsageDaily.unique_users + (1 if is_new_user else 0),
+                            updated_at=utcnow(),
+                        )
+                    )
+                    await s.commit()
+            else:
+                await s.commit()
+    except Exception as exc:  # pragma: no cover - telemetry must never break a request
+        logger.debug("persist_ai_usage_db failed for hotel %s agent %s: %s", hotel_id, agent_type, exc)
+
+
+async def read_ai_usage_db(hotel_id: str, days: int) -> dict:
+    """Read durable usage for the last `days` days, grouped by agent type.
+
+    Returns {agent_type: {"daily_tokens": {iso_date: tokens}, "messages_today": n,
+    "unique_users_today": n}} — the dashboard's source of truth.
+    """
+    from sqlmodel import select
+    from datetime import timedelta
+    from app.core.database import async_session
+    from app.models.ai_usage import AIUsageDaily
+
+    today = utcnow().date()
+    start = today - timedelta(days=days - 1)
+    agents = ("hotelier", "guest", "whatsapp")
+    out = {
+        a: {"daily_tokens": {(today - timedelta(days=i)).isoformat(): 0 for i in range(days)},
+            "messages_today": 0, "unique_users_today": 0}
+        for a in agents
+    }
+
+    async with async_session() as s:
+        rows = (await s.execute(
+            select(AIUsageDaily).where(
+                AIUsageDaily.hotel_id == hotel_id,
+                AIUsageDaily.usage_date >= start,
+            )
+        )).scalars().all()
+
+    for row in rows:
+        bucket = out.get(row.agent_type)
+        if bucket is None:
+            continue
+        iso = row.usage_date.isoformat()
+        if iso in bucket["daily_tokens"]:
+            bucket["daily_tokens"][iso] = row.total_tokens
+        if row.usage_date == today:
+            bucket["messages_today"] = row.message_count
+            bucket["unique_users_today"] = row.unique_users
+    return out
