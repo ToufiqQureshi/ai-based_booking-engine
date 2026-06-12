@@ -33,15 +33,17 @@
         var openHeight = widgetLayout === 'classic' ? 750 : 550;
 
         // ── Container styles ──────────────────────────────────────────────
-        container.style.setProperty('position', 'fixed', 'important');
-        container.style.setProperty('bottom', '0', 'important');
-        container.style.setProperty('left', '0', 'important');
-        container.style.setProperty('z-index', '999999', 'important');
+        container.style.setProperty('position', 'relative', 'important');
+        container.style.setProperty('z-index', '50', 'important');
         container.style.setProperty('height', barHeight + 'px', 'important');
-        container.style.setProperty('min-height', barHeight + 'px', 'important');
-        container.style.setProperty('width', '100%', 'important');
         container.style.setProperty('display', 'block', 'important');
         container.style.setProperty('overflow', 'visible', 'important');
+
+        // ── Spacer (Fixed Height) ─────────────────────────────────────────
+        var spacer = document.createElement('div');
+        spacer.style.width = '100%';
+        spacer.style.height = barHeight + 'px';
+        spacer.style.display = 'block';
 
         // ── Fix parent overflow/stacking on page load ─────────────────────
         // Kisi bhi parent element ka overflow:hidden widget ko clip kar sakta hai
@@ -68,12 +70,16 @@
 
         // ── Iframe ────────────────────────────────────────────────────────
         var iframe = document.createElement('iframe');
-        iframe.src = frontendUrl + '/book/' + hotelSlug + '/widget';
+        var iframeUrl = frontendUrl + '/book/' + hotelSlug + '/widget';
+        if (widgetLayout) {
+            iframeUrl += '?preview_layout=' + widgetLayout;
+        }
+        iframe.src = iframeUrl;
         iframe.title = 'Hotel Booking Search';
         iframe.loading = 'eager';
         iframe.style.cssText = [
             'position: absolute',
-            'bottom: 0',
+            'top: 0',
             'left: 0',
             'width: 100%',
             'height: ' + barHeight + 'px',
@@ -86,6 +92,7 @@
         iframe.setAttribute('scrolling', 'no');
 
         container.innerHTML = '';
+        container.appendChild(spacer);
         container.appendChild(iframe);
 
         // ── State ─────────────────────────────────────────────────────────
@@ -98,7 +105,7 @@
                     var p = container.parentElement;
                     var d = 0;
                     parentOriginalStyles = [];
-                    while (p && d < 10) {   // 5 → 10 (deep nested layouts ke liye)
+                    while (p && d < 10) {   // deep nested layouts ke liye
                         if (p.tagName === 'BODY' || p.tagName === 'HTML') break;
                         var pcs = window.getComputedStyle(p);
                         parentOriginalStyles.push({

@@ -210,7 +210,7 @@ export default function BookingWidget() {
             className="z-[2147483647] p-0 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 overflow-hidden calendar-container"
             style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px', transform: 'translateZ(0)', willChange: 'transform, opacity' }}
             align="center"
-            side="top"
+            side="bottom"
             avoidCollisions={false}
             collisionPadding={0}
             sideOffset={10}
@@ -289,7 +289,7 @@ export default function BookingWidget() {
 
 
     const guestPopoverContent = (
-        <PopoverContent className="z-[2147483647] w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="top" avoidCollisions={false} collisionPadding={0} sideOffset={10}>
+        <PopoverContent className="z-[2147483647] w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="bottom" avoidCollisions={false} collisionPadding={0} sideOffset={10}>
             <div className="space-y-6">
                 {/* Rooms Counter */}
                 <div className="flex items-center justify-between">
@@ -440,7 +440,7 @@ export default function BookingWidget() {
                     padding: 0 !important;
                     display: flex !important;
                     flex-direction: column !important;
-                    justify-content: flex-end !important;
+                    justify-content: flex-start !important;
                     background-color: transparent !important;
                     overflow: visible !important;
                 }
