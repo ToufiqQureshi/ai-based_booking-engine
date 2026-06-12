@@ -2,8 +2,10 @@
     'use strict';
 
     function init(config) {
-        console.clear();
-        console.log("%c HOTELIER WIDGET V3: FINAL FIXED SPACER ", "background: #000; color: #0f0; font-size: 16px; font-weight: bold;");
+        // Intentionally do NOT call console.clear() here — clearing the host
+        // page's console would destroy any debugging information the hotelier's
+        // developer has already logged, and is universally considered hostile
+        // behaviour for a third-party widget.
 
         var hotelSlug = config ? config.hotelSlug : null;
         var frontendUrl = config && config.frontendUrl ? config.frontendUrl : window.location.origin;
@@ -34,48 +36,55 @@
             defaultHeight = '85px';
         }
 
-        // Set container relative for absolute positioning of iframe
+        // Container is relative so the iframe can float above page content when
+        // the calendar is open. overflow:visible lets the calendar expand above
+        // the container without being clipped.
         container.style.position = 'relative';
-        container.style.zIndex = '999999'; // Highest z-index so overflowing card and shadow stay on top
-        // Force height to never collapse but never expand beyond bar
+        container.style.zIndex = '9999';
         container.style.height = defaultHeight;
         container.style.display = 'block';
-        container.style.overflow = 'visible'; // Ensure content outside is visible
+        container.style.overflow = 'visible';
 
-        // 1. Create Spacer (Fixed Height - NEVER CHANGES)
+        // 1. Spacer — occupies the bar height in the page flow so layout never
+        //    shifts. It NEVER changes size; the iframe floats above/over it.
         var spacer = document.createElement('div');
         spacer.style.width = '100%';
         spacer.style.height = defaultHeight;
         spacer.style.display = 'block';
 
-        // 2. Create Iframe (Floats over content when expanded)
+        // 2. Iframe — positioned bottom:0 so it grows UPWARD when the calendar
+        //    opens. This keeps the search bar visible at the same position and
+        //    floats the calendar above (not below) the bar, leaving the host-page
+        //    content underneath completely undisturbed.
         var iframe = document.createElement('iframe');
         iframe.src = frontendUrl + '/book/' + hotelSlug + '/widget';
+        iframe.title = 'Hotel Booking Search';
+        iframe.loading = 'lazy';
         iframe.style.position = 'absolute';
-        iframe.style.top = '0';
+        iframe.style.bottom = '0';     // grow upward on expand
         iframe.style.left = '0';
         iframe.style.width = '100%';
-        iframe.style.height = defaultHeight; // Initial height matching bar
+        iframe.style.height = defaultHeight;
         iframe.style.border = 'none';
         iframe.style.overflow = 'visible';
-        iframe.style.zIndex = '999999'; // Super High Z-Index
+        iframe.style.zIndex = '9999';
         iframe.style.backgroundColor = 'transparent';
         iframe.allowTransparency = 'true';
         iframe.scrolling = 'no';
-        iframe.style.transition = 'height 0.2s ease';
+        iframe.style.transition = 'height 0.25s ease';
 
         container.innerHTML = '';
         container.appendChild(spacer);
         container.appendChild(iframe);
 
-        // Listen for Resize - BUT ONLY RESIZE IFRAME, NEVER SPACER
+        // Resize the iframe (but never the spacer) when the calendar / guest
+        // picker opens inside the widget. The iframe grows upward thanks to
+        // bottom:0 positioning, so the calendar appears above the search bar and
+        // never covers the host-page content below the widget.
         window.addEventListener('message', function (event) {
             if (event.data && event.data.type === 'RESIZE_OVERLAY') {
-                console.log("Widget V3: Resize Received ->", event.data.height);
                 if (event.data.height) {
                     iframe.style.height = event.data.height + 'px';
-                    // Note: We deliberately DO NOT resize the spacer or container.
-                    // This ensures the page content stays put (under the floating calendar).
                 }
             }
         });
@@ -87,18 +96,29 @@
         var chatIframe = document.createElement('iframe');
         chatIframe.id = 'hotelier-chat-widget';
         chatIframe.src = frontendUrl + '/book/' + hotelSlug + '/chat';
+        chatIframe.title = 'Hotel AI Concierge Chat';
+        // Lazy-load the chat iframe so it does not block or compete with the
+        // hotel website's initial render. The chat button is not visible until
+        // the page is interactive anyway.
+        chatIframe.loading = 'lazy';
 
-        // --- CONSTANTS ---
-        var DESKTOP_BOTTOM = '110px';
         var DESKTOP_RIGHT = '20px';
-        var MOBILE_BOTTOM = '10px';
-        var MOBILE_RIGHT = '10px';
+        var MOBILE_RIGHT  = '10px';
+        var MOBILE_BOTTOM = '16px';
 
-        // Initial Dimensions (Button State)
-        var BTN_WIDTH = '280px';
-        var BTN_HEIGHT = '100px';
+        // Only push the chat button up by 110 px if the booking-search widget is
+        // also present on this page (to avoid overlapping it when both are used
+        // together). When only the chat is embedded, sit 24 px from the bottom.
+        var DESKTOP_BOTTOM = document.getElementById('hotelier-booking-widget')
+            ? '110px'
+            : '24px';
 
-        // --- STYLES ---
+        // Closed state: sized to match the actual button pill (~250 × 64 px) with
+        // a small buffer. Keeping the iframe tight prevents an invisible dead-zone
+        // that silently swallows host-page clicks on elements below the button.
+        var BTN_WIDTH  = '280px';
+        var BTN_HEIGHT = '76px';
+
         chatIframe.style.cssText = `
             position: fixed !important;
             bottom: ${window.innerWidth <= 768 ? MOBILE_BOTTOM : DESKTOP_BOTTOM} !important;
@@ -108,7 +128,7 @@
             width: ${BTN_WIDTH} !important;
             height: ${BTN_HEIGHT} !important;
             border: none !important;
-            z-index: 2147483647 !important;
+            z-index: 99999 !important;
             overflow: visible !important;
             background: transparent !important;
             transition: width 0.3s ease, height 0.3s ease, right 0.3s ease, bottom 0.3s ease;
@@ -117,26 +137,26 @@
 
         document.body.appendChild(chatIframe);
 
-        // --- EVENT HANDLERS ---
         window.addEventListener('message', function (event) {
             if (!event.data) return;
 
             var isMobile = window.innerWidth <= 768;
 
             if (event.data.type === 'CHAT_OPEN') {
-                var openWidth = isMobile ? '90vw' : '400px';
-                var openHeight = isMobile ? '80vh' : '650px';
+                var openWidth  = isMobile ? '90vw'  : '400px';
+                var openHeight = isMobile ? '80vh'  : '650px';
 
-                chatIframe.style.width = openWidth;
-                chatIframe.style.height = openHeight;
-                chatIframe.style.borderRadius = "16px";
-                chatIframe.style.boxShadow = "0 25px 50px -12px rgba(0, 0, 0, 0.25)";
+                chatIframe.style.width        = openWidth;
+                chatIframe.style.height       = openHeight;
+                chatIframe.style.borderRadius = '16px';
+                chatIframe.style.boxShadow    = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
 
             } else if (event.data.type === 'CHAT_CLOSE') {
-                chatIframe.style.width = BTN_WIDTH;
-                chatIframe.style.height = BTN_HEIGHT;
-                chatIframe.style.borderRadius = "0";
-                chatIframe.style.boxShadow = "none";
+                chatIframe.style.width        = BTN_WIDTH;
+                chatIframe.style.height       = BTN_HEIGHT;
+                chatIframe.style.borderRadius = '0';
+                chatIframe.style.boxShadow    = 'none';
+
             } else if (event.data.type === 'CHECKOUT_REDIRECT') {
                 if (event.data.data && event.data.data.booking_id) {
                     window.location.href = frontendUrl + '/checkout/' + event.data.data.booking_id;
@@ -147,7 +167,7 @@
         window.addEventListener('resize', function () {
             var isMobile = window.innerWidth <= 768;
             chatIframe.style.bottom = isMobile ? MOBILE_BOTTOM : DESKTOP_BOTTOM;
-            chatIframe.style.right = isMobile ? MOBILE_RIGHT : DESKTOP_RIGHT;
+            chatIframe.style.right  = isMobile ? MOBILE_RIGHT  : DESKTOP_RIGHT;
         });
     }
 
