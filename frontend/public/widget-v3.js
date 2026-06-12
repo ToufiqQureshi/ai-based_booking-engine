@@ -41,40 +41,18 @@
         var openHeight = widgetLayout === 'classic' ? 750 : 550;
 
         // ── Container — occupies exactly barHeight in the page flow ──────────
-        // position:relative so the absolutely-positioned iframe stays anchored.
-        // overflow:visible lets the iframe extend above the container box.
-        // height is FIXED and NEVER changes → zero layout shift.
         container.style.setProperty('position', 'relative', 'important');
         container.style.setProperty('z-index', '999999', 'important');
         container.style.setProperty('height', barHeight + 'px', 'important');
         container.style.setProperty('display', 'block', 'important');
         container.style.setProperty('overflow', 'visible', 'important');
 
-        // ── Fix ancestor clipping (up to 5 levels) ──────────────────────────
-        try {
-            var parent = container.parentElement;
-            var depth = 0;
-            while (parent && depth < 5) {
-                if (parent.tagName === 'BODY' || parent.tagName === 'HTML') break;
-                var cs = window.getComputedStyle(parent);
-                if (cs.overflow === 'hidden' || cs.overflowX === 'hidden' || cs.overflowY === 'hidden') {
-                    parent.style.setProperty('overflow', 'visible', 'important');
-                }
-                if (cs.position === 'static' && cs.zIndex !== 'auto') {
-                    parent.style.setProperty('position', 'relative', 'important');
-                }
-                parent = parent.parentElement;
-                depth++;
-            }
-        } catch (e) { /* best effort */ }
+        // NOTE: We do NOT touch parent elements on page load. Modifying the
+        // host site's overflow/position at init time breaks their layout and
+        // creates blank spaces. Parent overrides are applied ONLY while the
+        // calendar overlay is open and reverted immediately when it closes.
 
         // ── Iframe ──────────────────────────────────────────────────────────
-        // Anchored at bottom:0 of the container. When closed its height equals
-        // barHeight so it exactly covers the container. When the calendar opens
-        // we increase its height — because it is bottom-anchored it grows
-        // UPWARD, and because the container has overflow:visible the extra
-        // height paints above the container, floating over the hero/banner.
-        // The container height never changes → host page content never moves.
         var iframe = document.createElement('iframe');
         iframe.src = frontendUrl + '/book/' + hotelSlug + '/widget';
         iframe.title = 'Hotel Booking Search';
@@ -108,21 +86,28 @@
                     parentOriginalStyles = [];
                     while (p && d < 5) {
                         if (p.tagName === 'BODY' || p.tagName === 'HTML') break;
+                        var pcs = window.getComputedStyle(p);
                         parentOriginalStyles.push({
                             el: p,
                             zIndex: p.style.zIndex,
-                            position: p.style.position
+                            position: p.style.position,
+                            overflow: p.style.overflow
                         });
+                        // Raise stacking context so calendar floats above everything
                         p.style.setProperty('z-index', '2147483647', 'important');
-                        var pcs = window.getComputedStyle(p);
                         if (pcs.position === 'static') {
                             p.style.setProperty('position', 'relative', 'important');
+                        }
+                        // Prevent clipping the iframe that extends above the container
+                        if (pcs.overflow === 'hidden' || pcs.overflowY === 'hidden') {
+                            p.style.setProperty('overflow', 'visible', 'important');
                         }
                         p = p.parentElement;
                         d++;
                     }
                 } catch (e) { /* best effort */ }
             } else {
+                // Restore every parent to its original inline styles
                 for (var i = 0; i < parentOriginalStyles.length; i++) {
                     var item = parentOriginalStyles[i];
                     if (item.zIndex) {
@@ -134,6 +119,11 @@
                         item.el.style.setProperty('position', item.position);
                     } else {
                         item.el.style.removeProperty('position');
+                    }
+                    if (item.overflow) {
+                        item.el.style.setProperty('overflow', item.overflow);
+                    } else {
+                        item.el.style.removeProperty('overflow');
                     }
                 }
                 parentOriginalStyles = [];
