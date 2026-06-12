@@ -203,7 +203,7 @@ export function useBookingWidgetState() {
                         // range. Now a fresh click starts a brand-new range.
                         setCheckInDate(range?.from);
                         setCheckOutDate(range?.to);
-                        if (range?.from && range?.to) setIsCalendarOpen(false);
+                        // Calendar stays open until guest explicitly hits X — do not auto-close
                     }}
                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     className="p-0"

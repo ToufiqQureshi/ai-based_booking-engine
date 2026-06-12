@@ -225,9 +225,7 @@ export function RoomSearchHeader({
                                 // range instead of producing an inverted/locked range.
                                 setCheckInDate(range?.from);
                                 setCheckOutDate(range?.to);
-                                if (range?.from && range?.to) {
-                                    setIsCalendarOpen(false);
-                                }
+                                // Calendar stays open until guest explicitly hits X
                             }}
                             disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                             className="p-0"

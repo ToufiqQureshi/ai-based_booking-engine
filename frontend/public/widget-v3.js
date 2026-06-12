@@ -59,7 +59,7 @@
         var iframe = document.createElement('iframe');
         iframe.src = frontendUrl + '/book/' + hotelSlug + '/widget';
         iframe.title = 'Hotel Booking Search';
-        iframe.loading = 'lazy';
+        iframe.loading = 'eager'; // Above-the-fold widget must load immediately, not wait for scroll
         iframe.style.position = 'absolute';
         iframe.style.bottom = '0';     // grow upward on expand
         iframe.style.left = '0';
