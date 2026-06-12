@@ -126,6 +126,17 @@ export default function BookingWidget() {
                 .rdp-day_selected.rdp-day_today {
                     color: white !important;
                 }
+                /* When check-in/check-out lands on TODAY, the "today" styling
+                   (light bg + border) fought the selected pill and clipped/hid
+                   the day number. Force the selected pill to fully win: dark bg,
+                   white text, no border. */
+                .rdp-day_selected.rdp-day_today {
+                    background-color: ${primaryHex} !important;
+                    border-color: transparent !important;
+                }
+                .rdp-day_selected.rdp-day_today span {
+                    color: white !important;
+                }
             `}</style>
             
             {/* Custom CSS overrides saved in DB settings */}
