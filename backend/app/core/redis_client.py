@@ -7,7 +7,38 @@ import fnmatch
 import logging
 from typing import Optional, Any
 
+from redis.retry import Retry
+from redis.backoff import ExponentialBackoff
+from redis.exceptions import ConnectionError as RedisConnectionError, TimeoutError as RedisTimeoutError
+
 _logger = logging.getLogger(__name__)
+
+# Railway's private network DNS (`redis.railway.internal`) intermittently fails
+# to resolve — "Error -2 ... Name or service not known" — roughly every half
+# hour. It is almost always a one-shot blip: the very next resolve succeeds.
+# So instead of giving up on the first failure (which dumped the whole worker
+# onto memory-only mode), we let redis-py retry the connect/command a few times
+# with tiny exponential backoff (~50ms → 500ms, ~0.7s worst case). This absorbs
+# the DNS flaps in-place and keeps shared state (rate limits, locks, AI usage)
+# on real Redis instead of churning to the local fallback dozens of times a day.
+_CONN_RETRY = Retry(ExponentialBackoff(cap=0.5, base=0.05), retries=3)
+_RETRY_ON_ERRORS = [RedisConnectionError, RedisTimeoutError]
+
+
+def _connection_kwargs() -> dict:
+    """Shared resilient-connection settings for both REDIS_URL and host/port."""
+    return dict(
+        decode_responses=True,
+        socket_timeout=2,
+        socket_connect_timeout=2,
+        # Auto-retry transient connect/DNS/timeout errors before surfacing them.
+        retry=_CONN_RETRY,
+        retry_on_error=_RETRY_ON_ERRORS,
+        # Validate idle connections so a silently-dropped socket is replaced
+        # rather than handed out and failing the next real command.
+        health_check_interval=30,
+    )
+
 
 class RedisClient:
     _instance: Optional[redis.Redis] = None
@@ -70,13 +101,7 @@ class RedisClient:
         try:
             # If REDIS_URL is provided (typical for Railway/Heroku), use it directly
             if settings.REDIS_URL:
-                inst = redis.Redis.from_url(
-                    settings.REDIS_URL,
-                    decode_responses=True,
-                    socket_timeout=2,
-                    socket_connect_timeout=2,
-                    retry_on_timeout=True
-                )
+                inst = redis.Redis.from_url(settings.REDIS_URL, **_connection_kwargs())
             else:
                 # Fallback to discrete parameters
                 inst = redis.Redis(
@@ -84,12 +109,10 @@ class RedisClient:
                     port=settings.REDIS_PORT,
                     password=settings.REDIS_PASSWORD,
                     db=0,
-                    decode_responses=True,
-                    socket_timeout=2,
-                    socket_connect_timeout=2,
-                    retry_on_timeout=True
+                    **_connection_kwargs(),
                 )
-            # Ping test to verify connection before we trust it.
+            # Ping test to verify connection before we trust it. With the retry
+            # config above this transparently rides out a transient DNS blip.
             inst.ping()
             cls._instance = inst
             cls._retry_after = 0.0  # recovered — clear the back-off
