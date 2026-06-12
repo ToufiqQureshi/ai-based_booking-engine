@@ -929,13 +929,25 @@ export const AnalyticsDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* AI Agent Token Usage — only shown when AI data + Redis both available */}
-            {!isAiLoading && aiData && aiUsageData?.data_available && (
+            {/* AI Agent Token Usage — always shown on the AI tab. Falls back to a
+                note when usage data is still loading or Redis is unavailable. */}
+            {!isAiLoading && aiData && (
                 <SectionCard
                   title="AI Agent Usage Today"
-                  subtitle="Token budget per guest-facing agent — resets midnight UTC · ~800 tokens = 1 conversation"
+                  subtitle="How many guests talked to each AI agent today, and how much of the daily token budget is left · ~800 tokens = 1 conversation"
                   icon={<MessageCircle className="w-4 h-4" />}
                 >
+                  {!aiUsageData ? (
+                    <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+                      <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
+                      Loading usage…
+                    </div>
+                  ) : !aiUsageData.data_available ? (
+                    <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-400">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      Live usage tracking is temporarily offline (cache reconnecting). Counts will appear here shortly — your AI agents keep working in the meantime.
+                    </div>
+                  ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {([
                       { key: 'guest' as const, color: '#10b981' },
@@ -1014,6 +1026,7 @@ export const AnalyticsDashboard: React.FC = () => {
                       );
                     })}
                   </div>
+                  )}
                 </SectionCard>
             )}
           </TabsContent>

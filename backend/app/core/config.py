@@ -108,6 +108,11 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: Optional[str] = None
+    # After a Redis failure we serve from local memory for this many seconds
+    # before transparently retrying. Kept short so a deploy-time DNS blip
+    # (redis.railway.internal not yet resolvable) only degrades shared state —
+    # rate limits, locks, AI usage counters — for a few seconds, not minutes.
+    REDIS_RETRY_COOLDOWN_SECONDS: int = 20
 
     # Number of trusted reverse proxies in front of the app (e.g. Cloudflare +
     # Railway = 2). Used to pick the real client IP from X-Forwarded-For instead
