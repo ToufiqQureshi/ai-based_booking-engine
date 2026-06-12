@@ -249,6 +249,8 @@ const IntegrationPage = () => {
                             isSavingSettings={isSavingSettings}
                             onUpdateSettings={updateSettings}
                             onSaveSettings={handleSaveSettings}
+                            widgetCode={widgetCode}
+                            copyToClipboard={copyToClipboard}
                             chainSlug={chainSlug || undefined}
                             chainName={chainName || undefined}
                         />
