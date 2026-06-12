@@ -93,23 +93,48 @@
         iframe.style.top = '0';        // grow downward on expand — bar stays put
         iframe.style.left = '0';
         iframe.style.width = '100%';
-        iframe.style.height = defaultHeight;
+        iframe.style.height = '850px'; // Fixed large height to accommodate calendar popover without clipping
         iframe.style.border = 'none';
         iframe.style.overflow = 'visible';
         iframe.style.zIndex = '9999';
         iframe.style.backgroundColor = 'transparent';
         iframe.allowTransparency = 'true';
         iframe.scrolling = 'no';
-        iframe.style.transition = 'height 0.2s ease';
+        iframe.style.pointerEvents = 'none'; // Allow clicking through transparent parts when closed
 
         container.innerHTML = '';
         container.appendChild(spacer);
         container.appendChild(iframe);
 
-        // Listen for message events to raise z-index when overlays (calendar/guest picker) are open
+        var calendarIsOpen = false;
+        var isHovered = false;
+
+        // Toggle pointerEvents when mouse enters/leaves the widget bar area
+        container.addEventListener('mouseenter', function () {
+            isHovered = true;
+            iframe.style.pointerEvents = 'auto';
+        });
+
+        container.addEventListener('mouseleave', function () {
+            isHovered = false;
+            if (!calendarIsOpen) {
+                iframe.style.pointerEvents = 'none';
+            }
+        });
+
+        // Listen for message events to raise z-index and handle pointer-events when calendar opens
         window.addEventListener('message', function (event) {
             if (!event.data || event.data.type !== 'RESIZE_OVERLAY') return;
-            iframe.style.zIndex = event.data.open ? '2147483000' : '9999';
+            calendarIsOpen = !!event.data.open;
+            iframe.style.zIndex = calendarIsOpen ? '2147483000' : '9999';
+            
+            if (calendarIsOpen) {
+                iframe.style.pointerEvents = 'auto';
+            } else {
+                if (!isHovered) {
+                    iframe.style.pointerEvents = 'none';
+                }
+            }
         });
     }
 
