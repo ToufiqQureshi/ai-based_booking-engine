@@ -8,14 +8,7 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
-// Import all layout variants from our new consolidated layouts file
-import {
-    ModernFloatingLayout,
-    ClassicStackedLayout,
-    MinimalBarLayout,
-    PremiumCapsuleLayout,
-    BookingComLayout
-} from './WidgetLayouts';
+import { RoomSearchHeader } from '@/components/public/booking/RoomSearchHeader';
 import { FARWidget } from '@/components/public/FARWidget';
 
 // Embedding (hotelier) page ka origin referrer se nikaalte hain taaki
@@ -147,7 +140,8 @@ export default function BookingWidget() {
     const [adults, setAdults] = useState(2);
     const [children, setChildren] = useState(0);
     const [promoCode, setPromoCode] = useState('');
-
+    const [searchType, setSearchType] = useState<'room' | 'package'>('room');
+    const [flexibleDates, setFlexibleDates] = useState(false);
     // Room types extracted from rooms fetch — for filter dropdown
     const [roomTypes, setRoomTypes] = useState<Array<{ id: string; name: string }>>([]);
     const [selectedRoomTypeId, setSelectedRoomTypeId] = useState<string>('');
@@ -630,12 +624,38 @@ export default function BookingWidget() {
                 <style>{config.widget_custom_css}</style>
             )}
 
-            {layoutStyle === 'modern' && <ModernFloatingLayout {...stateBag} />}
-            {layoutStyle === 'classic' && <ClassicStackedLayout {...stateBag} />}
-            {layoutStyle === 'minimal' && <MinimalBarLayout {...stateBag} />}
-            {layoutStyle === 'premium' && <PremiumCapsuleLayout {...stateBag} />}
-            {layoutStyle === 'booking' && <BookingComLayout {...stateBag} />}
-            {layoutStyle === 'far' && <FARWidget {...stateBag} />}
+            {layoutStyle === 'far' ? (
+                <FARWidget {...stateBag} />
+            ) : (
+                <RoomSearchHeader
+                    searchType={searchType}
+                    setSearchType={setSearchType}
+                    checkInDate={checkInDate}
+                    setCheckInDate={setCheckInDate}
+                    checkOutDate={checkOutDate}
+                    setCheckOutDate={setCheckOutDate}
+                    adults={adults}
+                    setAdults={setAdults}
+                    children={children}
+                    setChildren={setChildren}
+                    roomsCount={roomsCount}
+                    setRoomsCount={setRoomsCount}
+                    promoCode={promoCode}
+                    setPromoCode={setPromoCode}
+                    isCalendarOpen={isCalendarOpen}
+                    setIsCalendarOpen={setIsCalendarOpen}
+                    isGuestOpen={isGuestOpen}
+                    setIsGuestOpen={setIsGuestOpen}
+                    flexibleDates={flexibleDates}
+                    setFlexibleDates={setFlexibleDates}
+                    themeColor={primaryHex}
+                    isMobile={isMobile}
+                    startingPrice={startingPrice}
+                    handleSearch={handleSearch}
+                    hotelSlug={hotelSlug}
+                    currency={config?.currency || 'INR'}
+                />
+            )}
         </div>
     );
 }
