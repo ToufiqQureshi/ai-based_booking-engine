@@ -8,55 +8,55 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Suspense, lazy } from "react";
 
 // Auth Pages
-const LoginPage = lazy(() => import("@/pages/auth/Login"));
-const SignupPage = lazy(() => import("@/pages/auth/Signup"));
-const ForgotPasswordPage = lazy(() => import("@/pages/auth/ForgotPassword"));
-const ResetPasswordPage = lazy(() => import("@/pages/auth/ResetPassword"));
+const LoginPage = lazy(() => import("@/auth/Login"));
+const SignupPage = lazy(() => import("@/auth/Signup"));
+const ForgotPasswordPage = lazy(() => import("@/auth/ForgotPassword"));
+const ResetPasswordPage = lazy(() => import("@/auth/ResetPassword"));
 
 // Dashboard Layout & Pages
 const DashboardLayout = lazy(() => import("@/components/layout/DashboardLayout"));
-const DashboardPage = lazy(() => import("@/pages/dashboard/Dashboard"));
-const RoomsPage = lazy(() => import("@/pages/rooms/Rooms"));
-const RatesPage = lazy(() => import("@/pages/finance/Rates"));
-const AvailabilityPage = lazy(() => import("@/pages/rooms/Availability"));
-const BookingsPage = lazy(() => import("@/pages/bookings/Bookings"));
-const GuestsPage = lazy(() => import("@/pages/bookings/Guests"));
-const PaymentsPage = lazy(() => import("@/pages/finance/Payments"));
-const AddonsPage = lazy(() => import("@/pages/marketing/Addons"));
-const SettingsPage = lazy(() => import("@/pages/settings/Settings"));
-const IntegrationPage = lazy(() => import("@/pages/settings/Integration"));
-const ChannelSettings = lazy(() => import("@/pages/dashboard/ChannelSettings"));
-const TaxesPage = lazy(() => import("@/pages/finance/Taxes"));
-const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
-const AgentPage = lazy(() => import("@/pages/agent/AgentPage").then(m => ({ default: m.default })));
-const ProfilePage = lazy(() => import("@/pages/settings/Profile"));
-const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
-const RateShopperPage = lazy(() => import("@/pages/dashboard/RateShopper"));
-const SuperAdminDashboard = lazy(() => import("@/pages/superadmin/SuperAdminDashboard"));
-const GoogleReviewsPage = lazy(() => import("@/pages/marketing/GoogleReviews"));
-const LoyaltyProgramPage = lazy(() => import("@/pages/marketing/LoyaltyProgram"));
-const ChainDashboard = lazy(() => import("@/pages/chain/ChainDashboard"));
+const DashboardPage = lazy(() => import("@/dashboard/Dashboard"));
+const RoomsPage = lazy(() => import("@/rooms/Rooms"));
+const RatesPage = lazy(() => import("@/finance/Rates"));
+const AvailabilityPage = lazy(() => import("@/rooms/Availability"));
+const BookingsPage = lazy(() => import("@/bookings/Bookings"));
+const GuestsPage = lazy(() => import("@/bookings/Guests"));
+const PaymentsPage = lazy(() => import("@/finance/Payments"));
+const AddonsPage = lazy(() => import("@/marketing/Addons"));
+const SettingsPage = lazy(() => import("@/settings/Settings"));
+const IntegrationPage = lazy(() => import("@/settings/Integration"));
+const ChannelSettings = lazy(() => import("@/dashboard/ChannelSettings"));
+const TaxesPage = lazy(() => import("@/finance/Taxes"));
+const AdminDashboard = lazy(() => import("@/admin/AdminDashboard"));
+const AgentPage = lazy(() => import("@/agent/AgentPage").then(m => ({ default: m.default })));
+const ProfilePage = lazy(() => import("@/settings/Profile"));
+const AnalyticsDashboard = lazy(() => import("@/analytics/AnalyticsDashboard"));
+const RateShopperPage = lazy(() => import("@/dashboard/RateShopper"));
+const SuperAdminDashboard = lazy(() => import("@/superadmin/SuperAdminDashboard"));
+const GoogleReviewsPage = lazy(() => import("@/marketing/GoogleReviews"));
+const LoyaltyProgramPage = lazy(() => import("@/marketing/LoyaltyProgram"));
+const ChainDashboard = lazy(() => import("@/chain/ChainDashboard"));
 
-const NotFound = lazy(() => import("@/pages/NotFound"));
+const NotFound = lazy(() => import("@/NotFound"));
 
 // Public Booking
 const PublicBookingLayout = lazy(() => import("@/layouts/PublicBookingLayout").then(m => ({ default: m.PublicBookingLayout })));
-const BookingSelection = lazy(() => import("@/pages/public/BookingSelection"));
-const BookingCheckout = lazy(() => import("@/pages/public/BookingCheckout"));
-const BookingConfirmation = lazy(() => import("@/pages/public/BookingConfirmation"));
-const BookingCancel = lazy(() => import("@/pages/public/BookingCancel"));
-const BookingWidget = lazy(() => import("@/pages/public/BookingWidget"));
-const ChainBookingWidget = lazy(() => import("@/pages/public/ChainBookingWidget"));
-const ChatEmbed = lazy(() => import("@/pages/public/ChatEmbed"));
-const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
+const BookingSelection = lazy(() => import("@/guest_booking/BookingSelection"));
+const BookingCheckout = lazy(() => import("@/guest_booking/BookingCheckout"));
+const BookingConfirmation = lazy(() => import("@/guest_booking/BookingConfirmation"));
+const BookingCancel = lazy(() => import("@/guest_booking/BookingCancel"));
+const BookingWidget = lazy(() => import("@/guest_booking/BookingWidget"));
+const ChainBookingWidget = lazy(() => import("@/guest_booking/ChainBookingWidget"));
+const ChatEmbed = lazy(() => import("@/guest_booking/ChatEmbed"));
+const LandingPage = lazy(() => import("@/guest_booking/LandingPage"));
 
 // Public Legal Pages
-const PrivacyPolicy = lazy(() => import("@/pages/public/legal/PrivacyPolicy"));
-const TermsOfService = lazy(() => import("@/pages/public/legal/TermsOfService"));
-const DataDeletion = lazy(() => import("@/pages/public/legal/DataDeletion"));
-const RefundPolicy = lazy(() => import("@/pages/public/legal/RefundPolicy"));
-const CookiePolicy = lazy(() => import("@/pages/public/legal/CookiePolicy"));
-const ContactUs = lazy(() => import("@/pages/public/legal/ContactUs"));
+const PrivacyPolicy = lazy(() => import("@/guest_booking/legal/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("@/guest_booking/legal/TermsOfService"));
+const DataDeletion = lazy(() => import("@/guest_booking/legal/DataDeletion"));
+const RefundPolicy = lazy(() => import("@/guest_booking/legal/RefundPolicy"));
+const CookiePolicy = lazy(() => import("@/guest_booking/legal/CookiePolicy"));
+const ContactUs = lazy(() => import("@/guest_booking/legal/ContactUs"));
 
 // Slim top progress bar — does NOT block the whole screen
 const PageLoader = () => <div className="page-progress" />;
@@ -192,3 +192,7 @@ const App = () => {
 };
 
 export default App;
+
+
+
+

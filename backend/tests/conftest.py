@@ -26,10 +26,10 @@ if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
 from app.core.database import engine
-from app.models.hotel import Hotel
-from app.models.user import User, UserRole
-from app.models.room import RoomType
-from app.models.rates import RatePlan
+from app.brand_console.hotel import Hotel
+from app.guests.models import User, UserRole
+from app.rooms.models import RoomType
+from app.rate_plans.models import RatePlan
 from main import app
 
 
@@ -103,7 +103,7 @@ async def auth_client(seeded_user: User) -> AsyncClient:
     Authenticated HTTP client.
     Uses FastAPI dependency override so no real JWT/Supabase needed.
     """
-    from app.api.deps import get_current_active_user
+    from app.core.deps import get_current_active_user
     app.dependency_overrides[get_current_active_user] = lambda: seeded_user
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
@@ -128,7 +128,7 @@ async def super_admin_client(seeded_hotel: Hotel) -> AsyncClient:
         await session.commit()
         await session.refresh(admin)
 
-    from app.api.deps import get_current_active_user
+    from app.core.deps import get_current_active_user
     app.dependency_overrides[get_current_active_user] = lambda: admin
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac

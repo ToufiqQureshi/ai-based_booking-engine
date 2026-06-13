@@ -15,8 +15,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.hotel import Hotel
-from app.models.room import RoomType
+from app.brand_console.models import Hotel
+from app.rooms.models import RoomType
 
 pytestmark = pytest.mark.asyncio
 

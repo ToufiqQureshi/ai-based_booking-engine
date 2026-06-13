@@ -19,25 +19,7 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@staybooker" />
-    <script>
-      // Performance Observer for Long Tasks & Animation Frames
-      try {
-        const observer = new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) {
-            if (entry.duration > 50) {
-              console.warn(`⚠️ SLOW TASK DETECTED [${entry.entryType}]:`, entry.name, `${Math.round(entry.duration)}ms`);
-            }
-          }
-        });
-        observer.observe({type: 'longtask', buffered: true});
-        
-        if (PerformanceObserver.supportedEntryTypes && PerformanceObserver.supportedEntryTypes.includes('long-animation-frame')) {
-          observer.observe({type: 'long-animation-frame', buffered: true});
-        }
-      } catch (e) {
-        // Fallback for older browsers
-      }
-    </script>
+
   </head>
 
   <body>

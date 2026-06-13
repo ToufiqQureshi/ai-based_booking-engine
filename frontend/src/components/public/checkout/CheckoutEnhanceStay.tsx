@@ -1,4 +1,4 @@
-import { useBookingCheckout } from '@/pages/public/BookingCheckoutContext';
+import { useBookingCheckout } from '@/guest_booking/BookingCheckoutContext';
 import { Sparkles, Plus, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -76,3 +76,6 @@ export function CheckoutEnhanceStay() {
         </>
     );
 }
+
+
+

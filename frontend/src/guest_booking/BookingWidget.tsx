@@ -196,28 +196,37 @@ export default function BookingWidget() {
     // Loader ko apni asli content height bhejte rehte hain — hardcoded iframe
     // heights ki jagah har layout/breakpoint pe exact fit. Popovers fixed-position
     // hote hain isliye unka bottom alag se max() mein lete hain.
+    // debouncePostHeight: height change hone par sirf ek postMessage bhejo,
+    // loop nahi — ResizeObserver → iframe resize → layout change → observer loop
+    // rokne ke liye 80ms debounce use karo.
+    const postHeightRafRef = useRef<number>(0);
     const postHeight = () => {
         if (window.parent === window) return;
-        
-        const mainContainer = document.getElementById('widget-main-container');
-        const baseHeight = mainContainer ? mainContainer.getBoundingClientRect().height : document.body.scrollHeight;
-        
-        let overlayHeight = baseHeight;
-        document.querySelectorAll('[data-radix-popper-content-wrapper]').forEach((el) => {
-            overlayHeight = Math.max(overlayHeight, el.getBoundingClientRect().bottom + 16);
+        cancelAnimationFrame(postHeightRafRef.current);
+        postHeightRafRef.current = requestAnimationFrame(() => {
+            const mainContainer = document.getElementById('widget-main-container');
+            const baseHeight = mainContainer
+                ? mainContainer.getBoundingClientRect().height
+                : document.body.scrollHeight;
+
+            let overlayHeight = baseHeight;
+            document.querySelectorAll('[data-radix-popper-content-wrapper]').forEach((el) => {
+                overlayHeight = Math.max(overlayHeight, el.getBoundingClientRect().bottom + 16);
+            });
+
+            overlayHeight = Math.ceil(overlayHeight);
+            const finalBaseHeight = Math.ceil(baseHeight);
+
+            // 4px threshold — 2px se kam tha isliye SubPixel animations pe bhi fire hota tha
+            if (Math.abs(overlayHeight - lastHeightRef.current) < 4) return;
+            lastHeightRef.current = overlayHeight;
+
+            window.parent.postMessage({
+                type: 'WIDGET_HEIGHT',
+                height: overlayHeight,
+                baseHeight: finalBaseHeight
+            }, PARENT_ORIGIN);
         });
-        
-        overlayHeight = Math.ceil(overlayHeight);
-        const finalBaseHeight = Math.ceil(baseHeight);
-        
-        if (Math.abs(overlayHeight - lastHeightRef.current) < 2) return;
-        lastHeightRef.current = overlayHeight;
-        
-        window.parent.postMessage({ 
-            type: 'WIDGET_HEIGHT', 
-            height: overlayHeight,
-            baseHeight: finalBaseHeight 
-        }, PARENT_ORIGIN);
     };
 
     // Ready + height reporting (config render hone ke baad)
@@ -236,19 +245,59 @@ export default function BookingWidget() {
     useEffect(() => {
         if (window.parent === window) return;
         const isOpen = isCalendarOpen || isGuestOpen;
+
+        // RESIZE_OVERLAY pehle bhejo — widget-v3.js turant iframe ko
+        // position:fixed + provisionalOpenHeight (550px) kar deta hai.
         window.parent.postMessage({ type: 'RESIZE_OVERLAY', open: isOpen }, PARENT_ORIGIN);
+
         if (isOpen) {
-            // Fixed-position popover body ResizeObserver mein nahi aata —
-            // open rehne tak halka poll (month change pe height badalti hai)
-            const id = setInterval(postHeight, 250);
-            const t = setTimeout(postHeight, 60);
-            return () => { clearInterval(id); clearTimeout(t); };
+            // Calendar/guest picker ke liye ek accurate measurement bhejo.
+            //
+            // KEY FIX: baseHeight = sirf widget bar height (isMobile ? compact : bar).
+            // widget-v3.js 'barHeight' ko baseHeight se update karta hai.
+            // Agar hum overlayHeight ko baseHeight se bhejein toh scroll/resize
+            // pe applyHeights() barHeight badi samajh ke height chhoti nahi karega.
+            // YAHI shaking ka root cause tha.
+            const sendOverlayHeight = () => {
+                if (window.parent === window) return;
+                cancelAnimationFrame(postHeightRafRef.current);
+                postHeightRafRef.current = requestAnimationFrame(() => {
+                    const mainContainer = document.getElementById('widget-main-container');
+                    const barH = Math.ceil(
+                        mainContainer
+                            ? mainContainer.getBoundingClientRect().height
+                            : document.body.scrollHeight
+                    );
+
+                    let overlayH = barH;
+                    document.querySelectorAll('[data-radix-popper-content-wrapper]').forEach((el) => {
+                        overlayH = Math.max(overlayH, el.getBoundingClientRect().bottom + 24);
+                    });
+                    overlayH = Math.ceil(overlayH);
+
+                    if (Math.abs(overlayH - lastHeightRef.current) < 4) return;
+                    lastHeightRef.current = overlayH;
+
+                    window.parent.postMessage({
+                        type: 'WIDGET_HEIGHT',
+                        height: overlayH,
+                        // baseHeight = actual bar height ONLY — never the overlay total.
+                        // widget-v3.js uses this as barHeight for layout-shift-free shrink.
+                        baseHeight: barH,
+                    }, PARENT_ORIGIN);
+                });
+            };
+
+            const t1 = setTimeout(sendOverlayHeight, 100);  // calendar DOM render ke baad
+            const t2 = setTimeout(sendOverlayHeight, 450);  // Radix animation settle ke baad
+            return () => { clearTimeout(t1); clearTimeout(t2); };
         }
-        // Close hone par exit animation ke baad shrink report karo
-        const t1 = setTimeout(postHeight, 100);
-        const t2 = setTimeout(postHeight, 350);
+
+        // Close: exit animation ke baad correct shrunk height bhejo
+        const t1 = setTimeout(postHeight, 200);
+        const t2 = setTimeout(postHeight, 550);
         return () => { clearTimeout(t1); clearTimeout(t2); };
-    }, [isCalendarOpen, isGuestOpen]);
+    }, [isCalendarOpen, isGuestOpen]);  // eslint-disable-line react-hooks/exhaustive-deps
 
     // Custom JS Code execution inside widget frame
     useEffect(() => {

@@ -1,4 +1,4 @@
-import { useBookingCheckout } from '@/pages/public/BookingCheckoutContext';
+import { useBookingCheckout } from '@/guest_booking/BookingCheckoutContext';
 import { CreditCard, Building2, MapPin, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -137,3 +137,6 @@ export function CheckoutPayment() {
         </div>
     );
 }
+
+
+

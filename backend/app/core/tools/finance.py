@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from datetime import date
 from sqlmodel import select, func, and_
-from app.models.booking import Booking, BookingStatus
+from app.bookings.booking import Booking, BookingStatus
 
 # We need a way to inject session/user into tools. 
 # Current pattern in agent.py defines tools INSIDE create_agent_executor to capture session/user.
@@ -33,7 +33,7 @@ async def logic_get_pending_payments(session, user_id) -> List[Dict[str, Any]]:
         })
         
     # Enhance with Guest Name (Optional but better)
-    from app.models.booking import Guest
+    from app.bookings.booking import Guest
     for item in pending_list:
         # N+1 query but safe for small lists. For production use JOIN.
         # Let's try to be better and use JOIN in specific query if needed, 

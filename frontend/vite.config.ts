@@ -15,12 +15,12 @@ export default defineConfig(() => ({
     port: 8080,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8001",
+        target: "http://[IP_ADDRESS]",
         secure: false,
         ws: true,
       },
       "/static": {
-        target: "http://127.0.0.1:8001",
+        target: "http://[IP_ADDRESS]",
         changeOrigin: true,
         secure: false,
       },

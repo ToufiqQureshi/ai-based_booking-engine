@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from app.models.booking import Booking
+from app.bookings.booking import Booking
 
 def calculate_cancellation_fee(booking: Booking, check_in_time_str: str = "14:00") -> tuple[float, float, str]:
     """

@@ -7,9 +7,9 @@ import logging
 from sqlmodel import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.booking import Booking, BookingStatus, Guest
-from app.models.room import RoomType
-from app.models.hotel import Hotel
+from app.bookings.booking import Booking, BookingStatus, Guest
+from app.rooms.room import RoomType
+from app.brand_console.hotel import Hotel
 from app.core.redis_client import redis_client
 
 logger = logging.getLogger(__name__)
@@ -163,7 +163,7 @@ async def _fetch_hotel_data(session: AsyncSession, hotel_id: str) -> Optional[di
     rt_res = await session.execute(select(RoomType).where(RoomType.hotel_id == hotel_id))
     room_types = rt_res.scalars().all()
 
-    from app.models.amenity import Amenity, RoomAmenityLink
+    from app.rooms.amenity import Amenity, RoomAmenityLink
     amenity_names_str = "No specific amenities configured."
     if room_types:
         room_ids = [r.id for r in room_types]
@@ -498,7 +498,7 @@ async def create_guest_agent_graph(
             "source": "ai_agent",
         }
 
-        from app.models.lead import Lead
+        from app.brand_console.lead import Lead
         lead = Lead(
             hotel_id=hotel_id,
             guest_name=f"{first_name} {last_name}".strip(),
@@ -515,7 +515,7 @@ async def create_guest_agent_graph(
         await session.commit()
         await session.refresh(lead)  # ensures created_at is populated from DB
 
-        from app.models.integration import IntegrationSettings
+        from app.integration.integration import IntegrationSettings
         int_res = await session.execute(
             select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
         )

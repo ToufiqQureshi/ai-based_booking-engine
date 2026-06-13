@@ -9,8 +9,8 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel
 
-from app.models.hotel import Hotel
-from app.models.user import User, UserRole
+from app.brand_console.models import Hotel
+from app.guests.models import User, UserRole
 
 
 pytestmark = pytest.mark.asyncio

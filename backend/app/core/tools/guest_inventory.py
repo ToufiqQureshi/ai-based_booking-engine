@@ -1,8 +1,8 @@
 from typing import List, Dict, Any, Optional
 from datetime import date
 from sqlmodel import select, or_
-from app.models.room import RoomBlock, RoomType
-from app.models.booking import Guest, Booking, BookingStatus
+from app.rooms.room import RoomBlock, RoomType
+from app.bookings.booking import Guest, Booking, BookingStatus
 
 async def logic_find_guest(session, user_id, query_str: str) -> List[Dict[str, Any]]:
     """

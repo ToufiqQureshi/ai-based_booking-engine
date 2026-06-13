@@ -1,4 +1,4 @@
-import { useBookingCheckout } from '@/pages/public/BookingCheckoutContext';
+import { useBookingCheckout } from '@/guest_booking/BookingCheckoutContext';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -266,3 +266,6 @@ export function CheckoutSummary() {
                     </div>
     );
 }
+
+
+

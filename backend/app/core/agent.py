@@ -4,10 +4,10 @@ from sqlmodel import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.models.timeline import BookingTimeline
-from app.models.booking import Booking, BookingStatus, BookingSource, Guest
-from app.models.room import RoomType
-from app.models.user import User
+from app.bookings.timeline import BookingTimeline
+from app.bookings.booking import Booking, BookingStatus, BookingSource, Guest
+from app.rooms.room import RoomType
+from app.guests.user import User
 
 # Import New Smart Tools
 from app.core.tools.weather import get_weather_forecast
@@ -142,7 +142,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         Search for bookings by Guest Name (first or last) or Booking Number.
         Returns a list of matching bookings with details.
         """
-        from app.models.booking import Guest
+        from app.bookings.booking import Guest
 
         results = []
 
@@ -196,7 +196,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         if not booking:
             return "Booking not found."
 
-        from app.models.booking import Guest
+        from app.bookings.booking import Guest
         guest_res = await session.execute(select(Guest).where(Guest.id == booking.guest_id))
         guest = guest_res.scalar_one_or_none()
 
@@ -765,7 +765,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         logger.info(f"Smart Tool Selector: Loaded {len(tools)} tools for query '{user_query}'")
 
     # Resolve dynamic config from integration settings or hotel relation
-    from app.models.integration import IntegrationSettings
+    from app.integration.integration import IntegrationSettings
     int_settings = None
     if user.hotel_id:
         try:

@@ -1,0 +1,283 @@
+"""
+Super Admin — Per-hotel integration credentials (AI, WhatsApp, Email, pause state).
+Secrets are stored encrypted in Supabase Vault; only vault UUIDs live in the DB.
+"""
+import logging
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from pydantic import BaseModel
+from sqlmodel import select
+
+from app.core.deps import DbSession
+from app.core.config import get_settings
+from app.core.vault import (
+    store_settings_secret, store_column_secret,
+    vault_get, resolve_column_secret,
+)
+from app.system.audit import AuditLog
+from app.brand_console.hotel import Hotel
+from app.guests.user import User
+from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+
+class HotelIntegrationsRead(BaseModel):
+    hotel_id: str
+    hotel_name: str
+    ai_provider: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_base_url: Optional[str] = None
+    ai_max_tokens: Optional[int] = None
+    ai_api_key_preview: Optional[str] = None
+    has_ai_api_key: bool = False
+    has_whatsapp_api_key: bool = False
+    whatsapp_api_key_preview: Optional[str] = None
+    has_whatsapp_phone_id: bool = False
+    has_whatsapp_business_id: bool = False
+    has_brevo_key: bool = False
+    brevo_key_preview: Optional[str] = None
+    has_smtp_password: bool = False
+    has_smtp_config: bool = False
+    smtp_host: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+    smtp_username: Optional[str] = None
+    smtp_port: Optional[int] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
+    ai_whatsapp_credits: int = 0
+    total_messages_sent: int = 0
+    # Razorpay (per-hotel). key_id is publishable so we return it; the secret
+    # is write-only and never returned — only a presence flag.
+    razorpay_key_id: Optional[str] = None
+    has_razorpay_secret: bool = False
+    is_paused: bool = False
+    pause_reason: Optional[str] = None
+    paused_at: Optional[datetime] = None
+    feature_ai_agent: bool = False
+    feature_guest_bot: bool = False
+    feature_ai_assistant: bool = False
+
+
+class HotelIntegrationsUpdate(BaseModel):
+    ai_provider: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_base_url: Optional[str] = None
+    ai_max_tokens: Optional[int] = None
+    ai_api_key: Optional[str] = None
+    whatsapp_api_key: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+    ai_whatsapp_credits: Optional[int] = None
+    razorpay_key_id: Optional[str] = None
+    razorpay_key_secret: Optional[str] = None
+    is_paused: Optional[bool] = None
+    pause_reason: Optional[str] = None
+    feature_ai_agent: Optional[bool] = None
+    feature_guest_bot: Optional[bool] = None
+    feature_ai_assistant: Optional[bool] = None
+
+
+def _preview_secret(value: Optional[str]) -> Optional[str]:
+    """Return a 4-char tail preview so admins can verify a key without seeing it."""
+    if not value or not isinstance(value, str):
+        return None
+    return f"…{value[-4:]}" if len(value) > 4 else "•" * len(value)
+
+
+@router.get("/hotels/{hotel_id}/integrations", response_model=HotelIntegrationsRead)
+async def get_hotel_integrations(
+    hotel_id: str,
+    super_admin: User = Depends(get_super_admin),
+    session: DbSession = None,
+):
+    """Read all integration credentials for a hotel (secrets masked)."""
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hotel not found")
+
+    from app.integration.integration import IntegrationSettings
+    int_settings = (await session.execute(
+        select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
+    )).scalar_one_or_none()
+
+    s = hotel.settings if isinstance(hotel.settings, dict) else {}
+
+    # Resolve Vault secrets for preview generation (super-admin only; never returned in full)
+    ai_key = await resolve_column_secret(session, int_settings, "ai_api_key", "ai_api_key_vault_id") \
+        if int_settings else None
+    if not ai_key:
+        ai_key = await resolve_column_secret(session, hotel, "ai_api_key", "ai_api_key_vault_id")
+
+    wa_key = await vault_get(session, s.get("whatsapp_api_key_vault_id")) if s.get("whatsapp_api_key_vault_id") else s.get("whatsapp_api_key")
+    rz_secret_present = bool(s.get("razorpay_key_secret_vault_id") or s.get("razorpay_key_secret"))
+    smtp_pass_present = bool(s.get("smtp_password_vault_id") or s.get("smtp_password"))
+
+    ai_max_tokens = (
+        getattr(int_settings, 'ai_max_tokens', None) if int_settings else None
+    ) or getattr(hotel, 'ai_max_tokens', None)
+    return HotelIntegrationsRead(
+        hotel_id=hotel.id, hotel_name=hotel.name,
+        ai_provider=int_settings.ai_provider if int_settings else hotel.ai_provider,
+        ai_model=int_settings.ai_model if int_settings else hotel.ai_model,
+        ai_base_url=int_settings.ai_base_url if int_settings else hotel.ai_base_url,
+        ai_max_tokens=ai_max_tokens,
+        ai_api_key_preview=_preview_secret(ai_key),
+        has_ai_api_key=bool(ai_key),
+        has_whatsapp_api_key=bool(wa_key),
+        whatsapp_api_key_preview=_preview_secret(wa_key),
+        has_whatsapp_phone_id=bool(s.get("whatsapp_phone_number_id")),
+        has_whatsapp_business_id=bool(s.get("whatsapp_business_account_id")),
+        has_brevo_key=bool(get_settings().BREVO_API_KEY),
+        brevo_key_preview=_preview_secret(get_settings().BREVO_API_KEY) if get_settings().BREVO_API_KEY else None,
+        has_smtp_password=smtp_pass_present,
+        has_smtp_config=bool(s.get("smtp_host") and s.get("smtp_username")),
+        smtp_host=s.get("smtp_host"),
+        smtp_from_email=s.get("smtp_from_email"),
+        smtp_username=s.get("smtp_username"),
+        smtp_port=s.get("smtp_port"),
+        whatsapp_phone_number_id=s.get("whatsapp_phone_number_id"),
+        whatsapp_business_account_id=s.get("whatsapp_business_account_id"),
+        ai_whatsapp_credits=int(s.get("ai_whatsapp_credits", 0) or 0),
+        total_messages_sent=int(s.get("total_messages_sent", 0) or 0),
+        razorpay_key_id=s.get("razorpay_key_id"),
+        has_razorpay_secret=rz_secret_present,
+        is_paused=hotel.is_paused,
+        pause_reason=hotel.pause_reason,
+        paused_at=hotel.paused_at,
+        feature_ai_agent=hotel.feature_ai_agent,
+        feature_guest_bot=hotel.feature_guest_bot,
+        feature_ai_assistant=hotel.feature_ai_assistant,
+    )
+
+
+@router.put("/hotels/{hotel_id}/integrations")
+async def update_hotel_integrations(
+    hotel_id: str,
+    payload: HotelIntegrationsUpdate,
+    request: Request,
+    super_admin: User = Depends(get_super_admin),
+    session: DbSession = None,
+):
+    """Update hotel integration credentials. Empty string = clear field."""
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Hotel not found")
+
+    from app.integration.integration import IntegrationSettings
+    int_settings = (await session.execute(
+        select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
+    )).scalar_one_or_none()
+
+    if not int_settings:
+        int_settings = IntegrationSettings(hotel_id=hotel_id)
+        session.add(int_settings)
+
+    updated: list[str] = []
+
+    for field in ("ai_provider", "ai_model", "feature_ai_agent", "feature_guest_bot", "feature_ai_assistant"):
+        val = getattr(payload, field)
+        if val is not None:
+            setattr(hotel, field, val)
+            if field in ("ai_provider", "ai_model"):
+                setattr(int_settings, field, val)
+            updated.append(field)
+
+    if payload.ai_base_url is not None:
+        val = payload.ai_base_url or None
+        hotel.ai_base_url = val
+        int_settings.ai_base_url = val
+        updated.append("ai_base_url")
+    if payload.ai_max_tokens is not None:
+        val = payload.ai_max_tokens if payload.ai_max_tokens > 0 else None
+        hotel.ai_max_tokens = val
+        int_settings.ai_max_tokens = val
+        updated.append("ai_max_tokens")
+    if payload.ai_api_key is not None:
+        # Store AI key in Vault for both hotel and integration_settings
+        await store_column_secret(
+            session, hotel, "ai_api_key", "ai_api_key_vault_id",
+            payload.ai_api_key or None,
+            f"hotel_{hotel_id}_ai_api_key",
+        )
+        await store_column_secret(
+            session, int_settings, "ai_api_key", "ai_api_key_vault_id",
+            payload.ai_api_key or None,
+            f"hotel_{hotel_id}_int_ai_api_key",
+        )
+        updated.append("ai_api_key")
+    if payload.is_paused is not None:
+        from app.core.feature_flags import set_pause
+        set_pause(hotel, payload.is_paused, payload.pause_reason)
+        updated.append("is_paused")
+    elif payload.pause_reason is not None:
+        hotel.pause_reason = payload.pause_reason or None
+        updated.append("pause_reason")
+
+    settings = dict(hotel.settings) if isinstance(hotel.settings, dict) else {}
+    changed = False
+
+    # Vault-managed secrets: store encrypted, clear plaintext
+    for vault_field in ("whatsapp_api_key", "smtp_password", "razorpay_key_secret"):
+        val = getattr(payload, vault_field, None)
+        if val is None:
+            continue
+        settings = await store_settings_secret(session, settings, vault_field, val or None, hotel_id)
+        changed = True
+        updated.append(vault_field)
+
+    # Plain settings fields (not sensitive enough for Vault or not a secret)
+    for json_field in (
+        "whatsapp_phone_number_id", "whatsapp_business_account_id",
+        "smtp_host", "smtp_username", "smtp_from_email",
+        "ai_whatsapp_credits", "razorpay_key_id",
+    ):
+        val = getattr(payload, json_field, None)
+        if val is None:
+            continue
+        settings[json_field] = val or None
+        changed = True
+        updated.append(json_field)
+    if "smtp_port" in payload.model_fields_set:
+        settings["smtp_port"] = payload.smtp_port
+        changed = True
+        updated.append("smtp_port")
+    if changed:
+        hotel.settings = settings
+
+    from app.core.time import utcnow
+    now = utcnow()
+    hotel.updated_at = now
+    int_settings.updated_at = now
+    session.add(hotel)
+    session.add(int_settings)
+    await session.commit()
+    await session.refresh(hotel)
+    await session.refresh(int_settings)
+
+    try:
+        from app.core.redis_client import redis_client
+        for key in (f"public:hotel-details:{hotel.id}", f"public:widget-config:{hotel.id}",
+                    f"public:slug-to-id:{hotel.slug}", f"public:social-proof:{hotel.slug}"):
+                redis_client.delete_key(key)
+    except Exception:
+        pass
+
+    session.add(AuditLog(
+        user_id=super_admin.id, user_email=super_admin.email,
+        action="UPDATE_HOTEL_INTEGRATIONS",
+        description=f"Updated {len(updated)} integration field(s) for hotel {hotel.name}: {', '.join(updated)}",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+    return {"status": "success", "message": f"Updated {len(updated)} field(s) for {hotel.name}", "fields_updated": updated}
+
+

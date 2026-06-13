@@ -80,9 +80,9 @@ async def check_subscription_expiry() -> dict:
     """
     from datetime import datetime, timedelta
     from app.core.database import async_session
-    from app.models.subscription import Subscription
-    from app.models.hotel import Hotel
-    from app.models.user import User, UserRole
+    from app.superadmin.subscriptions.subscription import Subscription
+    from app.brand_console.hotel import Hotel
+    from app.guests.user import User, UserRole
     from sqlmodel import select
 
     now = datetime.utcnow()
@@ -143,7 +143,7 @@ async def log_timeline_task(
 ) -> None:
     """Background task to log events to the booking timeline."""
     from app.core.database import async_session
-    from app.models.timeline import BookingTimeline
+    from app.bookings.timeline import BookingTimeline
 
     async with async_session() as session:
         try:
@@ -164,9 +164,9 @@ async def log_timeline_task(
 async def process_loyalty_checkout_task(booking_id: str) -> None:
     """Background task to calculate and award loyalty points on guest checkout."""
     from app.core.database import async_session
-    from app.models.booking import Booking, BookingStatus, Guest
-    from app.models.hotel import Hotel
-    from app.models.loyalty import LoyaltyProgram, GuestLoyalty
+    from app.bookings.booking import Booking, BookingStatus, Guest
+    from app.brand_console.hotel import Hotel
+    from app.loyalty.loyalty import LoyaltyProgram, GuestLoyalty
     from sqlmodel import select
     from datetime import datetime
 

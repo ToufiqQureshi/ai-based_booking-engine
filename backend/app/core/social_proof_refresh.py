@@ -29,9 +29,9 @@ from typing import Optional
 from sqlalchemy import func, select
 
 from app.core.time import utcnow
-from app.models.booking import Booking, BookingStatus
-from app.models.hotel import Hotel
-from app.models.social_proof import HotelSocialProofSettings
+from app.bookings.booking import Booking, BookingStatus
+from app.brand_console.hotel import Hotel
+from app.google_reviews.social_proof_model import HotelSocialProofSettings
 from app.models.review import Review  # type: ignore  # may not exist yet
 
 logger = logging.getLogger(__name__)

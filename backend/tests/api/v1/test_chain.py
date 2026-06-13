@@ -4,9 +4,9 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import engine
-from app.models.chain import Chain
-from app.models.hotel import Hotel
-from app.models.user import User, UserRole
+from app.superadmin.chains.models import Chain
+from app.brand_console.models import Hotel
+from app.guests.models import User, UserRole
 from main import app
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ async def test_chain_dashboard_success_for_brand_admin(seeded_hotel: Hotel):
         hashed_password="PYTEST_NO_AUTH",
         is_active=True
     )
-    from app.api.deps import get_current_active_user
+    from app.core.deps import get_current_active_user
     app.dependency_overrides[get_current_active_user] = lambda: transient_user
     
     # 3. Call the API

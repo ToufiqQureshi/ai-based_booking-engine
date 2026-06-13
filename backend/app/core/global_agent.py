@@ -4,7 +4,7 @@ from datetime import date
 from sqlmodel import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.hotel import Hotel
+from app.brand_console.hotel import Hotel
 from app.core.config import get_settings
 
 SYSTEM_PROMPT = """You are the Staybooker Global Concierge.

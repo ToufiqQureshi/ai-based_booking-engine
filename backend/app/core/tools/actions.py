@@ -1,6 +1,6 @@
 from sqlmodel import select, Session
-from app.models.room import RoomType
-from app.models.promo import PromoCode
+from app.rooms.room import RoomType
+from app.rate_plans.promo import PromoCode
 from app.core.database import engine
 from sqlalchemy.orm import sessionmaker
 import logging

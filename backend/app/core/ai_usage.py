@@ -148,7 +148,7 @@ async def enforce_ai_token_quota(agent_type: str, hotel_id: str, session) -> Non
     """
     try:
         from sqlmodel import select
-        from app.models.subscription import Subscription
+        from app.superadmin.subscriptions.subscription import Subscription
 
         sub = (await session.execute(
             select(Subscription).where(Subscription.hotel_id == hotel_id)
@@ -211,7 +211,7 @@ async def _read_today_tokens_db(session, agent_type: str, hotel_id: str):
     """Return today's recorded tokens from the durable table, or None on error."""
     try:
         from sqlmodel import select
-        from app.models.ai_usage import AIUsageDaily
+        from app.ai_assistant.ai_usage import AIUsageDaily
         today = utcnow().date()
         row = (await session.execute(
             select(AIUsageDaily.total_tokens).where(
@@ -243,7 +243,7 @@ async def persist_ai_usage_db(
         from sqlalchemy import update
         from sqlalchemy.exc import IntegrityError
         from app.core.database import async_session
-        from app.models.ai_usage import AIUsageDaily, AIUsageParticipant
+        from app.ai_assistant.ai_usage import AIUsageDaily, AIUsageParticipant
 
         tokens = extract_total_tokens(result) or 0
         today = utcnow().date()
@@ -324,7 +324,7 @@ async def read_ai_usage_db(hotel_id: str, days: int) -> dict:
     from sqlmodel import select
     from datetime import timedelta
     from app.core.database import async_session
-    from app.models.ai_usage import AIUsageDaily
+    from app.ai_assistant.ai_usage import AIUsageDaily
 
     today = utcnow().date()
     start = today - timedelta(days=days - 1)

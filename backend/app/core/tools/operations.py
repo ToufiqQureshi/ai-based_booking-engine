@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from datetime import date
 from sqlmodel import select, and_
-from app.models.booking import Booking, BookingStatus, Guest
+from app.bookings.booking import Booking, BookingStatus, Guest
 
 async def logic_get_todays_arrivals(session, user_id) -> List[Dict[str, Any]]:
     """

@@ -11,7 +11,7 @@ from agno.models.google import Gemini
 from agno.models.deepseek import DeepSeek
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import engine
-from app.models.hotel import Hotel
+from app.brand_console.models import Hotel
 
 @pytest.mark.asyncio
 async def test_guest_agent_gemini_model_instantiation(seeded_hotel: Hotel):

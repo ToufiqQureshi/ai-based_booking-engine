@@ -9,9 +9,9 @@ Tests for authenticated-route rate limits and pagination guards.
 """
 import inspect
 
-import app.api.v1.users as users_mod
-import app.api.v1.reports as reports_mod
-import app.api.v1.upload as upload_mod
+import app.guests.users as users_mod
+import app.analytics.reports as reports_mod
+import app.system.upload as upload_mod
 
 
 def _src(fn):

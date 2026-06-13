@@ -3,8 +3,8 @@ from typing import List, Dict, Any
 from datetime import date, timedelta
 from collections import defaultdict
 from sqlmodel import select, func, and_
-from app.models.booking import Booking, BookingStatus, BookingSource, Guest
-from app.models.room import RoomType
+from app.bookings.booking import Booking, BookingStatus, BookingSource, Guest
+from app.rooms.room import RoomType
 
 
 def _chart(d: dict) -> str:

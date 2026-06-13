@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import engine
 from app.core.agent import create_agent_executor, logger as agent_logger
-from app.models.user import User
+from app.guests.models import User
 
 
 def test_agent_module_has_logger():

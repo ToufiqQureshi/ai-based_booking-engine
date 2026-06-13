@@ -15,8 +15,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.hotel import Hotel
-from app.models.user import User, UserRole
+from app.brand_console.models import Hotel
+from app.guests.models import User, UserRole
 
 pytestmark = pytest.mark.asyncio
 
@@ -28,7 +28,7 @@ async def manager_client(seeded_hotel: Hotel):
     """MANAGER-role authenticated client for the seeded hotel."""
     from tests.conftest import engine
     from main import app
-    from app.api.deps import get_current_active_user
+    from app.core.deps import get_current_active_user
 
     manager = User(
         id=str(uuid.uuid4()),
@@ -57,7 +57,7 @@ async def staff_client(seeded_hotel: Hotel):
     """STAFF-role authenticated client for the seeded hotel."""
     from tests.conftest import engine
     from main import app
-    from app.api.deps import get_current_active_user
+    from app.core.deps import get_current_active_user
 
     staff = User(
         id=str(uuid.uuid4()),
@@ -203,7 +203,7 @@ class TestDeactivatedEntities:
         """
         from tests.conftest import engine
         from main import app
-        from app.api.deps import get_current_user
+        from app.core.deps import get_current_user
         from httpx import AsyncClient, ASGITransport
 
         inactive_user = User(

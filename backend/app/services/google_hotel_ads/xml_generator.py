@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import List, Optional
-from app.models.hotel import Hotel
+from app.brand_console.hotel import Hotel
 from sqlmodel import Session, select
 
 def generate_hotel_list_xml(hotels: List[Hotel]) -> str:

@@ -29,8 +29,8 @@ from typing import Iterable, Optional
 
 from fastapi import Depends, HTTPException, status
 
-from app.api.deps import CurrentUser
-from app.models.hotel import Hotel
+from app.core.deps import CurrentUser
+from app.brand_console.hotel import Hotel
 
 
 # Default behaviour when a flag isn't set: deny access.
@@ -135,3 +135,4 @@ def require_not_paused():
         return current_user
 
     return _dep
+

@@ -6,7 +6,7 @@ import uuid
 import pytest
 from httpx import AsyncClient
 
-from app.models.hotel import Hotel
+from app.brand_console.models import Hotel
 
 pytestmark = pytest.mark.asyncio
 

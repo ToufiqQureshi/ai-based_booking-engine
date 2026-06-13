@@ -13,9 +13,9 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.hotel import Hotel
-from app.models.booking import Booking, BookingStatus
-from app.models.room import RoomType
+from app.brand_console.models import Hotel
+from app.bookings.models import Booking, BookingStatus
+from app.rooms.models import RoomType
 
 pytestmark = pytest.mark.asyncio
 
@@ -199,7 +199,7 @@ class TestPublicCancellation:
         interfere with the rate-limit bucket used by TestPublicBookingCreate.
         """
         from tests.conftest import engine
-        from app.models.booking import Booking, BookingStatus, BookingSource, Guest
+        from app.bookings.models import Booking, BookingStatus, BookingSource, Guest
 
         guest_email = f"cancel-{uuid.uuid4().hex[:6]}@test.com"
         booking_number = f"BK{uuid.uuid4().hex[:10].upper()}"
