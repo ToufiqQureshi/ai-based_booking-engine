@@ -16,6 +16,8 @@ interface IntegrationSettings {
     widget_background_color: string;
     widget_layout?: string;
     widget_theme?: string;
+    widget_min_nights?: number;
+    widget_advance_purchase_days?: number;
 }
 
 interface WidgetCode {
@@ -76,6 +78,7 @@ export const SearchWidgetTab = ({
         { id: 'minimal', name: 'Minimal Bar', desc: 'Clean underline' },
         { id: 'premium', name: 'Premium Capsule', desc: 'Rounded floating' },
         { id: 'booking', name: 'Booking.com Style', desc: 'Yellow container' },
+        { id: 'far', name: 'Rate Badge', desc: 'Best rate + Book Now' },
     ];
 
     return (
@@ -238,6 +241,37 @@ export const SearchWidgetTab = ({
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* Booking Constraints — operational settings, no premium gate */}
+                        <div className="pt-4 border-t space-y-4">
+                            <Label className="text-sm font-semibold block">Booking Constraints</Label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Minimum Stay (nights)</Label>
+                                    <p className="text-[11px] text-muted-foreground mb-1">Widget enforces this minimum when guest searches</p>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={365}
+                                        value={settings.widget_min_nights ?? 1}
+                                        onChange={(e) => onUpdateSettings({ widget_min_nights: Math.max(1, parseInt(e.target.value) || 1) })}
+                                        className="h-9 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs text-muted-foreground">Advance Purchase (days)</Label>
+                                    <p className="text-[11px] text-muted-foreground mb-1">Earliest check-in = today + this many days</p>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        max={365}
+                                        value={settings.widget_advance_purchase_days ?? 0}
+                                        onChange={(e) => onUpdateSettings({ widget_advance_purchase_days: Math.max(0, parseInt(e.target.value) || 0) })}
+                                        className="h-9 text-sm"
+                                    />
+                                </div>
                             </div>
                         </div>
 

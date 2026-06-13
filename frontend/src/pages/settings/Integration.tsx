@@ -33,6 +33,8 @@ interface IntegrationSettings {
     widget_custom_css?: string;
     widget_custom_js?: string;
     widget_theme?: string;
+    widget_min_nights?: number;
+    widget_advance_purchase_days?: number;
 }
 
 interface WidgetCode {

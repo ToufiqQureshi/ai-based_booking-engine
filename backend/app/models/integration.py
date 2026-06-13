@@ -100,6 +100,11 @@ class IntegrationSettings(SQLModel, table=True):
     widget_custom_css: Optional[str] = Field(default="")
     widget_custom_js: Optional[str] = Field(default="")
 
+    # Booking constraints — enforced in widget
+    widget_min_nights: int = Field(default=1, ge=1, le=365)
+    widget_advance_purchase_days: int = Field(default=0, ge=0, le=365)
+    widget_room_type_filter: Optional[str] = Field(default=None)
+
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -164,6 +169,9 @@ class IntegrationSettingsRead(BaseModel):
     google_ads_status: str = "inactive"
     widget_custom_css: Optional[str] = ""
     widget_custom_js: Optional[str] = ""
+    widget_min_nights: int = 1
+    widget_advance_purchase_days: int = 0
+    widget_room_type_filter: Optional[str] = None
 
 
 class IntegrationSettingsUpdate(BaseModel):
@@ -197,6 +205,9 @@ class IntegrationSettingsUpdate(BaseModel):
     google_ads_status: Optional[str] = None
     widget_custom_css: Optional[str] = None
     widget_custom_js: Optional[str] = None
+    widget_min_nights: Optional[int] = None
+    widget_advance_purchase_days: Optional[int] = None
+    widget_room_type_filter: Optional[str] = None
 
 
 class WidgetCodeResponse(BaseModel):

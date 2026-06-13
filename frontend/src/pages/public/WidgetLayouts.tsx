@@ -25,7 +25,8 @@ export function ModernFloatingLayout(props: any) {
         checkOutDate, setCheckOutDate, roomsCount, setRoomsCount, adults, setAdults,
         children, setChildren, promoCode, setPromoCode, isCalendarOpen, setIsCalendarOpen,
         isGuestOpen, setIsGuestOpen, isMobile, handleSearch,
-        primaryHex, layout, calendarPopoverContent, guestPopoverContent
+        primaryHex, layout, calendarPopoverContent, guestPopoverContent,
+        roomTypes, selectedRoomTypeId, setSelectedRoomTypeId,
     } = props;
 
     if (layout !== 'modern') return null;
@@ -171,6 +172,25 @@ export function ModernFloatingLayout(props: any) {
                         )}
                     </div>
 
+                    {/* Room Type filter — only when hotel has multiple room types */}
+                    {roomTypes && roomTypes.length > 1 && (
+                        <div className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus-within:border-slate-400 transition-colors">
+                            <div className="flex-1">
+                                <label className="text-[11px] font-medium text-slate-500 block">Room type</label>
+                                <select
+                                    className="bg-transparent border-0 font-semibold text-sm focus:outline-none text-slate-900 w-full p-0 cursor-pointer appearance-none"
+                                    value={selectedRoomTypeId}
+                                    onChange={(e) => setSelectedRoomTypeId && setSelectedRoomTypeId(e.target.value)}
+                                >
+                                    <option value="">Any room type</option>
+                                    {roomTypes.map((rt: any) => (
+                                        <option key={rt.id} value={rt.id}>{rt.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Promo */}
                     <div className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus-within:border-slate-400 transition-colors">
                         <span className="text-base font-semibold w-5 text-center shrink-0" style={{ color: primaryHex }}>%</span>
@@ -251,6 +271,25 @@ export function ModernFloatingLayout(props: any) {
                     </PopoverTrigger>
                     {guestPopoverContent}
                 </Popover>
+
+                {/* Room Type filter — only when hotel has multiple room types */}
+                {roomTypes && roomTypes.length > 1 && (
+                    <div className="w-44 flex items-center gap-2 px-5 py-3.5 border-r border-slate-200 focus-within:bg-slate-50 transition-colors">
+                        <div className="min-w-0 flex-1">
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wide block">Room type</label>
+                            <select
+                                className="bg-transparent border-0 font-semibold text-sm p-0 focus:outline-none text-slate-900 w-full cursor-pointer appearance-none"
+                                value={selectedRoomTypeId}
+                                onChange={(e) => setSelectedRoomTypeId && setSelectedRoomTypeId(e.target.value)}
+                            >
+                                <option value="">Any type</option>
+                                {roomTypes.map((rt: any) => (
+                                    <option key={rt.id} value={rt.id}>{rt.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                )}
 
                 {/* Promo */}
                 <div className="w-44 flex items-center gap-2 px-5 py-3.5 border-r border-slate-200 focus-within:bg-slate-50 transition-colors">

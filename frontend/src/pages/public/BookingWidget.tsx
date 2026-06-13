@@ -9,13 +9,14 @@ import {
 import { cn } from '@/lib/utils';
 
 // Import all layout variants from our new consolidated layouts file
-import { 
-    ModernFloatingLayout, 
-    ClassicStackedLayout, 
-    MinimalBarLayout, 
+import {
+    ModernFloatingLayout,
+    ClassicStackedLayout,
+    MinimalBarLayout,
     PremiumCapsuleLayout,
     BookingComLayout
 } from './WidgetLayouts';
+import { FARWidget } from '@/components/public/FARWidget';
 
 // Embedding (hotelier) page ka origin referrer se nikaalte hain taaki
 // postMessage wildcard '*' pe broadcast na ho
@@ -60,7 +61,7 @@ export default function BookingWidget() {
                 setConfig({}); // Fallback to empty object to allow default settings rendering
             });
 
-        // Fetch rooms to calculate live starting price
+        // Fetch rooms to calculate live starting price and extract room types for filter dropdown
         const checkInStr = format(new Date(), 'yyyy-MM-dd');
         const checkOutStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
         fetch(`${apiUrl}/public/hotels/${hotelSlug}/rooms?check_in=${checkInStr}&check_out=${checkOutStr}`)
@@ -76,6 +77,16 @@ export default function BookingWidget() {
                     if (lowest !== Infinity && lowest > 0) {
                         setStartingPrice(lowest);
                     }
+                    // Extract unique room types for the filter dropdown
+                    const seen = new Set<string>();
+                    const types: Array<{ id: string; name: string }> = [];
+                    rooms.forEach(r => {
+                        if (r.id && r.name && !seen.has(r.id)) {
+                            seen.add(r.id);
+                            types.push({ id: r.id, name: r.name });
+                        }
+                    });
+                    setRoomTypes(types);
                 }
             })
             .catch(err => console.error("Failed to fetch rooms for widget price:", err));
@@ -136,6 +147,20 @@ export default function BookingWidget() {
     const [adults, setAdults] = useState(2);
     const [children, setChildren] = useState(0);
     const [promoCode, setPromoCode] = useState('');
+
+    // Room types extracted from rooms fetch — for filter dropdown
+    const [roomTypes, setRoomTypes] = useState<Array<{ id: string; name: string }>>([]);
+    const [selectedRoomTypeId, setSelectedRoomTypeId] = useState<string>('');
+
+    // Apply advance_purchase_days and min_nights from config once loaded
+    useEffect(() => {
+        if (!config) return;
+        const advanceDays = config.advance_purchase_days ?? 0;
+        const minNights = config.min_nights ?? 1;
+        const newCheckIn = addDays(new Date(), advanceDays);
+        setCheckInDate(newCheckIn);
+        setCheckOutDate(addDays(newCheckIn, Math.max(minNights, 1)));
+    }, [config?.advance_purchase_days, config?.min_nights]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calendar UI State
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -212,24 +237,30 @@ export default function BookingWidget() {
     }, [config]);
 
     const handleSearch = () => {
+        const minNights = config?.min_nights ?? 1;
         // Require a valid date range before navigating
         if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
             setIsCalendarOpen(true);
             return;
         }
+        // Enforce minimum stay — bump checkout if guest selected fewer nights
+        const nights = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / 86400000);
+        const effectiveCheckOut = nights < minNights ? addDays(checkInDate, minNights) : checkOutDate;
+
         const targetUrl = `${window.location.origin}/book/${hotelSlug}/rooms`;
 
         const totalGuests = adults + children;
 
         const params = new URLSearchParams();
         if (checkInDate) params.append('check_in', format(checkInDate, 'yyyy-MM-dd'));
-        if (checkOutDate) params.append('check_out', format(checkOutDate, 'yyyy-MM-dd'));
+        params.append('check_out', format(effectiveCheckOut, 'yyyy-MM-dd'));
 
         params.append('guests', totalGuests.toString());
         params.append('adults', adults.toString());
         params.append('children', children.toString());
         params.append('rooms', roomsCount.toString());
 
+        if (selectedRoomTypeId) params.append('room_type_id', selectedRoomTypeId);
         if (promoCode) params.append('promo_code', promoCode);
 
         if (window.parent !== window) {
@@ -388,7 +419,8 @@ export default function BookingWidget() {
         children, setChildren, promoCode, setPromoCode, isCalendarOpen, setIsCalendarOpen,
         isGuestOpen, setIsGuestOpen, isMobile, setIsMobile, handleSearch,
         primaryHex, bgColor, isBgLight, widgetTheme, layout: layoutStyle,
-        widgetRef, calendarPopoverContent, guestPopoverContent
+        widgetRef, calendarPopoverContent, guestPopoverContent,
+        roomTypes, selectedRoomTypeId, setSelectedRoomTypeId,
     };
 
     return (
@@ -519,6 +551,7 @@ export default function BookingWidget() {
             {layoutStyle === 'minimal' && <MinimalBarLayout {...stateBag} />}
             {layoutStyle === 'premium' && <PremiumCapsuleLayout {...stateBag} />}
             {layoutStyle === 'booking' && <BookingComLayout {...stateBag} />}
+            {layoutStyle === 'far' && <FARWidget {...stateBag} />}
         </div>
     );
 }
