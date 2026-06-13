@@ -331,12 +331,12 @@ export default function BookingWidget() {
                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     className="p-0"
                     classNames={{
-                        cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:custom-theme-bg-light [&:has([aria-selected])]:custom-theme-bg-light first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                        day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                        cell: "h-9 w-9 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:custom-theme-bg-light [&:has([aria-selected])]:custom-theme-bg-light first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                        day: "h-9 w-9 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
                         day_selected: "custom-theme-btn font-semibold shadow-sm",
                         day_today: "custom-theme-text font-semibold border border-slate-200 bg-slate-50",
-                        head_cell: "text-slate-400 font-semibold uppercase tracking-wide text-[10px] w-9 sm:w-11 pb-2 text-center",
-                        caption: "flex justify-center py-2.5 px-3 relative items-center custom-theme-btn rounded-xl mb-3",
+                        head_cell: "text-slate-400 font-semibold uppercase tracking-wide text-[10px] w-9 pb-2 text-center",
+                        caption: "flex justify-center py-2 px-3 relative items-center custom-theme-btn rounded-xl mb-3",
                         caption_label: "text-sm font-semibold tracking-wide",
                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
                         months: "flex flex-col md:flex-row space-y-3 md:space-x-4 md:space-y-0"
