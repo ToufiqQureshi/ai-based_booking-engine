@@ -558,3 +558,81 @@ export function PremiumCapsuleLayout(props: any) {
         </>
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 5. BOOKING.COM STYLE LAYOUT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function BookingComLayout(props: any) {
+    const {
+        checkInDate, checkOutDate, roomsCount, adults,
+        children, promoCode, setPromoCode, isCalendarOpen, setIsCalendarOpen,
+        isGuestOpen, setIsGuestOpen, handleSearch,
+        layout, calendarPopoverContent, guestPopoverContent
+    } = props;
+    
+    // Default Booking.com colors
+    const yellowBg = '#febb02';
+    const blueBtn = '#006ce4';
+
+    return (
+        <>
+            {layout === 'booking' && (
+                <div className="w-full max-w-5xl mx-auto flex flex-col sm:flex-row items-center gap-1 p-1 rounded-sm shadow-md"
+                     style={{ backgroundColor: yellowBg }}>
+                    
+                    {/* Dates */}
+                    <div className="flex-[1.5] w-full text-left bg-white rounded-sm h-12 flex items-center px-3 relative border-[3px] border-transparent focus-within:border-[#febb02] focus-within:ring-2 focus-within:ring-[#febb02]">
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <button className="w-full h-full flex items-center gap-3 text-left bg-transparent text-slate-800 cursor-pointer outline-none">
+                                    <CalendarIcon className="w-5 h-5 text-slate-500" />
+                                    <span className="text-sm font-bold truncate">
+                                        {checkInDate ? format(checkInDate, "EEE, MMM d") : "Check-in Date"} 
+                                        &nbsp;—&nbsp; 
+                                        {checkOutDate ? format(checkOutDate, "EEE, MMM d") : "Check-out Date"}
+                                    </span>
+                                </button>
+                            </PopoverTrigger>
+                            {calendarPopoverContent}
+                        </Popover>
+                    </div>
+
+                    {/* Guests */}
+                    <div className="flex-1 w-full text-left bg-white rounded-sm h-12 flex items-center px-3 relative border-[3px] border-transparent focus-within:border-[#febb02] focus-within:ring-2 focus-within:ring-[#febb02]">
+                        <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
+                            <PopoverTrigger asChild>
+                                <button className="w-full h-full flex items-center gap-3 text-left bg-transparent text-slate-800 cursor-pointer outline-none">
+                                    <Users className="w-5 h-5 text-slate-500" />
+                                    <span className="text-sm font-bold truncate">
+                                        {adults} adults · {children} children · {roomsCount} room{roomsCount > 1 ? 's' : ''}
+                                    </span>
+                                </button>
+                            </PopoverTrigger>
+                            {guestPopoverContent}
+                        </Popover>
+                    </div>
+
+                    {/* Promo */}
+                    <div className="flex-1 w-full text-left bg-white rounded-sm h-12 flex items-center px-3 relative border-[3px] border-transparent focus-within:border-[#febb02] focus-within:ring-2 focus-within:ring-[#febb02]">
+                        <input
+                            className="bg-transparent border-0 font-bold text-sm focus:outline-none placeholder:text-slate-500 text-slate-800 w-full"
+                            placeholder="Promo Code (Optional)"
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Search */}
+                    <button
+                        className="h-12 px-8 rounded-sm text-white font-bold text-lg flex items-center justify-center transition-colors shrink-0 sm:w-auto w-full outline-none hover:bg-[#0057b8]"
+                        style={{ backgroundColor: blueBtn }}
+                        onClick={handleSearch}
+                    >
+                        Search
+                    </button>
+                </div>
+            )}
+        </>
+    );
+}

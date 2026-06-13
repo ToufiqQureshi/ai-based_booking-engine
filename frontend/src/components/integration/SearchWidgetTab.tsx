@@ -75,6 +75,7 @@ export const SearchWidgetTab = ({
         { id: 'classic', name: 'Classic Stacked', desc: 'Vertical form' },
         { id: 'minimal', name: 'Minimal Bar', desc: 'Clean underline' },
         { id: 'premium', name: 'Premium Capsule', desc: 'Rounded floating' },
+        { id: 'booking', name: 'Booking.com Style', desc: 'Yellow container' },
     ];
 
     return (

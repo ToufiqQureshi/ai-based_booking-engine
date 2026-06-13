@@ -13,7 +13,8 @@ import {
     ModernFloatingLayout, 
     ClassicStackedLayout, 
     MinimalBarLayout, 
-    PremiumCapsuleLayout 
+    PremiumCapsuleLayout,
+    BookingComLayout
 } from './WidgetLayouts';
 
 // Embedding (hotelier) page ka origin referrer se nikaalte hain taaki
@@ -517,6 +518,7 @@ export default function BookingWidget() {
             {layoutStyle === 'classic' && <ClassicStackedLayout {...stateBag} />}
             {layoutStyle === 'minimal' && <MinimalBarLayout {...stateBag} />}
             {layoutStyle === 'premium' && <PremiumCapsuleLayout {...stateBag} />}
+            {layoutStyle === 'booking' && <BookingComLayout {...stateBag} />}
         </div>
     );
 }
