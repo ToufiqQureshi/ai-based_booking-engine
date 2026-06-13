@@ -31,3 +31,10 @@ createRoot(document.getElementById("root")!).render(
   </QueryClientProvider>
 );
 
+// Automatically reload the page if a dynamically imported module fails to load.
+// This typically happens when a new version of the app is deployed while a user has the app open,
+// causing their browser to request outdated, non-existent JS chunks.
+window.addEventListener('vite:preloadError', (event) => {
+  console.warn('Vite preload error (chunk load failed). Reloading page...', event);
+  window.location.reload();
+});
