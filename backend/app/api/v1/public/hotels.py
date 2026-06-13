@@ -210,7 +210,10 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         "widget_custom_css": getattr(settings, 'widget_custom_css', '') if settings else '',
         "widget_custom_js": getattr(settings, 'widget_custom_js', '') if settings else '',
         "allowed_domains": allowed_domains,
-        "widget_enabled": widget_enabled
+        "widget_enabled": widget_enabled,
+        "min_nights": getattr(settings, 'widget_min_nights', 1) if settings else 1,
+        "advance_purchase_days": getattr(settings, 'widget_advance_purchase_days', 0) if settings else 0,
+        "room_type_filter": getattr(settings, 'widget_room_type_filter', None) if settings else None,
     }
 
     return res_dict

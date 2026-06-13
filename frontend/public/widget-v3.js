@@ -112,7 +112,8 @@
 
         // Pehle paint ke liye layout-wise approximate height; iframe baad mein
         // apni asli content height (WIDGET_HEIGHT) bhejta rehta hai
-        var barHeight = widgetLayout === 'classic' ? 360 : (widgetLayout === 'minimal' ? 85 : 110);
+        // FAR = compact rate badge, no calendar — stays 72 px always
+        var barHeight = widgetLayout === 'classic' ? 360 : widgetLayout === 'minimal' ? 85 : widgetLayout === 'far' ? 72 : 110;
         var provisionalOpenHeight = widgetLayout === 'classic' ? 750 : 550;
 
         // Sirf apne container ko style karte hain. Host page ke parent elements
