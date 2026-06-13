@@ -114,11 +114,19 @@ class Settings(BaseSettings):
     # rate limits, locks, AI usage counters — for a few seconds, not minutes.
     REDIS_RETRY_COOLDOWN_SECONDS: int = 20
 
-    # Number of trusted reverse proxies in front of the app (e.g. Cloudflare +
-    # Railway = 2). Used to pick the real client IP from X-Forwarded-For instead
-    # of trusting the spoofable left-most hop. Default 0 keeps the legacy
-    # behavior; set this in production to make IP rate limits non-spoofable.
-    TRUSTED_PROXY_COUNT: int = 0
+    # Number of trusted reverse proxies in front of the app. Used to pick the
+    # real client IP from X-Forwarded-For instead of trusting the spoofable
+    # left-most hop, so IP rate limits cannot be defeated by rotating a fake
+    # X-Forwarded-For header.
+    #
+    # How to size this for YOUR deployment:
+    #   * Railway only (no extra proxy):                 1  (Railway's edge)
+    #   * Cloudflare proxy → Railway (orange-cloud DNS): 2
+    # To verify: hit an endpoint and log request.headers["X-Forwarded-For"];
+    # the number of comma-separated IPs == the number of proxies in front.
+    # Default is 1 (Railway always adds one hop) — strictly safer than the old
+    # spoofable default of 0. Override via the TRUSTED_PROXY_COUNT env var.
+    TRUSTED_PROXY_COUNT: int = 1
 
     # Razorpay Payment Gateway
     RAZORPAY_KEY_ID: Optional[str] = None
