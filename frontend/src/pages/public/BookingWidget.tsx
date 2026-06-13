@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { format, addDays, addMonths, startOfMonth } from 'date-fns';
-import { Calendar as CalendarIcon, Users, ArrowRight, Minus, Plus, Search, X, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Minus, Plus, X } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import {
     PopoverContent,
@@ -269,7 +268,7 @@ export default function BookingWidget() {
             {/* Header */}
             <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                    <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
+                    <p className="text-sm font-semibold text-slate-800">Select dates</p>
                     <p className="text-[11px] text-slate-400 mt-0.5">Tap check-in, then check-out</p>
                 </div>
                 <button onClick={() => setIsCalendarOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
@@ -290,11 +289,11 @@ export default function BookingWidget() {
                     classNames={{
                         cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:custom-theme-bg-light [&:has([aria-selected])]:custom-theme-bg-light first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
                         day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
-                        day_selected: "custom-theme-btn font-bold shadow-md",
-                        day_today: "custom-theme-text font-bold border border-slate-200 bg-slate-50",
-                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-9 sm:w-11 pb-2 text-center",
-                        caption: "flex justify-center py-2.5 px-3 relative items-center custom-theme-btn rounded-xl mb-3 shadow-sm",
-                        caption_label: "text-xs font-extrabold tracking-wide uppercase",
+                        day_selected: "custom-theme-btn font-semibold shadow-sm",
+                        day_today: "custom-theme-text font-semibold border border-slate-200 bg-slate-50",
+                        head_cell: "text-slate-400 font-semibold uppercase tracking-wide text-[10px] w-9 sm:w-11 pb-2 text-center",
+                        caption: "flex justify-center py-2.5 px-3 relative items-center custom-theme-btn rounded-xl mb-3",
+                        caption_label: "text-sm font-semibold tracking-wide",
                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
                         months: "flex flex-col md:flex-row space-y-3 md:space-x-4 md:space-y-0"
                     }}
@@ -313,14 +312,14 @@ export default function BookingWidget() {
 
                             return (
                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                    <span className="text-xs font-medium leading-none">{date.getDate()}</span>
                                     {!isPast && (
                                         <span className={cn(
-                                            "text-[9px] font-extrabold leading-none mt-1",
+                                            "text-[9px] font-semibold leading-none mt-1",
                                             isSoldOut
-                                                ? "text-red-400 font-bold"
+                                                ? "text-red-400"
                                                 : price !== null
-                                                    ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold"
+                                                    ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700"
                                                     : "text-slate-300"
                                         )}>
                                             {isSoldOut ? "Sold" : price !== null ? formatPrice(price) : ''}
@@ -331,8 +330,8 @@ export default function BookingWidget() {
                         }
                     }}
                 />
-                <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                    <span className="text-red-400 font-extrabold">Sold</span> = No rooms &nbsp;·&nbsp; Prices shown are starting rates
+                <div className="border-t border-slate-100 pt-3 mt-2 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+                    <span className="text-red-400 font-semibold">Sold</span> = No rooms &nbsp;·&nbsp; Prices shown are starting rates
                 </div>
             </div>
         </PopoverContent>
@@ -340,95 +339,38 @@ export default function BookingWidget() {
 
 
     const guestPopoverContent = (
-        <PopoverContent className="z-[2147483647] w-80 p-6 bg-white text-slate-800 border-slate-100 shadow-2xl rounded-3xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="bottom" avoidCollisions={false} collisionPadding={0} sideOffset={10}>
-            <div className="space-y-6">
-                {/* Rooms Counter */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="font-bold text-sm text-slate-900 text-left">Rooms</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider text-left">Total Rooms</p>
+        <PopoverContent className="z-[2147483647] w-80 p-5 bg-white text-slate-800 border border-slate-200 shadow-xl rounded-2xl" style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }} align="center" side="bottom" avoidCollisions={false} collisionPadding={0} sideOffset={10}>
+            <div className="space-y-1">
+                {([['Rooms', roomsCount, setRoomsCount, 1, 5, 'Total rooms'],
+                   ['Adults', adults, setAdults, 1, 10, 'Ages 13+'],
+                   ['Children', children, setChildren, 0, 6, 'Ages 0–12']] as const).map(([label, val, setter, min, max, hint], idx) => (
+                    <div key={label}>
+                        {idx > 0 && <div className="h-px bg-slate-100" />}
+                        <div className="flex items-center justify-between py-3">
+                            <div className="text-left">
+                                <p className="font-medium text-sm text-slate-800">{label}</p>
+                                <p className="text-[11px] text-slate-400">{hint}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    className="h-9 w-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:border-slate-400 transition-colors disabled:opacity-40 disabled:hover:border-slate-200"
+                                    onClick={() => (setter as any)(Math.max(min, val - 1))}
+                                    disabled={val <= min}
+                                >
+                                    <Minus className="h-3.5 w-3.5" />
+                                </button>
+                                <span className="w-5 text-center text-sm font-semibold text-slate-900">{val}</span>
+                                <button
+                                    className="h-9 w-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:border-slate-400 transition-colors disabled:opacity-40 disabled:hover:border-slate-200"
+                                    onClick={() => (setter as any)(Math.min(max, val + 1))}
+                                    disabled={val >= max}
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-4 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
-                            onClick={() => setRoomsCount(Math.max(1, roomsCount - 1))}
-                            disabled={roomsCount <= 1}
-                        >
-                            <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-4 text-center text-sm font-black text-slate-900">{roomsCount}</span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
-                            onClick={() => setRoomsCount(Math.min(5, roomsCount + 1))}
-                        >
-                            <Plus className="h-3 w-3" />
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="h-px bg-slate-50" />
-
-                {/* Adults Counter */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="font-bold text-sm text-slate-900 text-left">Adults</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider text-left">Ages 13+</p>
-                    </div>
-                    <div className="flex items-center gap-4 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
-                            onClick={() => setAdults(Math.max(1, adults - 1))}
-                            disabled={adults <= 1}
-                        >
-                            <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-4 text-center text-sm font-black text-slate-900">{adults}</span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
-                            onClick={() => setAdults(Math.min(10, adults + 1))}
-                        >
-                            <Plus className="h-3 w-3" />
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="h-px bg-slate-50" />
-
-                {/* Children Counter */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="font-bold text-sm text-slate-900 text-left">Children</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider text-left">Ages 0-12</p>
-                    </div>
-                    <div className="flex items-center gap-4 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
-                            onClick={() => setChildren(Math.max(0, children - 1))}
-                            disabled={children <= 0}
-                        >
-                            <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-4 text-center text-sm font-black text-slate-900">{children}</span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all"
-                            onClick={() => setChildren(Math.min(6, children + 1))}
-                        >
-                            <Plus className="h-3 w-3" />
-                        </Button>
-                    </div>
-                </div>
+                ))}
             </div>
         </PopoverContent>
     );

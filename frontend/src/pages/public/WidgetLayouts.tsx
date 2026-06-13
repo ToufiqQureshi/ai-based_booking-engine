@@ -8,61 +8,68 @@ import { Button } from '@/components/ui/button';
 // 1. MODERN FLOATING CARD LAYOUT (DEFAULT)
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Small currency helper — INR ko Indian grouping, baaki ko locale number
+function fmtFrom(price: number, currency?: string) {
+    if (!price || price <= 0) return null;
+    if (!currency || currency === 'INR') return `₹${Math.round(price).toLocaleString('en-IN')}`;
+    try {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(price);
+    } catch {
+        return `${Math.round(price)}`;
+    }
+}
+
 export function ModernFloatingLayout(props: any) {
     const {
         config, startingPrice, checkInDate, setCheckInDate,
         checkOutDate, setCheckOutDate, roomsCount, setRoomsCount, adults, setAdults,
         children, setChildren, promoCode, setPromoCode, isCalendarOpen, setIsCalendarOpen,
         isGuestOpen, setIsGuestOpen, isMobile, handleSearch,
-        primaryHex, bgColor, isBgLight, widgetTheme, layout,
-        calendarPopoverContent, guestPopoverContent
+        primaryHex, layout, calendarPopoverContent, guestPopoverContent
     } = props;
-    return (
-        <>
-            {layout === 'modern' && isMobile && (
-                /* ── MOBILE: vertical stack with INLINE calendar ── */
-                <div className="bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-4 w-full flex flex-col gap-3 border border-white/60"
-                     style={{ backgroundColor: bgColor === '#ffffff' || bgColor === '#fff' ? 'rgba(255,255,255,0.95)' : bgColor }}>
 
-                    {/* Date trigger */}
+    if (layout !== 'modern') return null;
+
+    const fromPrice = fmtFrom(startingPrice, config?.currency);
+    const guestSummary = `${adults + children} guest${adults + children !== 1 ? 's' : ''} · ${roomsCount} room${roomsCount !== 1 ? 's' : ''}`;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MOBILE — clean stacked fields with inline calendar
+    // ─────────────────────────────────────────────────────────────────────────
+    if (isMobile) {
+        return (
+            <div className="w-full rounded-2xl bg-white border border-slate-200 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18)] overflow-hidden">
+                <div className="p-3 flex flex-col gap-2.5">
+                    {/* Dates */}
                     <button
-                        className="w-full flex flex-row items-center gap-3 p-3.5 rounded-2xl border-2 transition-all text-left cursor-pointer hover:bg-slate-50/50"
-                        style={{ borderColor: isCalendarOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
+                        className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border bg-white text-left transition-colors hover:bg-slate-50"
+                        style={{ borderColor: isCalendarOpen ? primaryHex : '#e2e8f0' }}
                         onClick={() => { setIsCalendarOpen(!isCalendarOpen); setIsGuestOpen(false); }}
                     >
-                        <div className="flex-1 flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                                 style={{ backgroundColor: `${primaryHex}18`, color: primaryHex }}>
-                                <CalendarIcon className="w-4 h-4" />
+                        <CalendarIcon className="w-5 h-5 shrink-0" style={{ color: primaryHex }} />
+                        <div className="flex-1 flex items-center min-w-0">
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[11px] font-medium text-slate-500">Check-in</div>
+                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                    {checkInDate ? format(checkInDate, "EEE, dd MMM") : "Select date"}
+                                </div>
                             </div>
-                            <div className="min-w-0">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
-                                <span className="text-xs font-extrabold text-slate-800 block truncate">
-                                    {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select date"}
-                                </span>
-                            </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
-                        <div className="flex-1 flex items-center gap-2.5 pl-2 border-l border-slate-100 min-w-0">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                                 style={{ backgroundColor: `${primaryHex}18`, color: primaryHex }}>
-                                <CalendarIcon className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
-                                <span className="text-xs font-extrabold text-slate-800 block truncate">
-                                    {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select date"}
-                                </span>
+                            <ArrowRight className="w-4 h-4 text-slate-300 mx-2 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[11px] font-medium text-slate-500">Check-out</div>
+                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                    {checkOutDate ? format(checkOutDate, "EEE, dd MMM") : "Select date"}
+                                </div>
                             </div>
                         </div>
                     </button>
 
-                    {/* Inline calendar — same theme as public booking page */}
+                    {/* Inline calendar */}
                     {isCalendarOpen && (
-                        <div className="rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] calendar-container">
-                            <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
+                        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden calendar-container">
+                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
+                                    <p className="text-sm font-semibold text-slate-800">Select dates</p>
                                     <p className="text-[11px] text-slate-400 mt-0.5">Tap check-in, then check-out</p>
                                 </div>
                                 <button onClick={() => setIsCalendarOpen(false)}
@@ -84,11 +91,11 @@ export function ModernFloatingLayout(props: any) {
                                     classNames={{
                                         cell: "h-11 w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:custom-theme-bg-light [&:has([aria-selected])]:custom-theme-bg-light first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
                                         day: "h-11 w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
-                                        day_selected: "custom-theme-btn font-bold shadow-md",
-                                        day_today: "custom-theme-text font-bold border border-slate-200 bg-slate-50",
-                                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-11 pb-2 text-center",
-                                        caption: "flex justify-center py-2.5 px-3 relative items-center custom-theme-btn rounded-xl mb-3 shadow-sm",
-                                        caption_label: "text-xs font-extrabold tracking-wide uppercase",
+                                        day_selected: "custom-theme-btn font-semibold shadow-sm",
+                                        day_today: "custom-theme-text font-semibold border border-slate-200 bg-slate-50",
+                                        head_cell: "text-slate-400 font-semibold uppercase tracking-wide text-[10px] w-11 pb-2 text-center",
+                                        caption: "flex justify-center py-2.5 px-3 relative items-center custom-theme-btn rounded-xl mb-3",
+                                        caption_label: "text-sm font-semibold tracking-wide",
                                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
                                         months: "w-full"
                                     }}
@@ -99,13 +106,13 @@ export function ModernFloatingLayout(props: any) {
                                         DayContent: ({ date }: any) => {
                                             const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
                                             const isPast = date < todayObj;
-                                            const showPrice = !isPast && startingPrice > 0;
+                                            const price = fmtFrom(startingPrice, config?.currency);
                                             return (
                                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                                    {showPrice && (
-                                                        <span className="text-[9px] font-extrabold leading-none mt-1 text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold">
-                                                            ₹{startingPrice}
+                                                    <span className="text-xs font-medium leading-none">{date.getDate()}</span>
+                                                    {!isPast && price && (
+                                                        <span className="text-[9px] font-semibold leading-none mt-1 text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700">
+                                                            {price}
                                                         </span>
                                                     )}
                                                 </div>
@@ -113,56 +120,49 @@ export function ModernFloatingLayout(props: any) {
                                         }
                                     }}
                                 />
-                                <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                                    Starting (&ldquo;from&rdquo;) rates &middot; final price &amp; availability confirmed at the next step
+                                <div className="border-t border-slate-100 pt-3 mt-2 text-center text-[11px] text-slate-400">
+                                    Starting rates &middot; final price confirmed at the next step
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Guests inline */}
+                    {/* Guests */}
                     <div className="w-full">
                         <button
-                            className="w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all text-left cursor-pointer hover:bg-slate-50/50"
-                            style={{ borderColor: isGuestOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
+                            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border bg-white text-left transition-colors hover:bg-slate-50"
+                            style={{ borderColor: isGuestOpen ? primaryHex : '#e2e8f0' }}
                             onClick={() => { setIsGuestOpen(!isGuestOpen); setIsCalendarOpen(false); }}
                         >
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                                 style={{ backgroundColor: `${primaryHex}18`, color: primaryHex }}>
-                                <Users className="w-4 h-4" />
+                            <Users className="w-5 h-5 shrink-0" style={{ color: primaryHex }} />
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[11px] font-medium text-slate-500">Guests &amp; rooms</div>
+                                <div className="text-sm font-semibold text-slate-900">{guestSummary}</div>
                             </div>
-                            <div>
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
-                                <span className="text-xs font-extrabold text-slate-800 block">
-                                    {adults + children} Guest{adults + children !== 1 ? 's' : ''} · {roomsCount} Room{roomsCount !== 1 ? 's' : ''}
-                                </span>
-                            </div>
-                            <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0"
+                            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0"
                                          style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                         </button>
                         {isGuestOpen && (
                             <div className="mt-2 rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-                                {([['Rooms', roomsCount, setRoomsCount, 1, 5],
-                                   ['Adults', adults, setAdults, 1, 10],
-                                   ['Children', children, setChildren, 0, 6]] as const).map(([label, val, setter, min, max]) => (
+                                {([['Rooms', roomsCount, setRoomsCount, 1, 5, 'Total rooms'],
+                                   ['Adults', adults, setAdults, 1, 10, 'Ages 13+'],
+                                   ['Children', children, setChildren, 0, 6, 'Ages 0–12']] as const).map(([label, val, setter, min, max, hint]) => (
                                     <div key={label as string} className="flex items-center justify-between">
                                         <div>
-                                            <p className="font-bold text-sm text-slate-900">{label as string}</p>
-                                            <p className="text-[10px] text-slate-400">
-                                                {label === 'Rooms' ? 'Total rooms' : label === 'Adults' ? 'Ages 13+' : 'Ages 0–12'}
-                                            </p>
+                                            <p className="font-medium text-sm text-slate-800">{label as string}</p>
+                                            <p className="text-[11px] text-slate-400">{hint as string}</p>
                                         </div>
-                                        <div className="flex items-center gap-3 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                                            <button className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white transition-all disabled:opacity-40"
+                                        <div className="flex items-center gap-3">
+                                            <button className="h-9 w-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:border-slate-400 transition-colors disabled:opacity-40 disabled:hover:border-slate-200"
                                                     onClick={() => (setter as any)(Math.max(min as number, (val as number) - 1))}
                                                     disabled={(val as number) <= (min as number)}>
-                                                <Minus className="h-3 w-3 text-slate-700" />
+                                                <Minus className="h-3.5 w-3.5" />
                                             </button>
-                                            <span className="w-5 text-center text-sm font-black text-slate-900">{val as number}</span>
-                                            <button className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-white transition-all disabled:opacity-40"
+                                            <span className="w-5 text-center text-sm font-semibold text-slate-900">{val as number}</span>
+                                            <button className="h-9 w-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:border-slate-400 transition-colors disabled:opacity-40 disabled:hover:border-slate-200"
                                                     onClick={() => (setter as any)(Math.min(max as number, (val as number) + 1))}
                                                     disabled={(val as number) >= (max as number)}>
-                                                <Plus className="h-3 w-3 text-slate-700" />
+                                                <Plus className="h-3.5 w-3.5" />
                                             </button>
                                         </div>
                                     </div>
@@ -171,219 +171,23 @@ export function ModernFloatingLayout(props: any) {
                         )}
                     </div>
 
-                    {/* Promo Code inline */}
-                    <div className="w-full flex items-center p-3.5 rounded-2xl border-2 transition-all bg-white" style={{ borderColor: '#f1f5f9' }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${primaryHex}18`, color: primaryHex }}>
-                            <span className="font-bold">%</span>
-                        </div>
-                        <div className="flex-1 ml-3">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Promo Code</span>
+                    {/* Promo */}
+                    <div className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus-within:border-slate-400 transition-colors">
+                        <span className="text-base font-semibold w-5 text-center shrink-0" style={{ color: primaryHex }}>%</span>
+                        <div className="flex-1">
+                            <label className="text-[11px] font-medium text-slate-500 block">Promo code</label>
                             <input
-                                className="bg-transparent border-0 font-extrabold text-xs focus:outline-none placeholder:text-slate-300 text-slate-800 w-full p-0 mt-0.5"
-                                placeholder="Enter optional code"
-                                value={promoCode}
-                                onChange={(e) => setPromoCode(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Search button */}
-                    <button
-                        className="w-full h-[60px] mt-1 rounded-2xl text-white font-black text-[15px] tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
-                        style={{ backgroundImage: `linear-gradient(135deg, ${primaryHex}, ${primaryHex}dd)` }}
-                        onClick={handleSearch}
-                    >
-                        <Search className="w-5 h-5" />
-                        Search Available Rooms
-                    </button>
-                </div>
-            )}
-
-            {layout === 'modern' && !isMobile && (
-                /* ── DESKTOP: inline accordion — no Popover needed ── */
-                <div className="bg-white/90 backdrop-blur-2xl rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] p-4 w-full max-w-6xl flex flex-col gap-3 border border-white/60"
-                     style={{ backgroundColor: bgColor === '#ffffff' || bgColor === '#fff' ? 'rgba(255,255,255,0.92)' : bgColor }}>
-
-                    {/* Top row: date + guests + promo + search */}
-                    <div className="flex flex-row items-center gap-3">
-                        {/* Date trigger */}
-                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                            <PopoverTrigger asChild>
-                                <button
-                                    className="flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
-                                    style={{ borderColor: isCalendarOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
-                                >
-                                    <div className="flex-1 flex items-center gap-3 min-w-0">
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                             style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                            <CalendarIcon className="w-5 h-5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
-                                            <span className="text-sm font-extrabold text-slate-800 block">
-                                                {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select Date"}
-                                            </span>
-                                            <span className="text-xs text-slate-500">{checkInDate ? format(checkInDate, "EEEE") : "Add date"}</span>
-                                        </div>
-                                    </div>
-                                    <ArrowRight className="w-5 h-5 text-slate-300 shrink-0" />
-                                    <div className="flex-1 flex items-center gap-3 pl-3 border-l border-slate-100 min-w-0">
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                             style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                            <CalendarIcon className="w-5 h-5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
-                                            <span className="text-sm font-extrabold text-slate-800 block">
-                                                {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select Date"}
-                                            </span>
-                                            <span className="text-xs text-slate-500">{checkOutDate ? format(checkOutDate, "EEEE") : "Add date"}</span>
-                                        </div>
-                                    </div>
-                                </button>
-                            </PopoverTrigger>
-                            {calendarPopoverContent}
-                        </Popover>
-
-                        {/* Guests trigger */}
-                        <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
-                            <PopoverTrigger asChild>
-                                <button
-                                    className="flex-1 flex items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
-                                    style={{ borderColor: isGuestOpen ? primaryHex : '#f1f5f9', backgroundColor: '#fff' }}
-                                >
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                         style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                        <Users className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
-                                        <span className="text-sm font-extrabold text-slate-800 block">
-                                            {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
-                                        </span>
-                                        <span className="text-xs text-slate-500">{roomsCount} Room{roomsCount !== 1 ? 's' : ''}, {adults} Adult{adults !== 1 ? 's' : ''}</span>
-                                    </div>
-                                    <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0"
-                                                 style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                                </button>
-                            </PopoverTrigger>
-                            {guestPopoverContent}
-                        </Popover>
-
-                        {/* Promo */}
-                        <div className="w-40 flex flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
-                            <input
-                                className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none placeholder:text-slate-300 text-slate-800 w-full"
+                                className="bg-transparent border-0 font-semibold text-sm focus:outline-none placeholder:text-slate-300 placeholder:font-normal text-slate-900 w-full p-0"
                                 placeholder="Optional"
                                 value={promoCode}
                                 onChange={(e) => setPromoCode(e.target.value)}
                             />
                         </div>
-
-                        {/* Search button */}
-                        <button
-                            className="h-[76px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all shrink-0"
-                            style={{ backgroundImage: `linear-gradient(135deg, ${primaryHex}, ${primaryHex}dd)` }}
-                            onClick={handleSearch}
-                        >
-                            <Search className="w-5 h-5" />
-                            Search
-                        </button>
-                    </div>
-
-
-                </div>
-            )}
-
-
-            {layout === 'floating' && !isMobile && (
-                <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-4 w-full max-w-6xl flex flex-row items-center gap-4 border border-white/80 ring-1 ring-slate-100"
-                     style={{ backgroundColor: bgColor }}>
-
-                    {/* Date Group */}
-                    <div className="flex-[2]">
-                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                            <PopoverTrigger asChild>
-                                <button className="w-full flex flex-row items-center gap-3 p-4 rounded-2xl border border-slate-200 custom-theme-border hover:shadow-md transition-all text-left cursor-pointer"
-                                        style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
-                                    <div className="flex-1 flex items-center gap-3 min-w-0">
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                             style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                            <CalendarIcon className="w-5 h-5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
-                                            <span className="text-sm font-extrabold text-slate-800 block">
-                                                {checkInDate ? format(checkInDate, "dd MMM yyyy") : "Select Date"}
-                                            </span>
-                                            <span className="text-xs text-slate-500">
-                                                {checkInDate ? format(checkInDate, "EEEE") : "Day"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <ArrowRight className="w-5 h-5 text-slate-300" />
-                                    <div className="flex-1 flex items-center gap-3 pl-3 border-l border-slate-100 min-w-0">
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                             style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                            <CalendarIcon className="w-5 h-5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
-                                            <span className="text-sm font-extrabold text-slate-800 block">
-                                                {checkOutDate ? format(checkOutDate, "dd MMM yyyy") : "Select Date"}
-                                            </span>
-                                            <span className="text-xs text-slate-500">
-                                                {checkOutDate ? format(checkOutDate, "EEEE") : "Day"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </button>
-                            </PopoverTrigger>
-                            {calendarPopoverContent}
-                        </Popover>
-                    </div>
-
-                    {/* Guests */}
-                    <div className="flex-1">
-                        <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
-                            <PopoverTrigger asChild>
-                                <button className="w-full flex items-center gap-3 p-4 rounded-2xl border border-slate-200 custom-theme-border hover:shadow-md transition-all text-left cursor-pointer"
-                                        style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                         style={{ backgroundColor: `${primaryHex}15`, color: primaryHex }}>
-                                        <Users className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
-                                        <span className="text-sm font-extrabold text-slate-800 block">
-                                            {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
-                                        </span>
-                                        <span className="text-xs text-slate-500">
-                                            {roomsCount} Room{roomsCount !== 1 ? 's' : ''}, {adults} Adult{adults !== 1 ? 's' : ''}
-                                        </span>
-                                    </div>
-                                </button>
-                            </PopoverTrigger>
-                            {guestPopoverContent}
-                        </Popover>
-                    </div>
-
-                    {/* Promo */}
-                    <div className="w-44 flex flex-col justify-center p-4 rounded-2xl border border-slate-200"
-                         style={{ backgroundColor: bgColor === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
-                        <input
-                            className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none placeholder:text-slate-400 text-slate-800 w-full"
-                            placeholder="Optional code"
-                            value={promoCode}
-                            onChange={(e) => setPromoCode(e.target.value)}
-                        />
                     </div>
 
                     {/* Search */}
                     <button
-                        className="h-16 px-8 rounded-2xl text-white font-extrabold text-base flex items-center justify-center gap-2 shadow-xl hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+                        className="w-full h-12 mt-0.5 rounded-xl text-white font-semibold text-[15px] flex items-center justify-center gap-2 transition-[filter,transform] hover:brightness-105 active:scale-[0.99]"
                         style={{ backgroundColor: primaryHex }}
                         onClick={handleSearch}
                     >
@@ -391,9 +195,95 @@ export function ModernFloatingLayout(props: any) {
                         Search
                     </button>
                 </div>
-            )}
+            </div>
+        );
+    }
 
-        </>
+    // ─────────────────────────────────────────────────────────────────────────
+    // DESKTOP — booking.com-style segmented bar
+    // ─────────────────────────────────────────────────────────────────────────
+    return (
+        <div className="w-full max-w-5xl mx-auto">
+            <div className="flex items-stretch bg-white rounded-2xl border border-slate-200 shadow-[0_8px_30px_-10px_rgba(15,23,42,0.18)] overflow-hidden">
+                {/* Dates */}
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <PopoverTrigger asChild>
+                        <button
+                            className="flex-[1.7] flex items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-slate-50 border-r border-slate-200"
+                            style={{ boxShadow: isCalendarOpen ? `inset 0 -2.5px 0 ${primaryHex}` : 'none' }}
+                        >
+                            <CalendarIcon className="w-5 h-5 shrink-0" style={{ color: primaryHex }} />
+                            <div className="flex-1 flex items-center min-w-0">
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Check-in</div>
+                                    <div className="text-sm font-semibold text-slate-900 truncate">
+                                        {checkInDate ? format(checkInDate, "EEE, dd MMM") : "Add date"}
+                                    </div>
+                                </div>
+                                <ArrowRight className="w-4 h-4 text-slate-300 mx-3 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Check-out</div>
+                                    <div className="text-sm font-semibold text-slate-900 truncate">
+                                        {checkOutDate ? format(checkOutDate, "EEE, dd MMM") : "Add date"}
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    </PopoverTrigger>
+                    {calendarPopoverContent}
+                </Popover>
+
+                {/* Guests */}
+                <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
+                    <PopoverTrigger asChild>
+                        <button
+                            className="flex-1 flex items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-slate-50 border-r border-slate-200"
+                            style={{ boxShadow: isGuestOpen ? `inset 0 -2.5px 0 ${primaryHex}` : 'none' }}
+                        >
+                            <Users className="w-5 h-5 shrink-0" style={{ color: primaryHex }} />
+                            <div className="min-w-0">
+                                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Guests &amp; rooms</div>
+                                <div className="text-sm font-semibold text-slate-900 truncate">{guestSummary}</div>
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0"
+                                         style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                        </button>
+                    </PopoverTrigger>
+                    {guestPopoverContent}
+                </Popover>
+
+                {/* Promo */}
+                <div className="w-44 flex items-center gap-2 px-5 py-3.5 border-r border-slate-200 focus-within:bg-slate-50 transition-colors">
+                    <div className="min-w-0 flex-1">
+                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wide block">Promo code</label>
+                        <input
+                            className="bg-transparent border-0 font-semibold text-sm p-0 focus:outline-none placeholder:text-slate-300 placeholder:font-normal text-slate-900 w-full"
+                            placeholder="Optional"
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* Search */}
+                <button
+                    className="px-9 flex items-center justify-center gap-2 text-white font-semibold text-[15px] transition-[filter] hover:brightness-105 active:brightness-95 shrink-0"
+                    style={{ backgroundColor: primaryHex }}
+                    onClick={handleSearch}
+                >
+                    <Search className="w-5 h-5" />
+                    Search
+                </button>
+            </div>
+
+            {fromPrice && (
+                <div className="mt-2 text-center sm:text-left px-1">
+                    <span className="text-xs text-slate-500">
+                        Rooms from <span className="font-semibold text-slate-700">{fromPrice}</span> / night · final price confirmed at checkout
+                    </span>
+                </div>
+            )}
+        </div>
     );
 }
 
