@@ -183,14 +183,26 @@ export default function BookingWidget() {
     // hote hain isliye unka bottom alag se max() mein lete hain.
     const postHeight = () => {
         if (window.parent === window) return;
-        let h = document.body.scrollHeight;
+        
+        const mainContainer = document.getElementById('widget-main-container');
+        const baseHeight = mainContainer ? mainContainer.getBoundingClientRect().height : document.body.scrollHeight;
+        
+        let overlayHeight = baseHeight;
         document.querySelectorAll('[data-radix-popper-content-wrapper]').forEach((el) => {
-            h = Math.max(h, el.getBoundingClientRect().bottom + 16);
+            overlayHeight = Math.max(overlayHeight, el.getBoundingClientRect().bottom + 16);
         });
-        h = Math.ceil(h);
-        if (Math.abs(h - lastHeightRef.current) < 2) return;
-        lastHeightRef.current = h;
-        window.parent.postMessage({ type: 'WIDGET_HEIGHT', height: h }, PARENT_ORIGIN);
+        
+        overlayHeight = Math.ceil(overlayHeight);
+        const finalBaseHeight = Math.ceil(baseHeight);
+        
+        if (Math.abs(overlayHeight - lastHeightRef.current) < 2) return;
+        lastHeightRef.current = overlayHeight;
+        
+        window.parent.postMessage({ 
+            type: 'WIDGET_HEIGHT', 
+            height: overlayHeight,
+            baseHeight: finalBaseHeight 
+        }, PARENT_ORIGIN);
     };
 
     // Ready + height reporting (config render hone ke baad)
@@ -424,7 +436,7 @@ export default function BookingWidget() {
     };
 
     return (
-        <div ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4 relative z-50 overflow-visible">
+        <div id="widget-main-container" ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4 relative z-50 overflow-visible">
             <style>{`
                 .custom-theme-btn {
                     background-color: ${primaryHex} !important;

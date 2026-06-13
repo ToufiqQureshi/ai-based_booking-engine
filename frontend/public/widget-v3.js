@@ -172,11 +172,11 @@
             if (overlayOpen) {
                 var top = parseFloat(iframe.style.top) || 0;
                 iframe.style.height = Math.min(contentHeight, viewportCap(top)) + 'px';
-                // Spacer frozen — overlay host content ke UPAR float karta hai,
-                // page layout ko push nahi karta
+                // Spacer stays at its natural bar height so host page layout doesn't jump
+                spacer.style.height = barHeight + 'px';
             } else {
                 iframe.style.height = contentHeight + 'px';
-                spacer.style.height = contentHeight + 'px';
+                spacer.style.height = barHeight + 'px'; // Fix: spacer never blindly follows overlay height!
             }
         }
 
@@ -224,8 +224,10 @@
                 reveal();
             } else if (data.type === 'WIDGET_HEIGHT') {
                 var h = Number(data.height);
+                var bh = Number(data.baseHeight) || h; // Fallback for older widget builds
                 if (isFinite(h) && h > 40 && h < 4000) {
                     contentHeight = Math.ceil(h);
+                    barHeight = Math.ceil(bh);
                     applyHeights();
                 }
             } else if (data.type === 'RESIZE_OVERLAY') {
