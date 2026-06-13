@@ -10,7 +10,6 @@ if (SENTRY_DSN) {
   Sentry.init({
     dsn: SENTRY_DSN,
     tracesSampleRate: 0.05, // 5% transactions capture rate
-    autoSessionTracking: false, // GlitchTip does not support sessions
   });
 }
 
@@ -32,9 +31,8 @@ createRoot(document.getElementById("root")!).render(
 );
 
 // Automatically reload the page if a dynamically imported module fails to load.
-// This typically happens when a new version of the app is deployed while a user has the app open,
-// causing their browser to request outdated, non-existent JS chunks.
+// This typically happens when the site is updated and the user has an old version loaded.
 window.addEventListener('vite:preloadError', (event) => {
-  console.warn('Vite preload error (chunk load failed). Reloading page...', event);
+  event.preventDefault(); // Prevent the default error logging if desired
   window.location.reload();
 });
