@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, DbSession
@@ -46,13 +46,7 @@ async def get_super_admin(current_user: CurrentUser):
 
 
 async def get_effective_permissions(user: User, session) -> dict:
-    """Resolve a super admin's effective sub-role and permission list.
-
-    Founders / platform owners have no SuperAdminRole record and get full
-    ("*") access — this keeps existing super admins unrestricted. Employees
-    granted a limited sub-role (finance/support/ops/viewer) are confined to
-    that tier's permissions.
-    """
+    """Resolve a super admin's effective sub-role and permission list."""
     from app.models.platform import SuperAdminRole
 
     role = (await session.execute(
@@ -68,11 +62,7 @@ async def get_effective_permissions(user: User, session) -> dict:
 
 
 def permission_granted(permissions: list[str], required: str) -> bool:
-    """Check if a permission list satisfies a required permission.
-
-    Supports full wildcard ("*"), exact match, and category wildcards such
-    as "superadmin.hotels.*" granting "superadmin.hotels.read".
-    """
+    """Check if a permission list satisfies a required permission."""
     if not required:
         return True
     if "*" in permissions or required in permissions:
@@ -102,10 +92,7 @@ def require_permission(required: str):
 
 @router.get("/me/access")
 async def my_access(session: DbSession, super_admin: User = Depends(get_super_admin)):
-    """Return the current admin's effective sub-role + allowed nav tabs.
-
-    The frontend uses this to hide tabs an employee should not see.
-    """
+    """Return the current admin's effective sub-role + allowed nav tabs."""
     from app.models.platform import TAB_PERMISSIONS
 
     eff = await get_effective_permissions(super_admin, session)
@@ -149,9 +136,14 @@ DEFAULT_ROLE_PERMISSIONS = {
 
 
 @router.get("/hotels", response_model=List[dict])
-async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_admin)):
-    """List all hotels with owner and subscription details."""
-    hotels = (await session.execute(select(Hotel))).scalars().all()
+async def list_hotels(
+    session: DbSession,
+    super_admin: User = Depends(get_super_admin),
+    limit: int = Query(100, le=500),
+    offset: int = Query(0, ge=0)
+):
+    """List all hotels with owner and subscription details (paginated)."""
+    hotels = (await session.execute(select(Hotel).offset(offset).limit(limit))).scalars().all()
     if not hotels:
         return []
 
@@ -331,7 +323,7 @@ async def delete_hotel(
             async with session.begin_nested():
                 await session.delete(u)
         except Exception as e:
-            logger.error("Failed to delete user %s: %s", u.email, e)
+            logger.error(f"Failed to delete user %s: %s", u.email, e)
 
     try:
         await session.delete(hotel)
