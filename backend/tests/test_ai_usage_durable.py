@@ -9,7 +9,7 @@ counting, and PII hashing.
 import pytest
 
 from app.core import ai_usage
-from app.brand_console.models import Hotel
+from app.brand_console.hotel import Hotel
 
 pytestmark = pytest.mark.asyncio
 

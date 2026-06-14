@@ -10,8 +10,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.analytics.models import AnalyticsSession, AnalyticsEvent
-from app.brand_console.models import Hotel
+from app.analytics.models import AnalyticsSession, AnalyticsEvent
+from app.brand_console.hotel import Hotel
 
 pytestmark = pytest.mark.asyncio
 
