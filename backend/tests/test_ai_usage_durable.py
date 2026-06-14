@@ -52,7 +52,7 @@ async def test_persist_without_identifier_counts_messages_only(seeded_hotel: Hot
 async def test_participant_rows_store_hash_not_pii(seeded_hotel: Hotel):
     from sqlmodel import select
     from app.core.database import async_session
-    from app.ai_assistant.models import AIUsageParticipant
+    from app.ai_assistant.ai_usage import AIUsageParticipant
 
     hotel_id = seeded_hotel.id
     await ai_usage.persist_ai_usage_db(hotel_id, _FakeResult(10), agent_type="guest", user_identifier="pii@example.com")

@@ -30,7 +30,7 @@ def _get_client_ip(request: Request) -> str:
     return request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
 
 PLAN_FEATURES_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
     "core", "plan_features.json",
 )
 
