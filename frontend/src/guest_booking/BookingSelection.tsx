@@ -19,10 +19,10 @@ import { RoomDetailModal } from '@/components/public/RoomDetailModal';
 import { BookingStepper } from '@/components/public/BookingStepper';
 import { SocialProofWidget } from '@/components/public/SocialProofWidget';
 import { ChatWidget } from '@/components/public/ChatWidget';
-import { format, addDays } from 'date-fns';
+import { format, addDays, differenceInDays } from 'date-fns';
 import { getImageUrl } from '@/lib/utils';
 import { ICONS } from '@/lib/amenityIcons';
-import { LoyaltyRewardPopup, LoyaltyMilestonePopup } from '@/components/public/LoyaltyRewardPopup';
+import { LoyaltyRewardPopup, LoyaltyMilestonePopup, StayOfferPopup } from '@/components/public/LoyaltyRewardPopup';
 
 // Extracted Booking Sub-Components
 import { RoomSearchHeader } from '@/components/public/booking/RoomSearchHeader';
@@ -120,6 +120,22 @@ export default function BookingSelection() {
         milestoneTotal: 0,
     });
 
+    // Stay-offer nudge (night-threshold upsell) — drives guests to extend their stay.
+    const [stayOffer, setStayOffer] = useState<{
+        isOpen: boolean;
+        title: string;
+        nudgeTitle: string;
+        nudgeMessage: string;
+        rewardLabel: string;
+        currentNights: number;
+        minNights: number;
+    }>({
+        isOpen: false, title: '', nudgeTitle: '', nudgeMessage: '',
+        rewardLabel: '', currentNights: 0, minNights: 0,
+    });
+    // Remember the night-counts we've already nudged on, so we don't re-spam.
+    const stayOfferShownRef = useRef<Set<number>>(new Set());
+
     const applyLoyaltyCoupon = (couponCode: string) => {
         setPromoCode(couponCode);
         setLoyaltyData(prev => ({ ...prev, isOpen: false }));
@@ -156,6 +172,43 @@ export default function BookingSelection() {
             } catch (_) {}
         }
     }, []);
+
+    // Stay-offer nudge: whenever the hotel + dates are known, ask the backend if
+    // extending the stay would unlock a reward, and nudge the guest if so.
+    useEffect(() => {
+        const hid = hotel?.id;
+        if (!hid || !checkInDate || !checkOutDate) return;
+        const nights = differenceInDays(checkOutDate, checkInDate);
+        if (nights <= 0) return;
+        // Only nudge once per distinct night-count to avoid spamming on re-render.
+        if (stayOfferShownRef.current.has(nights)) return;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await apiClient.post<any>('/public/loyalty-offers', {
+                    hotel_id: hid,
+                    nights,
+                });
+                if (cancelled) return;
+                if (res?.has_offer && !res.unlocked && (res.nights_remaining || 0) > 0) {
+                    stayOfferShownRef.current.add(nights);
+                    setStayOffer({
+                        isOpen: true,
+                        title: res.title || 'Stay Offer',
+                        nudgeTitle: res.nudge_title || 'Stay a little longer!',
+                        nudgeMessage: res.nudge_message || '',
+                        rewardLabel: res.reward_label || '',
+                        currentNights: res.current_nights || nights,
+                        minNights: res.min_nights || nights,
+                    });
+                }
+            } catch (_) {
+                // Loyalty is best-effort — never block the booking flow.
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [hotel?.id, checkInDate, checkOutDate]);
 
     const handleCheckLoyalty = async () => {
         if (!loyaltyEmail) return;
@@ -1119,6 +1172,22 @@ export default function BookingSelection() {
                 bookingsToReward={milestoneData.bookingsToReward}
                 milestoneTotal={milestoneData.milestoneTotal}
                 onContinue={() => setMilestoneData(prev => ({ ...prev, isOpen: false }))}
+            />
+
+            {/* Stay-offer Nudge Popup — extend nights to unlock a reward */}
+            <StayOfferPopup
+                isOpen={stayOffer.isOpen}
+                onClose={() => setStayOffer(prev => ({ ...prev, isOpen: false }))}
+                title={stayOffer.title}
+                nudgeTitle={stayOffer.nudgeTitle}
+                nudgeMessage={stayOffer.nudgeMessage}
+                rewardLabel={stayOffer.rewardLabel}
+                currentNights={stayOffer.currentNights}
+                minNights={stayOffer.minNights}
+                onExtend={() => {
+                    setStayOffer(prev => ({ ...prev, isOpen: false }));
+                    setIsCalendarOpen(true);
+                }}
             />
 
             <ChatWidget hotelSlug={hotelSlug || ''} bottomOffset={cart.length > 0 ? "bottom-24" : "bottom-4"} />
