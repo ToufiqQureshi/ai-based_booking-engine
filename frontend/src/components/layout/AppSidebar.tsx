@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Bed, IndianRupee, Calendar, BookOpen,
   Users, CreditCard, Settings, LogOut, Building2, Plug,
   Sparkles, Link2, Coffee, TrendingUp, Bot, LineChart, Percent, Star, Gift,
+  Zap, Send,
 } from 'lucide-react';
 import { NavLink } from '@/components/layout/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,9 +30,16 @@ const mainNavItems = [
   { title: 'Guests',          url: '/guests',           icon: Users },
   { title: 'Payments',        url: '/payments',         icon: CreditCard },
   { title: 'Experiences & Activities', url: '/addons',  icon: Sparkles },
-  { title: 'Loyalty Program', url: '/loyalty',           icon: Gift },
   { title: 'Google Reviews',  url: '/reviews',           icon: Star },
   { title: 'Channel Manager', url: '/channel-settings', icon: Link2 },
+];
+
+// Revenue tools — features whose job is to grow bookings & revenue, grouped so
+// the hotelier can find them together instead of hunting across the menu.
+const revenueNavItems = [
+  { title: 'Loyalty Program', url: '/loyalty',           icon: Gift },
+  { title: 'Dynamic Pricing', url: '/revenue/pricing',   icon: Zap },
+  { title: 'Guest Recovery',  url: '/revenue/recovery',  icon: Send },
 ];
 
 const settingsNavItems = [
@@ -43,11 +51,13 @@ const DEFAULT_ROLE_PERMISSIONS = {
   OWNER: [
     "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper",
     "/availability", "/bookings", "/taxes", "/guests", "/payments", "/addons",
-    "/loyalty", "/reviews", "/channel-settings", "/integration", "/settings"
+    "/loyalty", "/revenue/pricing", "/revenue/recovery",
+    "/reviews", "/channel-settings", "/integration", "/settings"
   ],
   MANAGER: [
     "/dashboard", "/analytics", "/rooms", "/rates", "/taxes",
-    "/availability", "/bookings", "/guests", "/payments", "/loyalty", "/settings"
+    "/availability", "/bookings", "/guests", "/payments",
+    "/loyalty", "/revenue/pricing", "/revenue/recovery", "/settings"
   ],
   STAFF: [
     "/availability", "/bookings", "/guests"
@@ -90,6 +100,7 @@ export function AppSidebar() {
     ...(user?.chain_id ? [{ title: 'Brand Console', url: '/chain/dashboard', icon: Building2 }] : []),
     ...mainNavItems.filter(isItemAllowed)
   ];
+  const allowedRevenueNavItems = revenueNavItems.filter(isItemAllowed);
   const allowedSettingsNavItems = settingsNavItems.filter(isItemAllowed);
 
   return (
@@ -168,6 +179,55 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {allowedRevenueNavItems.length > 0 && (
+          <SidebarGroup className="mt-2">
+            {!collapsed && (
+              <SidebarGroupLabel className="px-2 mb-1 text-[10px] font-bold text-muted-foreground dark:text-muted-foreground uppercase tracking-widest">
+                Revenue
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">
+                {allowedRevenueNavItems.map((item) => {
+                  const active = isActive(item.url);
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        tooltip={collapsed ? item.title : undefined}
+                        className={cn(
+                          'h-9 rounded-lg transition-all px-2.5 group',
+                          active
+                            ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400'
+                            : 'text-muted-foreground dark:text-muted-foreground hover:bg-muted/30 dark:hover:bg-slate-800 hover:text-foreground dark:hover:text-slate-200'
+                        )}
+                      >
+                        <NavLink to={item.url} className="flex items-center gap-2.5 w-full">
+                          <item.icon
+                            className={cn(
+                              'h-4 w-4 shrink-0 transition-colors',
+                              active
+                                ? 'text-indigo-600 dark:text-indigo-400'
+                                : 'text-muted-foreground dark:text-muted-foreground group-hover:text-muted-foreground dark:group-hover:text-slate-300'
+                            )}
+                          />
+                          {!collapsed && (
+                            <span className="flex-1 text-sm font-medium">{item.title}</span>
+                          )}
+                          {active && !collapsed && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <SidebarGroup className="mt-2">
           {!collapsed && (

@@ -51,6 +51,8 @@ from app.ai_assistant import agent
 from app.superadmin import router as superadmin_router
 from app.marketing import google_ads
 from app.loyalty import loyalty
+from app.revenue import pricing as revenue_pricing
+from app.revenue import recovery as revenue_recovery
 from app.rate_shopper import competitors
 
 from app.analytics.reports import router as analytics_router
@@ -203,6 +205,8 @@ app.include_router(leads.router, prefix=API_V1_PREFIX + "/leads", tags=["Leads"]
 app.include_router(google_ads.router, prefix=API_V1_PREFIX)
 
 app.include_router(loyalty.router, prefix=API_V1_PREFIX + "/loyalty", tags=["Loyalty"])
+app.include_router(revenue_pricing.router, prefix=API_V1_PREFIX + "/revenue/pricing-rules", tags=["Revenue - Dynamic Pricing"])
+app.include_router(revenue_recovery.router, prefix=API_V1_PREFIX + "/revenue/recovery", tags=["Revenue - Recovery"])
 app.include_router(social_proof_router, prefix=API_V1_PREFIX)
 app.include_router(public_sse.router, prefix=API_V1_PREFIX)
 app.include_router(chain_router, prefix=API_V1_PREFIX)

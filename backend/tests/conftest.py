@@ -43,6 +43,7 @@ from app.superadmin.chains.chain import Chain  # noqa: E402,F401
 from app.system.audit import AuditLog, SystemBroadcast  # noqa: E402,F401
 from app.bookings.booking import Booking  # noqa: E402,F401
 from app.loyalty.loyalty_model import LoyaltyProgram, GuestLoyalty  # noqa: E402,F401
+from app.revenue.pricing_model import PricingRule  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

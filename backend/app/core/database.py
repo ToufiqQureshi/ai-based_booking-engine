@@ -225,6 +225,10 @@ async def init_db():
         "ALTER TABLE subscriptions ADD COLUMN ai_hotelier_daily_limit INTEGER NOT NULL DEFAULT 50000",
         "ALTER TABLE subscriptions ADD COLUMN ai_guest_chat_daily_limit INTEGER NOT NULL DEFAULT 100000",
         "ALTER TABLE subscriptions ADD COLUMN ai_whatsapp_daily_limit INTEGER NOT NULL DEFAULT 100000",
+        # DB-05: abandoned-booking recovery (added 2026-06-14). bookings table
+        # predates the column, so create_all won't add it — every recovery
+        # sweep would otherwise fail with "column recovery_sent_at does not exist".
+        "ALTER TABLE bookings ADD COLUMN recovery_sent_at TIMESTAMPTZ",
     ]:
         try:
             async with engine.begin() as conn:

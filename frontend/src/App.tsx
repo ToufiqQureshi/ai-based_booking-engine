@@ -35,6 +35,8 @@ const RateShopperPage = lazy(() => import("@/dashboard/RateShopper"));
 const SuperAdminDashboard = lazy(() => import("@/superadmin/SuperAdminDashboard"));
 const GoogleReviewsPage = lazy(() => import("@/marketing/GoogleReviews"));
 const LoyaltyProgramPage = lazy(() => import("@/marketing/LoyaltyProgram"));
+const DynamicPricingPage = lazy(() => import("@/revenue/DynamicPricing"));
+const GuestRecoveryPage = lazy(() => import("@/revenue/GuestRecovery"));
 const ChainDashboard = lazy(() => import("@/chain/ChainDashboard"));
 
 const NotFound = lazy(() => import("@/NotFound"));
@@ -133,6 +135,8 @@ const App = () => {
                       <Route path="/admin/:section" element={<AdminDashboard />} />
                       <Route path="/reviews" element={<GoogleReviewsPage />} />
                       <Route path="/loyalty" element={<LoyaltyProgramPage />} />
+                      <Route path="/revenue/pricing" element={<DynamicPricingPage />} />
+                      <Route path="/revenue/recovery" element={<GuestRecoveryPage />} />
                       <Route path="/agent" element={<AgentPage />} />
                       <Route path="/settings/profile" element={<ProfilePage />} />
                       <Route path="/chain/dashboard" element={<ChainDashboard />} />

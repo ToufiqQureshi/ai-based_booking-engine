@@ -137,6 +137,10 @@ class Booking(BookingBase, table=True):
     # DB-01: indexed — bookings are routinely sorted/filtered by created_at.
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Abandoned-booking recovery: timestamp of the last recovery nudge sent
+    # (WhatsApp/email). NULL = never nudged. Prevents re-spamming the guest.
+    recovery_sent_at: Optional[datetime] = Field(default=None)
     
     # Relationships
     hotel: Optional["Hotel"] = Relationship(back_populates="bookings")
