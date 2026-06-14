@@ -101,3 +101,33 @@ We use a multi-layered caching system to protect the database and ensure lightni
 - If you add, modify, or delete features or endpoints, you **must** document it in `work_log_tracker.csv`.
 - Maintain fields: `"Timestamp","Task Name","File Path","Category","API Calls Count","Caching & Database Details","Security Controls / IDOR Prevention"`.
 - Always wrap each field in double quotes (`"`) to ensure clean parsing.
+
+---
+
+## 🛡️ 8. Bug Fix Protocol (Regression Prevention)
+
+Every bug fix must follow this checklist before committing:
+
+### Before touching code
+1. **Read the file being changed** — understand full context, not just the broken line.
+2. **Find all callers** — grep for every function/endpoint you're modifying. Check what else depends on it.
+3. **Check model definitions** — if touching DB fields, verify the actual SQLModel schema (JSON dicts vs direct attrs, nullable, unique constraints).
+
+### While fixing
+4. **Minimal blast radius** — change only what is broken. No opportunistic cleanups in the same commit.
+5. **One bug = one commit** — never bundle unrelated fixes. If a second bug is found while fixing, open a separate commit.
+6. **Never swallow exceptions silently** — remove bare `except: pass` patterns. Log or re-raise.
+
+### After fixing
+7. **Run `cd backend && python -m compileall -q app main.py`** — catch import/syntax errors instantly.
+8. **Run `cd backend && pytest tests/ -x -q --tb=short`** — must be green before pushing.
+9. **Check related tests** — if a test file tests the endpoint you changed, read it and verify your fix doesn't break assertions.
+10. **Grep for similar patterns** — if a bug exists in file A, search the whole codebase for the same anti-pattern (e.g. `scalar_one_or_none` with `or_`, `getattr(model, "json_field")`).
+
+### Common regression traps in this codebase
+- **JSON dict fields**: `Hotel.address`, `Hotel.contact`, `Hotel.settings`, `Booking.rooms`, `Booking.addons` are all JSON dicts — never access as direct attributes (`hotel.city`), always use `.get()`.
+- **`scalar_one_or_none()` with `or_` filters** — can return multiple rows and crash silently if caught by broad `except`. Use `scalars().first()` when OR conditions span multiple rows.
+- **`chain_id` inheritance** — whenever creating a new Hotel or User, always inherit `chain_id` from `current_user.chain_id` if the user is part of a chain.
+- **`require_hotel_role` on every non-public endpoint** — GET endpoints need it too, not just PUT/POST/DELETE.
+- **Test imports** — test files import from `app.guests.user`, `app.rooms.room`, `app.rate_plans.rates_model` — NOT `.models` aliases.
+
