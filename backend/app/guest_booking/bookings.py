@@ -264,12 +264,15 @@ async def create_public_booking(
         if booking_data.promo_code:
             from datetime import date as _date
             today = _date.today()
+            # Lock the promo row so the usage counter read-modify-write is atomic;
+            # otherwise two concurrent redemptions can both pass the max_usage
+            # check and over-redeem a limited promo.
             promo = (await session.execute(
                 select(PromoCode).where(
                     PromoCode.code == booking_data.promo_code,
                     or_(PromoCode.hotel_id == hotel_id, PromoCode.chain_id == chain_id),
                     PromoCode.is_active == True,
-                )
+                ).with_for_update()
             )).scalar_one_or_none()
             if promo:
                 if (promo.end_date and promo.end_date < today) or \
@@ -288,16 +291,18 @@ async def create_public_booking(
         # Loyalty points redemption
         points_redeemed = 0.0
         if booking_data.redeem_points and booking_data.redeem_points > 0:
+            # Lock the loyalty row so the balance check + deduction is atomic and
+            # points can't be double-spent across concurrent bookings.
             if chain_id:
                 loyal_stmt = select(GuestLoyalty).where(
                     GuestLoyalty.guest_email == guest_data.email,
                     GuestLoyalty.chain_id == chain_id,
-                )
+                ).with_for_update()
             else:
                 loyal_stmt = select(GuestLoyalty).where(
                     GuestLoyalty.guest_email == guest_data.email,
                     GuestLoyalty.hotel_id == hotel_id,
-                )
+                ).with_for_update()
             loyal = (await session.execute(loyal_stmt)).scalar_one_or_none()
             if not loyal or loyal.points_balance < booking_data.redeem_points:
                 raise HTTPException(status_code=400, detail="Insufficient loyalty points balance")
