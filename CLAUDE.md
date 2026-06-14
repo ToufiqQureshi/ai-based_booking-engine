@@ -109,25 +109,25 @@ We use a multi-layered caching system to protect the database and ensure lightni
 Every bug fix must follow this checklist before committing:
 
 ### Before touching code
-1. **Read the file being changed** — understand full context, not just the broken line.
-2. **Find all callers** — grep for every function/endpoint you're modifying. Check what else depends on it.
-3. **Check model definitions** — if touching DB fields, verify the actual SQLModel schema (JSON dicts vs direct attrs, nullable, unique constraints).
+1. **Read the full file** — understand the whole context, not just the broken line.
+2. **Find all callers** — grep every function/endpoint being modified. Check what else depends on it.
+3. **Check model definitions** — verify the actual schema before assuming field names, types, or constraints.
 
 ### While fixing
-4. **Minimal blast radius** — change only what is broken. No opportunistic cleanups in the same commit.
-5. **One bug = one commit** — never bundle unrelated fixes. If a second bug is found while fixing, open a separate commit.
-6. **Never swallow exceptions silently** — remove bare `except: pass` patterns. Log or re-raise.
+4. **Minimal blast radius** — change only what is broken. No cleanups or refactors in the same commit.
+5. **One bug = one commit** — if a second bug is found while fixing, put it in a separate commit.
+6. **Never swallow exceptions silently** — no bare `except: pass`. Always log or re-raise.
 
 ### After fixing
-7. **Run `cd backend && python -m compileall -q app main.py`** — catch import/syntax errors instantly.
-8. **Run `cd backend && pytest tests/ -x -q --tb=short`** — must be green before pushing.
-9. **Check related tests** — if a test file tests the endpoint you changed, read it and verify your fix doesn't break assertions.
-10. **Grep for similar patterns** — if a bug exists in file A, search the whole codebase for the same anti-pattern (e.g. `scalar_one_or_none` with `or_`, `getattr(model, "json_field")`).
+7. **Compile check** — `cd backend && python -m compileall -q app main.py` before pushing.
+8. **Run tests** — `cd backend && pytest tests/ -x -q --tb=short` must be green.
+9. **Check related tests** — read any test file that covers the changed endpoint, verify assertions still hold.
+10. **Grep for the same pattern** — if a bug exists in one place, search the whole codebase for the same anti-pattern and fix all instances.
 
-### Common regression traps in this codebase
-- **JSON dict fields**: `Hotel.address`, `Hotel.contact`, `Hotel.settings`, `Booking.rooms`, `Booking.addons` are all JSON dicts — never access as direct attributes (`hotel.city`), always use `.get()`.
-- **`scalar_one_or_none()` with `or_` filters** — can return multiple rows and crash silently if caught by broad `except`. Use `scalars().first()` when OR conditions span multiple rows.
-- **`chain_id` inheritance** — whenever creating a new Hotel or User, always inherit `chain_id` from `current_user.chain_id` if the user is part of a chain.
-- **`require_hotel_role` on every non-public endpoint** — GET endpoints need it too, not just PUT/POST/DELETE.
-- **Test imports** — test files import from `app.guests.user`, `app.rooms.room`, `app.rate_plans.rates_model` — NOT `.models` aliases.
+### General traps to check on every change
+- **DB model fields** — always read the actual model definition before accessing fields. Nested data may be stored as JSON dicts, not direct attributes. Use `.get()` on dicts.
+- **Query result cardinality** — if a query uses `OR` conditions across multiple rows, `scalar_one_or_none()` will crash. Use `.scalars().first()` when multiple results are possible.
+- **Object creation** — when creating any DB record, check if it needs to inherit context fields (e.g. tenant ID, chain ID, hotel ID) from the current user.
+- **Auth on read endpoints** — GET endpoints need the same role/permission guards as write endpoints.
+- **Silent failures** — broad `except` blocks that return generic responses hide real bugs. Check for them near any code you touch.
 
