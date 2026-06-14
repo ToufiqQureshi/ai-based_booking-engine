@@ -169,7 +169,11 @@ async def create_public_booking(
                 recalculated_total += nightly_total
                 curr_day += timedelta(days=1)
 
-            if abs(recalculated_total - room_req.total_price) > 5.0:
+            # Tolerance is the greater of a small flat amount and 1% of the
+            # server total, so a flat rounding allowance can't be abused to
+            # underpay high-value bookings (e.g. ₹5 on a ₹50,000 stay).
+            price_tolerance = max(5.0, 0.01 * recalculated_total)
+            if abs(recalculated_total - room_req.total_price) > price_tolerance:
                 logger.warning(f"Price mismatch: Recalculated {recalculated_total} vs Submitted {room_req.total_price}")
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,

@@ -451,7 +451,7 @@ export default function BookingWidget() {
                     }}
                 />
                 <div className="border-t border-slate-100 pt-3 mt-2 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
-                    <span className="text-red-400 font-semibold">Sold</span> = No rooms &nbsp;·&nbsp; Prices shown are starting rates
+                    <span className="text-red-400 font-semibold">Sold</span> = No rooms &nbsp;·&nbsp; From-price per night · taxes &amp; extra guests may apply
                 </div>
             </div>
         </PopoverContent>
