@@ -5,6 +5,8 @@ Public booking widget routes:
   POST /public/bookings/cancel-request  — compute cancellation fee
   POST /public/bookings/cancel-confirm  — execute cancellation
 """
+import hashlib
+import hmac
 import time
 from datetime import date, timedelta
 from typing import List, Optional
@@ -13,6 +15,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from sqlalchemy import func
 from sqlmodel import select, and_, or_
 
+from app.core.config import get_settings
 from app.core.deps import DbSession
 from app.core.limiter import limiter
 from app.core.redis_client import redis_client
@@ -39,6 +42,37 @@ import logging
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
+app_settings = get_settings()
+
+
+def _mint_booking_token() -> str:
+    """Short-lived HMAC token proving a booking request came from a freshly
+    loaded widget/checkout (anti-automation defence in depth). Format: 'ts.sig'."""
+    ts = str(int(time.time()))
+    sig = hmac.new(app_settings.SECRET_KEY.encode(), ts.encode(), hashlib.sha256).hexdigest()
+    return f"{ts}.{sig}"
+
+
+def _verify_booking_token(token: Optional[str]) -> bool:
+    """Constant-time verify of a booking token and its TTL."""
+    if not token or "." not in token:
+        return False
+    ts_str, _, sig = token.partition(".")
+    try:
+        ts = int(ts_str)
+    except ValueError:
+        return False
+    if abs(int(time.time()) - ts) > app_settings.BOOKING_TOKEN_TTL_SECONDS:
+        return False
+    expected = hmac.new(app_settings.SECRET_KEY.encode(), ts_str.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
+
+
+@router.get("/booking-token")
+@limiter.limit("30/minute")
+async def issue_booking_token(request: Request):
+    """Issue a short-lived booking token for the widget to send back on submit."""
+    return {"token": _mint_booking_token(), "ttl": app_settings.BOOKING_TOKEN_TTL_SECONDS}
 
 
 @router.post("/bookings", response_model=PublicBookingResponse)
@@ -55,6 +89,18 @@ async def create_public_booking(
     """
     if not booking_data.rooms:
         raise HTTPException(status_code=400, detail="At least one room is required")
+
+    # Anti-automation token (defence in depth). Always logged when missing/invalid
+    # so we can measure coverage; only hard-rejected once BOOKING_TOKEN_REQUIRED is
+    # enabled, so the mechanism can be rolled out without risking live checkout.
+    booking_token = request.headers.get("X-Booking-Token")
+    if not _verify_booking_token(booking_token):
+        if app_settings.BOOKING_TOKEN_REQUIRED:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid or expired booking session. Please refresh and try again.",
+            )
+        logger.info("Booking submitted without a valid X-Booking-Token (enforcement off)")
 
     room_type_id = booking_data.rooms[0].room_type_id
     idempotency_key = f"booking_lock:{booking_data.guest.email}:{room_type_id}:{booking_data.check_in}"

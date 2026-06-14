@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Public-booking anti-automation token (defence in depth on top of the
+    # IP rate-limit + idempotency lock). The widget fetches a short-lived
+    # HMAC token before submitting a booking. Enforcement is OFF by default so
+    # the mechanism can ship + be verified in production before being gated on.
+    BOOKING_TOKEN_REQUIRED: bool = False
+    BOOKING_TOKEN_TTL_SECONDS: int = 1800
     
     # CORS - Parsed from JSON string in env
     CORS_ORIGINS: List[str] = [
