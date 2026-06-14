@@ -76,6 +76,18 @@ export function RoomSearchHeader({
         if (currency === 'INR') return `₹${Math.round(price).toLocaleString('en-IN')}`;
         return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(price);
     };
+    // Compact form for tight calendar cells (e.g. ₹2.5k, $1.2k) so the
+    // price-per-night line never overflows a day cell on narrow screens.
+    const _symbol = currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '';
+    const formatPriceCompact = (price: number) => {
+        const p = Math.round(price);
+        const body = p >= 100000
+            ? `${(p / 100000).toFixed(p % 100000 === 0 ? 0 : 1)}L`
+            : p >= 1000
+                ? `${(p / 1000).toFixed(p % 1000 === 0 ? 0 : 1)}k`
+                : `${p}`;
+        return _symbol ? `${_symbol}${body}` : formatPrice(price);
+    };
 
     // Fetch calendar data for a month string "YYYY-MM"
     const fetchMonth = async (monthStr: string) => {
@@ -184,10 +196,12 @@ export function RoomSearchHeader({
                     </PopoverTrigger>
 
                     <PopoverContent
-                        className="p-0 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
-                        style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px' }}
+                        className="p-0 bg-white rounded-2xl shadow-2xl border border-slate-100"
+                        style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px', boxSizing: 'border-box' }}
                         align="center"
                         sideOffset={8}
+                        avoidCollisions={true}
+                        collisionPadding={isMobile ? 16 : 24}
                     >
                         <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
                             <div>
@@ -198,7 +212,9 @@ export function RoomSearchHeader({
                                 <X className="w-4 h-4 text-slate-500" />
                             </button>
                         </div>
-                        <div className="p-3 overflow-x-auto">
+                        {/* Bounded height + internal scroll so the calendar and
+                            legend are never clipped by the popover/iframe. */}
+                        <div className="p-3 overflow-x-auto max-h-[75vh] overflow-y-auto">
                             <style>{`
                                 .rdp-day_selected,
                                 .rdp-day_selected:hover {
@@ -238,7 +254,9 @@ export function RoomSearchHeader({
                                 caption: "flex justify-center py-2.5 px-3 relative items-center text-white rounded-xl mb-3 shadow-sm",
                                 caption_label: "text-xs font-extrabold tracking-wide uppercase",
                                 nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
-                                months: "flex flex-col md:flex-row space-y-3 md:space-x-4 md:space-y-0"
+                                // Width-driven (isMobile), not the md: breakpoint —
+                                // the embedded iframe is often <768px on desktop.
+                                months: isMobile ? "flex flex-col space-y-3" : "flex flex-row space-x-4"
                             }}
                             styles={{
                                 caption: { backgroundColor: themeColor },
@@ -269,7 +287,7 @@ export function RoomSearchHeader({
                                                             ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700"
                                                             : "text-slate-300"
                                                 )}>
-                                                    {isSoldOut ? "Sold" : price !== null ? formatPrice(price) : ''}
+                                                    {isSoldOut ? "Sold" : price !== null ? formatPriceCompact(price) : ''}
                                                 </span>
                                             )}
                                         </div>
@@ -278,7 +296,7 @@ export function RoomSearchHeader({
                             }}
                         />
                         <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                            <span className="text-red-400 font-extrabold">Sold</span> = No rooms &nbsp;·&nbsp; Prices shown are starting rates
+                            <span className="text-red-400 font-extrabold">Sold</span> = No rooms &nbsp;·&nbsp; From-price per night · taxes &amp; extra guests may apply
                         </div>
                         </div>
                     </PopoverContent>
