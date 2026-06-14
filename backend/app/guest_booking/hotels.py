@@ -304,7 +304,7 @@ async def get_public_chain(request: Request, chain_slug: str, session: DbSession
             "hotel_id": h.id,
             "name": h.name,
             "slug": h.slug,
-            "city": getattr(h, "city", None),
+            "city": h.address.get("city") if isinstance(h.address, dict) else None,
             "logo_url": h.logo_url,
             "star_rating": getattr(h, "star_rating", None),
             "primary_color": h.primary_color or "#7C3AED",
