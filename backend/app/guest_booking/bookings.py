@@ -446,11 +446,13 @@ async def check_guest_loyalty(request: Request, data: LoyaltyCheckRequest, sessi
         chain_id = hotel_res.scalar_one_or_none()
 
         if chain_id:
+            # Prefer hotel-level program over chain-level; use first() to avoid
+            # MultipleResultsFound when both exist and are active simultaneously.
             prog_result = await session.execute(
                 select(LoyaltyProgram).where(
                     or_(LoyaltyProgram.hotel_id == data.hotel_id, LoyaltyProgram.chain_id == chain_id),
                     LoyaltyProgram.is_active == True,
-                )
+                ).order_by(LoyaltyProgram.hotel_id.nulls_last())
             )
         else:
             prog_result = await session.execute(
@@ -459,7 +461,7 @@ async def check_guest_loyalty(request: Request, data: LoyaltyCheckRequest, sessi
                     LoyaltyProgram.is_active == True,
                 )
             )
-        program = prog_result.scalar_one_or_none()
+        program = prog_result.scalars().first()
 
         if chain_id:
             loyal_stmt = select(GuestLoyalty).where(

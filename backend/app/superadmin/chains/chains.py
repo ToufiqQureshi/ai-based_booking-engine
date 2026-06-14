@@ -211,16 +211,10 @@ async def add_property_to_chain(
     hotel = Hotel(name=data.name, slug=data.slug, chain_id=chain_id)
     if data.email or data.phone:
         hotel.contact = {"email": data.email or "", "phone": data.phone or ""}
-    if data.city:
-        try:
-            hotel.city = data.city
-        except Exception:
-            pass
-    if data.country:
-        try:
-            hotel.country = data.country
-        except Exception:
-            pass
+    hotel.address = {
+        "city": data.city or "Unknown",
+        "country": data.country or "India",
+    }
 
     session.add(hotel)
     session.add(AuditLog(

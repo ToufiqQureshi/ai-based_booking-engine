@@ -38,7 +38,7 @@ class GuestLoyaltySummary(BaseModel):
 
 # ── Admin Endpoints ───────────────────────────────────────────────────────────
 
-@router.get("/program")
+@router.get("/program", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER", "STAFF"))])
 async def get_loyalty_program(current_user: CurrentUser, session: DbSession):
     """Get or auto-create the hotel's loyalty program config."""
     result = await session.execute(
@@ -77,7 +77,7 @@ async def update_loyalty_program(
     return program
 
 
-@router.get("/guests", response_model=List[GuestLoyaltySummary])
+@router.get("/guests", response_model=List[GuestLoyaltySummary], dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def list_loyal_guests(
     current_user: CurrentUser,
     session: DbSession,
