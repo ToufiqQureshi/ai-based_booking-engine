@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import engine
 from app.superadmin.chains.models import Chain
 from app.brand_console.models import Hotel
-from app.guests.models import User, UserRole
+from app.guests.user import User, UserRole
 from main import app
 
 # ---------------------------------------------------------------------------

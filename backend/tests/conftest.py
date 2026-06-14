@@ -27,9 +27,9 @@ if backend_dir not in sys.path:
 
 from app.core.database import engine
 from app.brand_console.hotel import Hotel
-from app.guests.models import User, UserRole
-from app.rooms.models import RoomType
-from app.rate_plans.models import RatePlan
+from app.guests.user import User, UserRole
+from app.rooms.room import RoomType
+from app.rate_plans.rates_model import RatePlan
 from main import app
 
 

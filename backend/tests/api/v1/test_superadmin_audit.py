@@ -6,7 +6,7 @@ from sqlmodel import select
 
 from app.core.database import engine
 from app.brand_console.models import Hotel
-from app.guests.models import User, UserRole
+from app.guests.user import User, UserRole
 from app.system.models import AuditLog, SystemBroadcast
 from app.superadmin.subscriptions.models import Subscription
 
