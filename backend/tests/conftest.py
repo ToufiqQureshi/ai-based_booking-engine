@@ -32,6 +32,18 @@ from app.rooms.room import RoomType
 from app.rate_plans.rates_model import RatePlan
 from main import app
 
+# Register models that the app imports lazily (inside functions, per the
+# performance rules) so their tables are present in SQLModel.metadata before
+# create_all() runs. Without these imports the in-memory test DB is missing
+# tables like ai_usage_daily / analytics_sessions / subscriptions.
+from app.analytics.models import AnalyticsSession, AnalyticsEvent  # noqa: E402,F401
+from app.ai_assistant.ai_usage import AIUsageDaily, AIUsageParticipant  # noqa: E402,F401
+from app.superadmin.subscriptions.subscription import Subscription  # noqa: E402,F401
+from app.superadmin.chains.chain import Chain  # noqa: E402,F401
+from app.system.audit import AuditLog, SystemBroadcast  # noqa: E402,F401
+from app.bookings.booking import Booking  # noqa: E402,F401
+from app.loyalty.loyalty_model import LoyaltyProgram, GuestLoyalty  # noqa: E402,F401
+
 
 # ---------------------------------------------------------------------------
 # DB initialisation (session-scoped)
