@@ -195,9 +195,15 @@ Shipped on `claude/project-code-review-1uv2pw` (backend 258 tests green, fronten
 | AI quota before stream (5.8) | ✅ N/A | already enforced pre-stream — subagent claim corrected |
 | ReactMarkdown XSS (5.11) | ✅ N/A | no `rehype-raw`; safe by default |
 
-Deliberately deferred (need live/browser verification before touching a production revenue widget):
-- **Mobile full-screen calendar sheet** — current popover is now full-width + bounded-scroll on mobile (cut-off resolved); a true sheet is polish.
-- **Skeleton price cells** — needs a proper per-month loading flag to avoid permanent shimmer.
-- **Separate Vite widget/chat entry bundles** — large build/routing change; high regression risk without runtime testing.
-- **Booking CSRF nonce (5.12)** — cross-cutting widget↔backend change; verify booking flow live first.
-- **Inventory count masking (5.9)** — intentionally kept: showing low counts ("only N left") matches OTA urgency practice.
+Widget polish — now shipped (build green, 262 backend tests green):
+- **Skeleton price cells** ✅ — per-month `loadingMonths` state drives a shimmer in each day cell's price line while data is in flight.
+- **Mobile full-screen calendar sheet** ✅ — calendar body extracted to a shared panel; desktop = anchored popover, mobile = full-screen bottom sheet (portal) with a sticky Done CTA. *Needs a live mobile pass once CF deploys.*
+- **Booking anti-automation token (5.12)** ✅ — short-lived HMAC token (`GET /public/booking-token`) sent as `X-Booking-Token`; server enforcement gated behind `BOOKING_TOKEN_REQUIRED` (default off, logs coverage) so it ships safely. Unit-tested. *Flip the flag on after verifying live checkout still succeeds.*
+- **Vendor chunk splitting** ✅ — Vite `manualChunks` splits react/charts/radix/date-fns/icons/query into cacheable chunks. (A full separate widget *entry* bundle is still deferred — needs runtime verification.)
+
+Still intentionally kept:
+- **Inventory count masking (5.9)** — showing low counts ("only N left") matches OTA urgency practice.
+
+Needs the user (prod access / external dashboards), not code:
+- **Supabase advisors** (function `search_path`, duplicate RLS, leaked-password protection) — production DB / Supabase dashboard.
+- **Cloudflare Pages build failure** — CF dashboard config; blocks all frontend deploys.
