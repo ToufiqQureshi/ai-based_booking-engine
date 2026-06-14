@@ -174,3 +174,30 @@ Walking the journey of a first-time guest on a hotel's site:
 7. **Perf (own batch):** separate Vite widget/chat entry bundles (§4.5).
 
 Each change is independently shippable and testable.
+
+---
+
+## 8. Implementation Status (2026-06-14)
+
+Shipped on `claude/project-code-review-1uv2pw` (backend 258 tests green, frontend build green):
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Iframe `sandbox` (booking + chat) | ✅ Done | `widget-v3.js`, `chat-loader.js` |
+| Remove public `widget_custom_js` + RCE sink | ✅ Done | `hotels.py`, `BookingWidget.tsx` (`new Function` removed) |
+| Sanitize public `widget_custom_css` | ✅ Done | `hotels.py` `_sanitize_widget_css()` |
+| postMessage origin (ancestorOrigins) | ✅ Done | `ChatWidget.tsx` |
+| Chat: inactive hotel → 404; guest msg length cap | ✅ Done | `chat.py` |
+| Calendar cut-off (overflow/scroll/width/padding/height) | ✅ Done | **`RoomSearchHeader.tsx`** (live calendar) + `BookingWidget.tsx` |
+| Compact in-cell price + clearer pricing note | ✅ Done | both calendars |
+| Loading delay (signal-based reveal, capped idle mount) | ✅ Done | `widget-v3.js`, `chat-loader.js` |
+| Checkout price tolerance → max(₹5, 1%) | ✅ Done | `bookings.py` |
+| AI quota before stream (5.8) | ✅ N/A | already enforced pre-stream — subagent claim corrected |
+| ReactMarkdown XSS (5.11) | ✅ N/A | no `rehype-raw`; safe by default |
+
+Deliberately deferred (need live/browser verification before touching a production revenue widget):
+- **Mobile full-screen calendar sheet** — current popover is now full-width + bounded-scroll on mobile (cut-off resolved); a true sheet is polish.
+- **Skeleton price cells** — needs a proper per-month loading flag to avoid permanent shimmer.
+- **Separate Vite widget/chat entry bundles** — large build/routing change; high regression risk without runtime testing.
+- **Booking CSRF nonce (5.12)** — cross-cutting widget↔backend change; verify booking flow live first.
+- **Inventory count masking (5.9)** — intentionally kept: showing low counts ("only N left") matches OTA urgency practice.
