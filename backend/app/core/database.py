@@ -149,7 +149,12 @@ async def init_db():
         "ALTER TABLE guest_loyalty ALTER COLUMN hotel_id DROP NOT NULL",
         "ALTER TABLE guest_loyalty ADD COLUMN points_balance NUMERIC DEFAULT 0.00",
         "ALTER TABLE promo_codes ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
-        "ALTER TABLE promo_codes ALTER COLUMN hotel_id DROP NOT NULL"
+        "ALTER TABLE promo_codes ALTER COLUMN hotel_id DROP NOT NULL",
+        # Points wallet config on loyalty_programs (create_all won't add columns
+        # to an existing table, so add them explicitly; idempotent via except).
+        "ALTER TABLE loyalty_programs ADD COLUMN points_enabled BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE loyalty_programs ADD COLUMN points_per_currency NUMERIC DEFAULT 0.00",
+        "ALTER TABLE loyalty_programs ADD COLUMN point_value NUMERIC DEFAULT 0.00",
     ]:
         try:
             async with engine.begin() as conn:

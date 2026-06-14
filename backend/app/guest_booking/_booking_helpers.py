@@ -67,6 +67,11 @@ async def _update_guest_loyalty(
         loyal.total_spend = float(loyal.total_spend) + total_amount
         loyal.last_booking_at = datetime.utcnow()
         loyal.updated_at = datetime.utcnow()
+
+        # Award points if the hotel's points wallet is enabled.
+        if getattr(program, "points_enabled", False) and (program.points_per_currency or 0) > 0:
+            loyal.points_balance = float(loyal.points_balance) + total_amount * program.points_per_currency
+
         session.add(loyal)
 
         milestone = program.milestone_bookings or 5

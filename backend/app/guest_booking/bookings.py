@@ -19,7 +19,7 @@ from app.core.redis_client import redis_client
 from app.core.time import utcnow
 from app.bookings.booking import Booking, BookingStatus, BookingSource, Guest
 from app.brand_console.hotel import Hotel
-from app.loyalty.loyalty_model import GuestLoyalty, LoyaltyProgram
+from app.loyalty.loyalty_model import GuestLoyalty, LoyaltyProgram, LoyaltyOffer
 from app.rate_plans.promo import PromoCode
 from app.rate_plans.rates_model import RatePlan, RoomRate
 from app.rooms.room import RoomBlock, RoomType
@@ -29,6 +29,8 @@ from ._schemas import (
     GuestCancelRequest,
     LoyaltyCheckRequest,
     LoyaltyCheckResponse,
+    LoyaltyOfferCheckRequest,
+    LoyaltyOfferCheckResponse,
     PublicBookingCreate,
     PublicBookingResponse,
 )
@@ -297,8 +299,20 @@ async def create_public_booking(
             loyal = (await session.execute(loyal_stmt)).scalar_one_or_none()
             if not loyal or loyal.points_balance < booking_data.redeem_points:
                 raise HTTPException(status_code=400, detail="Insufficient loyalty points balance")
-            points_redeemed = min(booking_data.redeem_points, total_before_discount - discount_amount)
-            loyal.points_balance = float(loyal.points_balance) - points_redeemed
+            # Convert points → currency using the hotel's configured point_value.
+            # Fallback 1:1 keeps legacy behaviour when the points wallet is off.
+            prog = (await session.execute(
+                select(LoyaltyProgram).where(LoyaltyProgram.hotel_id == hotel_id)
+            )).scalar_one_or_none()
+            point_value = (
+                prog.point_value
+                if prog and prog.points_enabled and prog.point_value and prog.point_value > 0
+                else 1.0
+            )
+            redeemable_value = booking_data.redeem_points * point_value
+            points_redeemed = min(redeemable_value, total_before_discount - discount_amount)
+            points_used = points_redeemed / point_value if point_value > 0 else points_redeemed
+            loyal.points_balance = float(loyal.points_balance) - points_used
             session.add(loyal)
 
         total_amount = round(total_before_discount - discount_amount - points_redeemed, 2)
@@ -432,6 +446,98 @@ async def create_public_booking(
     except Exception as e:
         logger.exception("Public booking error")
         raise HTTPException(status_code=500, detail=f"Booking failed: {str(e)}")
+
+
+def _reward_label(reward_type: str, reward_value: float) -> str:
+    """Human-readable reward text for guest popups."""
+    if reward_type == "free_night":
+        return "1 Free Night"
+    if reward_type == "fixed_amount":
+        return f"₹{int(reward_value)} off"
+    return f"{int(reward_value)}% off"
+
+
+@router.post("/loyalty-offers", response_model=LoyaltyOfferCheckResponse)
+@limiter.limit("30/minute")
+async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest, session: DbSession):
+    """
+    Public, pre-booking stay-offer check for the booking widget.
+
+    Given a hotel (and optionally a room type + chosen nights), returns the most
+    relevant active stay offer plus a nudge if the guest is below the night
+    threshold. Drives the "stay N nights to unlock" upsell popup.
+    """
+    try:
+        # Room-scoped offers for the chosen room, plus hotel-wide (room_type_id IS NULL).
+        conditions = [
+            LoyaltyOffer.hotel_id == data.hotel_id,
+            LoyaltyOffer.is_active == True,
+        ]
+        if data.room_type_id:
+            conditions.append(
+                or_(
+                    LoyaltyOffer.room_type_id == data.room_type_id,
+                    LoyaltyOffer.room_type_id.is_(None),
+                )
+            )
+        else:
+            # No room chosen yet → only hotel-wide offers are relevant.
+            conditions.append(LoyaltyOffer.room_type_id.is_(None))
+
+        offers = (await session.execute(
+            select(LoyaltyOffer).where(*conditions)
+        )).scalars().all()
+
+        if not offers:
+            return LoyaltyOfferCheckResponse(has_offer=False)
+
+        # Prefer a room-specific offer over a hotel-wide one when both exist.
+        offers.sort(key=lambda o: (o.room_type_id is None, o.min_nights))
+
+        nights = data.nights or 0
+        # No dates yet → tell the widget an offer exists so it can prompt for dates.
+        if nights <= 0:
+            offer = offers[0]
+            return LoyaltyOfferCheckResponse(
+                has_offer=True, needs_dates=True, offer_id=offer.id, title=offer.title,
+                min_nights=offer.min_nights, reward_type=offer.reward_type,
+                reward_value=offer.reward_value,
+                reward_label=_reward_label(offer.reward_type, offer.reward_value),
+                nudge_title=offer.nudge_title,
+            )
+
+        # Among unlocked offers (nights >= min), pick the highest threshold reached.
+        unlocked = [o for o in offers if nights >= o.min_nights]
+        if unlocked:
+            offer = max(unlocked, key=lambda o: o.min_nights)
+            label = _reward_label(offer.reward_type, offer.reward_value)
+            return LoyaltyOfferCheckResponse(
+                has_offer=True, unlocked=True, offer_id=offer.id, title=offer.title,
+                min_nights=offer.min_nights, current_nights=nights, nights_remaining=0,
+                reward_type=offer.reward_type, reward_value=offer.reward_value,
+                reward_label=label,
+                nudge_title="Offer Unlocked! 🎉",
+                nudge_message=f"You've unlocked {label} on this stay!",
+            )
+
+        # Otherwise nudge toward the closest threshold above the current nights.
+        offer = min(offers, key=lambda o: o.min_nights - nights)
+        remaining = offer.min_nights - nights
+        label = _reward_label(offer.reward_type, offer.reward_value)
+        msg = (offer.nudge_message or "Stay {remaining} more night(s) and unlock {reward}!") \
+            .replace("{remaining}", str(remaining)).replace("{reward}", label)
+        return LoyaltyOfferCheckResponse(
+            has_offer=True, unlocked=False, offer_id=offer.id, title=offer.title,
+            min_nights=offer.min_nights, current_nights=nights, nights_remaining=remaining,
+            reward_type=offer.reward_type, reward_value=offer.reward_value,
+            reward_label=label, nudge_title=offer.nudge_title, nudge_message=msg,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Loyalty offer check error")
+        # Never break the booking widget over a loyalty lookup.
+        return LoyaltyOfferCheckResponse(has_offer=False)
 
 
 @router.post("/loyalty-check", response_model=LoyaltyCheckResponse)
