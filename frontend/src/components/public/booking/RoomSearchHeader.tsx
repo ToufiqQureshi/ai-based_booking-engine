@@ -1,5 +1,6 @@
 import { format, addMonths, startOfMonth } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, Search, User, ChevronDown, Plus, Minus, X, ArrowRight, Hotel as HotelIcon, Sparkles } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -71,6 +72,9 @@ export function RoomSearchHeader({
     const [calendarData, setCalendarData] = useState<Record<string, CalendarDay>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
     const fetchedMonths = useRef<Set<string>>(new Set());
+    // Months whose prices are still in flight — drives the per-cell skeleton
+    // shimmer so the calendar reads as "loading" instead of "no prices".
+    const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
 
     const formatPrice = (price: number) => {
         if (currency === 'INR') return `₹${Math.round(price).toLocaleString('en-IN')}`;
@@ -92,6 +96,7 @@ export function RoomSearchHeader({
     // Fetch calendar data for a month string "YYYY-MM"
     const fetchMonth = async (monthStr: string) => {
         if (!hotelSlug) return;
+        setLoadingMonths(prev => new Set(prev).add(monthStr));
         try {
             const data = await apiClient.get<Record<string, CalendarDay>>(
                 `/public/hotels/${hotelSlug}/calendar`,
@@ -100,6 +105,12 @@ export function RoomSearchHeader({
             setCalendarData(prev => ({ ...prev, ...data }));
         } catch {
             // silent — calendar will just show no prices
+        } finally {
+            setLoadingMonths(prev => {
+                const next = new Set(prev);
+                next.delete(monthStr);
+                return next;
+            });
         }
     };
 
@@ -121,6 +132,111 @@ export function RoomSearchHeader({
             }
         });
     }, [hotelSlug, displayMonth, calendarRefreshTrigger]);
+
+    // Shared calendar body — rendered inside a Popover on desktop and a
+    // full-screen bottom sheet on mobile (see render below).
+    const calendarPanel = (
+        <>
+            <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <div>
+                    <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Tap check-in, then check-out</p>
+                </div>
+                <button onClick={() => setIsCalendarOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                    <X className="w-4 h-4 text-slate-500" />
+                </button>
+            </div>
+            {/* Bounded height + internal scroll so the calendar and
+                legend are never clipped by the popover/sheet. */}
+            <div className="p-3 overflow-x-auto overflow-y-auto max-h-[75vh] md:max-h-[75vh] flex-1 min-h-0">
+                <style>{`
+                    .rdp-day_selected,
+                    .rdp-day_selected:hover {
+                        background-color: ${themeColor} !important;
+                        color: white !important;
+                    }
+                    .rdp-day_today:not(.rdp-day_selected) {
+                        color: ${themeColor} !important;
+                    }
+                    .rdp-day_selected.rdp-day_today {
+                        color: white !important;
+                    }
+                `}</style>
+                <Calendar
+                    mode="range"
+                    numberOfMonths={isMobile ? 1 : 2}
+                    selected={{ from: checkInDate, to: checkOutDate }}
+                    onSelect={(range: any) => {
+                        // Mirror the computed range exactly so a new check-in
+                        // click clears the old check-out and starts a fresh
+                        // range instead of producing an inverted/locked range.
+                        setCheckInDate(range?.from);
+                        setCheckOutDate(range?.to);
+                        // Calendar stays open until guest explicitly hits X / Done
+                    }}
+                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                    className="p-0"
+                    classNames={{
+                        cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
+                        day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                        day_selected: "text-white font-bold shadow-md",
+                        day_today: "font-bold border border-slate-200 bg-slate-50",
+                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-9 sm:w-11 pb-2 text-center",
+                        caption: "flex justify-center py-2.5 px-3 relative items-center text-white rounded-xl mb-3 shadow-sm",
+                        caption_label: "text-xs font-extrabold tracking-wide uppercase",
+                        nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
+                        // Width-driven (isMobile), not the md: breakpoint —
+                        // the embedded iframe is often <768px on desktop.
+                        months: isMobile ? "flex flex-col space-y-3" : "flex flex-row space-x-4"
+                    }}
+                    styles={{ caption: { backgroundColor: themeColor } }}
+                    modifiersStyles={{
+                        selected: { backgroundColor: themeColor, color: '#fff' },
+                        today: { color: themeColor, fontWeight: 700 }
+                    }}
+                    onMonthChange={(month: Date) => setDisplayMonth(startOfMonth(month))}
+                    components={{
+                        DayContent: ({ date }: any) => {
+                            const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
+                            const isPast = date < todayObj;
+                            const key = format(date, 'yyyy-MM-dd');
+                            const dayData = calendarData[key];
+                            const isSoldOut = dayData ? !dayData.available : false;
+                            const price = dayData?.min_price ?? null;
+                            // Show a shimmer in the price line while this date's month
+                            // is still being fetched (data not yet arrived).
+                            const isLoading = !dayData && !isPast && loadingMonths.has(format(date, 'yyyy-MM'));
+
+                            return (
+                                <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
+                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                    {!isPast && (
+                                        isLoading ? (
+                                            <span className="mt-1 h-[7px] w-6 rounded-full bg-slate-200 animate-pulse" aria-hidden="true" />
+                                        ) : (
+                                        <span className={cn(
+                                            "text-[9px] font-extrabold leading-none mt-1",
+                                            isSoldOut
+                                                ? "text-red-400"
+                                                : price !== null
+                                                    ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700"
+                                                    : "text-slate-300"
+                                        )}>
+                                            {isSoldOut ? "Sold" : price !== null ? formatPriceCompact(price) : ''}
+                                        </span>
+                                        )
+                                    )}
+                                </div>
+                            );
+                        }
+                    }}
+                />
+                <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
+                    <span className="text-red-400 font-extrabold">Sold</span> = No rooms &nbsp;·&nbsp; From-price per night · taxes &amp; extra guests may apply
+                </div>
+            </div>
+        </>
+    );
 
     return (
         <div id="hotelier-search-widget" className="bg-white/95 backdrop-blur-2xl p-4 sm:p-6 rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] mb-6 sm:mb-10 max-w-6xl mx-auto border border-white/60">
@@ -195,112 +311,48 @@ export function RoomSearchHeader({
                         </button>
                     </PopoverTrigger>
 
+                    {/* Desktop: anchored popover. Mobile: full-screen bottom sheet (below). */}
+                    {!isMobile && (
                     <PopoverContent
-                        className="p-0 bg-white rounded-2xl shadow-2xl border border-slate-100"
-                        style={{ width: isMobile ? 'calc(100vw - 32px)' : 'auto', maxWidth: '720px', boxSizing: 'border-box' }}
+                        className="p-0 bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col"
+                        style={{ width: 'auto', maxWidth: '720px', boxSizing: 'border-box' }}
                         align="center"
                         sideOffset={8}
                         avoidCollisions={true}
-                        collisionPadding={isMobile ? 16 : 24}
+                        collisionPadding={24}
                     >
-                        <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Select Dates</p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Tap check-in, then check-out</p>
-                            </div>
-                            <button onClick={() => setIsCalendarOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-                                <X className="w-4 h-4 text-slate-500" />
-                            </button>
-                        </div>
-                        {/* Bounded height + internal scroll so the calendar and
-                            legend are never clipped by the popover/iframe. */}
-                        <div className="p-3 overflow-x-auto max-h-[75vh] overflow-y-auto">
-                            <style>{`
-                                .rdp-day_selected,
-                                .rdp-day_selected:hover {
-                                    background-color: ${themeColor} !important;
-                                    color: white !important;
-                                }
-                                .rdp-day_today:not(.rdp-day_selected) {
-                                    color: ${themeColor} !important;
-                                }
-                                .rdp-day_selected.rdp-day_today {
-                                    color: white !important;
-                                }
-                            `}</style>
-                        <Calendar 
-                            mode="range"
-                            numberOfMonths={isMobile ? 1 : 2}
-                            selected={{
-                                from: checkInDate,
-                                to: checkOutDate
-                            }}
-                            onSelect={(range: any) => {
-                                // Mirror the computed range exactly so a new check-in
-                                // click clears the old check-out and starts a fresh
-                                // range instead of producing an inverted/locked range.
-                                setCheckInDate(range?.from);
-                                setCheckOutDate(range?.to);
-                                // Calendar stays open until guest explicitly hits X
-                            }}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                            className="p-0"
-                            classNames={{
-                                cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                                day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
-                                day_selected: "text-white font-bold shadow-md",
-                                day_today: "font-bold border border-slate-200 bg-slate-50",
-                                head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-9 sm:w-11 pb-2 text-center",
-                                caption: "flex justify-center py-2.5 px-3 relative items-center text-white rounded-xl mb-3 shadow-sm",
-                                caption_label: "text-xs font-extrabold tracking-wide uppercase",
-                                nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
-                                // Width-driven (isMobile), not the md: breakpoint —
-                                // the embedded iframe is often <768px on desktop.
-                                months: isMobile ? "flex flex-col space-y-3" : "flex flex-row space-x-4"
-                            }}
-                            styles={{
-                                caption: { backgroundColor: themeColor },
-                            }}
-                            modifiersStyles={{
-                                selected: { backgroundColor: themeColor, color: '#fff' },
-                                today: { color: themeColor, fontWeight: 700 }
-                            }}
-                            onMonthChange={(month: Date) => setDisplayMonth(startOfMonth(month))}
-                            components={{
-                                DayContent: ({ date }: any) => {
-                                    const todayObj = new Date(new Date().setHours(0, 0, 0, 0));
-                                    const isPast = date < todayObj;
-                                    const key = format(date, 'yyyy-MM-dd');
-                                    const dayData = calendarData[key];
-                                    const isSoldOut = dayData ? !dayData.available : false;
-                                    const price = dayData?.min_price ?? null;
-
-                                    return (
-                                        <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                            <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                            {!isPast && (
-                                                <span className={cn(
-                                                    "text-[9px] font-extrabold leading-none mt-1",
-                                                    isSoldOut
-                                                        ? "text-red-400"
-                                                        : price !== null
-                                                            ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700"
-                                                            : "text-slate-300"
-                                                )}>
-                                                    {isSoldOut ? "Sold" : price !== null ? formatPriceCompact(price) : ''}
-                                                </span>
-                                            )}
-                                        </div>
-                                    );
-                                }
-                            }}
-                        />
-                        <div className="border-t border-slate-100 pt-3 mt-2 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5 font-bold tracking-wide">
-                            <span className="text-red-400 font-extrabold">Sold</span> = No rooms &nbsp;·&nbsp; From-price per night · taxes &amp; extra guests may apply
-                        </div>
-                        </div>
+                        {calendarPanel}
                     </PopoverContent>
+                    )}
                 </Popover>
+
+                {/* Mobile: full-screen bottom sheet so the calendar is never clipped
+                    by the popover/iframe and gets a clear sticky confirm CTA. */}
+                {isMobile && isCalendarOpen && createPortal(
+                    <div
+                        className="fixed inset-0 z-[2147483646] bg-black/40 flex flex-col justify-end"
+                        role="dialog"
+                        aria-modal="true"
+                        onClick={() => setIsCalendarOpen(false)}
+                    >
+                        <div
+                            className="bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[92dvh] animate-in slide-in-from-bottom duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {calendarPanel}
+                            <div className="border-t border-slate-100 p-3 shrink-0">
+                                <button
+                                    onClick={() => setIsCalendarOpen(false)}
+                                    className="w-full py-3 rounded-2xl text-white font-extrabold text-sm tracking-wide shadow-md active:scale-[0.99] transition-transform"
+                                    style={{ backgroundColor: themeColor }}
+                                >
+                                    {checkInDate && checkOutDate ? 'Done' : 'Select your dates'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
 
                 {/* Guests Configuration Popover */}
                 <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
