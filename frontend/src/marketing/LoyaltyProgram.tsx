@@ -308,7 +308,7 @@ export default function LoyaltyProgramPage() {
     return (
         <PageShell
             title="Loyalty & Upsell Hub"
-            description="Turn one-time guests into repeat customers — and every booking into a bigger one"
+            subtitle="Turn one-time guests into repeat customers — and every booking into a bigger one"
         >
             {/* ── Tab Bar ── */}
             <div className="flex items-center justify-between mb-6">
@@ -621,7 +621,7 @@ export default function LoyaltyProgramPage() {
                                         <div className="bg-primary/10 rounded-xl px-3 py-2 mb-3">
                                             <p className="text-[10px] font-bold text-primary/60 uppercase tracking-wider">Reward</p>
                                             <p className="text-sm font-black text-primary">
-                                                {form.reward_description || rewardLabel()}
+                                                {form.milestones[0]?.reward_description || rewardLabel(form.milestones[0])}
                                             </p>
                                         </div>
                                         <div className="w-full bg-primary text-white text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-1">
@@ -637,7 +637,7 @@ export default function LoyaltyProgramPage() {
                                         Reward Unlocked! 🎉
                                     </p>
                                     <p className="text-[11px] text-green-600 dark:text-green-500">
-                                        After {form.milestone_bookings} bookings, guest gets: <strong>{form.reward_description || rewardLabel()}</strong>
+                                        After {form.milestones[0]?.milestone_bookings || 5} bookings, guest gets: <strong>{form.milestones[0]?.reward_description || rewardLabel(form.milestones[0])}</strong>
                                     </p>
                                 </div>
 

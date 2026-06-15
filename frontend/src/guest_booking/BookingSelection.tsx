@@ -645,6 +645,7 @@ export default function BookingSelection() {
             {hotel && hotel.photos && hotel.photos.length > 0 && (
                 <div className="w-full h-48 md:h-72 lg:h-[450px] relative overflow-hidden bg-slate-900 group">
                     <AnimatePresence mode="wait">
+                        // @ts-ignore - framer-motion type mismatch with React 18
                         <motion.img 
                             key={currentImageIndex}
                             src={hotel.photos[currentImageIndex].url} 
@@ -659,6 +660,7 @@ export default function BookingSelection() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-6 md:p-12 z-10">
                         <div className="max-w-7xl mx-auto w-full">
+                            {/* @ts-ignore - framer-motion type mismatch with React 18 */}
                             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                                 <h1 className="text-3xl md:text-6xl font-black text-white tracking-tight drop-shadow-2xl">{hotel.name}</h1>
                                 <div className="flex flex-wrap items-center gap-3 mt-4 text-white/90">
