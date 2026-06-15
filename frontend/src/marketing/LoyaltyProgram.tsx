@@ -83,7 +83,7 @@ export default function LoyaltyProgramPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'setup' | 'offers' | 'points' | 'guests'>('setup');
+    const [activeTab, setActiveTab] = useState<'setup' | 'offers' | 'points' | 'guests'>('guests');
     const [program, setProgram] = useState<LoyaltyProgram | null>(null);
     const [guests, setGuests] = useState<GuestLoyaltySummary[]>([]);
     const [guestsLoading, setGuestsLoading] = useState(false);
@@ -284,64 +284,34 @@ export default function LoyaltyProgramPage() {
 
     return (
         <PageShell
-            title="Loyalty Program"
-            description="Reward your returning guests and drive repeat bookings"
+            title="Loyalty & Upsell Hub"
+            description="Turn one-time guests into repeat customers — and every booking into a bigger one"
         >
-            {/* ── Header ── */}
+            {/* ── Tab Bar ── */}
             <div className="flex items-center justify-between mb-6">
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setActiveTab('setup')}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                            activeTab === 'setup'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        )}
-                    >
-                        <span className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4" /> Program Setup
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('offers')}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                            activeTab === 'offers'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        )}
-                    >
-                        <span className="flex items-center gap-2">
-                            <BedDouble className="w-4 h-4" /> Stay Offers
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('points')}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                            activeTab === 'points'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        )}
-                    >
-                        <span className="flex items-center gap-2">
-                            <Star className="w-4 h-4" /> Points
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('guests')}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                            activeTab === 'guests'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        )}
-                    >
-                        <span className="flex items-center gap-2">
-                            <Users className="w-4 h-4" /> Loyal Guests
-                        </span>
-                    </button>
+                <div className="flex flex-wrap gap-2">
+                    {([
+                        { id: 'guests', label: 'Loyal Guests',      icon: Users,    hint: 'See who keeps coming back' },
+                        { id: 'setup',  label: 'Milestone Rewards',  icon: Trophy,   hint: 'Reward returning guests' },
+                        { id: 'offers', label: 'Stay Upsells',       icon: BedDouble,hint: 'Nudge guests to book more nights' },
+                        { id: 'points', label: 'Points Wallet',      icon: Star,     hint: 'Earn & redeem points' },
+                    ] as const).map(({ id, label, icon: Icon, hint }) => (
+                        <button
+                            key={id}
+                            onClick={() => setActiveTab(id)}
+                            title={hint}
+                            className={cn(
+                                'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                                activeTab === id
+                                    ? 'bg-primary text-white shadow-sm'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                            )}
+                        >
+                            <span className="flex items-center gap-2">
+                                <Icon className="w-4 h-4" /> {label}
+                            </span>
+                        </button>
+                    ))}
                 </div>
 
                 {activeTab === 'setup' && (
@@ -352,12 +322,20 @@ export default function LoyaltyProgramPage() {
                 )}
             </div>
 
-            {/* ── SETUP TAB ── */}
+            {/* ── MILESTONE REWARDS TAB ── */}
             {activeTab === 'setup' && (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
                     {/* Left: Configuration */}
                     <div className="xl:col-span-2 space-y-5">
+
+                        {/* Business value callout */}
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 flex gap-3 items-start">
+                            <Trophy className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                            <p className="text-sm text-amber-800 dark:text-amber-300">
+                                <strong>Repeat bookings upsell:</strong> After N completed stays, automatically unlock a reward for the guest — showing it as a popup the moment they start a new booking. Hotels see <strong>20-40% higher repeat rates</strong> with milestone rewards.
+                            </p>
+                        </div>
 
                         {/* Enable/Disable Card */}
                         <Card className="border-2 border-dashed border-primary/20 bg-primary/5 dark:bg-primary/10">
@@ -626,9 +604,17 @@ export default function LoyaltyProgramPage() {
                 </div>
             )}
 
-            {/* ── STAY OFFERS TAB ── */}
+            {/* ── STAY UPSELLS TAB ── */}
             {activeTab === 'offers' && (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    {/* Business value callout (full-width, above columns) */}
+                    <div className="xl:col-span-3 rounded-xl border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800 px-4 py-3 flex gap-3 items-start">
+                        <BedDouble className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
+                        <p className="text-sm text-indigo-800 dark:text-indigo-300">
+                            <strong>Longer-stay upsell:</strong> When a guest picks dates, show a popup — "Stay 1 more night and get 15% off!" This nudges them to extend their visit before they even choose a room.
+                            Set a minimum-nights threshold; guests who meet it get the reward automatically at checkout.
+                        </p>
+                    </div>
                     {/* Offer editor */}
                     <div className="xl:col-span-1 space-y-5">
                         <Card>
@@ -816,6 +802,13 @@ export default function LoyaltyProgramPage() {
             {/* ── POINTS TAB ── */}
             {activeTab === 'points' && (
                 <div className="max-w-2xl space-y-5">
+                    {/* Business value callout */}
+                    <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 px-4 py-3 flex gap-3 items-start">
+                        <Star className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                        <p className="text-sm text-green-800 dark:text-green-300">
+                            <strong>Points upsell:</strong> Guests earn points on every rupee spent and can redeem them for a discount on their next booking — giving them a compelling reason to come back. You set exactly how much a point is worth.
+                        </p>
+                    </div>
                     <Card className="border-2 border-dashed border-primary/20 bg-primary/5">
                         <CardContent className="p-5 flex items-center justify-between">
                             <div>
@@ -892,7 +885,13 @@ export default function LoyaltyProgramPage() {
 
             {/* ── GUESTS TAB ── */}
             {activeTab === 'guests' && (
-                <div>
+                <div className="space-y-4">
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 px-4 py-3 flex gap-3 items-start">
+                        <Users className="w-4 h-4 text-violet-600 dark:text-violet-400 mt-0.5 shrink-0" />
+                        <p className="text-sm text-violet-800 dark:text-violet-300">
+                            <strong>Your loyal guests:</strong> These guests have completed at least one booking. Track their reward progress, total spend, and how many stays away they are from their next reward — your highest-value repeat customers at a glance.
+                        </p>
+                    </div>
                     {guestsLoading ? (
                         <div className="flex items-center justify-center h-48">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />

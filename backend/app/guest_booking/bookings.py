@@ -23,6 +23,8 @@ from app.loyalty.loyalty_model import GuestLoyalty, LoyaltyProgram, LoyaltyOffer
 from app.rate_plans.promo import PromoCode
 from app.rate_plans.rates_model import RatePlan, RoomRate
 from app.rooms.room import RoomBlock, RoomType
+from app.revenue.pricing_model import PricingRule
+from app.revenue.pricing_engine import apply_pricing_rules
 
 from ._schemas import (
     GuestCancelInfoResponse,
@@ -124,6 +126,15 @@ async def create_public_booking(
                 daily_price_map[(dr.room_type_id, c.isoformat())] = dr.price
                 c += timedelta(days=1)
 
+        # Fetch active dynamic pricing rules for this hotel
+        active_pricing_rules = (await session.execute(
+            select(PricingRule).where(
+                PricingRule.hotel_id == hotel_id,
+                PricingRule.is_active == True,  # noqa: E712
+            )
+        )).scalars().all()
+        lead_time_days = (booking_data.check_in - date.today()).days
+
         # Per-room: availability check + server-side price recomputation
         for room_req in booking_data.rooms:
             rt = locked_room_types.get(room_req.room_type_id)
@@ -163,7 +174,18 @@ async def create_public_booking(
                     )
 
                 nightly_base = daily_price_map.get((rt.id, d_str), float(rt.base_price))
-                nightly_total = nightly_base + plan_modifier
+                occupancy_pct = (
+                    (rt.total_inventory - available) / rt.total_inventory * 100
+                    if rt.total_inventory > 0 else 0.0
+                )
+                dynamic_price, _ = apply_pricing_rules(
+                    nightly_base, active_pricing_rules,
+                    target_date=curr_day,
+                    room_type_id=rt.id,
+                    occupancy_pct=occupancy_pct,
+                    lead_time_days=lead_time_days,
+                )
+                nightly_total = dynamic_price + plan_modifier
                 extra_adults = max(0, room_req.guests - rt.base_occupancy)
                 if extra_adults > 0:
                     rate_adult = float(rt.extra_adult_price) if rt.extra_adult_price else float(rt.extra_person_price or 1000.0)

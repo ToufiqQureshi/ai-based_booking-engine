@@ -29,7 +29,6 @@ const mainNavItems = [
   { title: 'Taxes',           url: '/taxes',            icon: Percent },
   { title: 'Guests',          url: '/guests',           icon: Users },
   { title: 'Payments',        url: '/payments',         icon: CreditCard },
-  { title: 'Experiences & Activities', url: '/addons',  icon: Sparkles },
   { title: 'Google Reviews',  url: '/reviews',           icon: Star },
   { title: 'Channel Manager', url: '/channel-settings', icon: Link2 },
 ];
@@ -37,9 +36,10 @@ const mainNavItems = [
 // Revenue tools — features whose job is to grow bookings & revenue, grouped so
 // the hotelier can find them together instead of hunting across the menu.
 const revenueNavItems = [
-  { title: 'Loyalty Program', url: '/loyalty',           icon: Gift },
-  { title: 'Dynamic Pricing', url: '/revenue/pricing',   icon: Zap },
-  { title: 'Guest Recovery',  url: '/revenue/recovery',  icon: Send },
+  { title: 'Loyalty & Upsells', url: '/loyalty',           icon: Gift },
+  { title: 'Add-on Upsells',    url: '/addons',            icon: Sparkles },
+  { title: 'Dynamic Pricing',   url: '/revenue/pricing',   icon: Zap },
+  { title: 'Guest Recovery',    url: '/revenue/recovery',  icon: Send },
 ];
 
 const settingsNavItems = [
@@ -50,14 +50,14 @@ const settingsNavItems = [
 const DEFAULT_ROLE_PERMISSIONS = {
   OWNER: [
     "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper",
-    "/availability", "/bookings", "/taxes", "/guests", "/payments", "/addons",
-    "/loyalty", "/revenue/pricing", "/revenue/recovery",
+    "/availability", "/bookings", "/taxes", "/guests", "/payments",
+    "/loyalty", "/addons", "/revenue/pricing", "/revenue/recovery",
     "/reviews", "/channel-settings", "/integration", "/settings"
   ],
   MANAGER: [
     "/dashboard", "/analytics", "/rooms", "/rates", "/taxes",
     "/availability", "/bookings", "/guests", "/payments",
-    "/loyalty", "/revenue/pricing", "/revenue/recovery", "/settings"
+    "/loyalty", "/addons", "/revenue/pricing", "/revenue/recovery", "/settings"
   ],
   STAFF: [
     "/availability", "/bookings", "/guests"
