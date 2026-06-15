@@ -535,7 +535,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </div>}
                         </form>
                     </Form>
                 </div>
