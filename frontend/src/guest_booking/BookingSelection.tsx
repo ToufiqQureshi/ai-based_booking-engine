@@ -195,13 +195,30 @@ export default function BookingSelection() {
                     nights,
                 });
                 if (cancelled) return;
-                if (res?.has_offer && !res.unlocked && (res.nights_remaining || 0) > 0) {
+
+                if (!res?.has_offer) return;
+
+                // Case 1: Guest is below the threshold — nudge them to add more nights
+                if (!res.unlocked && (res.nights_remaining || 0) > 0) {
                     stayOfferShownRef.current.add(nights);
                     setStayOffer({
                         isOpen: true,
                         title: res.title || 'Stay Offer',
                         nudgeTitle: res.nudge_title || 'Stay a little longer!',
-                        nudgeMessage: res.nudge_message || '',
+                        nudgeMessage: res.nudge_message || `Stay ${res.nights_remaining} more night(s) and unlock ${res.reward_label || 'a reward'}!`,
+                        rewardLabel: res.reward_label || '',
+                        currentNights: res.current_nights || nights,
+                        minNights: res.min_nights || nights + (res.nights_remaining || 1),
+                    });
+                }
+                // Case 2: Guest has met the threshold — show a "you've unlocked it!" popup
+                else if (res.unlocked) {
+                    stayOfferShownRef.current.add(nights);
+                    setStayOffer({
+                        isOpen: true,
+                        title: res.title || 'Reward Unlocked! 🎉',
+                        nudgeTitle: res.nudge_title || 'Offer Unlocked! 🎉',
+                        nudgeMessage: res.nudge_message || `You've unlocked ${res.reward_label || 'a reward'} on this stay!`,
                         rewardLabel: res.reward_label || '',
                         currentNights: res.current_nights || nights,
                         minNights: res.min_nights || nights,
