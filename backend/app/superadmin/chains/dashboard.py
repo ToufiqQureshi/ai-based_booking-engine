@@ -361,6 +361,8 @@ class ChainPromoCreate(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     max_usage: Optional[int] = None
+    auto_apply: bool = False
+    name: Optional[str] = None
 
 class ChainLoyaltyUpdate(BaseModel):
     is_active: Optional[bool] = None
@@ -409,6 +411,8 @@ async def create_chain_promo(
         start_date=payload.start_date,
         end_date=payload.end_date,
         max_usage=payload.max_usage,
+        auto_apply=payload.auto_apply,
+        name=payload.name,
         is_active=True
     )
     session.add(promo)

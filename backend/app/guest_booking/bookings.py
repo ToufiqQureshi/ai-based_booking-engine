@@ -330,10 +330,11 @@ async def create_public_booking(
         chain_id = hotel_model.chain_id if hotel_model else None
 
         # Promo code discount
+        from datetime import date as _date
+        today = _date.today()
         discount_amount = 0.0
+        effective_promo_code = booking_data.promo_code
         if booking_data.promo_code:
-            from datetime import date as _date
-            today = _date.today()
             # Lock the promo row so the usage counter read-modify-write is atomic;
             # otherwise two concurrent redemptions can both pass the max_usage
             # check and over-redeem a limited promo.
@@ -357,6 +358,38 @@ async def create_public_booking(
                 discount_amount = min(discount_amount, total_before_discount)
                 promo.current_usage = (promo.current_usage or 0) + 1
                 session.add(promo)
+
+        # Seasonal auto-apply promotion. Only when the guest didn't already get a
+        # discount from a typed code. We pick the best in-window deal for this
+        # hotel/chain and compute the discount server-side (never trust client).
+        if discount_amount == 0:
+            auto_candidates = (await session.execute(
+                select(PromoCode).where(
+                    PromoCode.auto_apply == True,
+                    PromoCode.is_active == True,
+                    or_(PromoCode.hotel_id == hotel_id, PromoCode.chain_id == chain_id),
+                ).with_for_update()
+            )).scalars().all()
+            best_promo = None
+            best_discount = 0.0
+            for ap in auto_candidates:
+                if (ap.end_date and ap.end_date < today) or \
+                   (ap.start_date and ap.start_date > today) or \
+                   (ap.max_usage is not None and (ap.current_usage or 0) >= ap.max_usage):
+                    continue
+                if ap.discount_type == "percentage":
+                    d = (total_before_discount * ap.discount_value) / 100
+                else:
+                    d = ap.discount_value
+                d = min(d, total_before_discount)
+                if d > best_discount:
+                    best_discount = d
+                    best_promo = ap
+            if best_promo:
+                discount_amount = best_discount
+                best_promo.current_usage = (best_promo.current_usage or 0) + 1
+                session.add(best_promo)
+                effective_promo_code = best_promo.code or best_promo.name
 
         # Loyalty points redemption
         points_redeemed = 0.0
@@ -441,7 +474,7 @@ async def create_public_booking(
             booking_number=generate_booking_number(),
             check_in=booking_data.check_in, check_out=booking_data.check_out,
             rooms=rooms_list, addons=[addon.model_dump() for addon in booking_data.addons],
-            special_requests=booking_data.special_requests, promo_code=booking_data.promo_code,
+            special_requests=booking_data.special_requests, promo_code=effective_promo_code,
             total_amount=total_amount, subtotal_amount=subtotal_amount,
             tax_amount=tax_amount, discount_amount=discount_amount,
             tax_details=tax_details, status=BookingStatus.PENDING,

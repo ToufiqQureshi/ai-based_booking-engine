@@ -264,6 +264,12 @@ async def init_db():
         # Lets a package run only for a season/date range; NULL = always available.
         "ALTER TABLE rate_plans ADD COLUMN valid_from DATE",
         "ALTER TABLE rate_plans ADD COLUMN valid_to DATE",
+        # DB-10: seasonal auto-apply promotions on promo_codes (added 2026-06-15).
+        # auto_apply=TRUE deals apply server-side within their date window with no
+        # code; `name` is the banner label shown to guests.
+        "ALTER TABLE promo_codes ADD COLUMN auto_apply BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE promo_codes ADD COLUMN name VARCHAR(255)",
+        "CREATE INDEX IF NOT EXISTS idx_promo_codes_auto_apply ON promo_codes (auto_apply)",
     ]:
         try:
             async with engine.begin() as conn:

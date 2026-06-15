@@ -119,6 +119,8 @@ export function ChainDashboard() {
   const [promoStartInput, setPromoStartInput] = useState('');
   const [promoEndInput, setPromoEndInput] = useState('');
   const [promoMaxUsage, setPromoMaxUsage] = useState<number | ''>('');
+  const [promoAutoApply, setPromoAutoApply] = useState(false);
+  const [promoNameInput, setPromoNameInput] = useState('');
   const [isCreatingPromo, setIsCreatingPromo] = useState(false);
 
   // New states for loyalty program edits
@@ -193,19 +195,30 @@ export function ChainDashboard() {
 
   const handleCreatePromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!promoCodeInput) return;
+    // Auto-apply seasonal deals don't need a typed code; classic coupons do.
+    if (!promoAutoApply && !promoCodeInput) return;
+    if (promoAutoApply && !promoNameInput) {
+      alert('Please give the seasonal deal a name.');
+      return;
+    }
     try {
       setIsCreatingPromo(true);
+      const code = promoCodeInput.trim().toUpperCase()
+        || `AUTO-${promoNameInput.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').slice(0, 16)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
       await apiClient.post('/chain/promos', {
-        code: promoCodeInput.trim().toUpperCase(),
+        code,
+        name: promoNameInput || null,
         description: promoDescInput,
         discount_type: promoTypeInput,
         discount_value: Number(promoValInput),
         start_date: promoStartInput || null,
         end_date: promoEndInput || null,
         max_usage: promoMaxUsage !== '' ? Number(promoMaxUsage) : null,
+        auto_apply: promoAutoApply,
       });
       setPromoCodeInput('');
+      setPromoNameInput('');
+      setPromoAutoApply(false);
       setPromoDescInput('');
       setPromoValInput(0);
       setPromoStartInput('');
@@ -865,17 +878,46 @@ export function ChainDashboard() {
               </CardHeader>
               <CardContent className="p-5">
                 <form onSubmit={handleCreatePromo} className="space-y-4 text-xs font-semibold text-slate-700">
-                  <div className="space-y-1">
-                    <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Coupon Code</label>
+                  <label className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 p-3 bg-slate-50">
+                    <span className="space-y-0.5">
+                      <span className="block text-slate-700">Seasonal auto-apply deal</span>
+                      <span className="block text-[10px] font-medium text-slate-500">
+                        On: auto-applies within the dates, no code, shown as a banner. Off: classic typed coupon.
+                      </span>
+                    </span>
                     <input
-                      type="text"
-                      required
-                      placeholder="e.g. BRANDWELCOME"
-                      value={promoCodeInput}
-                      onChange={e => setPromoCodeInput(e.target.value.toUpperCase())}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none font-bold tracking-widest bg-slate-50 focus:bg-white"
+                      type="checkbox"
+                      checked={promoAutoApply}
+                      onChange={e => setPromoAutoApply(e.target.checked)}
+                      className="mt-1 h-4 w-4 accent-indigo-600"
                     />
-                  </div>
+                  </label>
+
+                  {promoAutoApply ? (
+                    <div className="space-y-1">
+                      <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Deal Name (shown to guests)</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Summer Sale"
+                        value={promoNameInput}
+                        onChange={e => setPromoNameInput(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none font-bold bg-slate-50 focus:bg-white"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Coupon Code</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. BRANDWELCOME"
+                        value={promoCodeInput}
+                        onChange={e => setPromoCodeInput(e.target.value.toUpperCase())}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none font-bold tracking-widest bg-slate-50 focus:bg-white"
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-1">
                     <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Description</label>

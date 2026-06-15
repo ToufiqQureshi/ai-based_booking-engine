@@ -154,6 +154,82 @@ class TestPublicBookingCreate:
         assert r.status_code == 409
 
 
+# ─── Seasonal auto-apply promotion ────────────────────────────────────────────
+
+class TestSeasonalAutoApply:
+    async def test_auto_apply_discount_computed_server_side(self, client: AsyncClient, seeded_hotel: Hotel):
+        """An active auto-apply promo discounts the booking with no code from the guest."""
+        from tests.conftest import engine
+        from app.rate_plans.promo import PromoCode
+
+        room_type = RoomType(
+            id=str(uuid.uuid4()),
+            hotel_id=seeded_hotel.id,
+            name="Seasonal Room",
+            base_price=1000.0,
+            total_inventory=5,
+            base_occupancy=2,
+            max_occupancy=3,
+        )
+        promo_id = str(uuid.uuid4())
+        promo = PromoCode(
+            id=promo_id,
+            hotel_id=seeded_hotel.id,
+            code="SUMMER-AUTO",
+            name="Summer Sale",
+            discount_type="fixed_amount",
+            discount_value=200.0,
+            auto_apply=True,
+            is_active=True,
+            start_date=date.today() - timedelta(days=1),
+            end_date=date.today() + timedelta(days=30),
+        )
+        async with AsyncSession(engine) as session:
+            session.add(room_type)
+            session.add(promo)
+            await session.commit()
+            await session.refresh(room_type)
+
+        # This test exercises pricing, not rate limiting — neutralise the shared
+        # /public/bookings limiter bucket that earlier tests consume.
+        from app.core.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(40), "check_out": _future(41),
+                "guest": {"first_name": "Auto", "last_name": "Deal", "email": "auto@deal.com", "phone": "9111111111"},
+                "rooms": [{
+                    "room_type_id": room_type.id,
+                    "room_type_name": room_type.name,
+                    "price_per_night": 1000.0,
+                    "total_price": 1000.0,
+                }],
+                "payment_method": "pay_at_property",
+            })
+        finally:
+            limiter.enabled = prev_enabled
+        assert r.status_code == 200, r.text
+        body = r.json()
+        # Discount applied server-side without the guest passing any code.
+        assert body["discount_amount"] == pytest.approx(200.0)
+        assert body["total_amount"] == pytest.approx(
+            round(body["subtotal_amount"] + body["tax_amount"] - 200.0, 2)
+        )
+
+        # And it surfaces on the public banner endpoint.
+        banner = await client.get(f"/api/v1/public/hotels/{seeded_hotel.id}/seasonal-deal")
+        assert banner.status_code == 200
+        assert banner.json()["active"] is True
+        assert banner.json()["name"] == "Summer Sale"
+
+        async with AsyncSession(engine) as session:
+            p = await session.get(PromoCode, promo_id)
+            if p:
+                await session.delete(p)
+            await session.commit()
+
+
 # ─── Loyalty check ────────────────────────────────────────────────────────────
 
 class TestLoyaltyCheck:

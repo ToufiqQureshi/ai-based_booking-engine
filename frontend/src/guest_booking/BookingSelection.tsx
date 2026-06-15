@@ -53,6 +53,7 @@ export default function BookingSelection() {
     const [rooms, setRooms] = useState<PublicRoomSearchResult[]>([]);
     const [addons, setAddons] = useState<AddOn[]>([]);
     const [hotel, setHotel] = useState<Hotel | null>(null);
+    const [seasonalDeal, setSeasonalDeal] = useState<{ active: boolean; name?: string; discount_type?: string; discount_value?: number; end_date?: string | null } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     // Tracks a failure of the critical rooms/hotel fetch so the guest sees a
     // retry affordance instead of a silent blank page.
@@ -548,6 +549,16 @@ export default function BookingSelection() {
         return () => es.close();
     }, [hotel?.id]);
 
+    // Seasonal deal banner — display only; the discount is recomputed server-side.
+    useEffect(() => {
+        if (!hotelSlug) return;
+        let cancelled = false;
+        apiClient.get<typeof seasonalDeal>(`/public/hotels/${hotelSlug}/seasonal-deal`)
+            .then(d => { if (!cancelled) setSeasonalDeal(d); })
+            .catch(() => { /* banner is optional */ });
+        return () => { cancelled = true; };
+    }, [hotelSlug]);
+
     const handleSelectRate = (room: PublicRoomSearchResult, ratePlan: RateOption) => {
         setPendingRoom(room);
         setSelectedRatePlan(ratePlan);
@@ -736,6 +747,19 @@ export default function BookingSelection() {
             )}
 
             <div className="max-w-7xl mx-auto px-3 sm:px-4 mt-4 sm:mt-8">
+                {/* Seasonal deal banner (auto-applied at checkout) */}
+                {seasonalDeal?.active && (
+                    <div className="mb-3 sm:mb-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                        <span className="text-lg">🎉</span>
+                        <span>
+                            {seasonalDeal.name}: {seasonalDeal.discount_type === 'percentage'
+                                ? `${seasonalDeal.discount_value}% off`
+                                : `₹${seasonalDeal.discount_value} off`} applied automatically
+                            {seasonalDeal.end_date ? ` · ends ${seasonalDeal.end_date}` : ''}
+                        </span>
+                    </div>
+                )}
+
                 {/* Custom Search Header */}
                 <RoomSearchHeader
                     searchType={searchType}
