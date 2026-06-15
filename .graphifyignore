@@ -1,0 +1,23 @@
+# Exclude files that require LLM API key for extraction
+*.md
+*.mdx
+*.xlsx
+*.csv
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.svg
+*.pdf
+*.html
+*.txt
+*.rst
+*.yaml
+*.yml
+docs/
+graphify-out/
+Dockerfile
+CLAUDE.md
+SECURITY.md
+STAYBOOKER_DOCS.md
