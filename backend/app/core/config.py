@@ -103,6 +103,10 @@ class Settings(BaseSettings):
     # Central WhatsApp Config
     CENTRAL_WHATSAPP_PHONE_ID: Optional[str] = None
     CENTRAL_WHATSAPP_TOKEN: Optional[str] = None
+    # Platform admin WhatsApp number for booking/cancellation alerts. Empty by
+    # default = alerts disabled. The public booking flow has no logged-in admin,
+    # so the recipient is a single configured platform number, not a user row.
+    SUPER_ADMIN_WHATSAPP: Optional[str] = None
 
     # Email Service (Brevo)
     BREVO_API_KEY: str | None = None

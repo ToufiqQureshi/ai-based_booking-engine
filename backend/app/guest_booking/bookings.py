@@ -507,20 +507,17 @@ async def create_public_booking(
 
             from app.services.whatsapp_service import get_whatsapp_service
             whatsapp_service = await get_whatsapp_service()
-            from app.guests.user import User, UserRole
-            super_admin = (await session.execute(
-                select(User).where(User.role == UserRole.SUPER_ADMIN)
-            )).scalars().first()
 
             if guest.phone:
                 tmpl = h_settings.get("whatsapp_template_booking_confirmed") or "booking_confirmation_guest"
                 comp = [{"type": "body", "parameters": [{"type": "text", "text": guest.first_name}, {"type": "text", "text": hotel.name or "our hotel"}, {"type": "text", "text": booking.booking_number}, {"type": "text", "text": str(booking.check_in)}, {"type": "text", "text": str(booking.check_out)}, {"type": "text", "text": f"{len(booking.rooms)} room(s)"}, {"type": "text", "text": f"INR {booking.total_amount}"}]}]
                 background_tasks.add_task(whatsapp_service.send_whatsapp_template, guest.phone, tmpl, "en_US", comp, h_settings)
-                
-            if super_admin and super_admin.phone:
+
+            admin_phone = app_settings.SUPER_ADMIN_WHATSAPP
+            if admin_phone:
                 tmpl_admin = "admin_new_booking_alert"
                 comp_admin = [{"type": "body", "parameters": [{"type": "text", "text": hotel.name or "our hotel"}, {"type": "text", "text": booking.booking_number}, {"type": "text", "text": f"{guest.first_name} {guest.last_name}"}, {"type": "text", "text": str(booking.check_in)}, {"type": "text", "text": f"INR {booking.total_amount}"}]}]
-                background_tasks.add_task(whatsapp_service.send_whatsapp_template, super_admin.phone, tmpl_admin, "en_US", comp_admin, h_settings)
+                background_tasks.add_task(whatsapp_service.send_whatsapp_template, admin_phone, tmpl_admin, "en_US", comp_admin, h_settings)
         return PublicBookingResponse(
             id=booking.id, booking_number=booking.booking_number,
             status=booking.status.value, check_in=booking.check_in, check_out=booking.check_out,
@@ -926,14 +923,11 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
     from app.services.email_service import get_email_service
     from app.services.whatsapp_service import get_whatsapp_service
     from app.core.vault import resolve_settings_secrets
-    from app.guests.user import User, UserRole
 
     email_service = await get_email_service()
     whatsapp_service = await get_whatsapp_service()
     h_settings = await resolve_settings_secrets(session, hotel.settings if hotel and hotel.settings else {})
-    
-    super_admin = (await session.execute(select(User).where(User.role == UserRole.SUPER_ADMIN))).scalars().first()
-    
+
     # Send Emails
     background_tasks.add_task(
         email_service.send_guest_booking_cancellation,
@@ -959,10 +953,11 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
         comp = [{"type": "body", "parameters": [{"type": "text", "text": guest.first_name}, {"type": "text", "text": booking.booking_number}, {"type": "text", "text": hotel.name or "our hotel"}]}]
         background_tasks.add_task(whatsapp_service.send_whatsapp_template, guest.phone, tmpl, "en_US", comp, h_settings)
 
-    if super_admin and super_admin.phone:
+    admin_phone = app_settings.SUPER_ADMIN_WHATSAPP
+    if admin_phone:
         tmpl_admin = "admin_booking_cancelled_alert"
         comp_admin = [{"type": "body", "parameters": [{"type": "text", "text": hotel.name or "our hotel"}, {"type": "text", "text": booking.booking_number}, {"type": "text", "text": f"{guest.first_name} {guest.last_name}"}]}]
-        background_tasks.add_task(whatsapp_service.send_whatsapp_template, super_admin.phone, tmpl_admin, "en_US", comp_admin, h_settings)
+        background_tasks.add_task(whatsapp_service.send_whatsapp_template, admin_phone, tmpl_admin, "en_US", comp_admin, h_settings)
 
     return {
         "status": "cancelled", "booking_number": booking.booking_number,

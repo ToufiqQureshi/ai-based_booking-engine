@@ -21,8 +21,8 @@ class WhatsAppService:
         """
         # If the hotel has their own credentials, use them. Otherwise, fallback to platform defaults.
         hotel_settings = hotel_settings or {}
-        access_token = hotel_settings.get("whatsapp_access_token") or self.settings.WHATSAPP_TOKEN
-        phone_number_id = hotel_settings.get("whatsapp_phone_number_id") or self.settings.WHATSAPP_PHONE_NUMBER_ID
+        access_token = hotel_settings.get("whatsapp_access_token") or self.settings.CENTRAL_WHATSAPP_TOKEN
+        phone_number_id = hotel_settings.get("whatsapp_phone_number_id") or self.settings.CENTRAL_WHATSAPP_PHONE_ID
 
         if not access_token or not phone_number_id:
             logger.warning("WhatsApp API credentials missing. Skipping message to %s", phone_number)
@@ -68,8 +68,8 @@ class WhatsAppService:
         Sends a pre-approved WhatsApp template message. This is required for proactive alerts.
         """
         hotel_settings = hotel_settings or {}
-        access_token = hotel_settings.get("whatsapp_access_token") or self.settings.WHATSAPP_TOKEN
-        phone_number_id = hotel_settings.get("whatsapp_phone_number_id") or self.settings.WHATSAPP_PHONE_NUMBER_ID
+        access_token = hotel_settings.get("whatsapp_access_token") or self.settings.CENTRAL_WHATSAPP_TOKEN
+        phone_number_id = hotel_settings.get("whatsapp_phone_number_id") or self.settings.CENTRAL_WHATSAPP_PHONE_ID
 
         if not access_token or not phone_number_id:
             logger.warning("WhatsApp API credentials missing. Skipping template to %s", phone_number)

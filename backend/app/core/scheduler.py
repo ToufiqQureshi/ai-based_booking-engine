@@ -9,6 +9,8 @@ If Redis is unavailable we fail-open and run (single-instance assumption).
 Jobs:
   - social_proof          every 15 min     — refresh cached social-proof stats
   - subscription_expiry   every 24 h       — notify hotels of expiring plans
+  - abandoned_recovery    hourly           — nudge guests who left a PENDING,
+                                             unpaid booking (per-hotel opt-in)
   - rate_shopper_auto_scrape  hourly (:10) — scrape competitor rates for hotels
                                              whose configured local hour is now
 
@@ -55,6 +57,18 @@ async def _job_subscription_expiry() -> None:
     await check_subscription_expiry()
 
 
+async def _job_abandoned_recovery() -> None:
+    # hotel_id=None sweeps every hotel; per-hotel settings["recovery_enabled"]
+    # gates who actually gets nudged, so disabled hotels are skipped inside.
+    from app.revenue.recovery import run_abandoned_recovery
+    result = await run_abandoned_recovery()
+    logger.info(
+        "Abandoned-recovery sweep: scanned=%s nudged=%s skipped_disabled=%s errors=%s",
+        result.get("scanned"), result.get("nudged"),
+        result.get("skipped_disabled"), result.get("errors"),
+    )
+
+
 async def _tick_social_proof() -> None:
     # lock TTL < interval so a crashed run releases before the next tick
     await _run_locked("social_proof", 600, _job_social_proof)
@@ -62,6 +76,11 @@ async def _tick_social_proof() -> None:
 
 async def _tick_subscription_expiry() -> None:
     await _run_locked("subscription_expiry", 3600, _job_subscription_expiry)
+
+
+async def _tick_abandoned_recovery() -> None:
+    # lock TTL (50 min) < hourly interval so a crashed run releases in time.
+    await _run_locked("abandoned_recovery", 3000, _job_abandoned_recovery)
 
 
 def start_scheduler() -> None:
@@ -73,10 +92,13 @@ def start_scheduler() -> None:
                   id="social_proof", max_instances=1, coalesce=True)
     sched.add_job(_tick_subscription_expiry, "interval", hours=24,
                   id="subscription_expiry", max_instances=1, coalesce=True)
+    sched.add_job(_tick_abandoned_recovery, "interval", hours=1,
+                  id="abandoned_recovery", max_instances=1, coalesce=True)
     sched.start()
     _scheduler = sched
     logger.info(
-        "Background scheduler started (social_proof=15m, subscription_expiry=24h)"
+        "Background scheduler started "
+        "(social_proof=15m, subscription_expiry=24h, abandoned_recovery=1h)"
     )
 
 
