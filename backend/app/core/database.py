@@ -250,6 +250,10 @@ async def init_db():
         "ALTER TABLE competitor_rates ALTER COLUMN price DROP NOT NULL",
         "ALTER TABLE competitor_rates ALTER COLUMN currency DROP NOT NULL",
         "ALTER TABLE competitor_rates ALTER COLUMN is_sold_out DROP NOT NULL",
+        # DB-07: nudge_from_nights on loyalty_offers (added 2026-06-15).
+        # Hotelier-controlled gate: nudge only shows when guest nights >= this value.
+        # Default 1 keeps existing offers behaving as before (show to all guests).
+        "ALTER TABLE loyalty_offers ADD COLUMN nudge_from_nights INTEGER NOT NULL DEFAULT 1",
     ]:
         try:
             async with engine.begin() as conn:
