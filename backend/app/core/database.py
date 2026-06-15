@@ -229,6 +229,27 @@ async def init_db():
         # predates the column, so create_all won't add it — every recovery
         # sweep would otherwise fail with "column recovery_sent_at does not exist".
         "ALTER TABLE bookings ADD COLUMN recovery_sent_at TIMESTAMPTZ",
+        # DB-06: schema drift fixes (added 2026-06-15). Two features shipped a
+        # model change with no matching migration; create_all never adds columns
+        # to an existing table, so production threw "column ... does not exist".
+        #  * loyalty_programs.milestones — multiple-milestones config (JSON array).
+        f"ALTER TABLE loyalty_programs ADD COLUMN milestones JSON DEFAULT {json_default}",
+        #  * competitor_rates — Rate Shopper was refactored from a single price to
+        #    per-meal-plan base/total rates (EP/CP/MAP/AP) plus a status string.
+        "ALTER TABLE competitor_rates ADD COLUMN status VARCHAR(50) DEFAULT 'Available'",
+        "ALTER TABLE competitor_rates ADD COLUMN ep_base DOUBLE PRECISION",
+        "ALTER TABLE competitor_rates ADD COLUMN ep_total DOUBLE PRECISION",
+        "ALTER TABLE competitor_rates ADD COLUMN cp_base DOUBLE PRECISION",
+        "ALTER TABLE competitor_rates ADD COLUMN cp_total DOUBLE PRECISION",
+        "ALTER TABLE competitor_rates ADD COLUMN map_base DOUBLE PRECISION",
+        "ALTER TABLE competitor_rates ADD COLUMN map_total DOUBLE PRECISION",
+        "ALTER TABLE competitor_rates ADD COLUMN ap_base DOUBLE PRECISION",
+        "ALTER TABLE competitor_rates ADD COLUMN ap_total DOUBLE PRECISION",
+        # The legacy NOT NULL columns the refactored model no longer writes — relax
+        # them so new scrapes can insert. Kept (not dropped) to preserve old data.
+        "ALTER TABLE competitor_rates ALTER COLUMN price DROP NOT NULL",
+        "ALTER TABLE competitor_rates ALTER COLUMN currency DROP NOT NULL",
+        "ALTER TABLE competitor_rates ALTER COLUMN is_sold_out DROP NOT NULL",
     ]:
         try:
             async with engine.begin() as conn:
