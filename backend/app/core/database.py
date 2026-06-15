@@ -260,6 +260,10 @@ async def init_db():
         # ordinary single-hotel offers.
         "ALTER TABLE loyalty_offers ADD COLUMN broadcast_id VARCHAR(255)",
         "CREATE INDEX IF NOT EXISTS idx_loyalty_offers_broadcast ON loyalty_offers (broadcast_id)",
+        # DB-09: optional package validity window on rate_plans (added 2026-06-15).
+        # Lets a package run only for a season/date range; NULL = always available.
+        "ALTER TABLE rate_plans ADD COLUMN valid_from DATE",
+        "ALTER TABLE rate_plans ADD COLUMN valid_to DATE",
     ]:
         try:
             async with engine.begin() as conn:

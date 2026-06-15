@@ -28,6 +28,10 @@ class RatePlanBase(SQLModel):
     package_items: list = Field(default_factory=list, sa_column=Column(JSON)) # Specific bundle items for packages
     market_price: Optional[float] = Field(default=None, description="Original price for strike-through display")
     image_url: Optional[str] = None
+    # Optional validity window — lets a package run only for a season/date range.
+    # NULL on both sides means always available.
+    valid_from: Optional[date] = Field(default=None, description="Package bookable from this date")
+    valid_to: Optional[date] = Field(default=None, description="Package bookable until this date")
 
 class RatePlan(RatePlanBase, table=True):
     __tablename__ = "rate_plans"
