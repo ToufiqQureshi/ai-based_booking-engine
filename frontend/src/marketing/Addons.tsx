@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
-import { 
-    Plus, Search, Loader2, Sparkles, Pencil, Trash2, ImageOff, 
-    Wifi, Tv, Snowflake, Waves, Dumbbell, Car, Utensils, Star, 
-    ShieldCheck, Wine, Bath, ShowerHead, Flame, Baby, Languages, 
-    ConciergeBell, WashingMachine, Key, Wind, CigaretteOff, PawPrint, 
+import {
+    Plus, Search, Loader2, Sparkles, Pencil, Trash2, ImageOff,
+    Wifi, Tv, Snowflake, Waves, Dumbbell, Car, Utensils, Star,
+    ShieldCheck, Wine, Bath, ShowerHead, Flame, Baby, Languages,
+    ConciergeBell, WashingMachine, Key, Wind, CigaretteOff, PawPrint,
     VolumeX, Maximize, Briefcase, Map, LayoutGrid, Hotel, BedDouble, Filter,
-    Coffee
+    Coffee, Sunrise, Sunset, Plane, ParkingCircle, UtensilsCrossed, Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -133,6 +133,36 @@ export default function AddonsPage() {
         addon.name.toLowerCase().includes(addonsSearchQuery.toLowerCase()) ||
         addon.category.toLowerCase().includes(addonsSearchQuery.toLowerCase())
     );
+
+    // Quick upsell templates — one-click to create; hotelier edits price if needed
+    const UPSELL_TEMPLATES = [
+        { name: 'Early Check-in',        description: 'Check in from 9 AM onwards, subject to availability',         price: 500,  category: 'general',   icon: Sunrise },
+        { name: 'Late Check-out',         description: 'Extend your stay until 2 PM hassle-free',                     price: 500,  category: 'general',   icon: Sunset },
+        { name: 'Breakfast Package',      description: 'Continental breakfast for 2 served in-room or at restaurant', price: 350,  category: 'food',      icon: Coffee },
+        { name: 'Airport Transfer',       description: 'One-way air-conditioned cab pickup or drop at airport',        price: 800,  category: 'transport', icon: Plane },
+        { name: 'Parking',               description: 'Secure covered parking for one vehicle',                       price: 200,  category: 'transport', icon: ParkingCircle },
+        { name: 'Spa Session',           description: '60-minute full-body relaxation massage',                       price: 1500, category: 'wellness',  icon: Waves },
+        { name: 'Candlelight Dinner',    description: 'Private candlelight dinner for 2 with curated menu',          price: 2000, category: 'romance',   icon: UtensilsCrossed },
+        { name: 'City Tour',             description: 'Half-day guided sightseeing tour of top local attractions',   price: 1200, category: 'activity',  icon: Map },
+    ] as const;
+
+    const createFromTemplate = async (t: typeof UPSELL_TEMPLATES[number]) => {
+        try {
+            await apiClient.post('/addons', {
+                name: t.name,
+                description: t.description,
+                price: t.price,
+                category: t.category,
+                is_active: true,
+            });
+            toast({ title: `"${t.name}" added!`, description: 'Edit the price to match your rates.' });
+            fetchAddons();
+        } catch {
+            toast({ variant: 'destructive', title: 'Failed to create', description: 'Try again.' });
+        }
+    };
+
+    const [showTemplates, setShowTemplates] = useState(true);
 
     // ==========================================
     // TAB 2 & 3: AMENITIES STATE & LOGIC
@@ -303,6 +333,39 @@ export default function AddonsPage() {
             onSuccess={fetchAddons}
             initialData={selectedAddon}
           />
+
+          {/* Quick Upsell Templates */}
+          <div className="rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/10 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-bold text-blue-800 dark:text-blue-300">Quick Upsell Templates</span>
+                <span className="text-xs text-blue-500 dark:text-blue-400">— click to add instantly, then edit price</span>
+              </div>
+              <button
+                onClick={() => setShowTemplates(v => !v)}
+                className="text-xs text-blue-500 hover:text-blue-700 font-semibold"
+              >
+                {showTemplates ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            {showTemplates && (
+              <div className="flex flex-wrap gap-2">
+                {UPSELL_TEMPLATES.map((t) => (
+                  <button
+                    key={t.name}
+                    onClick={() => createFromTemplate(t)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-800/50 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all shadow-sm hover:shadow-md"
+                  >
+                    <t.icon className="w-3.5 h-3.5 text-blue-500" />
+                    {t.name}
+                    <span className="text-xs text-muted-foreground font-normal">₹{t.price}</span>
+                    <Plus className="w-3 h-3 text-blue-400" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="flex items-center justify-between">
             <div className="relative max-w-sm w-full">
