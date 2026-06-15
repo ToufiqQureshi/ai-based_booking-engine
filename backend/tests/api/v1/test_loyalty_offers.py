@@ -9,10 +9,31 @@ Covers:
 import uuid
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import engine
+from app.brand_console.hotel import Hotel
+from app.loyalty.loyalty_model import LoyaltyOffer
 from app.rooms.room import RoomType
 
 pytestmark = pytest.mark.asyncio
+
+
+async def _fresh_hotel_with_offers(*offers: dict) -> str:
+    """Create an isolated hotel owning only the given offers.
+
+    The public-offer checks share a session-scoped seeded_hotel, so offers that
+    other tests create on it leak in and make the night-threshold assertions
+    order-dependent (e.g. an unrelated min_nights=6 offer turns an "unlocked at 5"
+    check into a "1 more night" nudge). Each check gets its own hotel instead.
+    """
+    hotel_id = str(uuid.uuid4())
+    async with AsyncSession(engine) as s:
+        s.add(Hotel(id=hotel_id, name="Offer Test Hotel", slug=f"offer-{uuid.uuid4().hex[:8]}"))
+        for o in offers:
+            s.add(LoyaltyOffer(hotel_id=hotel_id, **o))
+        await s.commit()
+    return hotel_id
 
 
 # ─── Hotelier: offer CRUD ─────────────────────────────────────────────────────
@@ -125,13 +146,13 @@ class TestPublicOfferCheck:
         assert r.status_code == 200
         assert r.json()["has_offer"] is False
 
-    async def test_nudge_below_threshold(self, auth_client: AsyncClient, client: AsyncClient, seeded_hotel):
-        await auth_client.post("/api/v1/loyalty/offers", json={
-            "title": "Stay 5", "min_nights": 5, "reward_type": "percentage", "reward_value": 20,
-            "nudge_message": "Stay {remaining} more night(s) and unlock {reward}!",
-        })
+    async def test_nudge_below_threshold(self, client: AsyncClient):
+        hotel_id = await _fresh_hotel_with_offers(
+            {"title": "Stay 5", "min_nights": 5, "reward_type": "percentage", "reward_value": 20,
+             "nudge_message": "Stay {remaining} more night(s) and unlock {reward}!"},
+        )
         r = await client.post("/api/v1/public/loyalty-offers", json={
-            "hotel_id": seeded_hotel.id, "nights": 3,
+            "hotel_id": hotel_id, "nights": 3,
         })
         assert r.status_code == 200
         body = r.json()
@@ -140,12 +161,12 @@ class TestPublicOfferCheck:
         assert body["nights_remaining"] == 2
         assert "2" in body["nudge_message"]
 
-    async def test_unlocked_at_threshold(self, auth_client: AsyncClient, client: AsyncClient, seeded_hotel):
-        await auth_client.post("/api/v1/loyalty/offers", json={
-            "title": "Stay 5", "min_nights": 5, "reward_type": "percentage", "reward_value": 20,
-        })
+    async def test_unlocked_at_threshold(self, client: AsyncClient):
+        hotel_id = await _fresh_hotel_with_offers(
+            {"title": "Stay 5", "min_nights": 5, "reward_type": "percentage", "reward_value": 20},
+        )
         r = await client.post("/api/v1/public/loyalty-offers", json={
-            "hotel_id": seeded_hotel.id, "nights": 5,
+            "hotel_id": hotel_id, "nights": 5,
         })
         assert r.status_code == 200
         body = r.json()
@@ -153,11 +174,11 @@ class TestPublicOfferCheck:
         assert body["unlocked"] is True
         assert body["nights_remaining"] == 0
 
-    async def test_needs_dates_when_nights_missing(self, auth_client: AsyncClient, client: AsyncClient, seeded_hotel):
-        await auth_client.post("/api/v1/loyalty/offers", json={
-            "title": "Stay 5", "min_nights": 5, "reward_type": "percentage", "reward_value": 20,
-        })
-        r = await client.post("/api/v1/public/loyalty-offers", json={"hotel_id": seeded_hotel.id})
+    async def test_needs_dates_when_nights_missing(self, client: AsyncClient):
+        hotel_id = await _fresh_hotel_with_offers(
+            {"title": "Stay 5", "min_nights": 5, "reward_type": "percentage", "reward_value": 20},
+        )
+        r = await client.post("/api/v1/public/loyalty-offers", json={"hotel_id": hotel_id})
         assert r.status_code == 200
         body = r.json()
         assert body["has_offer"] is True
