@@ -185,7 +185,8 @@ export const AnalyticsDashboard: React.FC = () => {
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const [activeUsers, setActiveUsers] = useState<number>(0);
 
-  const { tab: activeTab = 'overview' } = useParams<{ tab?: string }>();
+  const { tab } = useParams<{ tab?: string }>();
+  const activeTab = tab || 'overview';
   const navigate = useNavigate();
 
   // 1. KPI stats (always load on mount, depends on `days`)
@@ -278,13 +279,15 @@ export const AnalyticsDashboard: React.FC = () => {
       ]);
       setActiveUsers(activeRes.active_visitors);
       setLiveEvents(feedRes.map(e => ({
-        id: Math.random().toString(),
-        type: (e.event === 'booking_complete' ? 'booking' : e.event === 'search' ? 'search' : 'view') as LiveEvent['type'],
-        message: e.event === 'booking_complete' ? '🎉 New Booking Confirmed' :
-                 e.event === 'search' ? '🔍 Searching availability' :
-                 e.event === 'room_view' ? '👁 Viewing room details' : '📄 New page visit',
-        timestamp: new Date(e.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-        amount: e.metadata ? (() => { try { return JSON.parse(e.metadata).total_amount; } catch { return undefined; } })() : undefined,
+        id: e.session_id,
+        type: (e.has_booked ? 'booking' : 'view') as LiveEvent['type'],
+        message: e.has_booked
+          ? `🎉 Booking confirmed${e.country ? ` · ${e.country}` : ''}`
+          : `👁 Visit${e.country ? ` from ${e.country}` : ''}${e.browser ? ` · ${e.browser}` : ''}`,
+        timestamp: e.started_at
+          ? new Date(e.started_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+          : '--:--',
+        amount: undefined,
       })));
     } catch (err) {
       console.error('Live feed poll failed', err);
@@ -594,7 +597,7 @@ export const AnalyticsDashboard: React.FC = () => {
                           key={ev.id}
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
-                          className="flex items-center justify-between py-2.5 py-3 bg-muted rounded-xl border border-border text-xs"
+                          className="flex items-center justify-between py-3 bg-muted rounded-xl border border-border text-xs"
                         >
                           <div className="flex items-center gap-2.5">
                             <span className={`w-2 h-2 rounded-full shrink-0 ${

@@ -372,7 +372,7 @@ export default function SuperAdminDashboard() {
                                 {activeSection === 'users' && <UsersTab />}
                                 {activeSection === 'brands' && <BrandsTab hotels={hotels} users={users} />}
                                 {activeSection === 'plans' && <PlanFeaturesTab />}
-                                {activeSection === 'analytics' && <AnalyticsTab hotels={hotels} users={users} onSelectHotel={handleSelectHotel} />}
+                                {activeSection === 'analytics' && <AnalyticsTab hotels={hotels} onSelectHotel={handleSelectHotel} />}
                                 {activeSection === 'revenue' && <RevenueTab />}
                                 {activeSection === 'health' && <HealthTab onSelectHotel={handleSelectHotel} />}
                                 {activeSection === 'broadcasts' && <BroadcastsTab />}

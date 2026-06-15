@@ -1,20 +1,10 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
-import { Search, Loader2, Building2, Plus, Shield, Users, Mail, Phone, Calendar, Globe, Trash2, CheckCircle2, Lock, Tag, MapPin, Edit, Settings2, BarChart3, Radio, RefreshCw, Smartphone, Key, Star, LayoutGrid, CheckSquare, XSquare, MessageSquare, ListFilter, PlayCircle, Filter, Download, Zap, UploadCloud, ChevronRight, Save, LayoutTemplate, Activity, AlertTriangle, ShieldCheck, FileText, Send, Eye, X, Crown, Clock, Copy, ArrowRight, UserCheck, CheckCircle, SlidersHorizontal, Settings, BrainCircuit, Sliders } from 'lucide-react';
+import { Crown, BrainCircuit, Sliders } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from '@/lib/utils';
 
 // Fallback hash function if not provided via props
 const getHotelHashValue = (id: string, seed: number) => {
@@ -26,7 +16,7 @@ const getHotelHashValue = (id: string, seed: number) => {
     return Math.abs(hash);
 };
 
-export function AnalyticsTab({ hotels, users, onSelectHotel }: { hotels: any[], users: any[], onSelectHotel?: (h: any) => void }) {
+export function AnalyticsTab({ hotels, onSelectHotel }: { hotels: any[], onSelectHotel?: (h: any) => void }) {
   return (
     <>
 <div>
@@ -78,7 +68,7 @@ export function AnalyticsTab({ hotels, users, onSelectHotel }: { hotels: any[], 
                                         <div className="w-12 h-12 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center border border-purple-500/20 shadow-sm">
                                             <BrainCircuit className="w-6 h-6" />
                                         </div>
-                                        <Badge className="bg-purple-500/10 text-purple-750 dark:text-purple-400 border border-purple-500/20 rounded-lg px-2.5 py-0.5 font-bold text-[10px] uppercase tracking-wider">AI Suite</Badge>
+                                        <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20 rounded-lg px-2.5 py-0.5 font-bold text-[10px] uppercase tracking-wider">AI Suite</Badge>
                                     </div>
                                     <div className="space-y-1">
                                         <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">AI Activation Status</span>
