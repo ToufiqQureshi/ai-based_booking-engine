@@ -12,6 +12,7 @@
 // token continues to be sent as a Bearer header as a fallback.
 
 import { ApiError, AuthTokens } from '@/types/api';
+import { supabase } from '@/lib/supabase';
 
 // Dynamic API URL selection
 const getBaseUrl = () => {
@@ -180,7 +181,6 @@ const tryRefreshToken = async (): Promise<boolean> => {
 
   refreshPromise = (async () => {
     try {
-      const { supabase } = await import('@/lib/supabase');
       const { data, error } = await supabase.auth.refreshSession();
 
       if (error || !data.session) {
