@@ -21,7 +21,10 @@ class PaymentBase(SQLModel):
     status: PaymentStatus = Field(default=PaymentStatus.PENDING)
     payment_method: Optional[str] = None
     gateway_reference: Optional[str] = None
-    transaction_id: Optional[str] = None
+    # PAY-2: unique so a gateway transaction can never be recorded twice (webhook
+    # replay / verify+webhook race). NULLs are allowed (multiple NULLs are fine in
+    # Postgres) for non-gateway/manual payments that have no transaction id.
+    transaction_id: Optional[str] = Field(default=None, unique=True, index=True)
     reference_number: Optional[str] = None
 
 class Payment(PaymentBase, table=True):

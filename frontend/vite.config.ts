@@ -32,6 +32,22 @@ export default defineConfig(() => ({
   },
   build: {
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Split heavy vendors into separate long-term-cacheable chunks so the
+        // initial bundle is smaller and app updates don't bust vendor caches.
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return;
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return "react-vendor";
+          if (id.includes("recharts") || /[\\/]d3-/.test(id)) return "charts";
+          if (id.includes("@radix-ui")) return "radix";
+          if (id.includes("date-fns")) return "date-fns";
+          if (id.includes("lucide-react")) return "icons";
+          if (id.includes("@tanstack")) return "query";
+          return "vendor";
+        },
+      },
+    },
   },
   plugins: [react()],
   resolve: {

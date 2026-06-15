@@ -450,7 +450,17 @@ async def create_guest_agent_graph(
         except (ValueError, TypeError):
             children_int = 0
 
-        if not phone or len(phone.strip()) < 8:
+        # Bound free-text inputs from the (public, LLM-mediated) guest so a
+        # prompt-injected or abusive message can't write oversized/garbage PII
+        # into the CRM lead or the synced Google Sheet. hotel_id is fixed by the
+        # closure, so a lead can never be written to another tenant.
+        first_name = (first_name or "").strip()[:80]
+        last_name = (last_name or "").strip()[:80]
+        phone = (phone or "").strip()[:20]
+        email = (email or "").strip()[:120]
+        inquiry_summary = (inquiry_summary or "").strip()[:500]
+
+        if not phone or len(phone) < 8:
             return "I need a valid mobile number to prepare your booking link. Could you please provide it?"
 
         room = next(

@@ -11,7 +11,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.models import AnalyticsSession, AnalyticsEvent
-from app.brand_console.hotel import Hotel
+from app.brand_console.models import Hotel
 
 pytestmark = pytest.mark.asyncio
 

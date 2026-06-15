@@ -5,6 +5,7 @@ from sqlmodel import select, and_, or_
 from pydantic import BaseModel, EmailStr
 import uuid
 import logging
+import re
 
 from app.core.database import get_session
 from app.core.deps import DbSession
@@ -21,6 +22,26 @@ from app.core.limiter import limiter
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
+
+# Patterns that turn "custom CSS" into an exfiltration / script vector. We allow
+# hoteliers to theme the widget, but strip anything that can make a network
+# request, break out of the <style> tag, or invoke script. (Leading OTAs do not
+# expose tenant JS at all; CSS theming is kept but neutered.)
+_CSS_DANGER = re.compile(
+    r"(?:</?\s*style|<\s*/?\s*script|expression\s*\(|javascript\s*:|@import|behavior\s*:|-moz-binding|url\s*\()",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_widget_css(css: Optional[str]) -> str:
+    """Best-effort sanitizer for hotelier-supplied widget CSS served publicly."""
+    if not css:
+        return ""
+    if _CSS_DANGER.search(css):
+        # Remove the offending constructs rather than dropping all styling.
+        css = _CSS_DANGER.sub("", css)
+    # Hard cap to avoid abuse via giant payloads.
+    return css[:10000]
 
 class RateOption(BaseModel):
     id: str # rate_plan_id
@@ -207,8 +228,10 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         "widget_layout": getattr(settings, 'widget_layout', 'modern') if settings else "modern",
         "widget_background_color": settings.widget_background_color if settings else "#FFFFFF",
         "widget_theme": getattr(settings, 'widget_theme', 'light') if settings else "light",
-        "widget_custom_css": getattr(settings, 'widget_custom_css', '') if settings else '',
-        "widget_custom_js": getattr(settings, 'widget_custom_js', '') if settings else '',
+        # custom CSS is sanitized before it ever reaches a guest browser;
+        # custom JS is deliberately NOT exposed on this public endpoint (it would
+        # be a remote-code-execution sink in every guest's widget).
+        "widget_custom_css": _sanitize_widget_css(getattr(settings, 'widget_custom_css', '') if settings else ''),
         "allowed_domains": allowed_domains,
         "widget_enabled": widget_enabled,
         "min_nights": getattr(settings, 'widget_min_nights', 1) if settings else 1,

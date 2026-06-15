@@ -32,12 +32,13 @@ from app.rooms.room import RoomType
 from app.rate_plans.rates_model import RatePlan
 from main import app
 
-# Register models that the app imports lazily (inside functions, per the
-# performance rules) so their tables are present in SQLModel.metadata before
-# create_all() runs. Without these imports the in-memory test DB is missing
-# tables like ai_usage_daily / analytics_sessions / subscriptions.
-from app.analytics.models import AnalyticsSession, AnalyticsEvent  # noqa: E402,F401
+# Tests create the schema with SQLModel.metadata.create_all (production uses
+# Alembic). Some table models are only imported lazily inside functions
+# (e.g. app.core.ai_usage imports these at call time), so they would be absent
+# from the metadata at create_all time and queries would hit "no such table".
+# Import them here so every table model is registered before create_all.
 from app.ai_assistant.ai_usage import AIUsageDaily, AIUsageParticipant  # noqa: E402,F401
+from app.analytics.models import AnalyticsSession, AnalyticsEvent  # noqa: E402,F401
 from app.superadmin.subscriptions.subscription import Subscription  # noqa: E402,F401
 from app.superadmin.chains.chain import Chain  # noqa: E402,F401
 from app.system.audit import AuditLog, SystemBroadcast  # noqa: E402,F401
