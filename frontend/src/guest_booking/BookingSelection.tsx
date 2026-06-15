@@ -645,7 +645,7 @@ export default function BookingSelection() {
             {hotel && hotel.photos && hotel.photos.length > 0 && (
                 <div className="w-full h-48 md:h-72 lg:h-[450px] relative overflow-hidden bg-slate-900 group">
                     <AnimatePresence mode="wait">
-                        // @ts-ignore - framer-motion type mismatch with React 18
+                        {/* @ts-ignore - framer-motion type mismatch with React 18 */}
                         <motion.img 
                             key={currentImageIndex}
                             src={hotel.photos[currentImageIndex].url} 
