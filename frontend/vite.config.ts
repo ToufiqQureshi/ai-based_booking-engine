@@ -38,7 +38,9 @@ export default defineConfig(() => ({
         // initial bundle is smaller and app updates don't bust vendor caches.
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return;
-          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return "react-vendor";
+          // Keep all React-ecosystem libs in one chunk to avoid createContext
+          // being called before React initialises in a separate chunk.
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|@sentry\/react|react-hook-form|react-day-picker|embla-carousel-react|react-markdown|remark|rehype|hast|unist|mdast|micromark|decode-named-character-reference|character-entities)[\\/]/.test(id)) return "react-vendor";
           if (id.includes("recharts") || /[\\/]d3-/.test(id)) return "charts";
           if (id.includes("@radix-ui")) return "radix";
           if (id.includes("date-fns")) return "date-fns";
