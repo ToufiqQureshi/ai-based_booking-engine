@@ -114,7 +114,11 @@
         // apni asli content height (WIDGET_HEIGHT) bhejta rehta hai
         // FAR = compact rate badge, no calendar — stays 72 px always
         var barHeight = widgetLayout === 'classic' ? 360 : widgetLayout === 'minimal' ? 85 : widgetLayout === 'far' ? 72 : 110;
-        var provisionalOpenHeight = widgetLayout === 'classic' ? 750 : 550;
+        // Provisional height while the calendar overlay opens, before the iframe
+        // posts its real content height. Sized to fit a 2-month calendar + price
+        // legend so the bottom rows aren't briefly clipped on open. Capped to the
+        // viewport later via viewportCap().
+        var provisionalOpenHeight = widgetLayout === 'classic' ? 860 : 680;
 
         // Sirf apne container ko style karte hain. Host page ke parent elements
         // ko KABHI mutate nahi karna — purane z-index/overflow hacks hotelier
@@ -135,6 +139,15 @@
         iframe.loading = 'eager';
         iframe.setAttribute('fetchpriority', 'high');
         iframe.setAttribute('allowtransparency', 'true');
+        // Isolate the widget from the host page. The widget runs on OUR own
+        // (cross-origin) frontend, so allow-same-origin scopes to our origin and
+        // grants NO access to the hotelier's page. No allow-top-navigation, so a
+        // compromised widget can never hijack the host site. Popups (the booking
+        // tab) are allowed to escape the sandbox so checkout/payments work.
+        iframe.setAttribute(
+            'sandbox',
+            'allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation'
+        );
         iframe.style.cssText =
             'position:absolute;top:0;left:0;width:100%;height:' + barHeight + 'px;' +
             'border:none;z-index:9999;background:transparent;color-scheme:normal;' +
@@ -159,9 +172,11 @@
             }, 350);
         }
 
-        // Purana app build WIDGET_READY na bheje to bhi load ke baad dikha dete hain
+        // The app posts WIDGET_READY as soon as React paints (see handler below),
+        // which reveals instantly. This timer is only a safety net for old builds
+        // that don't send the signal — kept short so guests never wait needlessly.
         iframe.addEventListener('load', function () {
-            setTimeout(reveal, 800);
+            setTimeout(reveal, 400);
         });
 
         function viewportCap(topPx) {
@@ -317,6 +332,12 @@
             chatIframe.id = 'hotelier-chat-widget';
             chatIframe.src = frontendUrl + '/book/' + encodeURIComponent(hotelSlug) + '/chat';
             chatIframe.title = 'Hotel AI Concierge Chat';
+            // Same isolation as the booking iframe — sandboxed to our own origin,
+            // no access to the host page, no top-navigation hijack.
+            chatIframe.setAttribute(
+                'sandbox',
+                'allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation'
+            );
             chatIframe.style.cssText =
                 'position:fixed;left:auto;top:auto;width:' + BTN_W + ';height:' + BTN_H + ';' +
                 'border:none;z-index:99999;background:transparent;color-scheme:normal;box-shadow:none;' +
@@ -324,9 +345,10 @@
             positionChat();
             document.body.appendChild(chatIframe);
 
-            // Safety net: app purana ho aur ready signal na aaye to bhi swap ho jaye
+            // CHAT_READY reveals instantly; this is just a short fallback for
+            // old builds (was 1500ms, which made the chat button visibly lag).
             chatIframe.addEventListener('load', function () {
-                setTimeout(chatReveal, 1500);
+                setTimeout(chatReveal, 400);
             });
 
             window.addEventListener('message', function (event) {
@@ -352,13 +374,24 @@
             });
         }
 
-        // Booking widget pehle network priority le, chat idle time mein aaye —
-        // placeholder ki wajah se user ko deri dikhti hi nahi
-        if ('requestIdleCallback' in window) {
-            window.requestIdleCallback(mountChatIframe, { timeout: 2500 });
-        } else {
-            setTimeout(mountChatIframe, 1200);
+        // Let the booking widget take network priority first, then mount chat —
+        // but cap the idle wait low so the chat button doesn't appear seconds
+        // late (was 2500/1200ms). Also mount immediately on the first user
+        // interaction so an eager guest never waits for it.
+        var chatMounted = false;
+        function mountChatOnce() {
+            if (chatMounted) return;
+            chatMounted = true;
+            mountChatIframe();
         }
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(mountChatOnce, { timeout: 800 });
+        } else {
+            setTimeout(mountChatOnce, 400);
+        }
+        ['pointerdown', 'scroll', 'keydown'].forEach(function (ev) {
+            window.addEventListener(ev, mountChatOnce, { once: true, passive: true });
+        });
 
         window.addEventListener('resize', function () {
             positionFloating();

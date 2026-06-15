@@ -107,6 +107,12 @@
             chatIframe.id = 'hotelier-chat-widget';
             chatIframe.src = frontendUrl + '/book/' + encodeURIComponent(hotelSlug) + '/chat';
             chatIframe.title = 'Hotel AI Concierge Chat';
+            // Sandbox the chat to our own origin — no access to the host page,
+            // no top-navigation hijack; popups (checkout) may escape.
+            chatIframe.setAttribute(
+                'sandbox',
+                'allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation'
+            );
             chatIframe.style.cssText =
                 'position:fixed;left:auto;top:auto;width:' + BTN_W + ';height:' + BTN_H + ';' +
                 'border:none;z-index:2147483647;background:transparent;color-scheme:normal;box-shadow:none;' +
@@ -114,8 +120,9 @@
             positionChat();
             document.body.appendChild(chatIframe);
 
+            // CHAT_READY reveals instantly; short fallback for old builds only.
             chatIframe.addEventListener('load', function () {
-                setTimeout(reveal, 1500);
+                setTimeout(reveal, 400);
             });
 
             window.addEventListener('message', function (event) {
@@ -143,11 +150,22 @@
             });
         }
 
-        if ('requestIdleCallback' in window) {
-            window.requestIdleCallback(mountChatIframe, { timeout: 2500 });
-        } else {
-            setTimeout(mountChatIframe, 1200);
+        // Cap the idle wait low (was 2500/1200ms) and mount on first interaction
+        // so the chat button never appears seconds after the page is usable.
+        var chatMounted = false;
+        function mountChatOnce() {
+            if (chatMounted) return;
+            chatMounted = true;
+            mountChatIframe();
         }
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(mountChatOnce, { timeout: 800 });
+        } else {
+            setTimeout(mountChatOnce, 400);
+        }
+        ['pointerdown', 'scroll', 'keydown'].forEach(function (ev) {
+            window.addEventListener(ev, mountChatOnce, { once: true, passive: true });
+        });
 
         window.addEventListener('resize', function () {
             text.style.display = isMobileView() ? 'none' : 'flex';

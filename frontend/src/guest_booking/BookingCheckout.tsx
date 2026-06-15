@@ -448,9 +448,20 @@ function BookingCheckoutInner() {
                 redeem_points: redeemPointsActive ? redeemPointsAmount : undefined,
             };
 
+            // Fetch a short-lived anti-automation token to send with the booking.
+            // Best-effort: if it fails we still submit (server enforcement is gated).
+            let bookingToken = '';
+            try {
+                const tk = await apiClient.get<{ token: string }>('/public/booking-token');
+                bookingToken = tk?.token || '';
+            } catch { /* ignore — token is defence in depth, not required client-side */ }
+
             // First create the booking
             const response = await apiClient.post('/public/bookings', bookingPayload, {
-                headers: { 'Idempotency-Key': idempotencyKeyRef.current },
+                headers: {
+                    'Idempotency-Key': idempotencyKeyRef.current,
+                    ...(bookingToken ? { 'X-Booking-Token': bookingToken } : {}),
+                },
             }) as any;
             const bookingId = response.id as string;
 

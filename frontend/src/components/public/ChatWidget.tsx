@@ -11,12 +11,16 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
 
-// Restrict postMessage to the embedding parent's origin when it can be derived
-// from the referrer. Falls back to '*' only when the referrer is unavailable so
-// existing embeds keep working — but guest/booking data is no longer broadcast
-// to an arbitrary wildcard origin.
+// Restrict postMessage to the embedding parent's exact origin. We prefer the
+// browser-provided ancestorOrigins (most reliable, can't be spoofed by the
+// page), then fall back to the referrer origin. Only control messages
+// (CHAT_OPEN/CLOSE/READY) and the public hotel slug ever travel over
+// postMessage — booking PII is passed via same-origin sessionStorage, never
+// broadcast — so the '*' last resort carries no sensitive data.
 const PARENT_ORIGIN: string = (() => {
     try {
+        const ao = (window.location as any).ancestorOrigins;
+        if (ao && ao.length > 0 && ao[0]) return ao[0];
         return document.referrer ? new URL(document.referrer).origin : '*';
     } catch {
         return '*';

@@ -25,6 +25,19 @@ from app.core.time import utcnow
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
 
+# Max characters accepted from a guest chat message. Caps the prompt-injection
+# and token-cost surface — a real guest question is never this long, but an
+# attacker could otherwise paste a huge instruction payload to fight the system
+# prompt or burn tokens. The agent still has tool_call_limit + max_tokens caps.
+_MAX_GUEST_MSG_CHARS = 2000
+
+
+def _bound_guest_text(text: Optional[str]) -> str:
+    if not text:
+        return ""
+    text = str(text)
+    return text[:_MAX_GUEST_MSG_CHARS]
+
 class RateOption(BaseModel):
     id: str # rate_plan_id
     name: str # rate_plan_name (e.g. "Room Only", "Breakfast Included")
@@ -195,12 +208,19 @@ async def chat_with_guest_ai(
             # (This logic is now covered by the OR condition above)
             raise HTTPException(status_code=404, detail="Hotel not found")
 
+        # Deactivated hotels must be indistinguishable from non-existent ones.
+        if not getattr(hotel, "is_active", True):
+            raise HTTPException(status_code=404, detail="Hotel not found")
+
         # Enforce SaaS feature flag guard
         if not getattr(hotel, "feature_guest_bot", False):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Guest chatbot feature is not enabled for this hotel"
             )
+
+        # Bound the prompt-injection / cost surface: cap guest input length.
+        payload.message = _bound_guest_text(payload.message)
 
         # AI-01: enforce per-agent daily token budget from subscription (IP limit is spoofable).
         await enforce_ai_token_quota("guest", hotel.id, session)
@@ -362,11 +382,18 @@ async def stream_guest_ai(
         if not hotel:
             raise HTTPException(status_code=404, detail="Hotel not found")
 
+        # Deactivated hotels must be indistinguishable from non-existent ones.
+        if not getattr(hotel, "is_active", True):
+            raise HTTPException(status_code=404, detail="Hotel not found")
+
         if not getattr(hotel, "feature_guest_bot", False):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Guest chatbot feature is not enabled for this hotel",
             )
+
+        # Bound the prompt-injection / cost surface: cap guest input length.
+        payload.message = _bound_guest_text(payload.message)
 
         # AI-01: enforce per-agent daily token budget from subscription (IP limit is spoofable).
         await enforce_ai_token_quota("guest", hotel.id, session)

@@ -29,8 +29,13 @@ def _get_client_ip(request: Request) -> str:
         return forwarded.split(",")[0].strip()
     return request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown")
 
+# __file__ = backend/app/superadmin/hotels/hotels.py
+#   dirname x3 -> backend/app, then join core/plan_features.json.
+# (Previously had a 4th dirname resolving to backend/core/... which does not
+# exist, so every subscription / plan-feature load raised FileNotFoundError and
+# returned 500.)
 PLAN_FEATURES_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
     "core", "plan_features.json",
 )
 

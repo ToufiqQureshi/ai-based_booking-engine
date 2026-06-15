@@ -288,21 +288,68 @@ async def verify_razorpay_payment(
             'razorpay_signature': data.razorpay_signature
         })
 
+        # SECURITY (PAY-1): A valid signature only proves the
+        # order/payment/signature triple is internally consistent — NOT that this
+        # payment actually paid THIS booking's amount. Fetch the authoritative
+        # order + payment from Razorpay and assert (a) the order's receipt is this
+        # booking, (b) the payment id belongs to that order, (c) the payment is
+        # captured, and (d) the captured amount equals the server-computed booking
+        # total. Without this a guest could pay ₹1 (or submit a valid triple from
+        # a different, cheaper order) and have the booking marked fully paid.
+        expected_paise = int(round(float(booking.total_amount or 0) * 100))
+        try:
+            order_info = client.order.fetch(data.razorpay_order_id)
+            payment_info = client.payment.fetch(data.razorpay_payment_id)
+        except Exception as fetch_err:
+            logger.error(
+                "Razorpay order/payment fetch failed for booking %s: %s",
+                data.booking_id, fetch_err,
+            )
+            redis_client.delete_value(lock_key)
+            raise HTTPException(status_code=502, detail="Could not verify payment with gateway")
+
+        paid_paise = int(payment_info.get("amount") or 0)
+        is_captured = payment_info.get("status") == "captured"
+        bound_to_booking = (
+            str(order_info.get("receipt") or "") == str(booking.id)
+            and str(payment_info.get("order_id") or "") == str(data.razorpay_order_id)
+        )
+        if not is_captured or not bound_to_booking or paid_paise != expected_paise:
+            logger.warning(
+                "Payment validation failed booking=%s expected_paise=%s paid_paise=%s "
+                "status=%s receipt=%s payment_order=%s",
+                booking.id, expected_paise, paid_paise, payment_info.get("status"),
+                order_info.get("receipt"), payment_info.get("order_id"),
+            )
+            redis_client.delete_value(lock_key)
+            raise HTTPException(status_code=400, detail="Payment does not match this booking")
+
         # If verification is successful, update booking status.
         # Guard against double-confirm: if booking is already in a terminal state,
         # we still respond 200 (idempotent) but skip the side effects.
         already_confirmed = booking.status == BookingStatus.CONFIRMED
         guest = None
         if not already_confirmed:
+            from app.payments.payment import Payment
+            # PAY-2: idempotency — never write a second Payment row for the same
+            # gateway transaction even if this endpoint is replayed.
+            existing_payment = (await session.execute(
+                select(Payment).where(Payment.transaction_id == data.razorpay_payment_id)
+            )).scalar_one_or_none()
+            if existing_payment:
+                redis_client.delete_value(lock_key)
+                return {"status": "success", "message": "Payment already recorded", "already_confirmed": True}
+
             booking.status = BookingStatus.CONFIRMED
-            booking.paid_amount = booking.total_amount
+            # Record the amount actually captured by the gateway, not a blind copy
+            # of total_amount.
+            booking.paid_amount = paid_paise / 100
             booking.updated_at = utcnow()
 
-            from app.payments.payment import Payment
             payment = Payment(
                 hotel_id=booking.hotel_id,
                 booking_id=booking.id,
-                amount=booking.total_amount,
+                amount=paid_paise / 100,
                 payment_method="razorpay",
                 transaction_id=data.razorpay_payment_id,
                 status="completed",
@@ -445,6 +492,7 @@ async def razorpay_webhook(
     request: Request,
     session: DbSession,
     x_razorpay_signature: Optional[str] = Header(None, alias="X-Razorpay-Signature"),
+    x_razorpay_event_id: Optional[str] = Header(None, alias="X-Razorpay-Event-Id"),
 ):
     """
     Server-side webhook handler called by Razorpay when payment state changes.
@@ -474,6 +522,22 @@ async def razorpay_webhook(
         raise HTTPException(status_code=400, detail="Invalid webhook payload")
 
     event_type = event.get("event", "")
+
+    # PAY-2: replay protection. Razorpay stamps each delivery with a unique
+    # X-Razorpay-Event-Id. A captured (validly-signed) webhook body could
+    # otherwise be re-sent indefinitely — and if a booking is ever moved out of
+    # CONFIRMED (e.g. partial refund flow), a replayed payment.captured would
+    # re-confirm it and re-credit loyalty. We record processed event ids in Redis
+    # for 24h and short-circuit duplicates. Fails open only if Redis is fully
+    # down (the downstream status guard + Payment dedup still apply).
+    if x_razorpay_event_id:
+        first_seen = await redis_client.set_nx_ex(
+            f"rzp_webhook_evt:{x_razorpay_event_id}", "1", expire=86400
+        )
+        if first_seen is False:
+            logger.info("Razorpay webhook duplicate event %s — acking", x_razorpay_event_id)
+            return {"status": "ignored", "reason": "duplicate_event"}
+
     payload = event.get("payload", {}) or {}
     payment_entity = (payload.get("payment") or {}).get("entity") or {}
     order_entity = (payload.get("order") or {}).get("entity") or {}
@@ -504,17 +568,54 @@ async def razorpay_webhook(
         return {"status": "ignored", "reason": "unknown order"}
 
     if event_type in ("payment.captured", "order.paid"):
+        # PAY-1: validate the captured amount from the (signed) payload against
+        # the server-computed booking total before confirming. The payload is
+        # authentic (HMAC-verified above), so we can trust these figures.
+        expected_paise = int(round(float(booking.total_amount or 0) * 100))
+        paid_paise = int(
+            payment_entity.get("amount")
+            or order_entity.get("amount_paid")
+            or order_entity.get("amount")
+            or 0
+        )
+        if paid_paise and paid_paise != expected_paise:
+            logger.warning(
+                "Razorpay webhook amount mismatch booking=%s expected_paise=%s paid_paise=%s — "
+                "NOT confirming, flagging for review",
+                booking.id, expected_paise, paid_paise,
+            )
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_message(
+                    f"Payment amount mismatch for booking {booking.id}: "
+                    f"expected {expected_paise} got {paid_paise}",
+                    level="error",
+                )
+            except Exception:
+                pass
+            return {"status": "ignored", "reason": "amount_mismatch", "booking_id": booking.id}
+
         if booking.status != BookingStatus.CONFIRMED:
-            booking.status = BookingStatus.CONFIRMED
-            booking.paid_amount = booking.total_amount
-            booking.updated_at = utcnow()
             from app.payments.payment import Payment
+            # PAY-2: dedup — don't double-write a Payment for the same txn even if
+            # /verify already recorded it or the webhook is delivered twice.
+            txn_id = razorpay_payment_id or razorpay_order_id
+            existing_payment = (await session.execute(
+                select(Payment).where(Payment.transaction_id == txn_id)
+            )).scalar_one_or_none()
+            if existing_payment:
+                logger.info("Webhook: payment %s already recorded for booking %s", txn_id, booking.id)
+                return {"status": "ok", "booking_id": booking.id, "event": event_type, "deduped": True}
+
+            booking.status = BookingStatus.CONFIRMED
+            booking.paid_amount = (paid_paise / 100) if paid_paise else booking.total_amount
+            booking.updated_at = utcnow()
             payment = Payment(
                 hotel_id=booking.hotel_id,
                 booking_id=booking.id,
-                amount=booking.total_amount,
+                amount=(paid_paise / 100) if paid_paise else booking.total_amount,
                 payment_method="razorpay",
-                transaction_id=razorpay_payment_id or razorpay_order_id,
+                transaction_id=txn_id,
                 status="completed",
                 reference_number=razorpay_order_id,
             )
