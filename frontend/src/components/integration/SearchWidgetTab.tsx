@@ -224,25 +224,7 @@ export const SearchWidgetTab = ({
                             </select>
                         </div>
 
-                        <div className="space-y-3">
-                            <Label className="text-sm font-semibold">Select Design</Label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {layouts.map((layout) => (
-                                    <div
-                                        key={layout.id}
-                                        className={`relative border-2 rounded-xl p-4 cursor-pointer hover:border-primary/50 transition-all ${settings.widget_layout === layout.id ? 'border-primary bg-primary/5' : 'border-border'}`}
-                                        onClick={() => onUpdateSettings({ widget_layout: layout.id })}
-                                    >
-                                        {settings.widget_layout === layout.id && <CheckCircle2 className="absolute top-2 right-2 w-4 h-4 text-primary" />}
-                                        <div className="h-8 bg-muted rounded mb-2" />
-                                        <div className="text-center">
-                                            <span className="font-semibold text-xs block">{layout.name}</span>
-                                            <span className="text-[10px] text-muted-foreground">{layout.desc}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+
 
                         {/* Booking Constraints — operational settings, no premium gate */}
                         <div className="pt-4 border-t space-y-4">

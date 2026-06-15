@@ -81,6 +81,12 @@ class HotelSettings(SQLModel):
     whatsapp_phone_number_id: Optional[str] = None
     whatsapp_business_account_id: Optional[str] = None
 
+    # Custom Templates
+    email_template_booking_confirmed: Optional[str] = None
+    email_template_booking_cancelled: Optional[str] = None
+    whatsapp_template_booking_confirmed: Optional[str] = None
+    whatsapp_template_booking_cancelled: Optional[str] = None
+
     # Credits & Stats
     ai_whatsapp_credits: int = 100
     total_messages_sent: int = 0

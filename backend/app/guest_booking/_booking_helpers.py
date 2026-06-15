@@ -85,7 +85,7 @@ async def _update_guest_loyalty(
             session.add(PromoCode(
                 hotel_id=hotel_id,
                 code=code,
-                description=f"Loyalty reward — {program.reward_description or program.program_name}",
+                description=f"Loyalty reward for {guest_email} — {program.reward_description or program.program_name}",
                 discount_type=disc_type,
                 discount_value=disc_value,
                 max_usage=1,

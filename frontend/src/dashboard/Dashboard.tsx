@@ -49,7 +49,6 @@ export function DashboardPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const aiToastShownFor = useRef<string | null>(null);
 
   const handleWsEvent = useCallback((event: { type: string; data?: Record<string, unknown> }) => {
     if (event.type === 'booking_created') {
@@ -82,34 +81,6 @@ export function DashboardPage() {
     staleTime: 1000 * 60 * 1, // 1 minute — bookings change more often
   });
 
-
-  // 4. Fetch Integration Settings
-  const { data: integration } = useQuery<any>({
-    queryKey: ['integrationSettings'],
-    queryFn: () => apiClient.get<any>('/integration/settings'),
-    staleTime: 600000,
-    refetchOnWindowFocus: false
-  });
-
-  const aiNotConfigured = !!integration && (!integration.ai_api_key || !integration.ai_model);
-
-  // Show a single non-blocking toast per hotel session when AI isn't set up.
-  // Replaces the persistent banner with broken "Configure Now" link.
-  useEffect(() => {
-    if (!aiNotConfigured || !hotel?.id) return;
-    if (aiToastShownFor.current === hotel.id) return;
-    aiToastShownFor.current = hotel.id;
-
-    toast({
-      title: 'Integrate AI to improve direct bookings',
-      description: 'Activate the Guest Concierge on your website to capture more leads.',
-      action: (
-        <ToastAction altText="Set up AI" onClick={() => navigate('/integration')}>
-          Set up
-        </ToastAction>
-      ),
-    });
-  }, [aiNotConfigured, hotel?.id, navigate, toast]);
 
   return (
     <PageShell

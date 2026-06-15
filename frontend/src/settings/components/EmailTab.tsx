@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Loader2, Mail, Send, ShieldCheck } from 'lucide-react';
+import { Save, Loader2, Mail, Send, ShieldCheck, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -110,16 +110,29 @@ export function EmailTab({ formData, handleUpdate, handleSave, isSaving, hotel }
                             </p>
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="emailTemplate">Custom Booking Template (HTML)</Label>
+                            <Label htmlFor="emailTemplateConfirmed">Booking Confirmation Template (HTML)</Label>
                             <Textarea
-                                id="emailTemplate"
+                                id="emailTemplateConfirmed"
                                 rows={6}
-                                placeholder="<p>Dear [GUEST_NAME], Thanks for booking with [HOTEL_NAME]. Reference: [BOOKING_REFERENCE]</p>"
-                                value={formData.settings.email_template || ''}
-                                onChange={(e) => handleUpdate('settings', 'email_template', e.target.value)}
+                                placeholder="<p>Dear {GUEST_NAME}, Thanks for booking with us! Reference: {BOOKING_REFERENCE}</p>"
+                                value={formData.settings.email_template_booking_confirmed || formData.settings.email_template || ''}
+                                onChange={(e) => handleUpdate('settings', 'email_template_booking_confirmed', e.target.value)}
                             />
                             <p className="text-xs text-muted-foreground">
-                                Available tags: [GUEST_NAME], [BOOKING_REFERENCE], [CHECK_IN], [CHECK_OUT], [TOTAL_AMOUNT]
+                                Available tags: {"{GUEST_NAME}"}, {"{BOOKING_REFERENCE}"}, {"{CHECK_IN}"}, {"{CHECK_OUT}"}, {"{TOTAL_AMOUNT}"}
+                            </p>
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="emailTemplateCancelled">Booking Cancellation Template (HTML)</Label>
+                            <Textarea
+                                id="emailTemplateCancelled"
+                                rows={6}
+                                placeholder="<p>Dear {GUEST_NAME}, Your booking {BOOKING_REFERENCE} has been cancelled.</p>"
+                                value={formData.settings.email_template_booking_cancelled || ''}
+                                onChange={(e) => handleUpdate('settings', 'email_template_booking_cancelled', e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Available tags: {"{GUEST_NAME}"}, {"{BOOKING_REFERENCE}"}, {"{REFUND_AMOUNT}"}
                             </p>
                         </div>
                         <div className="space-y-2 md:col-span-2">
@@ -137,6 +150,47 @@ export function EmailTab({ formData, handleUpdate, handleSave, isSaving, hotel }
                         <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Save Email Settings
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* WHATSAPP TEMPLATES */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5 text-primary" />
+                        WhatsApp Templates
+                    </CardTitle>
+                    <CardDescription>
+                        Set the template names of your pre-approved Meta WhatsApp templates for automated alerts.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="waTemplateConfirmed">Booking Confirmation Template Name</Label>
+                            <Input
+                                id="waTemplateConfirmed"
+                                placeholder="e.g. booking_confirmation_guest"
+                                value={formData.settings.whatsapp_template_booking_confirmed || ''}
+                                onChange={(e) => handleUpdate('settings', 'whatsapp_template_booking_confirmed', e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="waTemplateCancelled">Booking Cancellation Template Name</Label>
+                            <Input
+                                id="waTemplateCancelled"
+                                placeholder="e.g. booking_cancellation_guest"
+                                value={formData.settings.whatsapp_template_booking_cancelled || ''}
+                                onChange={(e) => handleUpdate('settings', 'whatsapp_template_booking_cancelled', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end mt-4">
+                        <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            Save WhatsApp Settings
                         </Button>
                     </div>
                 </CardContent>

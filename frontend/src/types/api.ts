@@ -122,6 +122,10 @@ export interface HotelSettings {
   whatsapp_api_key?: string;
   whatsapp_phone_number_id?: string;
   whatsapp_business_account_id?: string;
+  email_template_booking_confirmed?: string;
+  email_template_booking_cancelled?: string;
+  whatsapp_template_booking_confirmed?: string;
+  whatsapp_template_booking_cancelled?: string;
   ai_whatsapp_credits?: number;
   total_messages_sent?: number;
   tax_name?: string;

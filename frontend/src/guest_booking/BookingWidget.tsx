@@ -667,6 +667,7 @@ export default function BookingWidget() {
                     handleSearch={handleSearch}
                     hotelSlug={hotelSlug}
                     currency={config?.currency || 'INR'}
+                    hideAdvancedOptions={true}
                 />
             )}
         </div>

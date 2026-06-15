@@ -38,6 +38,7 @@ interface RoomSearchHeaderProps {
     hotelSlug?: string;
     currency?: string;
     calendarRefreshTrigger?: number;
+    hideAdvancedOptions?: boolean;
 }
 
 export function RoomSearchHeader({
@@ -68,6 +69,7 @@ export function RoomSearchHeader({
     hotelSlug,
     currency = 'INR',
     calendarRefreshTrigger,
+    hideAdvancedOptions = false
 }: RoomSearchHeaderProps) {
     const [calendarData, setCalendarData] = useState<Record<string, CalendarDay>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
@@ -240,33 +242,34 @@ export function RoomSearchHeader({
 
     return (
         <div id="hotelier-search-widget" className="bg-white/95 backdrop-blur-2xl p-4 sm:p-6 rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] mb-6 sm:mb-10 max-w-6xl mx-auto border border-white/60">
-            {/* Premium Room/Package Switch */}
-            <div className="flex justify-center mb-4">
-                <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/50 backdrop-blur-sm">
-                    <button
-                        onClick={() => setSearchType('room')}
-                        className={cn(
-                            "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
-                            searchType === 'room' ? "bg-white shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
-                        )}
-                        style={searchType === 'room' ? { color: themeColor } : {}}
-                    >
-                        <HotelIcon className="w-3.5 h-3.5" />
-                        Rooms
-                    </button>
-                    <button
-                        onClick={() => setSearchType('package')}
-                        className={cn(
-                            "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
-                            searchType === 'package' ? "bg-white shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
-                        )}
-                        style={searchType === 'package' ? { color: themeColor } : {}}
-                    >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Packages
-                    </button>
+            {!hideAdvancedOptions && (
+                <div className="flex justify-center mb-4">
+                    <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/50 backdrop-blur-sm">
+                        <button
+                            onClick={() => setSearchType('room')}
+                            className={cn(
+                                "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
+                                searchType === 'room' ? "bg-white shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
+                            )}
+                            style={searchType === 'room' ? { color: themeColor } : {}}
+                        >
+                            <HotelIcon className="w-3.5 h-3.5" />
+                            Rooms
+                        </button>
+                        <button
+                            onClick={() => setSearchType('package')}
+                            className={cn(
+                                "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
+                                searchType === 'package' ? "bg-white shadow-sm ring-1 ring-slate-200" : "text-slate-400 hover:text-slate-600"
+                            )}
+                            style={searchType === 'package' ? { color: themeColor } : {}}
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Packages
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="flex flex-col lg:flex-row items-stretch gap-3">
                 {/* Date Selector Popover (Check-In & Check-Out) */}
@@ -454,20 +457,21 @@ export function RoomSearchHeader({
                 </button>
             </div>
 
-            {/* Flexible Dates Checkbox */}
-            <div className="mt-4 px-4 flex items-center justify-center gap-2.5">
-                <input 
-                    type="checkbox" 
-                    id="flex-dates" 
-                    checked={flexibleDates}
-                    onChange={(e) => setFlexibleDates(e.target.checked)}
-                    className="rounded border-slate-300 w-4 h-4 cursor-pointer" 
-                    style={{ accentColor: themeColor }}
-                />
-                <label htmlFor="flex-dates" className="text-xs text-slate-500 font-black tracking-wider uppercase cursor-pointer select-none hover:text-slate-700 transition-colors">
-                    Flexible Dates
-                </label>
-            </div>
+            {!hideAdvancedOptions && (
+                <div className="mt-4 px-4 flex items-center justify-center gap-2.5">
+                    <input 
+                        type="checkbox" 
+                        id="flex-dates" 
+                        checked={flexibleDates}
+                        onChange={(e) => setFlexibleDates(e.target.checked)}
+                        className="rounded border-slate-300 w-4 h-4 cursor-pointer" 
+                        style={{ accentColor: themeColor }}
+                    />
+                    <label htmlFor="flex-dates" className="text-xs text-slate-500 font-black tracking-wider uppercase cursor-pointer select-none hover:text-slate-700 transition-colors">
+                        Flexible Dates
+                    </label>
+                </div>
+            )}
         </div>
     );
 }

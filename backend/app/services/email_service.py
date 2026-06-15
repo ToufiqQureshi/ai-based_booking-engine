@@ -132,7 +132,7 @@ class EmailService:
     ):
         hotel_settings = hotel_settings or {}
         subject = f"Booking Confirmation: {booking_number}"
-        template = hotel_settings.get("email_template")
+        template = hotel_settings.get("email_template_booking_confirmed") or hotel_settings.get("email_template")
         if template:
             html_content = self._replace_template(template, {
                 "GUEST_NAME": guest_name, "BOOKING_REFERENCE": booking_number,
@@ -175,6 +175,46 @@ class EmailService:
         cc_emails = [e.strip() for e in cc_list.split(",")] if cc_list else []
         await self._dispatch_hotel_email(hotel_settings, emails, subject, html_content, cc_emails=cc_emails)
 
+
+    async def send_guest_booking_cancellation(
+        self, guest_email, guest_name, booking_number, refund_amount, hotel_settings=None
+    ):
+        hotel_settings = hotel_settings or {}
+        subject = f"Booking Cancellation Confirmed: {booking_number}"
+        
+        template = hotel_settings.get("email_template_booking_cancelled")
+        if template:
+            html_content = self._replace_template(template, {
+                "GUEST_NAME": guest_name, "BOOKING_REFERENCE": booking_number,
+                "REFUND_AMOUNT": refund_amount,
+            })
+        else:
+            # Simplified HTML without templates for now
+            html_content = f"""<html><body>
+                <h2>Hi {guest_name},</h2>
+                <p>Your booking <strong>{booking_number}</strong> has been successfully cancelled.</p>
+                <p><strong>Refund Amount:</strong> INR {refund_amount}</p>
+                <p>If you have any questions, please contact the hotel directly.</p>
+            </body></html>"""
+        await self._dispatch_hotel_email(hotel_settings, [guest_email], subject, html_content)
+
+    async def send_hotel_booking_cancellation(
+        self, hotel_emails, booking_number, guest_name, refund_amount, hotel_settings=None
+    ):
+        hotel_settings = hotel_settings or {}
+        if not hotel_emails:
+            hotel_emails = self.settings.HOTEL_NOTIFICATION_EMAILS
+            if not hotel_emails:
+                return
+        subject = f"Booking Cancelled Alert: {booking_number}"
+        html_content = f"""<html><body>
+            <h2>Booking Cancellation Alert</h2>
+            <p><strong>Booking Reference:</strong> {booking_number}</p>
+            <p><strong>Guest Name:</strong> {guest_name}</p>
+            <p><strong>Refund Amount:</strong> INR {refund_amount}</p>
+        </body></html>"""
+        emails = [e.strip() for e in hotel_emails.split(",") if e.strip()]
+        await self._dispatch_hotel_email(hotel_settings, emails, subject, html_content)
 
 async def get_email_service() -> EmailService:
     return EmailService()

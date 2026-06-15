@@ -106,6 +106,8 @@ export function SettingsPage() {
       whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
       whatsapp_phone_number_id: hotel?.settings?.whatsapp_phone_number_id || '',
       whatsapp_business_account_id: hotel?.settings?.whatsapp_business_account_id || '',
+      whatsapp_template_booking_confirmed: hotel?.settings?.whatsapp_template_booking_confirmed || '',
+      whatsapp_template_booking_cancelled: hotel?.settings?.whatsapp_template_booking_cancelled || '',
     },
     photos: hotel?.photos || []
   });
@@ -211,7 +213,7 @@ export function SettingsPage() {
             className="flex justify-start gap-3 px-4 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
           >
             <Mail className="h-4 w-4" />
-            <span className="font-medium">Email Settings</span>
+            <span className="font-medium">Email & WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger 
             value="policies" 
