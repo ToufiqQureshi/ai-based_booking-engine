@@ -15,6 +15,8 @@ from app.core.redis_client import redis_client
 from app.rooms.room import RoomType, RoomBlock, RoomBlockRead
 from app.bookings.booking import Booking, BookingStatus
 from app.rate_plans.rates_model import RoomRate
+from app.revenue.pricing_model import PricingRule
+from app.revenue.pricing_engine import apply_pricing_rules
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/availability", tags=["Availability"])
@@ -97,6 +99,16 @@ async def get_availability(
             blocked_by_room_date[(block.room_type_id, curr.isoformat())] += block.blocked_count
             curr += timedelta(days=1)
 
+    # Active dynamic pricing rules — used to show the hotelier the projected
+    # dynamic price per cell alongside the configured base price.
+    pricing_rules = (await session.execute(
+        select(PricingRule).where(
+            PricingRule.hotel_id == current_user.hotel_id,
+            PricingRule.is_active == True,
+        )
+    )).scalars().all()
+    today = date.today()
+
     availability_data = []
     for room in room_types:
         room_data = {
@@ -110,6 +122,20 @@ async def get_availability(
             booked_count = booked_by_room_date[(room.id, day_str)]
             blocked_count = blocked_by_room_date[(room.id, day_str)]
             available = max(0, room.total_inventory - booked_count - blocked_count)
+            base_price = price_map.get((room.id, day_str), room.base_price)
+
+            occupancy_pct = (
+                (booked_count / room.total_inventory) * 100.0
+                if room.total_inventory > 0 else 0.0
+            )
+            dynamic_price, applied_rules = apply_pricing_rules(
+                base_price,
+                pricing_rules,
+                target_date=day,
+                room_type_id=room.id,
+                occupancy_pct=occupancy_pct,
+                lead_time_days=(day - today).days,
+            )
             room_data["availability"].append({
                 "date": day_str,
                 "totalRooms": room.total_inventory,
@@ -117,7 +143,12 @@ async def get_availability(
                 "blockedRooms": blocked_count,
                 "availableRooms": available,
                 "isBlocked": blocked_count >= room.total_inventory or available == 0,
-                "price": price_map.get((room.id, day_str), room.base_price),
+                "price": base_price,
+                # Hotelier preview of the dynamic-pricing engine output. The
+                # actual charged price is unchanged here; this surfaces what the
+                # configured rules would do for this room/date.
+                "dynamicPrice": dynamic_price,
+                "appliedRules": applied_rules,
             })
         availability_data.append(room_data)
 

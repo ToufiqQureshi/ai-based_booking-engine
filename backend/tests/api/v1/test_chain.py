@@ -4,9 +4,9 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import engine
-from app.superadmin.chains.models import Chain
-from app.brand_console.models import Hotel
-from app.guests.models import User, UserRole
+from app.superadmin.chains.chain import Chain
+from app.brand_console.hotel import Hotel
+from app.guests.user import User, UserRole
 from main import app
 
 # ---------------------------------------------------------------------------

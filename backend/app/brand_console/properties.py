@@ -84,6 +84,7 @@ async def add_property(prop_data: PropertyCreate, current_user: CurrentUser, ses
     new_hotel = Hotel(
         name=prop_data.name,
         slug=prop_data.slug,
+        chain_id=current_user.chain_id,
     )
     # Correctly initialize contact info as dict if needed
     new_hotel.contact = {

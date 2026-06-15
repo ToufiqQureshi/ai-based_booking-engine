@@ -30,6 +30,47 @@ class LoyaltyProgram(SQLModel, table=True):
     popup_title: str = Field(default="You're Almost There!")
     popup_message: str = Field(default="Book {remaining} more room(s) and unlock your reward!")
 
+    # Points wallet config (hotel-wide). Hotelier decides earn & redeem rates.
+    #   points_enabled      — turn the points wallet on/off
+    #   points_per_currency — points earned per 1 unit of currency spent (₹1 → N points)
+    #   point_value         — redemption value of 1 point in currency (1 point → ₹X)
+    points_enabled: bool = Field(default=False)
+    points_per_currency: float = Field(default=0.0)
+    point_value: float = Field(default=0.0)
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class LoyaltyOffer(SQLModel, table=True):
+    """
+    Stay-based upsell offers, optionally scoped to a single room type.
+    Unlike LoyaltyProgram (one per hotel, repeat-guest retention), a hotel can
+    have MANY offers — e.g. "Stay 5 nights in Deluxe, get 20% off".
+    A NULL room_type_id means the offer applies to every room in the hotel.
+    """
+    __tablename__ = "loyalty_offers"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    hotel_id: str = Field(foreign_key="hotels.id", index=True)
+    chain_id: Optional[str] = Field(default=None, foreign_key="chains.id", index=True)
+    room_type_id: Optional[str] = Field(default=None, foreign_key="room_types.id", index=True)
+
+    is_active: bool = Field(default=True)
+    title: str = Field(default="Stay Longer, Save More")
+
+    # Trigger: minimum nights in a single booking to unlock the reward
+    min_nights: int = Field(default=5)
+
+    # Reward type: percentage | fixed_amount | free_night
+    reward_type: str = Field(default="percentage")
+    reward_value: float = Field(default=10.0)
+
+    # Nudge popup shown when the guest is below the night threshold.
+    # Use {remaining} for nights left and {reward} for the reward label.
+    nudge_title: str = Field(default="Stay a little longer!")
+    nudge_message: str = Field(default="Stay {remaining} more night(s) and unlock {reward}!")
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

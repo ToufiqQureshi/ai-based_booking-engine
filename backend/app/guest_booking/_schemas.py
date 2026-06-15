@@ -92,6 +92,28 @@ class LoyaltyCheckRequest(BaseModel):
     hotel_id: str
 
 
+class LoyaltyOfferCheckRequest(BaseModel):
+    hotel_id: str
+    room_type_id: Optional[str] = None
+    nights: Optional[int] = None        # None / 0 → guest hasn't picked dates yet
+
+
+class LoyaltyOfferCheckResponse(BaseModel):
+    has_offer: bool = False
+    needs_dates: bool = False           # true when an offer exists but nights unknown
+    offer_id: Optional[str] = None
+    title: Optional[str] = None
+    min_nights: int = 0
+    current_nights: int = 0
+    nights_remaining: int = 0           # 0 when unlocked
+    unlocked: bool = False
+    reward_type: Optional[str] = None
+    reward_value: float = 0.0
+    reward_label: Optional[str] = None
+    nudge_title: Optional[str] = None
+    nudge_message: Optional[str] = None
+
+
 class LoyaltyCheckResponse(BaseModel):
     is_repeat_guest: bool
     message: str

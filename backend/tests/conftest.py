@@ -27,9 +27,9 @@ if backend_dir not in sys.path:
 
 from app.core.database import engine
 from app.brand_console.hotel import Hotel
-from app.guests.models import User, UserRole
-from app.rooms.models import RoomType
-from app.rate_plans.models import RatePlan
+from app.guests.user import User, UserRole
+from app.rooms.room import RoomType
+from app.rate_plans.rates_model import RatePlan
 from main import app
 
 # Tests create the schema with SQLModel.metadata.create_all (production uses
@@ -40,7 +40,11 @@ from main import app
 from app.ai_assistant.ai_usage import AIUsageDaily, AIUsageParticipant  # noqa: E402,F401
 from app.analytics.models import AnalyticsSession, AnalyticsEvent  # noqa: E402,F401
 from app.superadmin.subscriptions.subscription import Subscription  # noqa: E402,F401
+from app.superadmin.chains.chain import Chain  # noqa: E402,F401
 from app.system.audit import AuditLog, SystemBroadcast  # noqa: E402,F401
+from app.bookings.booking import Booking  # noqa: E402,F401
+from app.loyalty.loyalty_model import LoyaltyProgram, GuestLoyalty  # noqa: E402,F401
+from app.revenue.pricing_model import PricingRule  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import pytest
 from app.services.google_hotel_ads.xml_generator import generate_hotel_list_xml
-from app.brand_console.models import Hotel
+from app.brand_console.hotel import Hotel
 
 def test_generate_hotel_list_xml():
     hotel = Hotel(

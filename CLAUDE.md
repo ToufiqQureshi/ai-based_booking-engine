@@ -101,3 +101,33 @@ We use a multi-layered caching system to protect the database and ensure lightni
 - If you add, modify, or delete features or endpoints, you **must** document it in `work_log_tracker.csv`.
 - Maintain fields: `"Timestamp","Task Name","File Path","Category","API Calls Count","Caching & Database Details","Security Controls / IDOR Prevention"`.
 - Always wrap each field in double quotes (`"`) to ensure clean parsing.
+
+---
+
+## 🛡️ 8. Bug Fix Protocol (Regression Prevention)
+
+Every bug fix must follow this checklist before committing:
+
+### Before touching code
+1. **Read the full file** — understand the whole context, not just the broken line.
+2. **Find all callers** — grep every function/endpoint being modified. Check what else depends on it.
+3. **Check model definitions** — verify the actual schema before assuming field names, types, or constraints.
+
+### While fixing
+4. **Minimal blast radius** — change only what is broken. No cleanups or refactors in the same commit.
+5. **One bug = one commit** — if a second bug is found while fixing, put it in a separate commit.
+6. **Never swallow exceptions silently** — no bare `except: pass`. Always log or re-raise.
+
+### After fixing
+7. **Compile check** — `cd backend && python -m compileall -q app main.py` before pushing.
+8. **Run tests** — `cd backend && pytest tests/ -x -q --tb=short` must be green.
+9. **Check related tests** — read any test file that covers the changed endpoint, verify assertions still hold.
+10. **Grep for the same pattern** — if a bug exists in one place, search the whole codebase for the same anti-pattern and fix all instances.
+
+### General traps to check on every change
+- **DB model fields** — always read the actual model definition before accessing fields. Nested data may be stored as JSON dicts, not direct attributes. Use `.get()` on dicts.
+- **Query result cardinality** — if a query uses `OR` conditions across multiple rows, `scalar_one_or_none()` will crash. Use `.scalars().first()` when multiple results are possible.
+- **Object creation** — when creating any DB record, check if it needs to inherit context fields (e.g. tenant ID, chain ID, hotel ID) from the current user.
+- **Auth on read endpoints** — GET endpoints need the same role/permission guards as write endpoints.
+- **Silent failures** — broad `except` blocks that return generic responses hide real bugs. Check for them near any code you touch.
+

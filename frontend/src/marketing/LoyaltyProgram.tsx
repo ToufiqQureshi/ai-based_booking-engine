@@ -45,6 +45,34 @@ interface GuestLoyaltySummary {
     reward_progress_pct: number;
 }
 
+interface StayOffer {
+    id: string;
+    room_type_id: string | null;
+    is_active: boolean;
+    title: string;
+    min_nights: number;
+    reward_type: 'percentage' | 'fixed_amount' | 'free_night';
+    reward_value: number;
+    nudge_title: string;
+    nudge_message: string;
+}
+
+interface RoomLite {
+    id: string;
+    name: string;
+}
+
+const BLANK_OFFER = {
+    room_type_id: '' as string,        // '' = all rooms
+    is_active: true,
+    title: 'Stay Longer, Save More',
+    min_nights: 5,
+    reward_type: 'percentage' as 'percentage' | 'fixed_amount' | 'free_night',
+    reward_value: 15,
+    nudge_title: 'Stay a little longer!',
+    nudge_message: 'Stay {remaining} more night(s) and unlock {reward}!',
+};
+
 const REWARD_TYPE_OPTIONS = [
     { value: 'percentage', label: 'Percentage Discount', icon: Percent, desc: 'e.g. 10% off booking' },
     { value: 'fixed_amount', label: 'Fixed Amount Off', icon: IndianRupee, desc: 'e.g. ₹500 off' },
@@ -55,10 +83,26 @@ export default function LoyaltyProgramPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'setup' | 'guests'>('setup');
+    const [activeTab, setActiveTab] = useState<'setup' | 'offers' | 'points' | 'guests'>('guests');
     const [program, setProgram] = useState<LoyaltyProgram | null>(null);
     const [guests, setGuests] = useState<GuestLoyaltySummary[]>([]);
     const [guestsLoading, setGuestsLoading] = useState(false);
+
+    // Stay offers (room-specific, night-threshold)
+    const [offers, setOffers] = useState<StayOffer[]>([]);
+    const [rooms, setRooms] = useState<RoomLite[]>([]);
+    const [offersLoading, setOffersLoading] = useState(false);
+    const [offerForm, setOfferForm] = useState({ ...BLANK_OFFER });
+    const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
+    const [savingOffer, setSavingOffer] = useState(false);
+
+    // Points wallet config
+    const [pointsForm, setPointsForm] = useState({
+        points_enabled: false,
+        points_per_currency: 0.1,
+        point_value: 1,
+    });
+    const [savingPoints, setSavingPoints] = useState(false);
 
     // form state mirrors program
     const [form, setForm] = useState({
@@ -79,6 +123,7 @@ export default function LoyaltyProgramPage() {
 
     useEffect(() => {
         if (activeTab === 'guests') fetchGuests();
+        if (activeTab === 'offers') { fetchOffers(); fetchRooms(); }
     }, [activeTab]);
 
     async function fetchProgram() {
@@ -96,10 +141,99 @@ export default function LoyaltyProgramPage() {
                 popup_title: data.popup_title,
                 popup_message: data.popup_message,
             });
+            setPointsForm({
+                points_enabled: (data as any).points_enabled ?? false,
+                points_per_currency: (data as any).points_per_currency ?? 0.1,
+                point_value: (data as any).point_value ?? 1,
+            });
         } catch {
             toast({ title: 'Failed to load loyalty program', variant: 'destructive' });
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function fetchOffers() {
+        setOffersLoading(true);
+        try {
+            const data = await apiClient.get<StayOffer[]>('/loyalty/offers');
+            setOffers(data);
+        } catch {
+            // silently fail
+        } finally {
+            setOffersLoading(false);
+        }
+    }
+
+    async function fetchRooms() {
+        try {
+            const data = await apiClient.get<RoomLite[]>('/rooms');
+            setRooms(data.map(r => ({ id: r.id, name: r.name })));
+        } catch {
+            // rooms optional — offers can still be hotel-wide
+        }
+    }
+
+    function editOffer(o: StayOffer) {
+        setEditingOfferId(o.id);
+        setOfferForm({
+            room_type_id: o.room_type_id || '',
+            is_active: o.is_active,
+            title: o.title,
+            min_nights: o.min_nights,
+            reward_type: o.reward_type,
+            reward_value: o.reward_value,
+            nudge_title: o.nudge_title,
+            nudge_message: o.nudge_message,
+        });
+    }
+
+    function resetOfferForm() {
+        setEditingOfferId(null);
+        setOfferForm({ ...BLANK_OFFER });
+    }
+
+    async function saveOffer() {
+        setSavingOffer(true);
+        try {
+            const payload = {
+                ...offerForm,
+                room_type_id: offerForm.room_type_id || null,
+            };
+            if (editingOfferId) {
+                await apiClient.put(`/loyalty/offers/${editingOfferId}`, payload);
+            } else {
+                await apiClient.post('/loyalty/offers', payload);
+            }
+            toast({ title: editingOfferId ? 'Offer updated' : 'Offer created' });
+            resetOfferForm();
+            fetchOffers();
+        } catch {
+            toast({ title: 'Failed to save offer', variant: 'destructive' });
+        } finally {
+            setSavingOffer(false);
+        }
+    }
+
+    async function deleteOffer(id: string) {
+        try {
+            await apiClient.delete(`/loyalty/offers/${id}`);
+            if (editingOfferId === id) resetOfferForm();
+            fetchOffers();
+        } catch {
+            toast({ title: 'Failed to delete offer', variant: 'destructive' });
+        }
+    }
+
+    async function savePoints() {
+        setSavingPoints(true);
+        try {
+            await apiClient.put('/loyalty/points-config', pointsForm);
+            toast({ title: 'Points settings saved!' });
+        } catch {
+            toast({ title: 'Failed to save points settings', variant: 'destructive' });
+        } finally {
+            setSavingPoints(false);
         }
     }
 
@@ -150,38 +284,34 @@ export default function LoyaltyProgramPage() {
 
     return (
         <PageShell
-            title="Loyalty Program"
-            description="Reward your returning guests and drive repeat bookings"
+            title="Loyalty & Upsell Hub"
+            description="Turn one-time guests into repeat customers — and every booking into a bigger one"
         >
-            {/* ── Header ── */}
+            {/* ── Tab Bar ── */}
             <div className="flex items-center justify-between mb-6">
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setActiveTab('setup')}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                            activeTab === 'setup'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        )}
-                    >
-                        <span className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4" /> Program Setup
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('guests')}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                            activeTab === 'guests'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        )}
-                    >
-                        <span className="flex items-center gap-2">
-                            <Users className="w-4 h-4" /> Loyal Guests
-                        </span>
-                    </button>
+                <div className="flex flex-wrap gap-2">
+                    {([
+                        { id: 'guests', label: 'Loyal Guests',      icon: Users,    hint: 'See who keeps coming back' },
+                        { id: 'setup',  label: 'Milestone Rewards',  icon: Trophy,   hint: 'Reward returning guests' },
+                        { id: 'offers', label: 'Stay Upsells',       icon: BedDouble,hint: 'Nudge guests to book more nights' },
+                        { id: 'points', label: 'Points Wallet',      icon: Star,     hint: 'Earn & redeem points' },
+                    ] as const).map(({ id, label, icon: Icon, hint }) => (
+                        <button
+                            key={id}
+                            onClick={() => setActiveTab(id)}
+                            title={hint}
+                            className={cn(
+                                'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                                activeTab === id
+                                    ? 'bg-primary text-white shadow-sm'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                            )}
+                        >
+                            <span className="flex items-center gap-2">
+                                <Icon className="w-4 h-4" /> {label}
+                            </span>
+                        </button>
+                    ))}
                 </div>
 
                 {activeTab === 'setup' && (
@@ -192,12 +322,20 @@ export default function LoyaltyProgramPage() {
                 )}
             </div>
 
-            {/* ── SETUP TAB ── */}
+            {/* ── MILESTONE REWARDS TAB ── */}
             {activeTab === 'setup' && (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
                     {/* Left: Configuration */}
                     <div className="xl:col-span-2 space-y-5">
+
+                        {/* Business value callout */}
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 flex gap-3 items-start">
+                            <Trophy className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                            <p className="text-sm text-amber-800 dark:text-amber-300">
+                                <strong>Repeat bookings upsell:</strong> After N completed stays, automatically unlock a reward for the guest — showing it as a popup the moment they start a new booking. Hotels see <strong>20-40% higher repeat rates</strong> with milestone rewards.
+                            </p>
+                        </div>
 
                         {/* Enable/Disable Card */}
                         <Card className="border-2 border-dashed border-primary/20 bg-primary/5 dark:bg-primary/10">
@@ -466,9 +604,294 @@ export default function LoyaltyProgramPage() {
                 </div>
             )}
 
+            {/* ── STAY UPSELLS TAB ── */}
+            {activeTab === 'offers' && (
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    {/* Business value callout (full-width, above columns) */}
+                    <div className="xl:col-span-3 rounded-xl border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800 px-4 py-3 flex gap-3 items-start">
+                        <BedDouble className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
+                        <p className="text-sm text-indigo-800 dark:text-indigo-300">
+                            <strong>Longer-stay upsell:</strong> When a guest picks dates, show a popup — "Stay 1 more night and get 15% off!" This nudges them to extend their visit before they even choose a room.
+                            Set a minimum-nights threshold; guests who meet it get the reward automatically at checkout.
+                        </p>
+                    </div>
+                    {/* Offer editor */}
+                    <div className="xl:col-span-1 space-y-5">
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <BedDouble className="w-4 h-4 text-primary" />
+                                    {editingOfferId ? 'Edit Offer' : 'New Stay Offer'}
+                                </CardTitle>
+                                <CardDescription>
+                                    "Stay N nights, get a reward." Leave room as <strong>All Rooms</strong> for a
+                                    hotel-wide offer, or pick a room for a room-specific one.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <Label>Applies to</Label>
+                                    <Select
+                                        value={offerForm.room_type_id || 'all'}
+                                        onValueChange={v => setOfferForm(f => ({ ...f, room_type_id: v === 'all' ? '' : v }))}
+                                    >
+                                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Rooms (hotel-wide)</SelectItem>
+                                            {rooms.map(r => (
+                                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="offer-title">Offer Title</Label>
+                                    <Input
+                                        id="offer-title"
+                                        value={offerForm.title}
+                                        onChange={e => setOfferForm(f => ({ ...f, title: e.target.value }))}
+                                        className="mt-1"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label>Minimum nights to unlock</Label>
+                                    <Input
+                                        type="number" min={1} max={60}
+                                        value={offerForm.min_nights}
+                                        onChange={e => setOfferForm(f => ({ ...f, min_nights: parseInt(e.target.value) || 1 }))}
+                                        className="mt-1 w-28 font-bold text-center"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label>Reward Type</Label>
+                                    <div className="grid grid-cols-3 gap-2 mt-2">
+                                        {REWARD_TYPE_OPTIONS.map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => setOfferForm(f => ({ ...f, reward_type: opt.value as any }))}
+                                                className={cn(
+                                                    'flex flex-col items-center gap-1 p-2 rounded-lg border-2 text-center transition-all',
+                                                    offerForm.reward_type === opt.value
+                                                        ? 'border-primary bg-primary/5 text-primary'
+                                                        : 'border-border hover:border-primary/30'
+                                                )}
+                                            >
+                                                <opt.icon className="w-4 h-4" />
+                                                <span className="text-[10px] font-semibold leading-tight">{opt.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {offerForm.reward_type !== 'free_night' && (
+                                    <div>
+                                        <Label>Reward Value ({offerForm.reward_type === 'percentage' ? '%' : '₹'})</Label>
+                                        <Input
+                                            type="number" min={1}
+                                            value={offerForm.reward_value}
+                                            onChange={e => setOfferForm(f => ({ ...f, reward_value: parseFloat(e.target.value) || 0 }))}
+                                            className="mt-1 w-32"
+                                        />
+                                    </div>
+                                )}
+
+                                <div>
+                                    <Label htmlFor="nudge-title">Nudge Popup Title</Label>
+                                    <Input
+                                        id="nudge-title"
+                                        value={offerForm.nudge_title}
+                                        onChange={e => setOfferForm(f => ({ ...f, nudge_title: e.target.value }))}
+                                        className="mt-1"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="nudge-msg">Nudge Message</Label>
+                                    <Textarea
+                                        id="nudge-msg"
+                                        value={offerForm.nudge_message}
+                                        onChange={e => setOfferForm(f => ({ ...f, nudge_message: e.target.value }))}
+                                        className="mt-1 resize-none"
+                                        rows={2}
+                                    />
+                                    <p className="text-[11px] text-muted-foreground mt-1">
+                                        Use <code className="bg-muted px-1 rounded">{'{remaining}'}</code> for nights left
+                                        and <code className="bg-muted px-1 rounded">{'{reward}'}</code> for the reward label.
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-1">
+                                    <div className="flex items-center gap-2">
+                                        <Switch
+                                            checked={offerForm.is_active}
+                                            onCheckedChange={v => setOfferForm(f => ({ ...f, is_active: v }))}
+                                        />
+                                        <span className="text-sm">{offerForm.is_active ? 'Active' : 'Paused'}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {editingOfferId && (
+                                            <Button variant="outline" size="sm" onClick={resetOfferForm}>Cancel</Button>
+                                        )}
+                                        <Button size="sm" onClick={saveOffer} disabled={savingOffer} className="gap-1">
+                                            {savingOffer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                            {editingOfferId ? 'Update' : 'Create'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Offer list */}
+                    <div className="xl:col-span-2">
+                        {offersLoading ? (
+                            <div className="flex items-center justify-center h-48">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            </div>
+                        ) : offers.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-64 text-center">
+                                <BedDouble className="w-12 h-12 text-muted-foreground/40 mb-4" />
+                                <p className="text-muted-foreground font-medium">No stay offers yet</p>
+                                <p className="text-sm text-muted-foreground/60 mt-1">
+                                    Create one on the left — e.g. "Stay 5 nights, get 20% off".
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {offers.map(o => {
+                                    const roomName = o.room_type_id
+                                        ? (rooms.find(r => r.id === o.room_type_id)?.name || 'Specific room')
+                                        : 'All Rooms';
+                                    const rewardText = o.reward_type === 'free_night'
+                                        ? '1 Free Night'
+                                        : o.reward_type === 'percentage'
+                                            ? `${o.reward_value}% off`
+                                            : `₹${o.reward_value} off`;
+                                    return (
+                                        <Card key={o.id} className="hover:shadow-md transition-shadow">
+                                            <CardContent className="p-4 flex items-center justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-semibold text-sm truncate">{o.title}</p>
+                                                        {o.is_active
+                                                            ? <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>
+                                                            : <Badge variant="outline">Paused</Badge>}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        Stay <strong>{o.min_nights}</strong> nights →{' '}
+                                                        <strong className="text-primary">{rewardText}</strong> · {roomName}
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-2 shrink-0">
+                                                    <Button variant="outline" size="sm" onClick={() => editOffer(o)}>Edit</Button>
+                                                    <Button variant="outline" size="sm" onClick={() => deleteOffer(o.id)}
+                                                        className="text-red-600 hover:text-red-700">Delete</Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── POINTS TAB ── */}
+            {activeTab === 'points' && (
+                <div className="max-w-2xl space-y-5">
+                    {/* Business value callout */}
+                    <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 px-4 py-3 flex gap-3 items-start">
+                        <Star className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                        <p className="text-sm text-green-800 dark:text-green-300">
+                            <strong>Points upsell:</strong> Guests earn points on every rupee spent and can redeem them for a discount on their next booking — giving them a compelling reason to come back. You set exactly how much a point is worth.
+                        </p>
+                    </div>
+                    <Card className="border-2 border-dashed border-primary/20 bg-primary/5">
+                        <CardContent className="p-5 flex items-center justify-between">
+                            <div>
+                                <p className="font-semibold text-base">
+                                    {pointsForm.points_enabled ? '✅ Points Wallet Active' : '⏸ Points Wallet Off'}
+                                </p>
+                                <p className="text-sm text-muted-foreground mt-0.5">
+                                    Guests earn points on every stay and redeem them for money off future bookings.
+                                </p>
+                            </div>
+                            <Switch
+                                checked={pointsForm.points_enabled}
+                                onCheckedChange={v => setPointsForm(f => ({ ...f, points_enabled: v }))}
+                                className="scale-125"
+                            />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Star className="w-4 h-4 text-amber-500" /> Earn & Redeem Rates
+                            </CardTitle>
+                            <CardDescription>You decide how points are earned and what each point is worth.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-5">
+                            <div>
+                                <Label>Points earned per ₹1 spent</Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Input
+                                        type="number" min={0} step={0.01}
+                                        value={pointsForm.points_per_currency}
+                                        onChange={e => setPointsForm(f => ({ ...f, points_per_currency: parseFloat(e.target.value) || 0 }))}
+                                        className="w-32"
+                                    />
+                                    <span className="text-sm text-muted-foreground">
+                                        points / ₹1 (e.g. 0.1 → ₹1000 stay = 100 points)
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <Label>Value of 1 point on redemption</Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-muted-foreground">₹</span>
+                                    <Input
+                                        type="number" min={0} step={0.01}
+                                        value={pointsForm.point_value}
+                                        onChange={e => setPointsForm(f => ({ ...f, point_value: parseFloat(e.target.value) || 0 }))}
+                                        className="w-32"
+                                    />
+                                    <span className="text-sm text-muted-foreground">
+                                        per point (e.g. ₹1 → 100 points = ₹100 off)
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="bg-muted/50 rounded-xl p-4 text-sm">
+                                <p className="font-semibold mb-1">Example</p>
+                                <p className="text-muted-foreground">
+                                    A ₹{(1000).toLocaleString()} booking earns{' '}
+                                    <strong>{Math.round(1000 * pointsForm.points_per_currency)}</strong> points, worth{' '}
+                                    <strong>₹{Math.round(1000 * pointsForm.points_per_currency * pointsForm.point_value)}</strong> on the next stay.
+                                </p>
+                            </div>
+
+                            <Button onClick={savePoints} disabled={savingPoints} className="gap-2">
+                                {savingPoints ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Save Points Settings
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
             {/* ── GUESTS TAB ── */}
             {activeTab === 'guests' && (
-                <div>
+                <div className="space-y-4">
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 px-4 py-3 flex gap-3 items-start">
+                        <Users className="w-4 h-4 text-violet-600 dark:text-violet-400 mt-0.5 shrink-0" />
+                        <p className="text-sm text-violet-800 dark:text-violet-300">
+                            <strong>Your loyal guests:</strong> These guests have completed at least one booking. Track their reward progress, total spend, and how many stays away they are from their next reward — your highest-value repeat customers at a glance.
+                        </p>
+                    </div>
                     {guestsLoading ? (
                         <div className="flex items-center justify-center h-48">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />

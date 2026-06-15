@@ -5,10 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.database import engine
-from app.brand_console.models import Hotel
-from app.guests.models import User, UserRole
-from app.system.models import AuditLog, SystemBroadcast
-from app.superadmin.subscriptions.models import Subscription
+from app.brand_console.hotel import Hotel
+from app.guests.user import User, UserRole
+from app.system.audit import AuditLog, SystemBroadcast
+from app.superadmin.subscriptions.subscription import Subscription
 
 @pytest.mark.anyio
 async def test_superadmin_update_permissions_audit(super_admin_client: AsyncClient, seeded_hotel: Hotel):
