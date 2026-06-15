@@ -150,7 +150,7 @@ export function RoomSearchHeader({
             </div>
             {/* Bounded height + internal scroll so the calendar and
                 legend are never clipped by the popover/sheet. */}
-            <div className="p-3 overflow-x-auto overflow-y-auto max-h-[75vh] md:max-h-[75vh] flex-1 min-h-0">
+            <div className="p-2 sm:p-3 overflow-x-auto overflow-y-auto max-h-[85vh] md:max-h-[700px] flex-1 min-h-0">
                 <style>{`
                     .rdp-day_selected,
                     .rdp-day_selected:hover {
@@ -211,7 +211,12 @@ export function RoomSearchHeader({
 
                             return (
                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                    <span className={cn(
+                                        "text-[12px] font-extrabold leading-none",
+                                        isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white"
+                                    )}>
+                                        {date.getDate()}
+                                    </span>
                                     {!isPast && (
                                         isLoading ? (
                                             <span className="mt-1 h-[7px] w-6 rounded-full bg-slate-200 animate-pulse" aria-hidden="true" />
