@@ -596,8 +596,12 @@ async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest,
                 nudge_title=offer.nudge_title,
             )
 
-        # Find the next nearest offer above current nights
-        next_offers = [o for o in offers if o.min_nights > nights]
+        # Find the next nearest offer above current nights, honouring the
+        # hotelier's nudge_from_nights gate (only nudge eligible guests).
+        next_offers = [
+            o for o in offers
+            if o.min_nights > nights and nights >= getattr(o, 'nudge_from_nights', 1)
+        ]
         if next_offers:
             offer = min(next_offers, key=lambda o: o.min_nights - nights)
             remaining = offer.min_nights - nights

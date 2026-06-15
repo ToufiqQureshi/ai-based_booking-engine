@@ -68,6 +68,12 @@ class LoyaltyOffer(SQLModel, table=True):
     reward_type: str = Field(default="percentage")
     reward_value: float = Field(default=10.0)
 
+    # Hotelier controls when the nudge popup starts appearing.
+    # e.g. nudge_from_nights=3 on a min_nights=5 offer means guests who pick
+    # only 1-2 nights see nothing; guests at 3-4 nights see the popup.
+    # Default 1 = show to everyone regardless of selected nights.
+    nudge_from_nights: int = Field(default=1)
+
     # Nudge popup shown when the guest is below the night threshold.
     # Use {remaining} for nights left and {reward} for the reward label.
     nudge_title: str = Field(default="Stay a little longer!")

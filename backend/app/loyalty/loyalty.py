@@ -204,6 +204,7 @@ class LoyaltyOfferCreate(BaseModel):
     min_nights: int = 5
     reward_type: str = "percentage"             # percentage | fixed_amount | free_night
     reward_value: float = 10.0
+    nudge_from_nights: int = 1                  # show nudge only when guest >= this many nights
     nudge_title: str = "Stay a little longer!"
     nudge_message: str = "Stay {remaining} more night(s) and unlock {reward}!"
 
@@ -215,6 +216,7 @@ class LoyaltyOfferUpdate(BaseModel):
     min_nights: Optional[int] = None
     reward_type: Optional[str] = None
     reward_value: Optional[float] = None
+    nudge_from_nights: Optional[int] = None
     nudge_title: Optional[str] = None
     nudge_message: Optional[str] = None
 
@@ -253,6 +255,10 @@ async def create_offer(
         raise HTTPException(status_code=400, detail="Invalid reward_type")
     if data.min_nights < 1:
         raise HTTPException(status_code=400, detail="min_nights must be at least 1")
+    if data.nudge_from_nights < 1:
+        raise HTTPException(status_code=400, detail="nudge_from_nights must be at least 1")
+    if data.nudge_from_nights >= data.min_nights:
+        raise HTTPException(status_code=400, detail="nudge_from_nights must be less than min_nights")
     await _assert_room_belongs_to_hotel(session, data.room_type_id, current_user.hotel_id)
 
     offer = LoyaltyOffer(
@@ -264,6 +270,7 @@ async def create_offer(
         min_nights=data.min_nights,
         reward_type=data.reward_type,
         reward_value=data.reward_value,
+        nudge_from_nights=data.nudge_from_nights,
         nudge_title=data.nudge_title,
         nudge_message=data.nudge_message,
     )

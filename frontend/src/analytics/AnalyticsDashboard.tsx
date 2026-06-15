@@ -185,7 +185,8 @@ export const AnalyticsDashboard: React.FC = () => {
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const [activeUsers, setActiveUsers] = useState<number>(0);
 
-  const { tab: activeTab = 'overview' } = useParams<{ tab?: string }>();
+  const { tab } = useParams<{ tab?: string }>();
+  const activeTab = tab || 'overview';
   const navigate = useNavigate();
 
   // 1. KPI stats (always load on mount, depends on `days`)
@@ -278,13 +279,15 @@ export const AnalyticsDashboard: React.FC = () => {
       ]);
       setActiveUsers(activeRes.active_visitors);
       setLiveEvents(feedRes.map(e => ({
-        id: Math.random().toString(),
-        type: (e.event === 'booking_complete' ? 'booking' : e.event === 'search' ? 'search' : 'view') as LiveEvent['type'],
-        message: e.event === 'booking_complete' ? '🎉 New Booking Confirmed' :
-                 e.event === 'search' ? '🔍 Searching availability' :
-                 e.event === 'room_view' ? '👁 Viewing room details' : '📄 New page visit',
-        timestamp: new Date(e.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-        amount: e.metadata ? (() => { try { return JSON.parse(e.metadata).total_amount; } catch { return undefined; } })() : undefined,
+        id: e.session_id,
+        type: (e.has_booked ? 'booking' : 'view') as LiveEvent['type'],
+        message: e.has_booked
+          ? `🎉 Booking confirmed${e.country ? ` · ${e.country}` : ''}`
+          : `👁 Visit${e.country ? ` from ${e.country}` : ''}${e.browser ? ` · ${e.browser}` : ''}`,
+        timestamp: e.started_at
+          ? new Date(e.started_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+          : '--:--',
+        amount: undefined,
       })));
     } catch (err) {
       console.error('Live feed poll failed', err);
@@ -594,7 +597,7 @@ export const AnalyticsDashboard: React.FC = () => {
                           key={ev.id}
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
-                          className="flex items-center justify-between py-2.5 py-3 bg-muted rounded-xl border border-border text-xs"
+                          className="flex items-center justify-between py-3 bg-muted rounded-xl border border-border text-xs"
                         >
                           <div className="flex items-center gap-2.5">
                             <span className={`w-2 h-2 rounded-full shrink-0 ${
@@ -805,65 +808,6 @@ export const AnalyticsDashboard: React.FC = () => {
                   </SectionCard>
                 </div>
 
-                {/* Traffic Heatmap */}
-                <SectionCard
-                  title="Traffic Heatmap"
-                  subtitle={`Aggregated visitor traffic by weekday & hour — last ${days} days (hover a cell for exact count)`}
-                  icon={<Clock className="w-4 h-4" />}
-                >
-                  <div className="overflow-x-auto">
-                    <div className="min-w-[700px]">
-                      {/* Hour labels with AM/PM markers */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '48px repeat(24, minmax(0, 1fr))', gap: '3px' }}>
-                        <div className="text-[9px] font-bold text-muted-foreground flex items-end pb-1">Day</div>
-                        {Array.from({ length: 24 }).map((_, h) => (
-                          <div key={h} className="text-[9px] text-center font-bold text-muted-foreground pb-1">
-                            {h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`}
-                          </div>
-                        ))}
-                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, dIdx) => {
-                          const maxVal = Math.max(...(trafficData.traffic_heatmap?.map((c: any) => c.visitors) || [1]), 1);
-                          return (
-                            <React.Fragment key={day}>
-                              <div className="text-[10px] font-bold text-muted-foreground flex items-center">{day}</div>
-                              {Array.from({ length: 24 }).map((_, hIdx) => {
-                                const cell = trafficData.traffic_heatmap?.find((i: any) => i.weekday === dIdx && i.hour === hIdx);
-                                const count = cell?.visitors || 0;
-                                const intensity = count > 0 ? 0.15 + (count / maxVal) * 0.85 : 0;
-                                const hourLabel = hIdx === 0 ? '12 AM' : hIdx < 12 ? `${hIdx} AM` : hIdx === 12 ? '12 PM' : `${hIdx - 12} PM`;
-                                return (
-                                  <div
-                                    key={hIdx}
-                                    title={`${day} ${hourLabel} — ${count} visitor${count !== 1 ? 's' : ''}`}
-                                    style={{
-                                      backgroundColor: count > 0 ? `rgba(99, 102, 241, ${intensity})` : 'hsl(var(--muted))',
-                                      border: '1px solid hsl(var(--border))'
-                                    }}
-                                    className="h-7 rounded-md cursor-pointer hover:scale-110 hover:shadow-md transition-transform"
-                                  />
-                                );
-                              })}
-                            </React.Fragment>
-                          );
-                        })}
-                      </div>
-
-                      {/* Legend + note */}
-                      <div className="flex items-center justify-between mt-4 gap-4 flex-wrap">
-                        <p className="text-[10px] text-muted-foreground italic">
-                          Each cell = total visitors for that weekday & hour, combined across the last {days} days
-                        </p>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] text-muted-foreground font-medium">Low</span>
-                          {[0.15, 0.35, 0.55, 0.75, 1].map(v => (
-                            <div key={v} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(99, 102, 241, ${v})` }} />
-                          ))}
-                          <span className="text-[10px] text-muted-foreground font-medium">High</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </SectionCard>
               </>
             )}
           </TabsContent>

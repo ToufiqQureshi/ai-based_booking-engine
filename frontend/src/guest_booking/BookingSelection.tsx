@@ -137,8 +137,12 @@ export default function BookingSelection() {
         isOpen: false, title: '', nudgeTitle: '', nudgeMessage: '',
         rewardLabel: '', currentNights: 0, minNights: 0,
     });
-    // Remember the night-counts we've already nudged on, so we don't re-spam.
-    const stayOfferShownRef = useRef<Set<number>>(new Set());
+    // Track date-pairs already nudged ("checkIn|checkOut") to avoid re-spamming on
+    // re-renders while still firing for every distinct date selection the user makes.
+    const stayOfferShownRef = useRef<Set<string>>(new Set());
+    // Set to true the first time the user explicitly picks dates via the calendar;
+    // prevents the popup from firing silently on initial page-load with default dates.
+    const userPickedDatesRef = useRef(false);
 
     const applyLoyaltyCoupon = (couponCode: string) => {
         setPromoCode(couponCode);
@@ -177,15 +181,18 @@ export default function BookingSelection() {
         }
     }, []);
 
-    // Stay-offer nudge: whenever the hotel + dates are known, ask the backend if
-    // extending the stay would unlock a reward, and nudge the guest if so.
+    // Stay-offer nudge: fires when the user explicitly selects dates and hotel is loaded.
+    // Tracks by "checkIn|checkOut" date-pair so it fires for every distinct selection,
+    // even if the night count happens to equal a previously-seen pair.
     useEffect(() => {
         const hid = hotel?.id;
         if (!hid || !checkInDate || !checkOutDate) return;
+        // Only fire after the user explicitly picks dates (not on initial default load).
+        if (!userPickedDatesRef.current) return;
         const nights = differenceInDays(checkOutDate, checkInDate);
         if (nights <= 0) return;
-        // Only nudge once per distinct night-count to avoid spamming on re-render.
-        if (stayOfferShownRef.current.has(nights)) return;
+        const datePairKey = `${format(checkInDate, 'yyyy-MM-dd')}|${format(checkOutDate, 'yyyy-MM-dd')}`;
+        if (stayOfferShownRef.current.has(datePairKey)) return;
 
         let cancelled = false;
         (async () => {
@@ -200,7 +207,7 @@ export default function BookingSelection() {
 
                 // Case 1: Guest is below the threshold — nudge them to add more nights
                 if (!res.unlocked && (res.nights_remaining || 0) > 0) {
-                    stayOfferShownRef.current.add(nights);
+                    stayOfferShownRef.current.add(datePairKey);
                     setStayOffer({
                         isOpen: true,
                         title: res.title || 'Stay Offer',
@@ -211,9 +218,9 @@ export default function BookingSelection() {
                         minNights: res.min_nights || nights + (res.nights_remaining || 1),
                     });
                 }
-                // Case 2: Guest has met the threshold — show a "you've unlocked it!" popup
+                // Case 2: Guest has met the threshold — show "you've unlocked it!" popup
                 else if (res.unlocked) {
-                    stayOfferShownRef.current.add(nights);
+                    stayOfferShownRef.current.add(datePairKey);
                     setStayOffer({
                         isOpen: true,
                         title: res.title || 'Reward Unlocked! 🎉',
@@ -734,9 +741,9 @@ export default function BookingSelection() {
                     searchType={searchType}
                     setSearchType={setSearchType}
                     checkInDate={checkInDate}
-                    setCheckInDate={setCheckInDate}
+                    setCheckInDate={(d) => { userPickedDatesRef.current = true; setCheckInDate(d); }}
                     checkOutDate={checkOutDate}
-                    setCheckOutDate={setCheckOutDate}
+                    setCheckOutDate={(d) => { userPickedDatesRef.current = true; setCheckOutDate(d); }}
                     adults={adults}
                     setAdults={setAdults}
                     children={children}

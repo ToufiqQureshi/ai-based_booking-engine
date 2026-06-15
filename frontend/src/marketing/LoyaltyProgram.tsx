@@ -61,6 +61,7 @@ interface StayOffer {
     min_nights: number;
     reward_type: 'percentage' | 'fixed_amount' | 'free_night';
     reward_value: number;
+    nudge_from_nights: number;
     nudge_title: string;
     nudge_message: string;
 }
@@ -77,6 +78,7 @@ const BLANK_OFFER = {
     min_nights: 5,
     reward_type: 'percentage' as 'percentage' | 'fixed_amount' | 'free_night',
     reward_value: 15,
+    nudge_from_nights: 1,
     nudge_title: 'Stay a little longer!',
     nudge_message: 'Stay {remaining} more night(s) and unlock {reward}!',
 };
@@ -206,6 +208,7 @@ export default function LoyaltyProgramPage() {
             min_nights: o.min_nights,
             reward_type: o.reward_type,
             reward_value: o.reward_value,
+            nudge_from_nights: o.nudge_from_nights ?? 1,
             nudge_title: o.nudge_title,
             nudge_message: o.nudge_message,
         });
@@ -710,6 +713,23 @@ export default function LoyaltyProgramPage() {
                                         onChange={e => setOfferForm(f => ({ ...f, min_nights: parseInt(e.target.value) || 1 }))}
                                         className="mt-1 w-28 font-bold text-center"
                                     />
+                                </div>
+
+                                <div>
+                                    <Label>Show nudge popup only from</Label>
+                                    <p className="text-[11px] text-muted-foreground mb-1">
+                                        Guests who select fewer nights than this will NOT see the popup.
+                                        e.g. set to 3 on a 5-night offer → only guests who already picked 3+ nights get nudged.
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="number" min={1} max={offerForm.min_nights - 1}
+                                            value={offerForm.nudge_from_nights}
+                                            onChange={e => setOfferForm(f => ({ ...f, nudge_from_nights: parseInt(e.target.value) || 1 }))}
+                                            className="w-28 font-bold text-center"
+                                        />
+                                        <span className="text-sm text-muted-foreground">nights selected</span>
+                                    </div>
                                 </div>
 
                                 <div>
