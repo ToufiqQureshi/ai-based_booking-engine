@@ -383,7 +383,7 @@ export interface PaginatedResponse<T> {
 }
 
 export interface ApiError {
-  detail: string;
+  detail: string | any[];
   code?: string;
   field?: string;
 }
