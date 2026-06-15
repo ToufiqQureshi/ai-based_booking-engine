@@ -42,3 +42,7 @@ cloudflared_config.yml
 *.sqlite
 *.sqlite3
 .pytest_cache/
+
+# Stray submodule gitlink that repeatedly breaks the Cloudflare Pages build
+# (gitlink with no .gitmodules URL). Ignore so it can't be re-added by accident.
+decodo-api-docs/
