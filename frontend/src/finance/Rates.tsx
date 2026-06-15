@@ -44,7 +44,7 @@ export function RatesPage() {
     try {
       setIsLoading(true);
       const data = await apiClient.get<RatePlan[]>('/rates/plans');
-      setRatePlans(data);
+      setRatePlans(data.filter(p => !p.is_package));
     } catch (error) {
       console.error('Failed to fetch rate plans:', error);
       toast({
@@ -116,6 +116,7 @@ export function RatesPage() {
         onOpenChange={setIsDialogOpen}
         initialData={selectedPlan}
         onSuccess={fetchRatePlans}
+        showPackageSection={false}
       />
 
       {/* Search */}

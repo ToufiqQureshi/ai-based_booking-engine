@@ -60,9 +60,10 @@ interface RatePlanDialogProps {
     initialData?: RatePlan | null;
     onSuccess: () => void;
     defaultIsPackage?: boolean;
+    showPackageSection?: boolean;
 }
 
-export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, defaultIsPackage = false }: RatePlanDialogProps) {
+export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, defaultIsPackage = false, showPackageSection = true }: RatePlanDialogProps) {
     const { toast } = useToast();
     const isEditing = !!initialData;
 
@@ -431,8 +432,8 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                 </div>
                             </div>
 
-                            {/* Section 4: Package Inclusions */}
-                            <div className="space-y-4">
+                            {/* Section 4: Package Inclusions — hidden on Rate Plans page */}
+                            {showPackageSection && <div className="space-y-4">
                                 <div className="flex items-center gap-2 text-foreground">
                                     <Package className="h-4 w-4" />
                                     <h3 className="text-base font-bold">Bundle Package Details</h3>
