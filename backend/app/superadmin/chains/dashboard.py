@@ -349,8 +349,9 @@ async def get_chain_guests(
 
 # ── Chain-Wide Promos & Loyalty ───────────────────────────────────────────────
 from pydantic import BaseModel
+import uuid as _uuid
 from app.rate_plans.promo import PromoCode
-from app.loyalty.loyalty_model import LoyaltyProgram
+from app.loyalty.loyalty_model import LoyaltyProgram, LoyaltyOffer
 
 class ChainPromoCreate(BaseModel):
     code: str
@@ -467,5 +468,140 @@ async def update_chain_loyalty(
     await session.commit()
     await session.refresh(program)
     return program
+
+
+# ── Chain-Wide Upsell Broadcast ────────────────────────────────────────────────
+# A chain admin composes one stay-upsell offer and "broadcasts" it to every
+# property in the chain. We materialise one LoyaltyOffer per hotel (sharing a
+# broadcast_id) so the existing per-hotel guest booking flow picks them up with
+# zero changes, while the brand console can manage the broadcast as one unit.
+
+_VALID_REWARD_TYPES = {"percentage", "fixed_amount", "free_night"}
+
+
+class ChainUpsellBroadcastCreate(BaseModel):
+    title: str = "Stay Longer, Save More"
+    min_nights: int = 5
+    reward_type: str = "percentage"          # percentage | fixed_amount | free_night
+    reward_value: float = 10.0
+    nudge_from_nights: int = 1
+    nudge_title: str = "Stay a little longer!"
+    nudge_message: str = "Stay {remaining} more night(s) and unlock {reward}!"
+    is_active: bool = True
+
+
+@router.get("/upsell", response_model=List[Dict[str, Any]])
+async def list_chain_upsell_broadcasts(
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """
+    List the chain's upsell broadcasts, grouped by broadcast_id. Each entry
+    reports how many properties currently carry the offer.
+    """
+    result = await session.execute(
+        select(LoyaltyOffer)
+        .where(
+            LoyaltyOffer.chain_id == current_user.chain_id,
+            LoyaltyOffer.broadcast_id.is_not(None),
+        )
+        .order_by(LoyaltyOffer.created_at.desc())
+    )
+    offers = result.scalars().all()
+
+    grouped: Dict[str, Dict[str, Any]] = {}
+    for o in offers:
+        g = grouped.get(o.broadcast_id)
+        if not g:
+            grouped[o.broadcast_id] = {
+                "broadcast_id": o.broadcast_id,
+                "title": o.title,
+                "min_nights": o.min_nights,
+                "reward_type": o.reward_type,
+                "reward_value": o.reward_value,
+                "nudge_from_nights": o.nudge_from_nights,
+                "nudge_title": o.nudge_title,
+                "nudge_message": o.nudge_message,
+                "is_active": o.is_active,
+                "property_count": 1,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+            }
+        else:
+            g["property_count"] += 1
+            # A broadcast is "active" if any property copy is active
+            g["is_active"] = g["is_active"] or o.is_active
+
+    # Preserve newest-first ordering
+    return sorted(grouped.values(), key=lambda x: x["created_at"] or "", reverse=True)
+
+
+@router.post("/upsell/broadcast", response_model=Dict[str, Any])
+async def broadcast_chain_upsell(
+    payload: ChainUpsellBroadcastCreate,
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """Create one stay-upsell offer and push a copy to every active property."""
+    if payload.reward_type not in _VALID_REWARD_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid reward_type")
+    if payload.min_nights < 1:
+        raise HTTPException(status_code=400, detail="min_nights must be at least 1")
+    if payload.nudge_from_nights < 1:
+        raise HTTPException(status_code=400, detail="nudge_from_nights must be at least 1")
+    if payload.nudge_from_nights >= payload.min_nights:
+        raise HTTPException(
+            status_code=400,
+            detail="nudge_from_nights must be less than min_nights",
+        )
+
+    hotels = (await session.execute(
+        select(Hotel.id).where(
+            Hotel.chain_id == current_user.chain_id,
+            Hotel.is_active == True,
+        )
+    )).scalars().all()
+    if not hotels:
+        raise HTTPException(status_code=400, detail="No active properties in this chain")
+
+    broadcast_id = str(_uuid.uuid4())
+    for hid in hotels:
+        session.add(LoyaltyOffer(
+            hotel_id=hid,
+            chain_id=current_user.chain_id,
+            broadcast_id=broadcast_id,
+            room_type_id=None,           # chain broadcasts apply to all rooms
+            is_active=payload.is_active,
+            title=payload.title,
+            min_nights=payload.min_nights,
+            reward_type=payload.reward_type,
+            reward_value=payload.reward_value,
+            nudge_from_nights=payload.nudge_from_nights,
+            nudge_title=payload.nudge_title,
+            nudge_message=payload.nudge_message,
+        ))
+    await session.commit()
+    return {"broadcast_id": broadcast_id, "property_count": len(hotels)}
+
+
+@router.delete("/upsell/{broadcast_id}")
+async def delete_chain_upsell_broadcast(
+    broadcast_id: str,
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """Delete a broadcast across all properties. IDOR-guarded by chain_id."""
+    result = await session.execute(
+        select(LoyaltyOffer).where(
+            LoyaltyOffer.broadcast_id == broadcast_id,
+            LoyaltyOffer.chain_id == current_user.chain_id,
+        )
+    )
+    offers = result.scalars().all()
+    if not offers:
+        raise HTTPException(status_code=404, detail="Broadcast not found")
+    for o in offers:
+        await session.delete(o)
+    await session.commit()
+    return {"ok": True, "deleted": len(offers)}
 
 

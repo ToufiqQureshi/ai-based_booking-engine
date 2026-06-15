@@ -58,6 +58,12 @@ class LoyaltyOffer(SQLModel, table=True):
     chain_id: Optional[str] = Field(default=None, foreign_key="chains.id", index=True)
     room_type_id: Optional[str] = Field(default=None, foreign_key="room_types.id", index=True)
 
+    # When a chain admin broadcasts one offer to every property, each hotel gets
+    # its own LoyaltyOffer row sharing the same broadcast_id. This lets us list
+    # and delete a broadcast as a single unit while the per-hotel booking flow
+    # keeps reading offers by hotel_id unchanged.
+    broadcast_id: Optional[str] = Field(default=None, index=True)
+
     is_active: bool = Field(default=True)
     title: str = Field(default="Stay Longer, Save More")
 

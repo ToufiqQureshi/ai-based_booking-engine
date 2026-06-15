@@ -121,6 +121,94 @@ async def test_chain_dashboard_success_for_brand_admin(seeded_hotel: Hotel):
 
 
 # ---------------------------------------------------------------------------
+# Chain-wide upsell broadcast
+# ---------------------------------------------------------------------------
+
+async def test_chain_upsell_broadcast_lifecycle(seeded_hotel: Hotel):
+    """A chain admin can broadcast an upsell to all properties, list it, and delete it."""
+    from app.loyalty.loyalty_model import LoyaltyOffer
+    from sqlmodel import select as _select
+
+    chain_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    hotel_a = str(uuid.uuid4())
+    hotel_b = str(uuid.uuid4())
+
+    async with AsyncSession(engine) as db:
+        db.add(Chain(id=chain_id, name="Upsell Chain", slug=f"upsell-{uuid.uuid4().hex[:6]}"))
+        db.add(User(
+            id=user_id, supabase_id=str(uuid.uuid4()),
+            email=f"upsell-admin-{uuid.uuid4().hex[:6]}@staybooker.ai",
+            name="Upsell Admin", role=UserRole.OWNER,
+            hotel_id=seeded_hotel.id, chain_id=chain_id,
+            hashed_password="PYTEST_NO_AUTH", is_active=True,
+        ))
+        db.add(Hotel(id=hotel_a, name="Prop A", slug=f"prop-a-{uuid.uuid4().hex[:6]}", chain_id=chain_id, is_active=True))
+        db.add(Hotel(id=hotel_b, name="Prop B", slug=f"prop-b-{uuid.uuid4().hex[:6]}", chain_id=chain_id, is_active=True))
+        await db.commit()
+
+    transient_user = User(
+        id=user_id, supabase_id=str(uuid.uuid4()),
+        email="upsell-admin-test@staybooker.ai", name="Upsell Admin",
+        role=UserRole.OWNER, hotel_id=seeded_hotel.id, chain_id=chain_id,
+        hashed_password="PYTEST_NO_AUTH", is_active=True,
+    )
+    from app.core.deps import get_current_active_user
+    app.dependency_overrides[get_current_active_user] = lambda: transient_user
+
+    from httpx import ASGITransport
+    broadcast_id = None
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as bc:
+            # Reject invalid nudge gate
+            bad = await bc.post("/api/v1/chain/upsell/broadcast", json={
+                "title": "Bad", "min_nights": 3, "reward_type": "percentage",
+                "reward_value": 10, "nudge_from_nights": 3,
+            })
+            assert bad.status_code == 400
+
+            # Broadcast a valid offer to both properties
+            res = await bc.post("/api/v1/chain/upsell/broadcast", json={
+                "title": "Stay 5 Save 20", "min_nights": 5, "reward_type": "percentage",
+                "reward_value": 20, "nudge_from_nights": 2,
+            })
+            assert res.status_code == 200, res.text
+            broadcast_id = res.json()["broadcast_id"]
+            assert res.json()["property_count"] == 2
+
+            # It should appear once in the grouped list, spanning 2 properties
+            lst = await bc.get("/api/v1/chain/upsell")
+            assert lst.status_code == 200
+            entry = next(b for b in lst.json() if b["broadcast_id"] == broadcast_id)
+            assert entry["property_count"] == 2
+            assert entry["min_nights"] == 5
+
+            # Delete removes every per-hotel copy
+            dele = await bc.delete(f"/api/v1/chain/upsell/{broadcast_id}")
+            assert dele.status_code == 200
+            assert dele.json()["deleted"] == 2
+    finally:
+        app.dependency_overrides.pop(get_current_active_user, None)
+        async with AsyncSession(engine) as db:
+            rows = (await db.execute(
+                _select(LoyaltyOffer).where(LoyaltyOffer.chain_id == chain_id)
+            )).scalars().all()
+            for r in rows:
+                await db.delete(r)
+            for hid in (hotel_a, hotel_b):
+                h = await db.get(Hotel, hid)
+                if h:
+                    await db.delete(h)
+            u = await db.get(User, user_id)
+            if u:
+                await db.delete(u)
+            c = await db.get(Chain, chain_id)
+            if c:
+                await db.delete(c)
+            await db.commit()
+
+
+# ---------------------------------------------------------------------------
 # Super Admin Brand Management operations
 # ---------------------------------------------------------------------------
 

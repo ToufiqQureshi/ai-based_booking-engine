@@ -254,6 +254,12 @@ async def init_db():
         # Hotelier-controlled gate: nudge only shows when guest nights >= this value.
         # Default 1 keeps existing offers behaving as before (show to all guests).
         "ALTER TABLE loyalty_offers ADD COLUMN nudge_from_nights INTEGER NOT NULL DEFAULT 1",
+        # DB-08: broadcast_id on loyalty_offers (added 2026-06-15).
+        # Groups the per-hotel copies created by a chain-wide upsell broadcast so
+        # the brand console can list/delete a broadcast as one unit. NULL for
+        # ordinary single-hotel offers.
+        "ALTER TABLE loyalty_offers ADD COLUMN broadcast_id VARCHAR(255)",
+        "CREATE INDEX IF NOT EXISTS idx_loyalty_offers_broadcast ON loyalty_offers (broadcast_id)",
     ]:
         try:
             async with engine.begin() as conn:
