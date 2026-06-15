@@ -174,9 +174,10 @@
 
         // The app posts WIDGET_READY as soon as React paints (see handler below),
         // which reveals instantly. This timer is only a safety net for old builds
-        // that don't send the signal — kept short so guests never wait needlessly.
+        // that don't send the signal. We wait 4000ms so we don't accidentally
+        // destroy the skeleton before React finishes its API fetches.
         iframe.addEventListener('load', function () {
-            setTimeout(reveal, 400);
+            setTimeout(reveal, 4000);
         });
 
         function viewportCap(topPx) {

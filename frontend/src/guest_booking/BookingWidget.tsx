@@ -403,13 +403,13 @@ export default function BookingWidget() {
                     disabled={(date: Date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     className="p-0"
                     classNames={{
-                        cell: "h-9 w-9 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl [&:has([aria-selected].day-outside)]:custom-theme-bg-light [&:has([aria-selected])]:custom-theme-bg-light first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                        day: "h-9 w-9 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                        cell: "h-8 w-8 sm:h-10 sm:w-10 text-center text-[11px] p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-lg [&:has([aria-selected].day-outside)]:custom-theme-bg-light [&:has([aria-selected])]:custom-theme-bg-light first:[&:has([aria-selected])]:rounded-l-lg last:[&:has([aria-selected])]:rounded-r-lg focus-within:relative focus-within:z-20",
+                        day: "h-8 w-8 sm:h-10 sm:w-10 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-lg transition-all",
                         day_selected: "custom-theme-btn font-semibold shadow-sm",
                         day_today: "custom-theme-text font-semibold border border-slate-200 bg-slate-50",
-                        head_cell: "text-slate-400 font-semibold uppercase tracking-wide text-[10px] w-9 pb-2 text-center",
+                        head_cell: "text-slate-400 font-semibold uppercase tracking-wide text-[9px] w-8 sm:w-10 pb-1 text-center",
                         caption: "flex justify-center py-2 px-3 relative items-center custom-theme-btn rounded-xl mb-3",
-                        caption_label: "text-sm font-semibold tracking-wide",
+                        caption_label: "text-xs font-semibold tracking-wide",
                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
                         // Drive the 1-vs-2-month layout from the widget's actual
                         // width (isMobile), NOT the Tailwind md: breakpoint — the
@@ -432,14 +432,19 @@ export default function BookingWidget() {
 
                             return (
                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                    <span className="text-xs font-medium leading-none">{date.getDate()}</span>
+                                    <span className={cn(
+                                        "text-[12px] font-extrabold leading-none",
+                                        isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white"
+                                    )}>
+                                        {date.getDate()}
+                                    </span>
                                     {!isPast && (
                                         <span className={cn(
-                                            "text-[9px] font-semibold leading-none mt-1",
+                                            "text-[8px] font-extrabold leading-none mt-0.5",
                                             isSoldOut
-                                                ? "text-red-400"
+                                                ? "text-red-500"
                                                 : price !== null
-                                                    ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700"
+                                                    ? "text-slate-700 group-aria-selected:text-white group-hover:text-slate-900"
                                                     : "text-slate-300"
                                         )}>
                                             {isSoldOut ? "Sold" : price !== null ? formatPriceCompact(price) : ''}

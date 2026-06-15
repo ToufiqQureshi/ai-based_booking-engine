@@ -150,7 +150,7 @@ export function RoomSearchHeader({
             </div>
             {/* Bounded height + internal scroll so the calendar and
                 legend are never clipped by the popover/sheet. */}
-            <div className="p-3 overflow-x-auto overflow-y-auto max-h-[75vh] md:max-h-[75vh] flex-1 min-h-0">
+            <div className="p-2 sm:p-3 overflow-x-auto overflow-y-auto max-h-[85vh] md:max-h-[700px] flex-1 min-h-0">
                 <style>{`
                     .rdp-day_selected,
                     .rdp-day_selected:hover {
@@ -179,11 +179,11 @@ export function RoomSearchHeader({
                     disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                     className="p-0"
                     classNames={{
-                        cell: "h-9 w-9 sm:h-11 sm:w-11 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-xl first:[&:has([aria-selected])]:rounded-l-xl last:[&:has([aria-selected])]:rounded-r-xl focus-within:relative focus-within:z-20",
-                        day: "h-9 w-9 sm:h-11 sm:w-11 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-xl transition-all",
+                        cell: "h-8 w-8 sm:h-10 sm:w-10 text-center text-[11px] p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-lg first:[&:has([aria-selected])]:rounded-l-lg last:[&:has([aria-selected])]:rounded-r-lg focus-within:relative focus-within:z-20",
+                        day: "h-8 w-8 sm:h-10 sm:w-10 p-0 font-normal group aria-selected:opacity-100 hover:bg-slate-100 rounded-lg transition-all",
                         day_selected: "text-white font-bold shadow-md",
                         day_today: "font-bold border border-slate-200 bg-slate-50",
-                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[10px] w-9 sm:w-11 pb-2 text-center",
+                        head_cell: "text-slate-500 font-black uppercase tracking-wider text-[9px] w-8 sm:w-10 pb-1 text-center",
                         caption: "flex justify-center py-2.5 px-3 relative items-center text-white rounded-xl mb-3 shadow-sm",
                         caption_label: "text-xs font-extrabold tracking-wide uppercase",
                         nav_button: "h-7 w-7 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center justify-center p-0",
@@ -211,17 +211,22 @@ export function RoomSearchHeader({
 
                             return (
                                 <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
-                                    <span className="text-xs font-bold leading-none">{date.getDate()}</span>
+                                    <span className={cn(
+                                        "text-[12px] font-extrabold leading-none",
+                                        isPast ? "text-slate-400" : "text-slate-800 group-aria-selected:text-white"
+                                    )}>
+                                        {date.getDate()}
+                                    </span>
                                     {!isPast && (
                                         isLoading ? (
                                             <span className="mt-1 h-[7px] w-6 rounded-full bg-slate-200 animate-pulse" aria-hidden="true" />
                                         ) : (
                                         <span className={cn(
-                                            "text-[9px] font-extrabold leading-none mt-1",
+                                            "text-[8px] font-extrabold leading-none mt-0.5",
                                             isSoldOut
-                                                ? "text-red-400"
+                                                ? "text-red-500"
                                                 : price !== null
-                                                    ? "text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700"
+                                                    ? "text-slate-700 group-aria-selected:text-white group-hover:text-slate-900"
                                                     : "text-slate-300"
                                         )}>
                                             {isSoldOut ? "Sold" : price !== null ? formatPriceCompact(price) : ''}
