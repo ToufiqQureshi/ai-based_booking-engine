@@ -1,8 +1,8 @@
 """
 Loyalty Program Models
 """
-from sqlmodel import SQLModel, Field
-from typing import Optional
+from sqlmodel import SQLModel, Field, Column, JSON
+from typing import Optional, List
 from datetime import datetime
 import uuid
 
@@ -18,15 +18,17 @@ class LoyaltyProgram(SQLModel, table=True):
     program_name: str = Field(default="Loyalty Program")
     description: Optional[str] = None
 
-    # Milestone: after N completed bookings, reward triggers
+    # Legacy single milestone fields (kept for backward compatibility during migration)
     milestone_bookings: int = Field(default=5)
-
-    # Reward type: percentage | fixed_amount | free_night
     reward_type: str = Field(default="percentage")
     reward_value: float = Field(default=10.0)  # % or ₹ amount
     reward_description: Optional[str] = None   # e.g. "Get 1 Free Night"
 
-    # Popup message hotelier writes
+    # New multiple milestones configuration
+    # Array of dicts: {"milestone_bookings": int, "reward_type": str, "reward_value": float, "reward_description": str}
+    milestones: List[dict] = Field(default=[], sa_column=Column(JSON))
+
+    # Popup message hotelier writes (used generically or per milestone if needed)
     popup_title: str = Field(default="You're Almost There!")
     popup_message: str = Field(default="Book {remaining} more room(s) and unlock your reward!")
 

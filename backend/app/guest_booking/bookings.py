@@ -599,7 +599,22 @@ async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest,
                 nudge_title=offer.nudge_title,
             )
 
-        # Among unlocked offers (nights >= min), pick the highest threshold reached.
+        # Find the next nearest offer above current nights
+        next_offers = [o for o in offers if o.min_nights > nights]
+        if next_offers:
+            offer = min(next_offers, key=lambda o: o.min_nights - nights)
+            remaining = offer.min_nights - nights
+            label = _reward_label(offer.reward_type, offer.reward_value)
+            msg = (offer.nudge_message or "Stay {remaining} more night(s) and unlock {reward}!") \
+                .replace("{remaining}", str(remaining)).replace("{reward}", label)
+            return LoyaltyOfferCheckResponse(
+                has_offer=True, unlocked=False, offer_id=offer.id, title=offer.title,
+                min_nights=offer.min_nights, current_nights=nights, nights_remaining=remaining,
+                reward_type=offer.reward_type, reward_value=offer.reward_value,
+                reward_label=label, nudge_title=offer.nudge_title, nudge_message=msg,
+            )
+
+        # If no higher offer exists, just return the highest unlocked one
         unlocked = [o for o in offers if nights >= o.min_nights]
         if unlocked:
             offer = max(unlocked, key=lambda o: o.min_nights)
@@ -613,18 +628,6 @@ async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest,
                 nudge_message=f"You've unlocked {label} on this stay!",
             )
 
-        # Otherwise nudge toward the closest threshold above the current nights.
-        offer = min(offers, key=lambda o: o.min_nights - nights)
-        remaining = offer.min_nights - nights
-        label = _reward_label(offer.reward_type, offer.reward_value)
-        msg = (offer.nudge_message or "Stay {remaining} more night(s) and unlock {reward}!") \
-            .replace("{remaining}", str(remaining)).replace("{reward}", label)
-        return LoyaltyOfferCheckResponse(
-            has_offer=True, unlocked=False, offer_id=offer.id, title=offer.title,
-            min_nights=offer.min_nights, current_nights=nights, nights_remaining=remaining,
-            reward_type=offer.reward_type, reward_value=offer.reward_value,
-            reward_label=label, nudge_title=offer.nudge_title, nudge_message=msg,
-        )
     except HTTPException:
         raise
     except Exception:
@@ -720,11 +723,32 @@ async def check_guest_loyalty(request: Request, data: LoyaltyCheckRequest, sessi
                 points_balance=points_balance,
             )
 
-        milestone = program.milestone_bookings
-        bookings_since_last_reward = completed_count % milestone if milestone > 0 else completed_count
-        remaining = milestone - bookings_since_last_reward
+        milestones = program.milestones if program and program.milestones else []
+        if not milestones and program and program.milestone_bookings and program.milestone_bookings > 0:
+            milestones = [{
+                "milestone_bookings": program.milestone_bookings,
+                "reward_type": program.reward_type,
+                "reward_value": program.reward_value,
+                "reward_description": program.reward_description
+            }]
+        
+        milestones = sorted(milestones, key=lambda x: x.get("milestone_bookings", 0))
 
-        if completed_count > 0 and bookings_since_last_reward == 0:
+        just_hit_milestone = None
+        for m in milestones:
+            if completed_count > 0 and completed_count == m.get("milestone_bookings", 0):
+                just_hit_milestone = m
+                break
+        
+        next_milestone = None
+        for m in milestones:
+            if m.get("milestone_bookings", 0) > completed_count:
+                next_milestone = m
+                break
+        
+        remaining = next_milestone.get("milestone_bookings", 0) - completed_count if next_milestone else 0
+
+        if just_hit_milestone:
             promo = (await session.execute(
                 select(PromoCode).where(
                     or_(PromoCode.hotel_id == data.hotel_id, PromoCode.chain_id == chain_id),
@@ -741,10 +765,11 @@ async def check_guest_loyalty(request: Request, data: LoyaltyCheckRequest, sessi
                     else f"₹{int(promo.discount_value)} Loyalty Reward"
                 )
             else:
-                val = program.reward_value
+                val = just_hit_milestone.get("reward_value", 10.0)
+                r_type = just_hit_milestone.get("reward_type", "percentage")
                 discount_text = (
                     f"{int(val)}% off your stay"
-                    if program.reward_type == "percentage"
+                    if r_type == "percentage"
                     else f"₹{int(val)} off your stay"
                 )
             return LoyaltyCheckResponse(
@@ -752,14 +777,15 @@ async def check_guest_loyalty(request: Request, data: LoyaltyCheckRequest, sessi
                 message=f"Welcome back, {first_name}! You've unlocked your loyalty reward. Enjoy your stay!",
                 coupon_code=coupon_code, discount_text=discount_text,
                 bookings_completed=completed_count, bookings_to_reward=0,
-                reward_description=program.reward_description, points_balance=points_balance,
+                reward_description=just_hit_milestone.get("reward_description"), points_balance=points_balance,
             )
 
-        if completed_count > 0 and remaining == 1:
+        if completed_count > 0 and next_milestone and remaining == 1:
             popup_msg = program.popup_message.replace("{remaining}", str(remaining))
-            val = program.reward_value
-            reward_desc = program.reward_description or (
-                f"{int(val)}% off" if program.reward_type == "percentage" else f"₹{int(val)} off"
+            val = next_milestone.get("reward_value", 10.0)
+            r_type = next_milestone.get("reward_type", "percentage")
+            reward_desc = next_milestone.get("reward_description") or (
+                f"{int(val)}% off" if r_type == "percentage" else f"₹{int(val)} off"
             )
             return LoyaltyCheckResponse(
                 is_repeat_guest=True, message=f"Welcome back, {first_name}!",

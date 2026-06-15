@@ -74,18 +74,34 @@ async def _update_guest_loyalty(
 
         session.add(loyal)
 
-        milestone = program.milestone_bookings or 5
-        if milestone > 0 and loyal.total_completed_bookings % milestone == 0:
+        milestones = program.milestones if program and program.milestones else []
+        if not milestones and program and program.milestone_bookings and program.milestone_bookings > 0:
+            milestones = [{
+                "milestone_bookings": program.milestone_bookings,
+                "reward_type": program.reward_type,
+                "reward_value": program.reward_value,
+                "reward_description": program.reward_description
+            }]
+            
+        just_hit_milestone = None
+        for m in milestones:
+            if loyal.total_completed_bookings == m.get("milestone_bookings", 0):
+                just_hit_milestone = m
+                break
+
+        if just_hit_milestone:
             code = f"LOYAL-{secrets.token_hex(4).upper()}-{loyal.total_completed_bookings}"
-            disc_type = "percentage" if program.reward_type == "percentage" else "fixed_amount"
-            disc_value = program.reward_value if program.reward_type != "free_night" else 100.0
-            if program.reward_type == "free_night":
+            r_type = just_hit_milestone.get("reward_type", "percentage")
+            disc_type = "percentage" if r_type == "percentage" else "fixed_amount"
+            disc_value = just_hit_milestone.get("reward_value", 10.0) if r_type != "free_night" else 100.0
+            if r_type == "free_night":
                 disc_type = "percentage"
 
+            reward_desc = just_hit_milestone.get("reward_description") or program.program_name
             session.add(PromoCode(
                 hotel_id=hotel_id,
                 code=code,
-                description=f"Loyalty reward for {guest_email} — {program.reward_description or program.program_name}",
+                description=f"Loyalty reward for {guest_email} — {reward_desc}",
                 discount_type=disc_type,
                 discount_value=disc_value,
                 max_usage=1,

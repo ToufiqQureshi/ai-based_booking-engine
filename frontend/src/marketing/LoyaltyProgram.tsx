@@ -20,6 +20,13 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
+interface LoyaltyMilestone {
+    milestone_bookings: number;
+    reward_type: 'percentage' | 'fixed_amount' | 'free_night';
+    reward_value: number;
+    reward_description: string | null;
+}
+
 interface LoyaltyProgram {
     id: string;
     hotel_id: string;
@@ -30,6 +37,7 @@ interface LoyaltyProgram {
     reward_type: 'percentage' | 'fixed_amount' | 'free_night';
     reward_value: number;
     reward_description: string | null;
+    milestones: LoyaltyMilestone[];
     popup_title: string;
     popup_message: string;
 }
@@ -73,6 +81,13 @@ const BLANK_OFFER = {
     nudge_message: 'Stay {remaining} more night(s) and unlock {reward}!',
 };
 
+const BLANK_MILESTONE: LoyaltyMilestone = {
+    milestone_bookings: 5,
+    reward_type: 'percentage',
+    reward_value: 10,
+    reward_description: '',
+};
+
 const REWARD_TYPE_OPTIONS = [
     { value: 'percentage', label: 'Percentage Discount', icon: Percent, desc: 'e.g. 10% off booking' },
     { value: 'fixed_amount', label: 'Fixed Amount Off', icon: IndianRupee, desc: 'e.g. ₹500 off' },
@@ -109,10 +124,7 @@ export default function LoyaltyProgramPage() {
         is_active: false,
         program_name: 'Loyalty Program',
         description: '',
-        milestone_bookings: 5,
-        reward_type: 'percentage' as 'percentage' | 'fixed_amount' | 'free_night',
-        reward_value: 10,
-        reward_description: '',
+        milestones: [{ ...BLANK_MILESTONE }],
         popup_title: "You're Almost There!",
         popup_message: 'Book {remaining} more room(s) and unlock your reward!',
     });
@@ -130,14 +142,25 @@ export default function LoyaltyProgramPage() {
         try {
             const data = await apiClient.get<LoyaltyProgram>('/loyalty/program');
             setProgram(data);
+            
+            let initialMilestones = data.milestones || [];
+            if (initialMilestones.length === 0 && data.milestone_bookings) {
+                initialMilestones = [{
+                    milestone_bookings: data.milestone_bookings,
+                    reward_type: data.reward_type,
+                    reward_value: data.reward_value,
+                    reward_description: data.reward_description || ''
+                }];
+            }
+            if (initialMilestones.length === 0) {
+                initialMilestones = [{ ...BLANK_MILESTONE }];
+            }
+
             setForm({
                 is_active: data.is_active,
                 program_name: data.program_name,
                 description: data.description || '',
-                milestone_bookings: data.milestone_bookings,
-                reward_type: data.reward_type as any,
-                reward_value: data.reward_value,
-                reward_description: data.reward_description || '',
+                milestones: initialMilestones,
                 popup_title: data.popup_title,
                 popup_message: data.popup_message,
             });
@@ -266,9 +289,9 @@ export default function LoyaltyProgramPage() {
         setForm(prev => ({ ...prev, [field]: value }));
     }
 
-    const rewardLabel = () => {
-        if (form.reward_type === 'percentage') return `${form.reward_value}% off`;
-        if (form.reward_type === 'fixed_amount') return `₹${form.reward_value} off`;
+    const rewardLabel = (m: LoyaltyMilestone) => {
+        if (m.reward_type === 'percentage') return `${m.reward_value}% off`;
+        if (m.reward_type === 'fixed_amount') return `₹${m.reward_value} off`;
         return '1 Free Night';
     };
 
@@ -392,103 +415,127 @@ export default function LoyaltyProgramPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Milestone & Reward */}
-                        <Card>
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <Trophy className="w-4 h-4 text-primary" /> Milestone & Reward
-                                </CardTitle>
-                                <CardDescription>
-                                    After how many completed bookings does the guest earn a reward?
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-5">
-                                <div>
-                                    <Label>Bookings required for reward</Label>
-                                    <div className="flex items-center gap-3 mt-2">
-                                        {[3, 5, 7, 10].map(n => (
-                                            <button
-                                                key={n}
-                                                onClick={() => set('milestone_bookings', n)}
-                                                className={cn(
-                                                    'w-14 h-12 rounded-xl border-2 text-sm font-bold transition-all',
-                                                    form.milestone_bookings === n
-                                                        ? 'border-primary bg-primary text-white shadow-md scale-105'
-                                                        : 'border-border bg-background hover:border-primary/40'
-                                                )}
-                                            >
-                                                {n}
-                                            </button>
-                                        ))}
-                                        <Input
-                                            type="number"
-                                            min={1}
-                                            max={50}
-                                            value={form.milestone_bookings}
-                                            onChange={e => set('milestone_bookings', parseInt(e.target.value) || 5)}
-                                            className="w-20 text-center font-bold"
-                                        />
-                                    </div>
-                                </div>
+                        {/* Milestone & Reward List */}
+                        <div className="flex items-center justify-between mt-6 mb-2">
+                            <h3 className="text-base font-bold flex items-center gap-2">
+                                <Trophy className="w-5 h-5 text-primary" /> Milestone Rewards
+                            </h3>
+                            <Button variant="outline" size="sm" onClick={() => {
+                                setForm(f => ({ 
+                                    ...f, 
+                                    milestones: [...f.milestones, { 
+                                        ...BLANK_MILESTONE, 
+                                        milestone_bookings: (f.milestones[f.milestones.length-1]?.milestone_bookings || 0) + 5 
+                                    }] 
+                                }));
+                            }}>
+                                + Add Milestone
+                            </Button>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Set up multiple rewards for returning guests. For example: after 3 bookings give 10% off, after 5 bookings give 1 Free Night.
+                        </p>
 
-                                <div>
-                                    <Label>Reward Type</Label>
-                                    <div className="grid grid-cols-3 gap-3 mt-2">
-                                        {REWARD_TYPE_OPTIONS.map(opt => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => set('reward_type', opt.value)}
-                                                className={cn(
-                                                    'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center',
-                                                    form.reward_type === opt.value
-                                                        ? 'border-primary bg-primary/5 text-primary'
-                                                        : 'border-border hover:border-primary/30'
-                                                )}
-                                            >
-                                                <opt.icon className="w-5 h-5" />
-                                                <span className="text-xs font-semibold leading-tight">{opt.label}</span>
-                                                <span className="text-[10px] text-muted-foreground">{opt.desc}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                        {form.milestones.map((m, idx) => {
+                            const updateMilestone = (field: keyof LoyaltyMilestone, val: any) => {
+                                const newMs = [...form.milestones];
+                                newMs[idx] = { ...newMs[idx], [field]: val };
+                                setForm(f => ({ ...f, milestones: newMs }));
+                            };
 
-                                {form.reward_type !== 'free_night' && (
-                                    <div>
-                                        <Label htmlFor="reward-val">
-                                            Reward Value ({form.reward_type === 'percentage' ? '%' : '₹'})
-                                        </Label>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-muted-foreground font-semibold">
-                                                {form.reward_type === 'percentage' ? '' : '₹'}
-                                            </span>
-                                            <Input
-                                                id="reward-val"
-                                                type="number"
-                                                min={1}
-                                                value={form.reward_value}
-                                                onChange={e => set('reward_value', parseFloat(e.target.value) || 0)}
-                                                className="w-32"
-                                            />
-                                            {form.reward_type === 'percentage' && (
-                                                <span className="text-muted-foreground">%</span>
-                                            )}
+                            return (
+                                <Card key={idx} className="mb-4">
+                                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                                        <div>
+                                            <CardTitle className="text-base">Milestone {idx + 1}</CardTitle>
+                                            <CardDescription>
+                                                Reward triggers after {m.milestone_bookings} bookings.
+                                            </CardDescription>
                                         </div>
-                                    </div>
-                                )}
+                                        {form.milestones.length > 1 && (
+                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                                const newMs = [...form.milestones];
+                                                newMs.splice(idx, 1);
+                                                setForm(f => ({ ...f, milestones: newMs }));
+                                            }}>
+                                                Remove
+                                            </Button>
+                                        )}
+                                    </CardHeader>
+                                    <CardContent className="space-y-5">
+                                        <div>
+                                            <Label>Bookings required for reward</Label>
+                                            <div className="flex items-center gap-3 mt-2">
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={100}
+                                                    value={m.milestone_bookings}
+                                                    onChange={e => updateMilestone('milestone_bookings', parseInt(e.target.value) || 1)}
+                                                    className="w-24 text-center font-bold"
+                                                />
+                                            </div>
+                                        </div>
 
-                                <div>
-                                    <Label htmlFor="reward-desc">Reward Label <span className="text-muted-foreground">(shown to guest)</span></Label>
-                                    <Input
-                                        id="reward-desc"
-                                        value={form.reward_description}
-                                        onChange={e => set('reward_description', e.target.value)}
-                                        placeholder={`e.g. "${rewardLabel()} on your next stay!"`}
-                                        className="mt-1"
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
+                                        <div>
+                                            <Label>Reward Type</Label>
+                                            <div className="grid grid-cols-3 gap-3 mt-2">
+                                                {REWARD_TYPE_OPTIONS.map(opt => (
+                                                    <button
+                                                        key={opt.value}
+                                                        onClick={() => updateMilestone('reward_type', opt.value)}
+                                                        className={cn(
+                                                            'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center',
+                                                            m.reward_type === opt.value
+                                                                ? 'border-primary bg-primary/5 text-primary'
+                                                                : 'border-border hover:border-primary/30'
+                                                        )}
+                                                    >
+                                                        <opt.icon className="w-5 h-5" />
+                                                        <span className="text-xs font-semibold leading-tight">{opt.label}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {m.reward_type !== 'free_night' && (
+                                            <div>
+                                                <Label htmlFor={`reward-val-${idx}`}>
+                                                    Reward Value ({m.reward_type === 'percentage' ? '%' : '₹'})
+                                                </Label>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-muted-foreground font-semibold">
+                                                        {m.reward_type === 'percentage' ? '' : '₹'}
+                                                    </span>
+                                                    <Input
+                                                        id={`reward-val-${idx}`}
+                                                        type="number"
+                                                        min={1}
+                                                        value={m.reward_value}
+                                                        onChange={e => updateMilestone('reward_value', parseFloat(e.target.value) || 0)}
+                                                        className="w-32"
+                                                    />
+                                                    {m.reward_type === 'percentage' && (
+                                                        <span className="text-muted-foreground">%</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <Label htmlFor={`reward-desc-${idx}`}>Reward Label <span className="text-muted-foreground">(shown to guest)</span></Label>
+                                            <Input
+                                                id={`reward-desc-${idx}`}
+                                                value={m.reward_description || ''}
+                                                onChange={e => updateMilestone('reward_description', e.target.value)}
+                                                placeholder={`e.g. "${rewardLabel(m)} on your next stay!"`}
+                                                className="mt-1"
+                                            />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
 
                         {/* Popup Message */}
                         <Card>
@@ -549,11 +596,11 @@ export default function LoyaltyProgramPage() {
                                     <div className="w-full bg-primary/10 rounded-full h-2 mb-2">
                                         <div
                                             className="h-2 bg-primary rounded-full transition-all"
-                                            style={{ width: `${Math.min(100, ((form.milestone_bookings - 1) / form.milestone_bookings) * 100)}%` }}
+                                            style={{ width: `${Math.min(100, (((form.milestones[0]?.milestone_bookings || 5) - 1) / (form.milestones[0]?.milestone_bookings || 5)) * 100)}%` }}
                                         />
                                     </div>
                                     <p className="text-xs text-right text-muted-foreground">
-                                        {form.milestone_bookings - 1}/{form.milestone_bookings} bookings
+                                        {(form.milestones[0]?.milestone_bookings || 5) - 1}/{form.milestones[0]?.milestone_bookings || 5} bookings
                                     </p>
                                 </div>
 

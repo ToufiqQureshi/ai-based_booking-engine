@@ -21,6 +21,7 @@ class LoyaltyProgramUpdate(BaseModel):
     reward_type: Optional[str] = None       # percentage | fixed_amount | free_night
     reward_value: Optional[float] = None
     reward_description: Optional[str] = None
+    milestones: Optional[List[dict]] = None
     popup_title: Optional[str] = None
     popup_message: Optional[str] = None
 
@@ -51,6 +52,20 @@ async def get_loyalty_program(current_user: CurrentUser, session: DbSession):
         session.add(program)
         await session.commit()
         await session.refresh(program)
+    
+    # Automatic migration: if milestones list is empty but legacy milestone exists, migrate it
+    if not program.milestones and program.milestone_bookings and program.milestone_bookings > 0:
+        program.milestones = [{
+            "milestone_bookings": program.milestone_bookings,
+            "reward_type": program.reward_type,
+            "reward_value": program.reward_value,
+            "reward_description": program.reward_description
+        }]
+        # Mark as modified for SQLModel JSON field (sometimes necessary, but assigning usually works)
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(program, "milestones")
+        await session.commit()
+
     return program
 
 
@@ -71,6 +86,9 @@ async def update_loyalty_program(
 
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(program, field, value)
+        if field == "milestones":
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(program, "milestones")
     program.updated_at = datetime.utcnow()
 
     await session.commit()
@@ -90,7 +108,16 @@ async def list_loyal_guests(
         select(LoyaltyProgram).where(LoyaltyProgram.hotel_id == current_user.hotel_id)
     )
     program = program_result.scalar_one_or_none()
-    milestone = program.milestone_bookings if program else 5
+    milestones = program.milestones if program and program.milestones else []
+    if not milestones and program and program.milestone_bookings and program.milestone_bookings > 0:
+        milestones = [{
+            "milestone_bookings": program.milestone_bookings,
+            "reward_type": program.reward_type,
+            "reward_value": program.reward_value,
+            "reward_description": program.reward_description
+        }]
+    
+    milestones = sorted(milestones, key=lambda x: x.get("milestone_bookings", 0))
 
     result = await session.execute(
         select(GuestLoyalty)
@@ -103,9 +130,20 @@ async def list_loyal_guests(
 
     summaries = []
     for g in guests:
-        bookings_since_last_reward = g.total_completed_bookings - (g.rewards_earned * milestone)
-        remaining = max(0, milestone - bookings_since_last_reward)
-        progress = min(100, int((bookings_since_last_reward / milestone) * 100)) if milestone > 0 else 0
+        next_milestone_req = 0
+        for m in milestones:
+            req = m.get("milestone_bookings", 0)
+            if req > g.total_completed_bookings:
+                next_milestone_req = req
+                break
+        
+        if next_milestone_req > 0:
+            remaining = next_milestone_req - g.total_completed_bookings
+            progress = min(100, int((g.total_completed_bookings / next_milestone_req) * 100))
+        else:
+            remaining = 0
+            progress = 100
+
         summaries.append(GuestLoyaltySummary(
             guest_email=g.guest_email,
             total_completed_bookings=g.total_completed_bookings,
