@@ -1,4 +1,4 @@
-﻿import { Edit, Trash2, Package, Check, Sparkles, ArrowRight } from 'lucide-react';
+﻿import { Edit, Trash2, Package, Check, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,22 @@ export function PackageCard({ pkg, onEdit, onDelete }: PackageCardProps) {
     }).format(amount);
   };
 
+  // Savings = market (strike-through) price minus the actual add-on price.
+  const addOn = pkg.price_adjustment ?? 0;
+  const savings = pkg.market_price && pkg.market_price > addOn ? pkg.market_price - addOn : 0;
+
+  const fmtDate = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : null;
+  const validFrom = fmtDate(pkg.valid_from);
+  const validTo = fmtDate(pkg.valid_to);
+  const validityLabel = validFrom && validTo
+    ? `${validFrom} – ${validTo}`
+    : validFrom
+      ? `From ${validFrom}`
+      : validTo
+        ? `Until ${validTo}`
+        : null;
+
   return (
     <Card className="overflow-hidden group hover:shadow-md transition-all duration-200 border border-border bg-background rounded-xl relative">
       <CardHeader className="p-0 relative">
@@ -30,6 +46,11 @@ export function PackageCard({ pkg, onEdit, onDelete }: PackageCardProps) {
         </div>
 
         <div className="absolute top-3 right-3 flex gap-2">
+            {savings > 0 && (
+              <Badge className="text-[10px] font-bold px-2 py-0.5 border-none bg-amber-500 hover:bg-amber-600">
+                Save {formatCurrency(savings)}
+              </Badge>
+            )}
             <Badge variant={pkg.is_active ? "default" : "secondary"} className={cn(
                 "text-[10px] font-bold px-2 py-0.5 border-none",
                 pkg.is_active ? "bg-green-500 hover:bg-green-600" : "bg-slate-200 text-muted-foreground"
@@ -64,6 +85,13 @@ export function PackageCard({ pkg, onEdit, onDelete }: PackageCardProps) {
               </div>
             )}
           </div>
+
+          {validityLabel && (
+            <div className="flex items-center gap-1.5 pt-1">
+              <CalendarRange className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground">Valid {validityLabel}</span>
+            </div>
+          )}
         </div>
       </CardContent>
 

@@ -52,6 +52,8 @@ const ratePlanSchema = z.object({
     package_items: z.string().optional(),
     market_price: z.coerce.number().min(0).optional().nullable(),
     image_url: z.string().optional(),
+    valid_from: z.string().optional(),
+    valid_to: z.string().optional(),
 });
 
 interface RatePlanDialogProps {
@@ -60,9 +62,10 @@ interface RatePlanDialogProps {
     initialData?: RatePlan | null;
     onSuccess: () => void;
     defaultIsPackage?: boolean;
+    showPackageSection?: boolean;
 }
 
-export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, defaultIsPackage = false }: RatePlanDialogProps) {
+export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, defaultIsPackage = false, showPackageSection = true }: RatePlanDialogProps) {
     const { toast } = useToast();
     const isEditing = !!initialData;
 
@@ -83,6 +86,8 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
             package_items: '',
             market_price: undefined,
             image_url: '',
+            valid_from: '',
+            valid_to: '',
         },
     });
 
@@ -106,6 +111,8 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                 package_items: (initialData.package_items || []).join(', '),
                 market_price: initialData.market_price,
                 image_url: initialData.image_url || '',
+                valid_from: initialData.valid_from || '',
+                valid_to: initialData.valid_to || '',
             });
         } else {
             form.reset({
@@ -123,6 +130,8 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                 package_items: '',
                 market_price: undefined,
                 image_url: '',
+                valid_from: '',
+                valid_to: '',
             });
         }
     }, [initialData, form, open, defaultIsPackage]);
@@ -136,7 +145,9 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                     : [],
                 package_items: values.package_items
                     ? values.package_items.split(',').map(s => s.trim()).filter(Boolean)
-                    : []
+                    : [],
+                valid_from: values.valid_from || null,
+                valid_to: values.valid_to || null,
             };
 
             if (isEditing) {
@@ -431,8 +442,8 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                 </div>
                             </div>
 
-                            {/* Section 4: Package Inclusions */}
-                            <div className="space-y-4">
+                            {/* Section 4: Package Inclusions — hidden on Rate Plans page */}
+                            {showPackageSection && <div className="space-y-4">
                                 <div className="flex items-center gap-2 text-foreground">
                                     <Package className="h-4 w-4" />
                                     <h3 className="text-base font-bold">Bundle Package Details</h3>
@@ -475,6 +486,36 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                                     </FormItem>
                                                 )}
                                             />
+
+                                            <div className="grid sm:grid-cols-2 gap-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name="valid_from"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs font-semibold text-muted-foreground">Valid From (optional)</FormLabel>
+                                                            <FormControl>
+                                                                <Input type="date" className="h-10 border-border" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={form.control}
+                                                    name="valid_to"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs font-semibold text-muted-foreground">Valid Until (optional)</FormLabel>
+                                                            <FormControl>
+                                                                <Input type="date" className="h-10 border-border" {...field} />
+                                                            </FormControl>
+                                                            <FormDescription className="text-[10px]">Leave both blank for an always-available package.</FormDescription>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
                                         </div>
                                     )}
 
@@ -494,7 +535,7 @@ export function RatePlanDialog({ open, onOpenChange, initialData, onSuccess, def
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </div>}
                         </form>
                     </Form>
                 </div>

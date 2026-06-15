@@ -214,6 +214,8 @@ export interface RatePlan {
   package_items?: string[];
   market_price?: number;
   image_url?: string;
+  valid_from?: string | null;
+  valid_to?: string | null;
   created_at: string;
 }
 

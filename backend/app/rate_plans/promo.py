@@ -17,13 +17,22 @@ class PromoCode(SQLModel, table=True):
     description: Optional[str] = None
     discount_type: str = Field(default="percentage") # percentage, fixed_amount
     discount_value: float
-    
+
     start_date: Optional[date] = None
     end_date: Optional[date] = None
-    
+
     max_usage: Optional[int] = None
     current_usage: int = Field(default=0)
-    
+
     is_active: bool = Field(default=True)
+
+    # Seasonal promotion controls. The hotelier picks the behaviour:
+    #   auto_apply=False → classic coupon: guest must type the code (default).
+    #   auto_apply=True  → automatic date-based deal: applied server-side within
+    #                      the start/end window with no code, and surfaced to
+    #                      guests as a banner using `name`.
+    auto_apply: bool = Field(default=False, index=True)
+    name: Optional[str] = None  # display label / banner text for seasonal deals
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

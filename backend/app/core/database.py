@@ -254,6 +254,22 @@ async def init_db():
         # Hotelier-controlled gate: nudge only shows when guest nights >= this value.
         # Default 1 keeps existing offers behaving as before (show to all guests).
         "ALTER TABLE loyalty_offers ADD COLUMN nudge_from_nights INTEGER NOT NULL DEFAULT 1",
+        # DB-08: broadcast_id on loyalty_offers (added 2026-06-15).
+        # Groups the per-hotel copies created by a chain-wide upsell broadcast so
+        # the brand console can list/delete a broadcast as one unit. NULL for
+        # ordinary single-hotel offers.
+        "ALTER TABLE loyalty_offers ADD COLUMN broadcast_id VARCHAR(255)",
+        "CREATE INDEX IF NOT EXISTS idx_loyalty_offers_broadcast ON loyalty_offers (broadcast_id)",
+        # DB-09: optional package validity window on rate_plans (added 2026-06-15).
+        # Lets a package run only for a season/date range; NULL = always available.
+        "ALTER TABLE rate_plans ADD COLUMN valid_from DATE",
+        "ALTER TABLE rate_plans ADD COLUMN valid_to DATE",
+        # DB-10: seasonal auto-apply promotions on promo_codes (added 2026-06-15).
+        # auto_apply=TRUE deals apply server-side within their date window with no
+        # code; `name` is the banner label shown to guests.
+        "ALTER TABLE promo_codes ADD COLUMN auto_apply BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE promo_codes ADD COLUMN name VARCHAR(255)",
+        "CREATE INDEX IF NOT EXISTS idx_promo_codes_auto_apply ON promo_codes (auto_apply)",
     ]:
         try:
             async with engine.begin() as conn:

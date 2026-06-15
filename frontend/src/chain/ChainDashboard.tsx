@@ -98,7 +98,18 @@ export function ChainDashboard() {
   const navigate = useNavigate();
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const [period, setPeriod] = useState('30d');
-  const [activeTab, setActiveTab] = useState<'overview' | 'guests' | 'promotions' | 'loyalty'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'guests' | 'promotions' | 'loyalty' | 'upsell'>('overview');
+  const [chainNavOpen, setChainNavOpen] = useState(true);
+
+  // Chain-wide upsell broadcast form state
+  const [upsellTitle, setUpsellTitle] = useState('Stay Longer, Save More');
+  const [upsellMinNights, setUpsellMinNights] = useState(5);
+  const [upsellRewardType, setUpsellRewardType] = useState<'percentage' | 'fixed_amount' | 'free_night'>('percentage');
+  const [upsellRewardValue, setUpsellRewardValue] = useState(10);
+  const [upsellNudgeFrom, setUpsellNudgeFrom] = useState(1);
+  const [upsellNudgeTitle, setUpsellNudgeTitle] = useState('Stay a little longer!');
+  const [upsellNudgeMsg, setUpsellNudgeMsg] = useState('Stay {remaining} more night(s) and unlock {reward}!');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
 
   // New states for creating promotion code
   const [promoCodeInput, setPromoCodeInput] = useState('');
@@ -108,6 +119,8 @@ export function ChainDashboard() {
   const [promoStartInput, setPromoStartInput] = useState('');
   const [promoEndInput, setPromoEndInput] = useState('');
   const [promoMaxUsage, setPromoMaxUsage] = useState<number | ''>('');
+  const [promoAutoApply, setPromoAutoApply] = useState(false);
+  const [promoNameInput, setPromoNameInput] = useState('');
   const [isCreatingPromo, setIsCreatingPromo] = useState(false);
 
   // New states for loyalty program edits
@@ -182,19 +195,30 @@ export function ChainDashboard() {
 
   const handleCreatePromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!promoCodeInput) return;
+    // Auto-apply seasonal deals don't need a typed code; classic coupons do.
+    if (!promoAutoApply && !promoCodeInput) return;
+    if (promoAutoApply && !promoNameInput) {
+      alert('Please give the seasonal deal a name.');
+      return;
+    }
     try {
       setIsCreatingPromo(true);
+      const code = promoCodeInput.trim().toUpperCase()
+        || `AUTO-${promoNameInput.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').slice(0, 16)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
       await apiClient.post('/chain/promos', {
-        code: promoCodeInput.trim().toUpperCase(),
+        code,
+        name: promoNameInput || null,
         description: promoDescInput,
         discount_type: promoTypeInput,
         discount_value: Number(promoValInput),
         start_date: promoStartInput || null,
         end_date: promoEndInput || null,
         max_usage: promoMaxUsage !== '' ? Number(promoMaxUsage) : null,
+        auto_apply: promoAutoApply,
       });
       setPromoCodeInput('');
+      setPromoNameInput('');
+      setPromoAutoApply(false);
       setPromoDescInput('');
       setPromoValInput(0);
       setPromoStartInput('');
@@ -225,6 +249,50 @@ export function ChainDashboard() {
     enabled: activeTab === 'guests',
     staleTime: 1000 * 60 * 10,
   });
+
+  const { data: upsellData, isLoading: upsellLoading, refetch: refetchUpsell } = useQuery<any[]>({
+    queryKey: ['chainUpsell'],
+    queryFn: () => apiClient.get<any[]>('/chain/upsell'),
+    enabled: activeTab === 'upsell',
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const handleBroadcastUpsell = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (upsellNudgeFrom >= upsellMinNights) {
+      alert('Nudge-from nights must be less than the minimum nights of the offer.');
+      return;
+    }
+    try {
+      setIsBroadcasting(true);
+      const res = await apiClient.post<{ property_count: number }>('/chain/upsell/broadcast', {
+        title: upsellTitle,
+        min_nights: Number(upsellMinNights),
+        reward_type: upsellRewardType,
+        reward_value: Number(upsellRewardValue),
+        nudge_from_nights: Number(upsellNudgeFrom),
+        nudge_title: upsellNudgeTitle,
+        nudge_message: upsellNudgeMsg,
+        is_active: true,
+      });
+      await refetchUpsell();
+      alert(`Offer broadcast to ${res.property_count} propert${res.property_count === 1 ? 'y' : 'ies'}.`);
+    } catch (err: any) {
+      alert(`Failed to broadcast: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
+  const handleDeleteBroadcast = async (broadcastId: string) => {
+    if (!confirm('Remove this offer from all properties?')) return;
+    try {
+      await apiClient.delete(`/chain/upsell/${broadcastId}`);
+      await refetchUpsell();
+    } catch (err: any) {
+      alert(`Failed to delete broadcast: ${err.message || 'Unknown error'}`);
+    }
+  };
 
   const handleSwitch = async (hotelId: string) => {
     try {
@@ -347,81 +415,83 @@ export function ChainDashboard() {
         )}
       </AnimatePresence>
 
-      {/* ── Tabs + Period Filter ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-              activeTab === 'overview'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            )}
-          >
-            <BarChart3 className="w-4 h-4" /> Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('guests')}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-              activeTab === 'guests'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            )}
-          >
-            <Users className="w-4 h-4" /> Guest Insights
-          </button>
-          <button
-            onClick={() => setActiveTab('promotions')}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-              activeTab === 'promotions'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            )}
-          >
-            <Tag className="w-4 h-4" /> Brand Promos
-          </button>
-          <button
-            onClick={() => setActiveTab('loyalty')}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-              activeTab === 'loyalty'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            )}
-          >
-            <Gift className="w-4 h-4" /> Brand Loyalty
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {activeTab === 'overview' && (
-            <>
-              <div className="flex bg-muted rounded-lg p-1 gap-1">
-                {PERIODS.map(p => (
-                  <button
-                    key={p.value}
-                    onClick={() => setPeriod(p.value)}
-                    className={cn(
-                      'px-3 py-1.5 text-xs font-semibold rounded-md transition-all',
-                      period === p.value
-                        ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
-                <Download className="w-3.5 h-3.5" /> Export CSV
-              </Button>
-            </>
+      {/* ── Collapsible Chain Console layout: secondary sidebar + content ── */}
+      <div className="flex items-start gap-5">
+        {/* Chain-only navigation rail (collapses to icons) */}
+        <aside
+          className={cn(
+            'shrink-0 sticky top-4 transition-all duration-200',
+            chainNavOpen ? 'w-56' : 'w-14'
           )}
+        >
+          <div className="rounded-xl border border-border bg-card p-2 space-y-1">
+            <div className={cn('flex items-center mb-1', chainNavOpen ? 'justify-between px-2 pt-1' : 'justify-center')}>
+              {chainNavOpen && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Brand Console
+                </span>
+              )}
+              <button
+                onClick={() => setChainNavOpen(o => !o)}
+                className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"
+                title={chainNavOpen ? 'Collapse' : 'Expand'}
+              >
+                <ChevronRight className={cn('w-4 h-4 transition-transform', chainNavOpen && 'rotate-180')} />
+              </button>
+            </div>
+            {([
+              { key: 'overview', label: 'Overview', icon: BarChart3 },
+              { key: 'guests', label: 'Guest Insights', icon: Users },
+              { key: 'promotions', label: 'Brand Promos', icon: Tag },
+              { key: 'loyalty', label: 'Brand Loyalty', icon: Gift },
+              { key: 'upsell', label: 'Upsell Broadcast', icon: Sparkles },
+            ] as const).map(item => (
+              <button
+                key={item.key}
+                onClick={() => setActiveTab(item.key)}
+                title={item.label}
+                className={cn(
+                  'w-full flex items-center gap-2.5 rounded-lg text-sm font-medium transition-all',
+                  chainNavOpen ? 'px-3 py-2' : 'px-0 py-2 justify-center',
+                  activeTab === item.key
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted'
+                )}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                {chainNavOpen && <span className="truncate">{item.label}</span>}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        {/* Content column */}
+        <div className="flex-1 min-w-0 space-y-5">
+
+      {/* Period filter (overview only) */}
+      {activeTab === 'overview' && (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex bg-muted rounded-lg p-1 gap-1">
+            {PERIODS.map(p => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                className={cn(
+                  'px-3 py-1.5 text-xs font-semibold rounded-md transition-all',
+                  period === p.value
+                    ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
+            <Download className="w-3.5 h-3.5" /> Export CSV
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* ── OVERVIEW TAB ── */}
       {activeTab === 'overview' && (
@@ -808,17 +878,46 @@ export function ChainDashboard() {
               </CardHeader>
               <CardContent className="p-5">
                 <form onSubmit={handleCreatePromo} className="space-y-4 text-xs font-semibold text-slate-700">
-                  <div className="space-y-1">
-                    <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Coupon Code</label>
+                  <label className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 p-3 bg-slate-50">
+                    <span className="space-y-0.5">
+                      <span className="block text-slate-700">Seasonal auto-apply deal</span>
+                      <span className="block text-[10px] font-medium text-slate-500">
+                        On: auto-applies within the dates, no code, shown as a banner. Off: classic typed coupon.
+                      </span>
+                    </span>
                     <input
-                      type="text"
-                      required
-                      placeholder="e.g. BRANDWELCOME"
-                      value={promoCodeInput}
-                      onChange={e => setPromoCodeInput(e.target.value.toUpperCase())}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none font-bold tracking-widest bg-slate-50 focus:bg-white"
+                      type="checkbox"
+                      checked={promoAutoApply}
+                      onChange={e => setPromoAutoApply(e.target.checked)}
+                      className="mt-1 h-4 w-4 accent-indigo-600"
                     />
-                  </div>
+                  </label>
+
+                  {promoAutoApply ? (
+                    <div className="space-y-1">
+                      <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Deal Name (shown to guests)</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Summer Sale"
+                        value={promoNameInput}
+                        onChange={e => setPromoNameInput(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none font-bold bg-slate-50 focus:bg-white"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Coupon Code</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. BRANDWELCOME"
+                        value={promoCodeInput}
+                        onChange={e => setPromoCodeInput(e.target.value.toUpperCase())}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none font-bold tracking-widest bg-slate-50 focus:bg-white"
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-1">
                     <label className="block text-slate-500 uppercase tracking-wider text-[10px]">Description</label>
@@ -1114,6 +1213,163 @@ export function ChainDashboard() {
           </Card>
         </motion.div>
       )}
+
+      {/* ── UPSELL BROADCAST TAB ── */}
+      {activeTab === 'upsell' && (
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-5">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-indigo-600" /> Broadcast a Stay Upsell
+              </CardTitle>
+              <CardDescription>
+                Push one "stay longer, save more" offer to every property in your brand at once.
+                Each hotel gets its own copy, so the guest booking flow shows it automatically.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleBroadcastUpsell} className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-semibold text-muted-foreground">Offer Title</label>
+                    <input
+                      value={upsellTitle}
+                      onChange={e => setUpsellTitle(e.target.value)}
+                      className="mt-1 w-full h-10 px-3 rounded-lg border border-border bg-background text-sm"
+                      placeholder="Stay Longer, Save More"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Minimum Nights</label>
+                    <input
+                      type="number" min={1}
+                      value={upsellMinNights}
+                      onChange={e => setUpsellMinNights(Number(e.target.value))}
+                      className="mt-1 w-full h-10 px-3 rounded-lg border border-border bg-background text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Show Nudge From (nights)</label>
+                    <input
+                      type="number" min={1}
+                      value={upsellNudgeFrom}
+                      onChange={e => setUpsellNudgeFrom(Number(e.target.value))}
+                      className="mt-1 w-full h-10 px-3 rounded-lg border border-border bg-background text-sm"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Must be less than minimum nights. Guests below this see nothing.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Reward Type</label>
+                    <select
+                      value={upsellRewardType}
+                      onChange={e => setUpsellRewardType(e.target.value as any)}
+                      className="mt-1 w-full h-10 px-3 rounded-lg border border-border bg-background text-sm"
+                    >
+                      <option value="percentage">Percentage off</option>
+                      <option value="fixed_amount">Fixed amount off</option>
+                      <option value="free_night">Free night</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Reward Value</label>
+                    <input
+                      type="number" min={0}
+                      value={upsellRewardValue}
+                      onChange={e => setUpsellRewardValue(Number(e.target.value))}
+                      className="mt-1 w-full h-10 px-3 rounded-lg border border-border bg-background text-sm"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-semibold text-muted-foreground">Nudge Title</label>
+                    <input
+                      value={upsellNudgeTitle}
+                      onChange={e => setUpsellNudgeTitle(e.target.value)}
+                      className="mt-1 w-full h-10 px-3 rounded-lg border border-border bg-background text-sm"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-semibold text-muted-foreground">Nudge Message</label>
+                    <input
+                      value={upsellNudgeMsg}
+                      onChange={e => setUpsellNudgeMsg(e.target.value)}
+                      className="mt-1 w-full h-10 px-3 rounded-lg border border-border bg-background text-sm"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Use {'{remaining}'} for nights left and {'{reward}'} for the reward label.
+                    </p>
+                  </div>
+                </div>
+                <Button type="submit" disabled={isBroadcasting} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                  {isBroadcasting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Broadcast to All Properties
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Broadcasts</CardTitle>
+              <CardDescription>Offers currently pushed across your portfolio.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {upsellLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+                </div>
+              ) : !upsellData?.length ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  No broadcasts yet. Create one above to push an upsell to all hotels.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Offer</TableHead>
+                      <TableHead>Min Nights</TableHead>
+                      <TableHead>Reward</TableHead>
+                      <TableHead>Properties</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {upsellData.map((b: any) => (
+                      <TableRow key={b.broadcast_id}>
+                        <TableCell className="font-medium">{b.title}</TableCell>
+                        <TableCell>{b.min_nights}</TableCell>
+                        <TableCell>
+                          {b.reward_type === 'free_night'
+                            ? 'Free night'
+                            : b.reward_type === 'percentage'
+                              ? `${b.reward_value}% off`
+                              : `₹${b.reward_value} off`}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{b.property_count} propert{b.property_count === 1 ? 'y' : 'ies'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost" size="icon"
+                            onClick={() => handleDeleteBroadcast(b.broadcast_id)}
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+        </div>{/* /content column */}
+      </div>{/* /chain console flex */}
     </PageShell>
   );
 }

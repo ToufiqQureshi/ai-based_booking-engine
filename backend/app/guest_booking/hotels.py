@@ -285,6 +285,50 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
     return masked
 
 
+@router.get("/hotels/{hotel_identifier}/seasonal-deal")
+@limiter.limit("120/minute")
+async def get_public_seasonal_deal(request: Request, hotel_identifier: str, session: DbSession):
+    """
+    Returns the active auto-apply seasonal deal for a hotel (or its chain), for
+    showing a banner on the booking page. The actual discount is always
+    recomputed server-side at booking time — this is display-only.
+    """
+    hotel_id = await resolve_hotel_id(hotel_identifier, session)
+    chain_id = (await session.execute(
+        select(Hotel.chain_id).where(Hotel.id == hotel_id)
+    )).scalar_one_or_none()
+
+    today = date.today()
+    candidates = (await session.execute(
+        select(PromoCode).where(
+            PromoCode.auto_apply == True,
+            PromoCode.is_active == True,
+            or_(PromoCode.hotel_id == hotel_id, PromoCode.chain_id == chain_id),
+        )
+    )).scalars().all()
+
+    # Best currently-valid deal by headline value (ties: percentage wins).
+    best = None
+    for ap in candidates:
+        if (ap.start_date and ap.start_date > today) or (ap.end_date and ap.end_date < today):
+            continue
+        if ap.max_usage is not None and (ap.current_usage or 0) >= ap.max_usage:
+            continue
+        if best is None or ap.discount_value > best.discount_value:
+            best = ap
+
+    if not best:
+        return {"active": False}
+
+    return {
+        "active": True,
+        "name": best.name or best.description or "Special Offer",
+        "discount_type": best.discount_type,
+        "discount_value": best.discount_value,
+        "end_date": best.end_date.isoformat() if best.end_date else None,
+    }
+
+
 # ── Public Chain / Multi-Property Widget ──────────────────────────────────────
 
 @router.get("/chain/{chain_slug}")
