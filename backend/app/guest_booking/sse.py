@@ -10,6 +10,7 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from app.core.cache.redis_client import redis_client
+from app.core.utils.limiter import limiter
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ POLL_INTERVAL_SECONDS = 2        # check Redis every 2s for near-instant guest u
 HEARTBEAT_EVERY_N_POLLS = 15     # send keepalive every 30s (15 × 2s) to prevent proxy timeouts
 
 @router.get("/hotels/{hotel_id}/rate-updates")
+@limiter.limit("10/minute")
 async def rate_update_stream(hotel_id: str, request: Request):
     """
     SSE stream that notifies clients when room rates change for a hotel.

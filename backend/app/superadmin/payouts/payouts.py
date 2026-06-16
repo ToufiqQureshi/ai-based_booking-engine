@@ -37,7 +37,7 @@ async def list_bank_accounts(
 @router.post("/payouts/bank-accounts")
 async def upsert_bank_account(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.payouts.read")),
+    super_admin: User = Depends(require_permission("superadmin.payouts.write")),
 ):
     bank_id = data.get("id")
     bank = await session.get(BankAccount, bank_id) if bank_id else None
@@ -71,7 +71,7 @@ async def upsert_bank_account(
 @router.post("/payouts/bank-accounts/{bank_id}/verify")
 async def verify_bank_account(
     bank_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.payouts.read")),
+    super_admin: User = Depends(require_permission("superadmin.payouts.write")),
 ):
     bank = await session.get(BankAccount, bank_id)
     if not bank:
@@ -95,7 +95,7 @@ async def verify_bank_account(
 @router.delete("/payouts/bank-accounts/{bank_id}")
 async def delete_bank_account(
     bank_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.payouts.read")),
+    super_admin: User = Depends(require_permission("superadmin.payouts.write")),
 ):
     bank = await session.get(BankAccount, bank_id)
     if not bank:
@@ -162,7 +162,7 @@ async def payouts_summary(
 @router.post("/payouts/generate")
 async def generate_payout(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.payouts.read")),
+    super_admin: User = Depends(require_permission("superadmin.payouts.write")),
 ):
     """Build a payout by pulling unpaid accrued ledger entries for a hotel + date window."""
     hotel_id = data.get("hotel_id")
@@ -229,7 +229,7 @@ async def generate_payout(
 @router.post("/payouts/{payout_id}/mark-paid")
 async def mark_payout_paid(
     payout_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.payouts.read")),
+    super_admin: User = Depends(require_permission("superadmin.payouts.write")),
 ):
     payout = await session.get(Payout, payout_id)
     if not payout:
@@ -262,7 +262,7 @@ async def mark_payout_paid(
 @router.post("/payouts/{payout_id}/cancel")
 async def cancel_payout(
     payout_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.payouts.read")),
+    super_admin: User = Depends(require_permission("superadmin.payouts.write")),
 ):
     payout = await session.get(Payout, payout_id)
     if not payout:
@@ -295,7 +295,7 @@ async def cancel_payout(
 @router.post("/payouts/{payout_id}/mark-failed")
 async def mark_payout_failed(
     payout_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.payouts.read")),
+    super_admin: User = Depends(require_permission("superadmin.payouts.write")),
 ):
     payout = await session.get(Payout, payout_id)
     if not payout:

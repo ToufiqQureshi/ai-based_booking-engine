@@ -282,8 +282,9 @@ async def test_ai_connection(current_user: CurrentUser, session: DbSession):
         from agno.agent import Message
         result = await agent.arun([Message(role="user", content="Respond with 'Ready' only.")])
         return {"status": "success", "message": f"Connection Successful! AI says: {result.content or ''}"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        logger.exception("AI connection test failed for hotel %s", current_user.hotel_id)
+        return {"status": "error", "message": "AI connection test failed. Check your API key and Model ID."}
 
 
 @router.post("/test-whatsapp", dependencies=[Depends(require_hotel_role("OWNER"))])
@@ -317,6 +318,7 @@ async def test_whatsapp_connection(current_user: CurrentUser, session: DbSession
             except (ValueError, AttributeError, TypeError):
                 err = resp.text
             return {"status": "error", "message": f"Meta Error: {err}"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        logger.exception("WhatsApp connection test failed for hotel %s", current_user.hotel_id)
+        return {"status": "error", "message": "WhatsApp connection test failed. Check your API key and Phone Number ID."}
 

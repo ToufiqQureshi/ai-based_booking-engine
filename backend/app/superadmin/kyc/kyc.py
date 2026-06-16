@@ -131,7 +131,7 @@ async def get_kyc_for_hotel(
 @router.patch("/kyc/hotels/{hotel_id}/profile")
 async def update_kyc_profile(
     hotel_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
+    super_admin: User = Depends(require_permission("superadmin.kyc.write")),
 ):
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
@@ -159,7 +159,7 @@ async def update_kyc_profile(
 @router.post("/kyc/hotels/{hotel_id}/documents")
 async def add_kyc_document(
     hotel_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
+    super_admin: User = Depends(require_permission("superadmin.kyc.write")),
 ):
     """Super admin can attach a document on behalf of hotelier."""
     hotel = await session.get(Hotel, hotel_id)
@@ -193,7 +193,7 @@ async def add_kyc_document(
 @router.post("/kyc/documents/{doc_id}/approve")
 async def approve_document(
     doc_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
+    super_admin: User = Depends(require_permission("superadmin.kyc.write")),
 ):
     doc = await session.get(KycDocument, doc_id)
     if not doc:
@@ -220,7 +220,7 @@ async def approve_document(
 @router.post("/kyc/documents/{doc_id}/reject")
 async def reject_document(
     doc_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
+    super_admin: User = Depends(require_permission("superadmin.kyc.write")),
 ):
     doc = await session.get(KycDocument, doc_id)
     if not doc:
@@ -247,7 +247,7 @@ async def reject_document(
 @router.delete("/kyc/documents/{doc_id}")
 async def delete_document(
     doc_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.kyc.read")),
+    super_admin: User = Depends(require_permission("superadmin.kyc.write")),
 ):
     doc = await session.get(KycDocument, doc_id)
     if not doc:
