@@ -838,7 +838,7 @@ async def check_guest_loyalty(request: Request, data: LoyaltyCheckRequest, sessi
 
         return LoyaltyCheckResponse(
             is_repeat_guest=False, message="Welcome! We're excited to have you here.",
-            bookings_to_reward=milestone, points_balance=points_balance,
+            bookings_to_reward=remaining, points_balance=points_balance,
         )
 
     except HTTPException:
