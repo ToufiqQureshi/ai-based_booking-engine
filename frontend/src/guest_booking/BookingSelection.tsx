@@ -5,8 +5,8 @@ import { motion, AnimatePresence, type HTMLMotionProps } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 
 // framer-motion v12 has stricter types — typed wrappers fix IDE errors without affecting runtime
-const MotionImg = motion.img as React.FC<HTMLMotionProps<'img'> & { src?: string; alt?: string }>;
-const MotionDiv = motion.div as React.FC<HTMLMotionProps<'div'> & { children?: React.ReactNode }>;
+const MotionImg = motion.img as any;
+const MotionDiv = motion.div as any;
 import { Button } from '@/components/ui/button';
 import {
     Sheet,
@@ -789,6 +789,8 @@ export default function BookingSelection() {
                     hotelSlug={hotelSlug}
                     currency={hotel?.settings?.currency || 'INR'}
                     calendarRefreshTrigger={calendarRefreshTrigger}
+                    minNights={hotel?.settings?.min_nights ?? 1}
+                    advancePurchaseDays={hotel?.settings?.advance_purchase_days ?? 0}
                 />
 
                 {/* Loyalty Program Member Verification Banner */}

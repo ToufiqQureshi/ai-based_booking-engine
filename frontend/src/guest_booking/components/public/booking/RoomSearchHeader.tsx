@@ -40,6 +40,8 @@ interface RoomSearchHeaderProps {
     calendarRefreshTrigger?: number;
     hideAdvancedOptions?: boolean;
     layoutStyle?: string;
+    minNights?: number;
+    advancePurchaseDays?: number;
 }
 
 export function RoomSearchHeader({
@@ -71,7 +73,9 @@ export function RoomSearchHeader({
     currency = 'INR',
     calendarRefreshTrigger,
     hideAdvancedOptions = false,
-    layoutStyle = 'modern'
+    layoutStyle = 'modern',
+    minNights = 1,
+    advancePurchaseDays = 0
 }: RoomSearchHeaderProps) {
     const [calendarData, setCalendarData] = useState<Record<string, CalendarDay>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
@@ -171,14 +175,30 @@ export function RoomSearchHeader({
                     numberOfMonths={isMobile ? 1 : 2}
                     selected={{ from: checkInDate, to: checkOutDate }}
                     onSelect={(range: any) => {
-                        // Mirror the computed range exactly so a new check-in
-                        // click clears the old check-out and starts a fresh
-                        // range instead of producing an inverted/locked range.
-                        setCheckInDate(range?.from);
-                        setCheckOutDate(range?.to);
-                        // Calendar stays open until guest explicitly hits X / Done
+                        let from = range?.from;
+                        let to = range?.to;
+                        
+                        // If they selected a check-in but the check-out is too soon or undefined, we can leave it undefined 
+                        // so they have to click a valid check-out. But if they just completed a range that is too short, force it.
+                        if (from && to) {
+                            const nights = Math.round((to.getTime() - from.getTime()) / 86400000);
+                            if (nights < minNights) {
+                                to = new Date(from);
+                                to.setDate(to.getDate() + minNights);
+                            }
+                        }
+                        setCheckInDate(from);
+                        setCheckOutDate(to);
                     }}
-                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                    disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        if (advancePurchaseDays > 0) {
+                            today.setDate(today.getDate() + advancePurchaseDays);
+                        }
+                        // Also disable dates before checkInDate if it's selected and we are picking checkOut
+                        return date < today;
+                    }}
                     className="p-0"
                     classNames={{
                         cell: "h-8 w-8 sm:h-10 sm:w-10 text-center text-[11px] p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-lg first:[&:has([aria-selected])]:rounded-l-lg last:[&:has([aria-selected])]:rounded-r-lg focus-within:relative focus-within:z-20",

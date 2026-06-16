@@ -674,6 +674,8 @@ export default function BookingWidget() {
                     currency={config?.currency || 'INR'}
                     hideAdvancedOptions={true}
                     layoutStyle={layoutStyle}
+                    minNights={config?.min_nights ?? 1}
+                    advancePurchaseDays={config?.advance_purchase_days ?? 0}
                 />
             )}
         </div>
