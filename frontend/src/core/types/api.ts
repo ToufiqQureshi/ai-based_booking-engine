@@ -110,6 +110,8 @@ export interface HotelSettings {
   multi_room_cart?: boolean;
   featured_room_type_id?: string;
   cancellation_mode?: 'instant' | 'request';
+  min_nights?: number;
+  advance_purchase_days?: number;
   smtp_host?: string;
   smtp_port?: string | number;
   smtp_username?: string;
