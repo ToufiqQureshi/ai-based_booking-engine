@@ -2,9 +2,9 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession, require_hotel_role
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.rooms.amenity import Amenity, AmenityCreate, AmenityRead, RoomAmenityLink
-from app.core.cache import cache_response, invalidate_cache
+from app.core.cache.cache import cache_response, invalidate_cache
 
 router = APIRouter(prefix="/amenities", tags=["Amenities"])
 

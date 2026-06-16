@@ -3,15 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Code, Key, Globe, Search, MessageCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiClient } from '@/api/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/core/api/client';
+import { useAuth } from '@/core/contexts/AuthContext';
 import { PageShell } from '@/components/layout/PageShell';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ApiKeysTab } from '@/components/integration/ApiKeysTab';
-import { ExternalServicesTab } from '@/components/integration/ExternalServicesTab';
-import { BookingWidgetTab } from '@/components/integration/BookingWidgetTab';
-import { ChatWidgetTab } from '@/components/integration/ChatWidgetTab';
-import { SearchWidgetTab } from '@/components/integration/SearchWidgetTab';
+import { ApiKeysTab } from '@/settings/components/integration/ApiKeysTab';
+import { ExternalServicesTab } from '@/settings/components/integration/ExternalServicesTab';
+import { BookingWidgetTab } from '@/settings/components/integration/BookingWidgetTab';
+import { ChatWidgetTab } from '@/settings/components/integration/ChatWidgetTab';
+import { SearchWidgetTab } from '@/settings/components/integration/SearchWidgetTab';
 
 interface ApiKey {
     id: string;

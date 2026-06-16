@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
+import { useToast } from '@/core/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
 import { Loader2, Sparkles, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { Hotel } from '@/types/api';
+import { Hotel } from '@/core/types/api';
 
 interface AIAgentTabProps {
   hotel: Hotel;

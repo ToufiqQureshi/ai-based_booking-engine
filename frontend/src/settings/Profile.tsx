@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/core/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
+import { useToast } from '@/core/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
 import { User, Lock, Mail, Phone, Save, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/core/lib/supabase';
 
 export default function ProfilePage() {
     const { user, setUser } = useAuth(); // Assuming setUser exists in AuthContext to update local state

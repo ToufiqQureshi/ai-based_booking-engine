@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
 from sqlmodel import select
 
-from app.core.deps import DbSession
-from app.core.config import get_settings
-from app.core.vault import (
+from app.core.auth.deps import DbSession
+from app.core.utils.config import get_settings
+from app.core.auth.vault import (
     store_settings_secret, store_column_secret,
     vault_get, resolve_column_secret,
 )
@@ -215,7 +215,7 @@ async def update_hotel_integrations(
         )
         updated.append("ai_api_key")
     if payload.is_paused is not None:
-        from app.core.feature_flags import set_pause
+        from app.core.utils.feature_flags import set_pause
         set_pause(hotel, payload.is_paused, payload.pause_reason)
         updated.append("is_paused")
     elif payload.pause_reason is not None:
@@ -253,7 +253,7 @@ async def update_hotel_integrations(
     if changed:
         hotel.settings = settings
 
-    from app.core.time import utcnow
+    from app.core.utils.time import utcnow
     now = utcnow()
     hotel.updated_at = now
     int_settings.updated_at = now
@@ -264,7 +264,7 @@ async def update_hotel_integrations(
     await session.refresh(int_settings)
 
     try:
-        from app.core.redis_client import redis_client
+        from app.core.cache.redis_client import redis_client
         for key in (f"public:hotel-details:{hotel.id}", f"public:widget-config:{hotel.id}",
                     f"public:slug-to-id:{hotel.slug}", f"public:social-proof:{hotel.slug}"):
                 redis_client.delete_key(key)

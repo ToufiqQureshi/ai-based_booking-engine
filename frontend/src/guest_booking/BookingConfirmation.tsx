@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import { apiClient } from '@/api/client';
+import { apiClient } from '@/core/api/client';
 
 export default function BookingConfirmation() {
     const { hotelSlug } = useParams();

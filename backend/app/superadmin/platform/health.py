@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlmodel import func, select
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.bookings.booking import Booking, BookingStatus
 from app.brand_console.hotel import Hotel
 from app.integration.integration import IntegrationSettings
@@ -26,7 +26,7 @@ def _db_pool_stats() -> dict:
     """Live SQLAlchemy connection-pool usage so admins can watch headroom
     against the Supabase connection limit (the #1 scale crash risk)."""
     try:
-        from app.core.database import engine
+        from app.core.db.database import engine
         pool = engine.pool
         checked_out = pool.checkedout()
         size = pool.size()

@@ -8,16 +8,16 @@ from datetime import datetime
 from fastapi import Depends, APIRouter, HTTPException, status
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession, require_hotel_role
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.rooms.room import RoomType, RoomTypeCreate, RoomTypeRead, RoomTypeUpdate, RoomBlock
 from app.rooms.amenity import Amenity, RoomAmenityLink
 from app.rate_plans.rates_model import RoomRate
 from sqlmodel import delete
 from app.calendar import clear_availability_cache
-from app.core.cache import cache_response, invalidate_cache
-from app.core.guest_agent import invalidate_guest_agent_cache
+from app.core.cache.cache import cache_response, invalidate_cache
+from app.ai_engine.guest_agent import invalidate_guest_agent_cache
 from fastapi import Request
-from app.core.rate_signals import bump_rate_version
+from app.revenue.rate_signals import bump_rate_version
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 

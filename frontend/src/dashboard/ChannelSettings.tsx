@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, AlertCircle, RefreshCw, Link2, ArrowRightLeft, Activity } from 'lucide-react';
-import apiClient from '@/api/client';
+import apiClient from '@/core/api/client';
 import { useToast } from "@/components/ui/use-toast";
 import { PageShell } from '@/components/layout/PageShell';
 

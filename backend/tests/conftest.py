@@ -25,7 +25,7 @@ backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-from app.core.database import engine
+from app.core.db.database import engine
 from app.brand_console.hotel import Hotel
 from app.guests.user import User, UserRole
 from app.rooms.room import RoomType
@@ -34,7 +34,7 @@ from main import app
 
 # Tests create the schema with SQLModel.metadata.create_all (production uses
 # Alembic). Some table models are only imported lazily inside functions
-# (e.g. app.core.ai_usage imports these at call time), so they would be absent
+# (e.g. app.ai_engine.ai_usage imports these at call time), so they would be absent
 # from the metadata at create_all time and queries would hit "no such table".
 # Import them here so every table model is registered before create_all.
 from app.ai_assistant.ai_usage import AIUsageDaily, AIUsageParticipant  # noqa: E402,F401
@@ -117,7 +117,7 @@ async def auth_client(seeded_user: User) -> AsyncClient:
     Authenticated HTTP client.
     Uses FastAPI dependency override so no real JWT/Supabase needed.
     """
-    from app.core.deps import get_current_active_user
+    from app.core.auth.deps import get_current_active_user
     app.dependency_overrides[get_current_active_user] = lambda: seeded_user
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
@@ -142,7 +142,7 @@ async def super_admin_client(seeded_hotel: Hotel) -> AsyncClient:
         await session.commit()
         await session.refresh(admin)
 
-    from app.core.deps import get_current_active_user
+    from app.core.auth.deps import get_current_active_user
     app.dependency_overrides[get_current_active_user] = lambda: admin
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac

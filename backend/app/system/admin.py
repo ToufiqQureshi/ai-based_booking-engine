@@ -4,7 +4,7 @@ from typing import List
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 
-from app.core.deps import CurrentUser, DbSession
+from app.core.auth.deps import CurrentUser, DbSession
 from app.guests.user import User, UserRole
 from app.brand_console.hotel import Hotel
 from app.superadmin.subscriptions.subscription import Subscription

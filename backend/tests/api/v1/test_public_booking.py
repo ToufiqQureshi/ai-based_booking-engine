@@ -192,7 +192,7 @@ class TestSeasonalAutoApply:
 
         # This test exercises pricing, not rate limiting — neutralise the shared
         # /public/bookings limiter bucket that earlier tests consume.
-        from app.core.limiter import limiter
+        from app.core.utils.limiter import limiter
         prev_enabled = limiter.enabled
         limiter.enabled = False
         try:
@@ -282,7 +282,7 @@ class TestLoyaltyCheck:
 
         # Tests the loyalty path, not rate limiting — neutralise the shared
         # /public/loyalty-check limiter bucket that other tests consume.
-        from app.core.limiter import limiter
+        from app.core.utils.limiter import limiter
         prev_enabled = limiter.enabled
         limiter.enabled = False
         try:

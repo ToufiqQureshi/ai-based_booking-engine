@@ -10,11 +10,11 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import select, delete
 
-from app.core.deps import CurrentUser, DbSession
+from app.core.auth.deps import CurrentUser, DbSession
 from app.rooms.room import RoomType, RoomBlock, RoomBlockCreate, RoomBlockRead
 from app.rate_plans.rates_model import RoomRate
 from .helpers import _assert_room_type_owned, clear_availability_cache, set_single_day_rate, set_single_day_block
-from app.core.rate_signals import bump_rate_version
+from app.revenue.rate_signals import bump_rate_version
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/availability", tags=["Availability"])

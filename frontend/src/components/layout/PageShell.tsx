@@ -7,7 +7,7 @@
  * - Optional right-side action area
  * - Dark mode support
  */
-import { cn } from '@/lib/utils';
+import { cn } from '@/core/lib/utils';
 import { ReactNode } from 'react';
 
 interface PageShellProps {

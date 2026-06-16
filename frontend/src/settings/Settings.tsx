@@ -16,11 +16,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/core/contexts/AuthContext';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
-import { Hotel } from '@/types/api';
+import { useToast } from '@/core/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
+import { Hotel } from '@/core/types/api';
 
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';

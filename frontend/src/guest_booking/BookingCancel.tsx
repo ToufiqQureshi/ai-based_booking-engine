@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { apiClient } from '@/api/client';
+import { apiClient } from '@/core/api/client';
 import { useToast } from '@/components/ui/use-toast';
-import { BookingStepper } from '@/components/public/BookingStepper';
-import { cn } from '@/lib/utils';
+import { BookingStepper } from '@/guest_booking/components/public/BookingStepper';
+import { cn } from '@/core/lib/utils';
 
 interface LookupForm {
     bookingNumber: string;

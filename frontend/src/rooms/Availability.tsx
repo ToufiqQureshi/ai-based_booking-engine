@@ -24,13 +24,13 @@ import {
 } from '@/components/ui/tooltip';
 import { PageShell } from '@/components/layout/PageShell';
 import { Skeleton } from '@/components/ui/skeleton';
-import { apiClient } from '@/api/client';
-import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
+import { useToast } from '@/core/hooks/use-toast';
 import { format, addDays, isToday, isBefore, startOfDay } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { BulkUpdateDialog } from '@/components/availability/BulkUpdateDialog';
-import { ManageOccupancyDialog } from '@/components/availability/ManageOccupancyDialog';
-import { WeekendUpdateDialog } from '@/components/availability/WeekendUpdateDialog';
+import { cn } from '@/core/lib/utils';
+import { BulkUpdateDialog } from '@/rooms/components/availability/BulkUpdateDialog';
+import { ManageOccupancyDialog } from '@/rooms/components/availability/ManageOccupancyDialog';
+import { WeekendUpdateDialog } from '@/rooms/components/availability/WeekendUpdateDialog';
 
 
 interface AvailabilityDay {

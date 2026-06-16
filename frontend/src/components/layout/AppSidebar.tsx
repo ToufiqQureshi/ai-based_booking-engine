@@ -7,8 +7,8 @@ import {
   Zap, Send,
 } from 'lucide-react';
 import { NavLink } from '@/components/layout/NavLink';
-import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/core/contexts/AuthContext';
+import { cn } from '@/core/lib/utils';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
   SidebarGroupContent, SidebarGroupLabel, SidebarHeader,

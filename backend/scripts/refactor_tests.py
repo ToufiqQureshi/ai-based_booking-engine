@@ -52,7 +52,7 @@ for base, folder in API_MAPPING.items():
 for base, folder in SUPERADMIN_MAPPING.items():
     import_replacements[f"app.api.v1.superadmin.{base}"] = f"app.superadmin.{folder.replace('/', '.')}.{base}"
 
-import_replacements["app.api.deps"] = "app.core.deps"
+import_replacements["app.api.deps"] = "app.core.auth.deps"
 import_replacements["app.api.v1.public"] = "app.guest_booking"
 
 def replace_in_file(filepath):

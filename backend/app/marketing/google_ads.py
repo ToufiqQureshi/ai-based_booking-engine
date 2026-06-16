@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Response, Header, HTTPException
 from sqlmodel import select
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.brand_console.hotel import Hotel
 from app.services.google_hotel_ads.xml_generator import generate_hotel_list_xml, generate_pos_xml
-from app.core.config import get_settings
+from app.core.utils.config import get_settings
 import logging
 
 router = APIRouter(prefix="/google", tags=["Google Hotel Ads"])

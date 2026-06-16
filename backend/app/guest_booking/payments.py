@@ -8,20 +8,20 @@ import hmac
 import hashlib
 import logging
 
-from app.core.database import get_session
-from app.core.deps import DbSession
+from app.core.db.database import get_session
+from app.core.auth.deps import DbSession
 from app.brand_console.hotel import Hotel, HotelRead
 from app.rooms.room import RoomType, RoomTypeRead, RoomBlock
 from app.bookings.booking import Booking, BookingStatus, Guest
 from app.rate_plans.rates_model import RatePlan, RoomRate
 from app.rate_plans.promo import PromoCode
 from app.integration.integration import IntegrationSettings
-from app.core.redis_client import redis_client
+from app.core.cache.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
-from app.core.config import get_settings
-from app.core.time import utcnow
-from app.core.limiter import limiter
+from app.core.utils.config import get_settings
+from app.core.utils.time import utcnow
+from app.core.utils.limiter import limiter
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -134,7 +134,7 @@ def generate_booking_number() -> str:
 
 # --- Razorpay Integration ---
 import razorpay
-from app.core.config import get_settings
+from app.core.utils.config import get_settings
 
 # Patch Razorpay Client to fix Python 3.12+/3.13+ strict header validation issue (Illegal header value due to trailing space in User-Agent)
 def patched_update_user_agent_header(self, options):
@@ -186,7 +186,7 @@ async def create_razorpay_order(
 
     hotel = await session.get(Hotel, booking.hotel_id)
     h_settings = hotel.settings if hotel and hotel.settings else {}
-    from app.core.vault import resolve_settings_secrets
+    from app.core.auth.vault import resolve_settings_secrets
     h_settings = await resolve_settings_secrets(session, h_settings)
     hotel_key_id = h_settings.get("razorpay_key_id")
     hotel_key_secret = h_settings.get("razorpay_key_secret")
@@ -265,7 +265,7 @@ async def verify_razorpay_payment(
 
     hotel = await session.get(Hotel, booking.hotel_id)
     h_settings = hotel.settings if hotel and hotel.settings else {}
-    from app.core.vault import resolve_settings_secrets
+    from app.core.auth.vault import resolve_settings_secrets
     h_settings = await resolve_settings_secrets(session, h_settings)
     hotel_key_id = h_settings.get("razorpay_key_id")
     hotel_key_secret = h_settings.get("razorpay_key_secret")
@@ -385,7 +385,7 @@ async def verify_razorpay_payment(
             if hotel and guest:
                 email_service = await get_email_service()
 
-                from app.core.tasks import safe_background
+                from app.core.utils.tasks import safe_background
                 safe_background(
                     background_tasks,
                     lambda svc=email_service, ge=guest.email, gn=f"{guest.first_name} {guest.last_name}", bn=booking.booking_number, ci=str(booking.check_in), co=str(booking.check_out), ta=booking.total_amount, hs=h_settings: svc.send_guest_booking_confirmation(

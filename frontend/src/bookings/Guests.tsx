@@ -26,8 +26,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { apiClient } from '@/api/client';
-import { Guest } from '@/types/api';
+import { apiClient } from '@/core/api/client';
+import { Guest } from '@/core/types/api';
 import { PageShell } from '@/components/layout/PageShell';
 
 export function GuestsPage() {

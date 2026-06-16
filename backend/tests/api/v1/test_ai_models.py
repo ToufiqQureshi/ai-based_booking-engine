@@ -6,11 +6,11 @@ import pytest
 # failing collection for the entire test suite.
 pytest.importorskip("google.genai", reason="google-genai not installed")
 
-from app.core.guest_agent import create_guest_agent_graph
+from app.ai_engine.guest_agent import create_guest_agent_graph
 from agno.models.google import Gemini
 from agno.models.deepseek import DeepSeek
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.database import engine
+from app.core.db.database import engine
 from app.brand_console.hotel import Hotel
 
 @pytest.mark.asyncio

@@ -3,11 +3,11 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlmodel import select, and_, SQLModel
 import uuid
 
-from app.core.deps import CurrentUser, DbSession
+from app.core.auth.deps import CurrentUser, DbSession
 from app.brand_console.hotel import Hotel, HotelRead
 from app.bookings.links import UserHotelLink
 from app.guests.user import User
-from app.core.cache import cache_response, invalidate_cache
+from app.core.cache.cache import cache_response, invalidate_cache
 
 router = APIRouter(prefix="/properties", tags=["Properties"])
 

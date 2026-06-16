@@ -1,15 +1,15 @@
 // Bookings Page - Real API Integration
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { useHotelWebSocket } from '@/hooks/useHotelWebSocket';
+import { useHotelWebSocket } from '@/core/hooks/useHotelWebSocket';
 import {
   Plus, Search, Filter, Eye, Edit, X, MoreHorizontal, Loader2,
   CalendarDays, Download, MessageSquare, Phone, Globe, Building2,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { CreateBookingDialog } from '@/components/bookings/CreateBookingDialog';
-import { BookingDetailsDialog } from '@/components/bookings/BookingDetailsDialog';
-import { EditBookingDialog } from '@/components/bookings/EditBookingDialog';
+import { CreateBookingDialog } from '@/bookings/components/CreateBookingDialog';
+import { BookingDetailsDialog } from '@/bookings/components/BookingDetailsDialog';
+import { EditBookingDialog } from '@/bookings/components/EditBookingDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,8 +29,8 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
+import { useToast } from '@/core/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
 import { PageShell } from '@/components/layout/PageShell';
 import { Skeleton } from '@/components/ui/skeleton';
 

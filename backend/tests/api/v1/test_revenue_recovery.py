@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, date
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import engine
+from app.core.db.database import engine
 from app.brand_console.hotel import Hotel
 from app.bookings.booking import Booking, BookingStatus, Guest
 import app.revenue.recovery as recovery

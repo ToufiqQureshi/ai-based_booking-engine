@@ -5,9 +5,9 @@ from sqlmodel import select, and_, or_
 from pydantic import BaseModel, EmailStr
 import uuid
 import logging
-from app.core.database import get_session
-from app.core.deps import DbSession
-from app.core.ai_usage import (
+from app.core.db.database import get_session
+from app.core.auth.deps import DbSession
+from app.ai_engine.ai_usage import (
     enforce_ai_token_quota,
     record_ai_usage as _record_ai_usage,
     persist_ai_usage_db as _persist_ai_usage_db,
@@ -17,10 +17,10 @@ from app.rooms.room import RoomType, RoomTypeRead, RoomBlock
 from app.bookings.booking import Booking, BookingStatus, Guest
 from app.rate_plans.rates_model import RatePlan, RoomRate
 from app.rate_plans.promo import PromoCode
-from app.core.redis_client import redis_client
+from app.core.cache.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
-from app.core.time import utcnow
+from app.core.utils.time import utcnow
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -157,7 +157,7 @@ class GuestChatResponse(BaseModel):
 
 from fastapi import Request
 from fastapi.responses import StreamingResponse
-from app.core.limiter import limiter, get_real_ip
+from app.core.utils.limiter import limiter, get_real_ip
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +171,7 @@ async def prewarm_guest_agent_cache(hotel_slug: str, session: DbSession):
     Call this on widget load so the first guest message hits cache, not DB.
     """
     hotel_id = await resolve_hotel_id(hotel_slug, session)
-    from app.core.guest_agent import _fetch_hotel_data
+    from app.ai_engine.guest_agent import _fetch_hotel_data
     await _fetch_hotel_data(session, hotel_id)
 
 
@@ -244,11 +244,11 @@ async def chat_with_guest_ai(
         messages = chat_history + [Message(role="user", content=payload.message)]
 
         # 3. Initialize Agent
-        from app.core.guest_agent import create_guest_agent_graph
+        from app.ai_engine.guest_agent import create_guest_agent_graph
         _max_tokens = (
             getattr(integration_settings, 'ai_max_tokens', None) or getattr(hotel, 'ai_max_tokens', None)
         )
-        from app.core.vault import get_hotel_ai_key
+        from app.core.auth.vault import get_hotel_ai_key
         _ai_key = await get_hotel_ai_key(session, integration_settings, hotel)
         agent = await create_guest_agent_graph(
             session,
@@ -279,7 +279,7 @@ async def chat_with_guest_ai(
             logger.warning(f"Guest agent failed for hotel {hotel.id}, retrying without tools: {invoke_err}")
             try:
                 from agno.agent import Agent
-                from app.core.guest_agent import get_guest_system_prompt_content
+                from app.ai_engine.guest_agent import get_guest_system_prompt_content
 
                 effective_provider = (getattr(integration_settings, 'ai_provider', None) or getattr(hotel, 'ai_provider', None) or "")
                 target_api_key = _ai_key  # already resolved from Vault above
@@ -413,8 +413,8 @@ async def stream_guest_ai(
                 chat_history_stream.append(AgnoMessage(role="assistant", content=msg["content"]))
         messages = chat_history_stream + [AgnoMessage(role="user", content=payload.message)]
 
-        from app.core.guest_agent import create_guest_agent_graph
-        from app.core.vault import get_hotel_ai_key
+        from app.ai_engine.guest_agent import create_guest_agent_graph
+        from app.core.auth.vault import get_hotel_ai_key
         _stream_max_tokens = (
             getattr(integration_settings, "ai_max_tokens", None) or getattr(hotel, "ai_max_tokens", None)
         )

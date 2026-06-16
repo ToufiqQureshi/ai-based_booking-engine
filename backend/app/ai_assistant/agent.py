@@ -3,15 +3,15 @@ from typing import List
 from pydantic import BaseModel
 import logging
 
-from app.core.deps import CurrentUser, DbSession
-from app.core.time import utcnow
-from app.core.feature_flags import require_feature
+from app.core.auth.deps import CurrentUser, DbSession
+from app.core.utils.time import utcnow
+from app.core.utils.feature_flags import require_feature
 # NOTE: create_agent_executor is imported lazily inside the handler (INF-01) —
-# importing app.core.agent at module load pulls in pandas + matplotlib (~150MB
+# importing app.ai_engine.agent at module load pulls in pandas + matplotlib (~150MB
 # RSS) into every worker at boot even when the agent is never used.
-from app.core.agent import create_agent_executor
-from app.core.limiter import limiter
-from app.core.ai_usage import enforce_ai_token_quota, record_ai_usage, persist_ai_usage_db
+from app.ai_engine.agent import create_agent_executor
+from app.core.utils.limiter import limiter
+from app.ai_engine.ai_usage import enforce_ai_token_quota, record_ai_usage, persist_ai_usage_db
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ async def get_ai_usage(
     """
     from sqlmodel import select
     from app.superadmin.subscriptions.subscription import Subscription
-    from app.core.ai_usage import read_ai_usage_db
+    from app.ai_engine.ai_usage import read_ai_usage_db
 
     hotel_id = current_user.hotel_id
 
@@ -139,7 +139,7 @@ async def chat_with_agent(
 
     try:
         # 1. Initialize Agent (lazy import — see INF-01 note at top of file)
-        from app.core.agent import create_agent_executor
+        from app.ai_engine.agent import create_agent_executor
         agent = await create_agent_executor(session, current_user, user_query=payload.message)
 
         # 2. Build history as Agno Messages (limit last 20)

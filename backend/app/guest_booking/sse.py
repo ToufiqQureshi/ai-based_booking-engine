@@ -9,7 +9,7 @@ import logging
 import time
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
-from app.core.redis_client import redis_client
+from app.core.cache.redis_client import redis_client
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)

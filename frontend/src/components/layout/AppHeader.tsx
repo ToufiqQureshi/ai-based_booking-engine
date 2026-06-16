@@ -1,5 +1,5 @@
 import { Bell, ChevronDown, Menu, Search, HelpCircle, Mail, Phone, MessageSquare, Plus, Building2, ShieldCheck, Zap, Globe, Sparkles, User, Settings as SettingsIcon, LogOut, Moon, Sun, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/core/contexts/AuthContext';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,12 +25,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { NotificationPopover } from '@/components/notifications/NotificationPopover';
-import { ChatWidget } from '@/components/support/ChatWidget';
-import { cn } from '@/lib/utils';
-import { useTheme } from '@/contexts/ThemeContext';
-import { apiClient } from '@/api/client';
-import { useToast } from '@/hooks/use-toast';
+import { NotificationPopover } from '@/dashboard/components/notifications/NotificationPopover';
+import { ChatWidget } from '@/guest_booking/components/support/ChatWidget';
+import { cn } from '@/core/lib/utils';
+import { useTheme } from '@/core/contexts/ThemeContext';
+import { apiClient } from '@/core/api/client';
+import { useToast } from '@/core/hooks/use-toast';
 
 interface Property {
   id: string;

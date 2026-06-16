@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from sqlmodel import func, select
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.brand_console.hotel import Hotel
 from app.superadmin.subscriptions.subscription import Subscription
 from app.guests.user import User

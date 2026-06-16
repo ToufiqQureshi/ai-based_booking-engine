@@ -10,8 +10,8 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Query
 from sqlmodel import select, and_, or_
 
-from app.core.deps import CurrentUser, DbSession
-from app.core.redis_client import redis_client
+from app.core.auth.deps import CurrentUser, DbSession
+from app.core.cache.redis_client import redis_client
 from app.rooms.room import RoomType, RoomBlock, RoomBlockRead
 from app.bookings.booking import Booking, BookingStatus
 from app.rate_plans.rates_model import RoomRate

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import select
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel
 from app.superadmin.subscriptions.subscription import Subscription

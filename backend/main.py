@@ -25,9 +25,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.core.config import get_settings
-from app.core.database import init_db
-from app.core.limiter import limiter, _rate_limit_exceeded_handler, RateLimitExceeded
+from app.core.utils.config import get_settings
+from app.core.db.database import init_db
+from app.core.utils.limiter import limiter, _rate_limit_exceeded_handler, RateLimitExceeded
 
 # Import routers from the new structure
 from app.auth import auth
@@ -73,7 +73,7 @@ async def lifespan(app: FastAPI):
 
     if settings.ENABLE_SCHEDULER:
         try:
-            from app.core.scheduler import start_scheduler
+            from app.core.utils.scheduler import start_scheduler
             start_scheduler()
         except Exception as e:
             logger.error(f"Scheduler failed to start: {e}")
@@ -81,7 +81,7 @@ async def lifespan(app: FastAPI):
     yield
 
     try:
-        from app.core.scheduler import shutdown_scheduler
+        from app.core.utils.scheduler import shutdown_scheduler
         shutdown_scheduler()
     except Exception:
         pass
@@ -119,7 +119,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-from app.core.exceptions import global_exception_handler
+from app.core.utils.exceptions import global_exception_handler
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

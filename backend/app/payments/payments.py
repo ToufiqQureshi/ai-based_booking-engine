@@ -8,11 +8,11 @@ from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 import logging
 
-from app.core.deps import CurrentUser, DbSession, require_hotel_role
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.payments.payment import Payment, PaymentCreate, PaymentRead
 from app.bookings.booking import Booking, BookingStatus, Guest
 from app.brand_console.hotel import Hotel
-from app.core.time import utcnow
+from app.core.utils.time import utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ async def create_razorpay_refund(
     Only hoteliers for their own hotel can refund.
     """
     import razorpay
-    from app.core.config import get_settings
+    from app.core.utils.config import get_settings
 
     # Verify booking belongs to this hotel
     booking = await session.get(Booking, data.booking_id)

@@ -6,7 +6,7 @@ SMTP password, Razorpay secret, AI provider key) in any settings payload — onl
 a boolean `has_*` presence flag. A leaked Razorpay secret was a real Critical
 bug; these tests pin that the masking layer keeps it from regressing.
 """
-from app.core.sensitive_fields import (
+from app.core.auth.sensitive_fields import (
     _is_sensitive_settings_key,
     _mask_settings_for_hotelier,
 )

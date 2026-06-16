@@ -19,13 +19,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Building2, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/core/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { isSuperAdminSubdomain } from '@/utils/subdomain';
+import { useToast } from '@/core/hooks/use-toast';
+import { isSuperAdminSubdomain } from '@/core/utils/subdomain';
 
 // Ye Rules hain (Validation Schema)
 // Agar user ne galat email dala, toh ye Zod library error degi.

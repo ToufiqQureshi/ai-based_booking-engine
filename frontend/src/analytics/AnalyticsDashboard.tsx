@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useVisibilityInterval } from '@/hooks/useVisibilityInterval';
+import { useVisibilityInterval } from '@/core/hooks/useVisibilityInterval';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { apiClient as api } from '@/api/client';
+import { apiClient as api } from '@/core/api/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, Clock, MousePointerClick, 

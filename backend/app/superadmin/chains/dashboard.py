@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import select, and_, func, or_
 
-from app.core.deps import CurrentUser, DbSession
+from app.core.auth.deps import CurrentUser, DbSession
 from app.brand_console.hotel import Hotel
 from app.bookings.booking import Booking, BookingStatus, Guest
 from app.rooms.room import RoomType

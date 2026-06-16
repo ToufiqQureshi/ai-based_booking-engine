@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from fastapi import HTTPException
 from sqlmodel import select
 
-from app.core.redis_client import redis_client
+from app.core.cache.redis_client import redis_client
 from app.rooms.room import RoomType, RoomBlock
 from app.rate_plans.rates_model import RoomRate
 

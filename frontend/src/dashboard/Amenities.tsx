@@ -36,7 +36,7 @@ import {
     Briefcase,
     Map
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/core/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
@@ -68,9 +68,9 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from '@/components/ui/card';
 
-import { apiClient } from '@/api/client';
-import { useToast } from "@/hooks/use-toast";
-import { Amenity } from '@/types/api';
+import { apiClient } from '@/core/api/client';
+import { useToast } from "@/core/hooks/use-toast";
+import { Amenity } from '@/core/types/api';
 import { PageShell } from '@/components/layout/PageShell';
 
 const ICONS: Record<string, any> = {

@@ -7,10 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
-import { Hotel } from '@/types/api';
+import { useAuth } from '@/core/contexts/AuthContext';
+import { useToast } from '@/core/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
+import { Hotel } from '@/core/types/api';
 import { PageShell } from '@/components/layout/PageShell';
 
 export default function Taxes() {

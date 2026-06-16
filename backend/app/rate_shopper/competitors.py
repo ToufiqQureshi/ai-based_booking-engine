@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import Depends, APIRouter, HTTPException, status, BackgroundTasks
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession, require_hotel_role
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.rate_shopper.competitor import Competitor, CompetitorCreate, CompetitorRead
 
 router = APIRouter(prefix="/competitors", tags=["Competitors"])

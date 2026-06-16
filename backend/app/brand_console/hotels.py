@@ -6,9 +6,9 @@ Multi-tenant - har user apni hotel hi dekh/edit kar sakta hai.
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession, require_hotel_role
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.brand_console.hotel import Hotel, HotelRead, HotelUpdate
-from app.core.sensitive_fields import (
+from app.core.auth.sensitive_fields import (
     mask_hotel_for_hotelier,
     strip_sensitive_from_update,
 )
@@ -27,7 +27,7 @@ async def get_my_hotel(current_user: CurrentUser, session: DbSession):
 
     Sensitive fields (AI keys, WhatsApp tokens, SMTP creds, Brevo key,
     internal quotas) are masked before the response is sent — see
-    app.core.sensitive_fields for the policy. Hoteliers see `has_*`
+    app.core.auth.sensitive_fields for the policy. Hoteliers see `has_*`
     flags and counters, never the secrets themselves.
     """
     if not current_user.hotel_id:
@@ -128,7 +128,7 @@ async def update_my_hotel(
     await session.refresh(hotel)
 
     try:
-        from app.core.redis_client import redis_client
+        from app.core.cache.redis_client import redis_client
         from app.calendar import clear_availability_cache
         # Bust both old and new slug — covers slug-change scenario
         for slug in {old_slug, hotel.slug}:

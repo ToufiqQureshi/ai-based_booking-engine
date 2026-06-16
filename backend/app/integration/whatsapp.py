@@ -11,10 +11,10 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlmodel import select
 
-from app.core.deps import DbSession
-from app.core.config import get_settings
-from app.core.limiter import limiter
-from app.core.redis_client import redis_client
+from app.core.auth.deps import DbSession
+from app.core.utils.config import get_settings
+from app.core.utils.limiter import limiter
+from app.core.cache.redis_client import redis_client
 from app.brand_console.hotel import Hotel
 from app.integration.integration import IntegrationSettings
 
@@ -126,7 +126,7 @@ async def whatsapp_webhook_receive(
                     h_settings = h.settings or {}
                     if str(h_settings.get("whatsapp_phone_number_id") or "") == phone_number_id:
                         target_hotel = h
-                        from app.core.vault import resolve_settings_secrets
+                        from app.core.auth.vault import resolve_settings_secrets
                         resolved_settings = await resolve_settings_secrets(session, h_settings)
                         whatsapp_token_to_use = resolved_settings.get("whatsapp_api_key")
                         break
@@ -190,7 +190,7 @@ async def whatsapp_webhook_receive(
 
                     if not resolved_hotel:
                         try:
-                            from app.core.global_agent import create_global_concierge_graph
+                            from app.ai_engine.global_agent import create_global_concierge_graph
                             from agno.agent import Message
 
                             global_agent = create_global_concierge_graph(
@@ -250,7 +250,7 @@ async def whatsapp_webhook_receive(
                     )
                     int_settings = int_res.scalar_one_or_none()
                     effective_provider = (getattr(int_settings, "ai_provider", None) or getattr(resolved_hotel, "ai_provider", None))
-                    from app.core.vault import get_hotel_ai_key
+                    from app.core.auth.vault import get_hotel_ai_key
                     effective_api_key = await get_hotel_ai_key(session, int_settings, resolved_hotel)
                     effective_model = (getattr(int_settings, "ai_model", None) or getattr(resolved_hotel, "ai_model", None))
                     effective_base_url = (getattr(int_settings, "ai_base_url", None) or getattr(resolved_hotel, "ai_base_url", None))
@@ -269,8 +269,8 @@ async def whatsapp_webhook_receive(
                     ]
 
                     try:
-                        from app.core.guest_agent import create_guest_agent_graph
-                        from app.core.ai_usage import enforce_ai_token_quota, record_ai_usage, persist_ai_usage_db
+                        from app.ai_engine.guest_agent import create_guest_agent_graph
+                        from app.ai_engine.ai_usage import enforce_ai_token_quota, record_ai_usage, persist_ai_usage_db
                         # Enforce per-hotel WhatsApp AI daily token budget before running agent
                         await enforce_ai_token_quota("whatsapp", resolved_hotel.id, session)
                         agent = await create_guest_agent_graph(

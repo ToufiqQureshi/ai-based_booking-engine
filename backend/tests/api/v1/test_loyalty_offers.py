@@ -11,7 +11,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import engine
+from app.core.db.database import engine
 from app.brand_console.hotel import Hotel
 from app.loyalty.loyalty_model import LoyaltyOffer
 from app.rooms.room import RoomType

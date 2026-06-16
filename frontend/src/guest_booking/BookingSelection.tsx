@@ -16,24 +16,24 @@ import {
     SheetDescription,
     SheetFooter,
 } from "@/components/ui/sheet";
-import { apiClient, API_BASE_URL } from '@/api/client';
-import { cn } from '@/lib/utils';
-import { PublicRoomSearchResult, RateOption, AddOn, Hotel } from '@/types/api';
-import { RoomDetailModal } from '@/components/public/RoomDetailModal';
-import { BookingStepper } from '@/components/public/BookingStepper';
-import { SocialProofWidget } from '@/components/public/SocialProofWidget';
-import { ChatWidget } from '@/components/public/ChatWidget';
+import { apiClient, API_BASE_URL } from '@/core/api/client';
+import { cn } from '@/core/lib/utils';
+import { PublicRoomSearchResult, RateOption, AddOn, Hotel } from '@/core/types/api';
+import { RoomDetailModal } from '@/guest_booking/components/public/RoomDetailModal';
+import { BookingStepper } from '@/guest_booking/components/public/BookingStepper';
+import { SocialProofWidget } from '@/guest_booking/components/public/SocialProofWidget';
+import { ChatWidget } from '@/guest_booking/components/public/ChatWidget';
 import { format, addDays, differenceInDays } from 'date-fns';
-import { getImageUrl } from '@/lib/utils';
-import { ICONS } from '@/lib/amenityIcons';
-import { LoyaltyRewardPopup, LoyaltyMilestonePopup, StayOfferPopup } from '@/components/public/LoyaltyRewardPopup';
+import { getImageUrl } from '@/core/lib/utils';
+import { ICONS } from '@/core/lib/amenityIcons';
+import { LoyaltyRewardPopup, LoyaltyMilestonePopup, StayOfferPopup } from '@/guest_booking/components/public/LoyaltyRewardPopup';
 
 // Extracted Booking Sub-Components
-import { RoomSearchHeader } from '@/components/public/booking/RoomSearchHeader';
-import { RoomFiltersSort } from '@/components/public/booking/RoomFiltersSort';
-import { RoomCard, PackageCard } from '@/components/public/booking/RoomCard';
-import { BookingCartSheet } from '@/components/public/booking/BookingCartSheet';
-import { RateSelectDialog } from '@/components/public/booking/RateSelectDialog';
+import { RoomSearchHeader } from '@/guest_booking/components/public/booking/RoomSearchHeader';
+import { RoomFiltersSort } from '@/guest_booking/components/public/booking/RoomFiltersSort';
+import { RoomCard, PackageCard } from '@/guest_booking/components/public/booking/RoomCard';
+import { BookingCartSheet } from '@/guest_booking/components/public/booking/BookingCartSheet';
+import { RateSelectDialog } from '@/guest_booking/components/public/booking/RateSelectDialog';
 
 interface CartItem {
     id: string;

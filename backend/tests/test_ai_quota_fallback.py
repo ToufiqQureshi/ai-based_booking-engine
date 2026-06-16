@@ -8,7 +8,7 @@ floor instead, keyed by agent_type + hotel_id.
 import pytest
 from fastapi import HTTPException
 
-import app.core.ai_usage as ai_usage
+import app.ai_engine.ai_usage as ai_usage
 
 
 def _reset_fallback():

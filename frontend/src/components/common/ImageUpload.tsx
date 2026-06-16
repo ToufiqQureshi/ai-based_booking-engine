@@ -3,8 +3,8 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
-import { apiClient } from '@/api/client';
+import { cn } from '@/core/lib/utils';
+import { apiClient } from '@/core/api/client';
 
 interface ImageUploadProps {
     onUploadComplete: (url: string) => void;

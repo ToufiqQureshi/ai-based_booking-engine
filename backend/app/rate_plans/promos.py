@@ -3,7 +3,7 @@ from sqlmodel import select, or_
 from typing import List, Optional
 from datetime import datetime, date
 
-from app.core.deps import DbSession, CurrentUser
+from app.core.auth.deps import DbSession, CurrentUser
 from app.rate_plans.promo import PromoCode
 from app.brand_console.hotel import Hotel
 
@@ -64,7 +64,7 @@ class ValidatePromoRequest(BaseModel):
     hotel_id: str
     booking_amount: float
 
-from app.core.limiter import limiter
+from app.core.utils.limiter import limiter
 from fastapi import Request
 
 @router.post("/validate")

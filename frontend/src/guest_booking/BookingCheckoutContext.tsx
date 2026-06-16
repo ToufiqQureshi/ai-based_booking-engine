@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { AddOn, Hotel, RoomType } from '@/types/api';
+import { AddOn, Hotel, RoomType } from '@/core/types/api';
 
 export interface BookingCheckoutContextType {
     hotelSlug: string;

@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageShell } from '@/components/layout/PageShell';
 import { toast } from 'sonner';
-import { apiClient } from '@/api/client';
+import { apiClient } from '@/core/api/client';
 
 interface RateShopperRecord {
   "Hotel Name": string;

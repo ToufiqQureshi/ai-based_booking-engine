@@ -4,8 +4,8 @@ Super Admin — Cache management and Redis stats.
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from app.core.deps import DbSession
-from app.core.redis_client import redis_client
+from app.core.auth.deps import DbSession
+from app.core.cache.redis_client import redis_client
 from app.brand_console.hotel import Hotel
 from app.guests.user import User
 from app.system.audit import AuditLog

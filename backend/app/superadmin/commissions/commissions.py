@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import select, func
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.system.audit import AuditLog
 from app.superadmin.commissions.commission import CommissionRule, CommissionLedger
 from app.brand_console.hotel import Hotel

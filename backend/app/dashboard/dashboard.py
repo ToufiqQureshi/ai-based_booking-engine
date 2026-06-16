@@ -9,11 +9,11 @@ import json
 from fastapi import APIRouter
 from sqlmodel import select, func
 
-from app.core.deps import CurrentUser, DbSession
+from app.core.auth.deps import CurrentUser, DbSession
 from app.bookings.booking import Booking, BookingStatus
 from app.rooms.room import RoomType
-from app.core.redis_client import redis_client
-from app.core.cache import cache_response
+from app.core.cache.redis_client import redis_client
+from app.core.cache.cache import cache_response
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 

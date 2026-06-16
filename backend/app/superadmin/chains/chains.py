@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlmodel import select
 from datetime import datetime
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.system.audit import AuditLog
 from app.superadmin.chains.chain import Chain
 from app.brand_console.hotel import Hotel

@@ -286,7 +286,7 @@ async def run_rate_shopper_for_hotel(hotel_id: str, num_days: int = 7):
     """
     import logging
     import asyncio
-    from app.core.database import async_session
+    from app.core.db.database import async_session
     from app.models.competitor import Competitor, CompetitorRate
     from sqlmodel import select
     from sqlalchemy import delete

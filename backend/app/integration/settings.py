@@ -11,10 +11,10 @@ import httpx
 from fastapi import Depends, APIRouter, HTTPException, status
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession, require_hotel_role
-from app.core.cache import invalidate_cache
-from app.core.config import get_settings
-from app.core.redis_client import redis_client
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
+from app.core.cache.cache import invalidate_cache
+from app.core.utils.config import get_settings
+from app.core.cache.redis_client import redis_client
 from app.brand_console.hotel import Hotel
 from app.integration.integration import (
     APIKey, APIKeyCreate, APIKeyRead, APIKeyWithSecret,
@@ -262,7 +262,7 @@ async def get_widget_code(current_user: CurrentUser, session: DbSession):
 @router.post("/test-ai", dependencies=[Depends(require_hotel_role("OWNER"))])
 async def test_ai_connection(current_user: CurrentUser, session: DbSession):
     """Test AI credentials by sending a simple prompt."""
-    from app.core.guest_agent import create_guest_agent_graph
+    from app.ai_engine.guest_agent import create_guest_agent_graph
 
     query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
     res = await session.execute(query)
@@ -305,7 +305,7 @@ async def test_whatsapp_connection(current_user: CurrentUser, session: DbSession
     if not hotel or not hotel.settings:
         return {"status": "error", "message": "Hotel settings not found."}
 
-    from app.core.vault import resolve_settings_secrets
+    from app.core.auth.vault import resolve_settings_secrets
     resolved = await resolve_settings_secrets(session, hotel.settings)
     wa_token = resolved.get("whatsapp_api_key")
     wa_phone_id = resolved.get("whatsapp_phone_number_id")

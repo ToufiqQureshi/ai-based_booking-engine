@@ -5,7 +5,7 @@ These guard the math that powers AI cost monitoring — under-counting tokens
 would hide an overspend until the monthly invoice. Pure functions only; no
 Redis or network required.
 """
-from app.core.ai_usage import _coerce_number, extract_total_tokens
+from app.ai_engine.ai_usage import _coerce_number, extract_total_tokens
 
 
 class _Metrics:

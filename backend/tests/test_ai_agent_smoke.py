@@ -15,15 +15,15 @@ from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.database import engine
-from app.core.agent import create_agent_executor, logger as agent_logger
+from app.core.db.database import engine
+from app.ai_engine.agent import create_agent_executor, logger as agent_logger
 from app.guests.user import User
 
 
 def test_agent_module_has_logger():
     """The module-level logger must exist (its absence broke every call)."""
     assert isinstance(agent_logger, logging.Logger)
-    assert agent_logger.name == "app.core.agent"
+    assert agent_logger.name == "app.ai_engine.agent"
 
 
 @pytest.mark.asyncio

@@ -10,8 +10,8 @@ from sqlmodel import select
 import uuid
 
 from fastapi import Request
-from app.core.deps import CurrentUser, DbSession
-from app.core.cache import cache_response, invalidate_cache
+from app.core.auth.deps import CurrentUser, DbSession
+from app.core.cache.cache import cache_response, invalidate_cache
 from app.bookings.timeline import BookingTimeline
 from app.bookings.booking import (
     Booking, BookingCreate, BookingRead, BookingUpdate,
@@ -20,7 +20,7 @@ from app.bookings.booking import (
 from app.rooms.room import RoomType
 from app.calendar import clear_availability_cache
 from app.services.email_service import get_email_service
-from app.core.redis_client import redis_client as _redis
+from app.core.cache.redis_client import redis_client as _redis
 
 def _clear_booking_caches(hotel_id: str):
     """Clear all booking-related caches when bookings change."""
@@ -311,7 +311,7 @@ async def create_booking(
     session.add(booking)
     await session.flush() # Get booking ID
     
-    from app.core.tasks import log_timeline_task
+    from app.core.utils.tasks import log_timeline_task
     # Log to Timeline in background
     background_tasks.add_task(
         log_timeline_task,
@@ -345,7 +345,7 @@ async def create_booking(
     email_service = await get_email_service()
 
     # Resolve Vault secrets before background task — session closes after response
-    from app.core.vault import resolve_settings_secrets
+    from app.core.auth.vault import resolve_settings_secrets
     h_settings = await resolve_settings_secrets(
         session, hotel.settings if hotel and hotel.settings else {}
     )
@@ -506,7 +506,7 @@ async def update_booking(
             # Keep pre-calculated values from guest request time
             pass
         else:
-            from app.core.cancellation import calculate_cancellation_fee
+            from app.guest_booking.cancellation import calculate_cancellation_fee
             fee, refund, ref_status = calculate_cancellation_fee(booking)
             booking.cancellation_fee = fee
             booking.refund_amount = refund
@@ -519,7 +519,7 @@ async def update_booking(
 
     # Log to timeline in background if status changed
     if old_status != new_status:
-        from app.core.tasks import log_timeline_task
+        from app.core.utils.tasks import log_timeline_task
         background_tasks.add_task(
             log_timeline_task,
             booking_id=booking.id,
@@ -530,8 +530,8 @@ async def update_booking(
             changed_by=str(current_user.id)
         )
         if new_status == BookingStatus.CHECKED_OUT:
-            from app.core.tasks import process_loyalty_checkout_task
-            from app.core.tasks import safe_background
+            from app.core.utils.tasks import process_loyalty_checkout_task
+            from app.core.utils.tasks import safe_background
             bid = booking.id
             safe_background(
                 background_tasks,

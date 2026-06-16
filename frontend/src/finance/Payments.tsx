@@ -26,10 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { apiClient } from '@/api/client';
-import { Payment } from '@/types/api';
-import { InvoiceDialog } from '@/components/payments/InvoiceDialog';
-import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
+import { Payment } from '@/core/types/api';
+import { InvoiceDialog } from '@/finance/components/payments/InvoiceDialog';
+import { useToast } from '@/core/hooks/use-toast';
 import { PageShell } from '@/components/layout/PageShell';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {

@@ -9,18 +9,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
-import { apiClient } from '@/api/client';
-import { AddOn, PublicRoomSearchResult } from '@/types/api';
-import { cn } from '@/lib/utils';
+import { apiClient } from '@/core/api/client';
+import { AddOn, PublicRoomSearchResult } from '@/core/types/api';
+import { cn } from '@/core/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
-import { BookingStepper } from '@/components/public/BookingStepper';
-import { LoyaltyRewardPopup, LoyaltyMilestonePopup } from '@/components/public/LoyaltyRewardPopup';
-import { SocialProofWidget } from '@/components/public/SocialProofWidget';
+import { BookingStepper } from '@/guest_booking/components/public/BookingStepper';
+import { LoyaltyRewardPopup, LoyaltyMilestonePopup } from '@/guest_booking/components/public/LoyaltyRewardPopup';
+import { SocialProofWidget } from '@/guest_booking/components/public/SocialProofWidget';
 import { BookingCheckoutContext } from './BookingCheckoutContext';
-import { CheckoutGuestSection } from '@/components/public/checkout/CheckoutGuestSection';
-import { CheckoutEnhanceStay } from '@/components/public/checkout/CheckoutEnhanceStay';
-import { CheckoutPayment } from '@/components/public/checkout/CheckoutPayment';
-import { CheckoutSummary } from '@/components/public/checkout/CheckoutSummary';
+import { CheckoutGuestSection } from '@/guest_booking/components/public/checkout/CheckoutGuestSection';
+import { CheckoutEnhanceStay } from '@/guest_booking/components/public/checkout/CheckoutEnhanceStay';
+import { CheckoutPayment } from '@/guest_booking/components/public/checkout/CheckoutPayment';
+import { CheckoutSummary } from '@/guest_booking/components/public/checkout/CheckoutSummary';
 
 
 // Error Boundary to catch render crashes

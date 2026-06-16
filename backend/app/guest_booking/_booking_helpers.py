@@ -9,7 +9,7 @@ from datetime import datetime, date as _date
 
 from sqlmodel import select
 
-from app.core.time import utcnow
+from app.core.utils.time import utcnow
 from app.loyalty.loyalty_model import LoyaltyProgram, GuestLoyalty
 from app.rate_plans.promo import PromoCode
 

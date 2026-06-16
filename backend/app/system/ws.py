@@ -38,7 +38,7 @@ async def _authenticate_ws(token: str, session) -> Optional[object]:
     Reuses Supabase token verification from the existing auth stack.
     """
     try:
-        from app.core.supabase import verify_supabase_token
+        from app.core.db.supabase import verify_supabase_token
         from app.guests.user import User
 
         payload = await verify_supabase_token(token)
@@ -89,7 +89,7 @@ async def hotel_ws(
     Persistent WebSocket for hotel staff.
     Receives real-time booking and availability events.
     """
-    from app.core.database import async_session
+    from app.core.db.database import async_session
 
     await websocket.accept()
 

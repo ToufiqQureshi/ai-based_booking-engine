@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
+import { useToast } from '@/core/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
 
 export function TeamList() {
   const [users, setUsers] = useState<any[]>([]);

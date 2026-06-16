@@ -16,21 +16,21 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useHotelWebSocket } from '@/hooks/useHotelWebSocket';
+import { useHotelWebSocket } from '@/core/hooks/useHotelWebSocket';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/api/client';
-import { DashboardStats } from '@/types/api';
-import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
+import { useAuth } from '@/core/contexts/AuthContext';
+import { apiClient } from '@/core/api/client';
+import { DashboardStats } from '@/core/types/api';
+import { WelcomeCard } from '@/dashboard/components/WelcomeCard';
 import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { PageShell } from '@/components/layout/PageShell';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/core/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { cn } from '@/lib/utils';
+import { cn } from '@/core/lib/utils';
 
 interface RecentBooking {
   id: string;

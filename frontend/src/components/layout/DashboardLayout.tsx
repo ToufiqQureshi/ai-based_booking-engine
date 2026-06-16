@@ -1,14 +1,14 @@
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ShieldX, Loader2, LogOut, MessageSquare, AlertCircle, Lock } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/core/contexts/AuthContext';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Suspense } from 'react';
-import { cn } from '@/lib/utils';
-import { tokenStorage } from '@/api/client';
+import { cn } from '@/core/lib/utils';
+import { tokenStorage } from '@/core/api/client';
 import { toast } from 'sonner';
 
 // Storage key for the super-admin's own tokens (saved while impersonating a hotel admin).

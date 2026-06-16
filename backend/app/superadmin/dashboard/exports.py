@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlmodel import select
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.bookings.booking import Booking, Guest
 from app.brand_console.hotel import Hotel
 from app.payments.payment import Payment

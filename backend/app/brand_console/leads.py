@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select, desc
-from app.core.deps import DbSession, CurrentUser
+from app.core.auth.deps import DbSession, CurrentUser
 from app.brand_console.lead import Lead
 
 router = APIRouter()

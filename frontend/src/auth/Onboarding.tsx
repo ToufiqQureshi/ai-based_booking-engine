@@ -5,13 +5,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Building2, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { authApi } from '@/api/auth';
+import { useAuth } from '@/core/contexts/AuthContext';
+import { authApi } from '@/core/api/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/core/hooks/use-toast';
 
 const onboardingSchema = z.object({
   hotelName: z.string().min(2, 'Hotel name must be at least 2 characters'),

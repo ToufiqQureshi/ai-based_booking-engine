@@ -4,7 +4,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.core.database import engine
+from app.core.db.database import engine
 from app.brand_console.hotel import Hotel
 from app.guests.user import User, UserRole
 from app.system.audit import AuditLog, SystemBroadcast

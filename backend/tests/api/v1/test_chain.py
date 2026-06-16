@@ -3,7 +3,7 @@ import uuid
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import engine
+from app.core.db.database import engine
 from app.superadmin.chains.chain import Chain
 from app.brand_console.hotel import Hotel
 from app.guests.user import User, UserRole
@@ -85,7 +85,7 @@ async def test_chain_dashboard_success_for_brand_admin(seeded_hotel: Hotel):
         hashed_password="PYTEST_NO_AUTH",
         is_active=True
     )
-    from app.core.deps import get_current_active_user
+    from app.core.auth.deps import get_current_active_user
     app.dependency_overrides[get_current_active_user] = lambda: transient_user
     
     # 3. Call the API
@@ -153,7 +153,7 @@ async def test_chain_upsell_broadcast_lifecycle(seeded_hotel: Hotel):
         role=UserRole.OWNER, hotel_id=seeded_hotel.id, chain_id=chain_id,
         hashed_password="PYTEST_NO_AUTH", is_active=True,
     )
-    from app.core.deps import get_current_active_user
+    from app.core.auth.deps import get_current_active_user
     app.dependency_overrides[get_current_active_user] = lambda: transient_user
 
     from httpx import ASGITransport

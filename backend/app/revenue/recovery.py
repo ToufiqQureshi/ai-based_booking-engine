@@ -26,7 +26,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlmodel import select
 
-from app.core.deps import DbSession, CurrentUser, require_hotel_role
+from app.core.auth.deps import DbSession, CurrentUser, require_hotel_role
 from app.bookings.booking import Booking, BookingStatus, Guest
 from app.brand_console.hotel import Hotel
 
@@ -146,7 +146,7 @@ async def run_abandoned_recovery(
     the hotelier's manual "send now" trigger for their own hotel).
     Callable from a scheduled/cron endpoint. Safe — failures are isolated.
     """
-    from app.core.database import async_session
+    from app.core.db.database import async_session
 
     nudged = 0
     skipped_disabled = 0

@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from app.core.deps import CurrentUser, DbSession, require_hotel_role
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.channel_manager.channel_manager_model import (
     ChannelManagerSettings, ChannelSettingsRead, ChannelSettingsUpdate,
     ChannelRoomMapping, MappingCreate, MappingRead,

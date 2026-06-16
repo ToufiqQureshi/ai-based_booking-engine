@@ -15,11 +15,11 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from sqlalchemy import func
 from sqlmodel import select, and_, or_
 
-from app.core.config import get_settings
-from app.core.deps import DbSession
-from app.core.limiter import limiter
-from app.core.redis_client import redis_client
-from app.core.time import utcnow
+from app.core.utils.config import get_settings
+from app.core.auth.deps import DbSession
+from app.core.utils.limiter import limiter
+from app.core.cache.redis_client import redis_client
+from app.core.utils.time import utcnow
 from app.bookings.booking import Booking, BookingStatus, BookingSource, Guest
 from app.brand_console.hotel import Hotel
 from app.loyalty.loyalty_model import GuestLoyalty, LoyaltyProgram, LoyaltyOffer
@@ -40,7 +40,7 @@ from ._schemas import (
     PublicBookingResponse,
 )
 from ._booking_helpers import generate_booking_number, _update_guest_loyalty
-from app.core.rate_signals import bump_rate_version
+from app.revenue.rate_signals import bump_rate_version
 
 import logging
 
@@ -514,7 +514,7 @@ async def create_public_booking(
             )
 
             from app.services.email_service import get_email_service
-            from app.core.vault import resolve_settings_secrets
+            from app.core.auth.vault import resolve_settings_secrets
             email_service = await get_email_service()
             h_settings = await resolve_settings_secrets(
                 session, hotel.settings if hotel and hotel.settings else {}
@@ -871,7 +871,7 @@ async def public_cancel_request(request: Request, data: GuestCancelRequest, sess
     if not guest or guest.email.lower().strip() != data.email.lower().strip():
         raise HTTPException(status_code=403, detail="Invalid guest email verification")
 
-    from app.core.cancellation import calculate_cancellation_fee
+    from app.guest_booking.cancellation import calculate_cancellation_fee
     fee, refund, ref_status = calculate_cancellation_fee(booking)
 
     room = booking.rooms[0] if booking.rooms else {}
@@ -913,7 +913,7 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
     if not guest or guest.email.lower().strip() != data.email.lower().strip():
         raise HTTPException(status_code=403, detail="Invalid guest email verification")
 
-    from app.core.cancellation import calculate_cancellation_fee
+    from app.guest_booking.cancellation import calculate_cancellation_fee
     fee, refund, ref_status = calculate_cancellation_fee(booking)
 
     hotel = await session.get(Hotel, booking.hotel_id)
@@ -959,7 +959,7 @@ async def public_cancel_confirm(request: Request, data: GuestCancelRequest, sess
 
     from app.services.email_service import get_email_service
     from app.services.whatsapp_service import get_whatsapp_service
-    from app.core.vault import resolve_settings_secrets
+    from app.core.auth.vault import resolve_settings_secrets
 
     email_service = await get_email_service()
     whatsapp_service = await get_whatsapp_service()

@@ -7,18 +7,18 @@ import uuid
 import logging
 import re
 
-from app.core.database import get_session
-from app.core.deps import DbSession
+from app.core.db.database import get_session
+from app.core.auth.deps import DbSession
 from app.brand_console.hotel import Hotel, HotelRead
 from app.rooms.room import RoomType, RoomTypeRead, RoomBlock
 from app.bookings.booking import Booking, BookingStatus, Guest
 from app.rate_plans.rates_model import RatePlan, RoomRate
 from app.rate_plans.promo import PromoCode
-from app.core.redis_client import redis_client
+from app.core.cache.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
-from app.core.time import utcnow
-from app.core.limiter import limiter
+from app.core.utils.time import utcnow
+from app.core.utils.limiter import limiter
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -163,7 +163,7 @@ async def get_public_hotel_by_slug(request: Request, hotel_slug: str, session: D
     /hotels/me endpoint uses, so the public never sees platform
     credentials.
     """
-    from app.core.sensitive_fields import mask_hotel_for_hotelier
+    from app.core.auth.sensitive_fields import mask_hotel_for_hotelier
 
     hotel_id = await resolve_hotel_id(hotel_slug, session)
 
@@ -250,7 +250,7 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
 
     SENSITIVE FIELDS ARE STRIPPED — see /hotels/slug/{slug} above.
     """
-    from app.core.sensitive_fields import mask_hotel_for_hotelier
+    from app.core.auth.sensitive_fields import mask_hotel_for_hotelier
 
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
 

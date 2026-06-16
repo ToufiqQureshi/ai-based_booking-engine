@@ -1,9 +1,9 @@
 import { Outlet, useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { startTimeTracking, stopTimeTracking, trackEvent } from '@/lib/tracker';
+import { startTimeTracking, stopTimeTracking, trackEvent } from '@/core/lib/tracker';
 import { Shield, FileText } from 'lucide-react';
-import { apiClient } from '@/api/client';
-import { PropertyDetailsFooter } from '@/components/public/PropertyDetailsFooter';
+import { apiClient } from '@/core/api/client';
+import { PropertyDetailsFooter } from '@/guest_booking/components/public/PropertyDetailsFooter';
 
 export function PublicBookingLayout() {
     const { hotelSlug } = useParams();

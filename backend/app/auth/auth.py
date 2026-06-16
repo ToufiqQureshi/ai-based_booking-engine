@@ -13,10 +13,10 @@ import re
 import uuid
 import logging
 
-from app.core.database import get_session
-from app.core.limiter import limiter
+from app.core.db.database import get_session
+from app.core.utils.limiter import limiter
 # Authentication is handled by Supabase, local token generation is no longer needed.
-from app.core.config import get_settings
+from app.core.utils.config import get_settings
 from app.guests.user import User, UserCreate, UserRead, UserRole
 from app.brand_console.hotel import Hotel
 from pydantic import BaseModel, EmailStr
@@ -41,8 +41,8 @@ class RegisterRequest(BaseModel):
     hotel_name: str # Hotel ka naam
 
 
-from app.core.deps import get_current_user
-from app.core.supabase import get_supabase
+from app.core.auth.deps import get_current_user
+from app.core.db.supabase import get_supabase
 
 @router.post("/onboarding")
 async def complete_onboarding(

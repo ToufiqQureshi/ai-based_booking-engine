@@ -97,7 +97,7 @@ for base, folder in SUPERADMIN_MAPPING.items():
 import_replacements["app.features.analytics.routers"] = "app.analytics.reports"
 import_replacements["app.social_proof"] = "app.google_reviews.social_proof"
 import_replacements["app.chain"] = "app.superadmin.chains"
-import_replacements["app.api.deps"] = "app.core.deps"
+import_replacements["app.api.deps"] = "app.core.auth.deps"
 import_replacements["app.api.v1.availability"] = "app.calendar.availability"
 
 

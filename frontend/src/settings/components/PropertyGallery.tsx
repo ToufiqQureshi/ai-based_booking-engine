@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
-import { RoomPhoto } from '@/types/api';
+import { useToast } from '@/core/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
+import { RoomPhoto } from '@/core/types/api';
 
 interface PropertyGalleryProps {
   photos: RoomPhoto[];

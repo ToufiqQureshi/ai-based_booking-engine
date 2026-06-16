@@ -16,7 +16,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.guest_agent import (
+from app.ai_engine.guest_agent import (
     _cache_get,
     _cache_set,
     invalidate_guest_agent_cache,
@@ -55,7 +55,7 @@ async def test_cache_get_returns_none_for_missing_key():
 # ---------------------------------------------------------------------------
 
 async def test_fetch_hotel_data_populates_cache(seeded_hotel, init_test_db):
-    from app.core.database import engine
+    from app.core.db.database import engine
 
     hotel_id = seeded_hotel.id
     invalidate_guest_agent_cache(hotel_id)  # start clean
@@ -77,7 +77,7 @@ async def test_fetch_hotel_data_populates_cache(seeded_hotel, init_test_db):
 
 async def test_fetch_hotel_data_uses_cache_on_second_call(seeded_hotel, init_test_db):
     """Second call must not hit DB — it returns the cached dict unchanged."""
-    from app.core.database import engine
+    from app.core.db.database import engine
 
     hotel_id = seeded_hotel.id
     invalidate_guest_agent_cache(hotel_id)
@@ -97,7 +97,7 @@ async def test_fetch_hotel_data_uses_cache_on_second_call(seeded_hotel, init_tes
 
 
 async def test_fetch_hotel_data_returns_none_for_unknown_hotel(init_test_db):
-    from app.core.database import engine
+    from app.core.db.database import engine
 
     async with AsyncSession(engine) as session:
         result = await _fetch_hotel_data(session, "does-not-exist-000")

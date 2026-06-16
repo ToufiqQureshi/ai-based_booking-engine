@@ -19,10 +19,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { RatePlanDialog } from '@/components/rates/RatePlanDialog';
-import { apiClient } from '@/api/client';
-import { RatePlan } from '@/types/api';
-import { useToast } from '@/hooks/use-toast';
+import { RatePlanDialog } from '@/finance/components/rates/RatePlanDialog';
+import { apiClient } from '@/core/api/client';
+import { RatePlan } from '@/core/types/api';
+import { useToast } from '@/core/hooks/use-toast';
 import { PageShell } from '@/components/layout/PageShell';
 
 const mealPlanLabels: Record<string, string> = {

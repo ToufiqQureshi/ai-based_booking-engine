@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select, desc
-from app.core.deps import DbSession, get_current_user
+from app.core.auth.deps import DbSession, get_current_user
 from app.guests.user import User
 from app.dashboard.notification import Notification
 

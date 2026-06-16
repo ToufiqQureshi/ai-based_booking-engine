@@ -9,9 +9,9 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession
-from app.core.config import get_settings
-from app.core.limiter import limiter
+from app.core.auth.deps import CurrentUser, DbSession
+from app.core.utils.config import get_settings
+from app.core.utils.limiter import limiter
 from app.brand_console.hotel import Hotel
 from app.integration.integration import IntegrationSettings
 
@@ -323,7 +323,7 @@ Guidelines: Be warm and grateful. Address reviewer by name. For negative reviews
 Reply:"""
 
     try:
-        from app.core.guest_agent import create_guest_agent_graph
+        from app.ai_engine.guest_agent import create_guest_agent_graph
         from agno.agent import Message
 
         effective_provider = (getattr(settings, "ai_provider", None) or getattr(hotel, "ai_provider", None))

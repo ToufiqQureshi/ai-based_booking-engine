@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlmodel import select
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel
 from app.guests.user import User, UserRole
@@ -110,7 +110,7 @@ async def delete_user(
 
     if user.supabase_id:
         try:
-            from app.core.supabase import get_supabase
+            from app.core.db.supabase import get_supabase
             supabase_client = get_supabase()
             await asyncio.to_thread(supabase_client.auth.admin.delete_user, user.supabase_id)
         except Exception as e:
@@ -136,8 +136,8 @@ async def create_staybooker_employee(
     Add a new Staybooker employee as SUPER_ADMIN.
     Only existing super admins can call this — no public signup allowed.
     """
-    from app.core import security
-    from app.core.supabase import get_supabase
+    import app.core.auth.security as security
+    from app.core.db.supabase import get_supabase
 
     email = data.email.lower().strip()
     if (await session.execute(select(User).where(User.email == email))).scalar_one_or_none():
@@ -201,8 +201,8 @@ async def create_hotel_user(
     super_admin: User = Depends(get_super_admin),
 ):
     """Create a new employee user for a hotel."""
-    from app.core import security
-    from app.core.supabase import get_supabase
+    import app.core.auth.security as security
+    from app.core.db.supabase import get_supabase
 
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:

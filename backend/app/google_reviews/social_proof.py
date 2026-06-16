@@ -28,9 +28,9 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession
-from app.core.redis_client import redis_client
-from app.core.time import utcnow
+from app.core.auth.deps import CurrentUser, DbSession
+from app.core.cache.redis_client import redis_client
+from app.core.utils.time import utcnow
 from app.brand_console.hotel import Hotel
 from app.google_reviews.social_proof_model import (
     HotelSocialProofSettings,

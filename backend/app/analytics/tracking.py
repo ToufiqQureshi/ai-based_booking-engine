@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.analytics.models import (
     AnalyticsSession, AnalyticsEvent,
     SessionStartRequest, SessionPingRequest, EventTrackRequest,

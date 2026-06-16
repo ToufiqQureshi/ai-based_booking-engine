@@ -8,9 +8,9 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from sqlmodel import func, select
 
-from app.core.deps import CurrentUser, DbSession
-from app.core.cache import cache_response
-from app.core.limiter import limiter
+from app.core.auth.deps import CurrentUser, DbSession
+from app.core.cache.cache import cache_response
+from app.core.utils.limiter import limiter
 from app.bookings.booking import Booking, BookingStatus
 from app.rooms.room import RoomType
 

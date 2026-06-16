@@ -8,7 +8,7 @@ counting, and PII hashing.
 """
 import pytest
 
-from app.core import ai_usage
+import app.ai_engine.ai_usage as ai_usage
 from app.brand_console.hotel import Hotel
 
 pytestmark = pytest.mark.asyncio
@@ -51,7 +51,7 @@ async def test_persist_without_identifier_counts_messages_only(seeded_hotel: Hot
 
 async def test_participant_rows_store_hash_not_pii(seeded_hotel: Hotel):
     from sqlmodel import select
-    from app.core.database import async_session
+    from app.core.db.database import async_session
     from app.ai_assistant.ai_usage import AIUsageParticipant
 
     hotel_id = seeded_hotel.id

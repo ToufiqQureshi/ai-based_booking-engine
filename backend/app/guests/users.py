@@ -5,8 +5,8 @@ Current user profile aur management.
 from fastapi import APIRouter, Request
 import logging
 
-from app.core.deps import CurrentUser, DbSession, get_current_user
-from app.core.limiter import limiter
+from app.core.auth.deps import CurrentUser, DbSession, get_current_user
+from app.core.utils.limiter import limiter
 from app.guests.user import UserRead, User
 from typing import Annotated
 from fastapi import Depends, Query
@@ -51,7 +51,7 @@ async def get_users(
 
 from pydantic import BaseModel
 from fastapi import HTTPException, status
-from app.core import security
+import app.core.auth.security as security
 
 class TeamMemberCreate(BaseModel):
     name: str
@@ -81,7 +81,7 @@ async def create_team_member(
     if res_existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="A user with this email already exists")
         
-    from app.core.supabase import get_supabase
+    from app.core.db.supabase import get_supabase
     supabase_client = get_supabase()
     
     from app.brand_console.hotel import Hotel

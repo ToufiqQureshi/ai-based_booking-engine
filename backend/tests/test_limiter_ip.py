@@ -8,7 +8,7 @@ bypassed by a forged header.
 """
 from types import SimpleNamespace
 
-import app.core.limiter as limiter
+import app.core.utils.limiter as limiter
 
 
 class _Req:

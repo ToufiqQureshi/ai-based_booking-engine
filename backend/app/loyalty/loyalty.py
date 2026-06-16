@@ -4,7 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
 
-from app.core.deps import DbSession, CurrentUser, require_hotel_role
+from app.core.auth.deps import DbSession, CurrentUser, require_hotel_role
 from app.loyalty.loyalty_model import LoyaltyProgram, GuestLoyalty, LoyaltyOffer
 from app.rooms.room import RoomType
 

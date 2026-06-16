@@ -4,9 +4,9 @@ import uuid
 import io
 import logging
 from PIL import Image, UnidentifiedImageError
-from app.core.supabase import get_supabase
-from app.core.limiter import limiter
-from app.core.deps import get_current_active_user
+from app.core.db.supabase import get_supabase
+from app.core.utils.limiter import limiter
+from app.core.auth.deps import get_current_active_user
 
 logger = logging.getLogger(__name__)
 

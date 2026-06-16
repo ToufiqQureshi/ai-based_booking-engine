@@ -5,19 +5,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/api/client';
-import { cn } from '@/lib/utils';
-import { RoomType, RatePlan } from '@/types/api';
-import { RoomCard } from '@/components/rooms/RoomCard';
-import { RoomListItem } from '@/components/rooms/RoomListItem';
+import { useToast } from '@/core/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
+import { cn } from '@/core/lib/utils';
+import { RoomType, RatePlan } from '@/core/types/api';
+import { RoomCard } from '@/rooms/components/RoomCard';
+import { RoomListItem } from '@/rooms/components/RoomListItem';
 import { PageShell } from '@/components/layout/PageShell';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy load dialog components
-const RoomDialog = lazy(() => import('@/components/rooms/RoomDialog').then(m => ({ default: m.RoomDialog })));
-const RatePlanDialog = lazy(() => import('@/components/rates/RatePlanDialog').then(m => ({ default: m.RatePlanDialog })));
-const PackageCard = lazy(() => import('@/components/rooms/PackageCard').then(m => ({ default: m.PackageCard })));
+const RoomDialog = lazy(() => import('@/rooms/components/RoomDialog').then(m => ({ default: m.RoomDialog })));
+const RatePlanDialog = lazy(() => import('@/finance/components/rates/RatePlanDialog').then(m => ({ default: m.RatePlanDialog })));
+const PackageCard = lazy(() => import('@/rooms/components/PackageCard').then(m => ({ default: m.PackageCard })));
 
 export function RoomsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');

@@ -4,9 +4,9 @@ from datetime import datetime
 from fastapi import Depends, APIRouter, HTTPException, status, Request
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession, require_hotel_role
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.experiences.addon import AddOn, AddOnCreate, AddOnUpdate
-from app.core.cache import cache_response, invalidate_cache
+from app.core.cache.cache import cache_response, invalidate_cache
 
 router = APIRouter(prefix="/addons", tags=["Addons"])
 

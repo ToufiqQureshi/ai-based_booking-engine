@@ -5,9 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { TabsContent } from '@/components/ui/tabs';
 import { Copy, Save, Loader2, Globe, Lock } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Hotel } from '@/types/api';
-import { apiClient } from '@/api/client';
+import { useToast } from '@/core/hooks/use-toast';
+import { Hotel } from '@/core/types/api';
+import { apiClient } from '@/core/api/client';
 import { useEffect, useState } from 'react';
 
 interface GoogleHotelAdsTabProps {

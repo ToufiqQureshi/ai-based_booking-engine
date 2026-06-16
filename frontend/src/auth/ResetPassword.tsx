@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { authApi } from '@/api/auth';
-import { supabase } from '@/lib/supabase';
+import { useToast } from '@/core/hooks/use-toast';
+import { authApi } from '@/core/api/auth';
+import { supabase } from '@/core/lib/supabase';
 
 const resetPasswordSchema = z.object({
     password: z.string()

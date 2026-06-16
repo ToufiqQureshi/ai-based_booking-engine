@@ -8,7 +8,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import select, func
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel
 from app.superadmin.kyc.kyc_model import KycDocument, KycProfile

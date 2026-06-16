@@ -16,7 +16,7 @@ import { format, isValid } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/core/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { apiClient, ApiClientError } from '@/api/client';
+import { apiClient, ApiClientError } from '@/core/api/client';
 import { PageShell } from '@/components/layout/PageShell';
 
 interface DashboardStats {

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlmodel import select
 
-from app.core.deps import DbSession
+from app.core.auth.deps import DbSession
 from app.system.audit import AuditLog, SystemBroadcast
 from app.brand_console.hotel import Hotel
 from app.superadmin.subscriptions.subscription import Subscription
@@ -102,8 +102,8 @@ async def get_hotel_ai_usage(
     Reads daily counters from Redis (key: ai_tokens:{agent_type}:{hotel_id}:{YYYYMMDD}).
     Returns zeroes for days with no recorded usage.
     """
-    from app.core.redis_client import redis_client
-    from app.core.time import utcnow
+    from app.core.cache.redis_client import redis_client
+    from app.core.utils.time import utcnow
 
     r = redis_client.get_instance()
     today = utcnow().date()

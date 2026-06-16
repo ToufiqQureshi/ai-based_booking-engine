@@ -15,8 +15,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import app.core.redis_client as rc_mod
-from app.core.redis_client import RedisClient
+import app.core.cache.redis_client as rc_mod
+from app.core.cache.redis_client import RedisClient
 
 
 @pytest.fixture(autouse=True)
@@ -64,7 +64,7 @@ def _patch_connect(monkeypatch, factory):
         rc_mod, "get_settings", lambda: SimpleNamespace(REDIS_URL="redis://x"), raising=False
     )
     # get_settings is imported inside the function; patch at its source too.
-    import app.core.config as cfg
+    import app.core.utils.config as cfg
     monkeypatch.setattr(cfg, "get_settings", lambda: SimpleNamespace(REDIS_URL="redis://x"))
 
 
@@ -139,7 +139,7 @@ def test_midflight_failure_falls_back_and_arms_cooldown(monkeypatch):
 
 def test_connection_kwargs_have_retry_and_no_deprecated_flag():
     from redis.retry import Retry
-    from app.core.redis_client import _connection_kwargs
+    from app.core.cache.redis_client import _connection_kwargs
 
     kw = _connection_kwargs()
     assert isinstance(kw["retry"], Retry)

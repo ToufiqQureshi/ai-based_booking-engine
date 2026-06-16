@@ -6,10 +6,10 @@ import { Calendar } from '@/components/ui/calendar';
 import {
     PopoverContent,
 } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { cn } from '@/core/lib/utils';
 
-import { RoomSearchHeader } from '@/components/public/booking/RoomSearchHeader';
-import { FARWidget } from '@/components/public/FARWidget';
+import { RoomSearchHeader } from '@/guest_booking/components/public/booking/RoomSearchHeader';
+import { FARWidget } from '@/guest_booking/components/public/FARWidget';
 
 // Embedding (hotelier) page ka origin referrer se nikaalte hain taaki
 // postMessage wildcard '*' pe broadcast na ho

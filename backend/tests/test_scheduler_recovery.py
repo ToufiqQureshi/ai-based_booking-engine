@@ -8,7 +8,7 @@ clicked "send now", so every abandoned booking aged past the 72h window unnudged
 """
 import pytest
 
-import app.core.scheduler as scheduler
+import app.core.utils.scheduler as scheduler
 import app.revenue.recovery as recovery
 
 pytestmark = pytest.mark.asyncio

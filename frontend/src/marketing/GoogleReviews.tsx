@@ -1,8 +1,8 @@
 // Google Reviews — Per-Hotel Connect + AI Reply Studio
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { apiClient } from '@/api/client';
-import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/core/api/client';
+import { useToast } from '@/core/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,7 @@ import {
   ThumbsUp, Loader2, ExternalLink, Unplug, Link2,
   Building2, ShieldCheck, Info
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/core/lib/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface GoogleStatus {

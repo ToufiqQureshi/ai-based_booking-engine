@@ -10,8 +10,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlmodel import select
 
-from app.core.deps import CurrentUser, DbSession
-from app.core.config import get_settings
+from app.core.auth.deps import CurrentUser, DbSession
+from app.core.utils.config import get_settings
 from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel, HotelUpdate
 from app.superadmin.subscriptions.subscription import Subscription
@@ -35,8 +35,8 @@ def _get_client_ip(request: Request) -> str:
 # exist, so every subscription / plan-feature load raised FileNotFoundError and
 # returned 500.)
 PLAN_FEATURES_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    "core", "plan_features.json",
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "core", "utils", "plan_features.json",
 )
 
 
@@ -286,7 +286,7 @@ async def delete_hotel(
 ):
     """Permanently delete a hotel and all associated data."""
     from sqlalchemy import text
-    from app.core.supabase import get_supabase
+    from app.core.db.supabase import get_supabase
 
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
@@ -407,7 +407,7 @@ async def refresh_social_proof_stats(
     super_admin: User = Depends(get_super_admin),
 ):
     """Recompute social proof cache for one or all hotels."""
-    from app.core.social_proof_refresh import refresh_all_social_proof_stats, refresh_one_hotel_now
+    from app.google_reviews.social_proof_refresh import refresh_all_social_proof_stats, refresh_one_hotel_now
 
     if hotel_id:
         ok = await refresh_one_hotel_now(session, hotel_id)

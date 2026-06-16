@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import select
 
-from app.core.deps import DbSession, CurrentUser, require_hotel_role
+from app.core.auth.deps import DbSession, CurrentUser, require_hotel_role
 from app.rooms.room import RoomType
 from app.revenue.pricing_model import PricingRule, RULE_TYPES, ADJUSTMENT_TYPES
 

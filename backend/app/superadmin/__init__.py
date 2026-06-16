@@ -39,6 +39,6 @@ router.include_router(platform_router)
 @router.post("/cron/check-expiry")
 async def run_expiry_check(super_admin=Depends(get_super_admin)):
     """Manually trigger subscription expiry notification check."""
-    from app.core.tasks import check_subscription_expiry
+    from app.core.utils.tasks import check_subscription_expiry
     result = await check_subscription_expiry()
     return {"status": "done", **result}

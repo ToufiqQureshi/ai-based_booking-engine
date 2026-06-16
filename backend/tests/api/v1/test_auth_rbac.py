@@ -28,7 +28,7 @@ async def manager_client(seeded_hotel: Hotel):
     """MANAGER-role authenticated client for the seeded hotel."""
     from tests.conftest import engine
     from main import app
-    from app.core.deps import get_current_active_user
+    from app.core.auth.deps import get_current_active_user
 
     manager = User(
         id=str(uuid.uuid4()),
@@ -57,7 +57,7 @@ async def staff_client(seeded_hotel: Hotel):
     """STAFF-role authenticated client for the seeded hotel."""
     from tests.conftest import engine
     from main import app
-    from app.core.deps import get_current_active_user
+    from app.core.auth.deps import get_current_active_user
 
     staff = User(
         id=str(uuid.uuid4()),
@@ -203,7 +203,7 @@ class TestDeactivatedEntities:
         """
         from tests.conftest import engine
         from main import app
-        from app.core.deps import get_current_user
+        from app.core.auth.deps import get_current_user
         from httpx import AsyncClient, ASGITransport
 
         inactive_user = User(

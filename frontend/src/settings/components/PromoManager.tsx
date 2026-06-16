@@ -24,8 +24,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { apiClient } from '@/api/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/core/api/client';
+import { useAuth } from '@/core/contexts/AuthContext';
 import { format } from 'date-fns';
 
 interface PromoCode {
