@@ -568,7 +568,7 @@ async def create_public_booking(
         raise
     except Exception as e:
         logger.exception("Public booking error")
-        raise HTTPException(status_code=500, detail=f"Booking failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Booking could not be completed. Please try again.")
 
 
 def _reward_label(reward_type: str, reward_value: float) -> str:

@@ -53,7 +53,7 @@ async def delete_block(block_id: str, current_user: CurrentUser, session: DbSess
         clear_availability_cache(current_user.hotel_id)
     except Exception as e:
         await session.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete block. Please try again.")
 
 
 class RateUpdate(BaseModel):

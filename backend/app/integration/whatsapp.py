@@ -175,7 +175,8 @@ async def whatsapp_webhook_receive(
                 if not user_message:
                     continue
 
-                debug_log.append(f"Processing message from {sender_phone}: '{user_message[:50]}'")
+                _masked_phone = f"***{sender_phone[-4:]}" if sender_phone and len(sender_phone) >= 4 else "***"
+                debug_log.append(f"Processing message from {_masked_phone}: '{user_message[:30]}'")
 
                 agent_reply = ""
                 resolved_hotel = target_hotel
@@ -354,6 +355,6 @@ async def whatsapp_webhook_receive(
                     except Exception as e:
                         logger.error("WhatsApp send error: %s", e)
 
-    logger.info("WhatsApp webhook debug: %s", debug_log)
+    logger.debug("WhatsApp webhook debug: %s", debug_log)
     return {"status": "success", "debug": debug_log}
 

@@ -60,6 +60,14 @@ async def update_user_role(
         raise HTTPException(status_code=404, detail="User not found")
     if role not in [r.value for r in UserRole]:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {[r.value for r in UserRole]}")
+    # Prevent privilege escalation: only the master super-admin can promote to SUPER_ADMIN.
+    # A limited-permission super-admin employee must not be able to elevate any user.
+    if role == "SUPER_ADMIN" and not getattr(super_admin, "is_master_admin", False):
+        from app.core.utils.config import get_settings as _get_settings
+        _admin_emails = _get_settings().master_admin_email_set
+        _caller_email = (super_admin.email or "").lower().strip()
+        if _caller_email not in _admin_emails:
+            raise HTTPException(status_code=403, detail="Only master admins can promote users to SUPER_ADMIN")
     old_role = user.role.value if hasattr(user.role, 'value') else str(user.role)
     user.role = UserRole(role)
     user.updated_at = datetime.utcnow()
@@ -157,7 +165,8 @@ async def create_staybooker_employee(
         sb_user = await asyncio.to_thread(_create_sb_user)
         supabase_id = sb_user.user.id
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create account: {str(e)}")
+        logger.error("Supabase employee account creation failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to create account. Please try again.")
 
     new_user = User(
         email=email,
@@ -184,7 +193,8 @@ async def create_staybooker_employee(
             supabase_client.auth.admin.delete_user(supabase_id)
         except Exception:
             pass
-        raise HTTPException(status_code=500, detail=f"Failed to save employee: {str(e)}")
+        logger.error("DB save failed for new employee: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to save employee. Please try again.")
 
     return {
         "id": new_user.id,
@@ -228,7 +238,8 @@ async def create_hotel_user(
         sb_user = await asyncio.to_thread(_create_sb_user)
         supabase_id = sb_user.user.id
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Supabase Auth registration failed: {str(e)}")
+        logger.error("Supabase Auth registration failed for hotel user: %s", e)
+        raise HTTPException(status_code=500, detail="Account registration failed. Please try again.")
 
     new_user = User(
         email=data.email.lower().strip(),
@@ -255,7 +266,8 @@ async def create_hotel_user(
             supabase_client.auth.admin.delete_user(supabase_id)
         except Exception as cleanup_err:
             logger.warning("Supabase auth user %s could not be deleted during rollback: %s", supabase_id, cleanup_err)
-        raise HTTPException(status_code=500, detail=f"Failed to save user: {str(e)}")
+        logger.error("DB save failed for new hotel user: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to save user. Please try again.")
 
     return {
         "id": new_user.id, "name": new_user.name, "email": new_user.email,

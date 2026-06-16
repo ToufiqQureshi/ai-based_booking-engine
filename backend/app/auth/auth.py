@@ -94,7 +94,7 @@ async def complete_onboarding(
         }
     except Exception as e:
         logger.error(f"Onboarding Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Onboarding failed. Please try again.")
 
 
 

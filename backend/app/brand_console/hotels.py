@@ -155,45 +155,48 @@ async def test_email_connection(
     hotel_id: str,
     request: TestEmailRequest,
     current_user: CurrentUser,
-
+    session: DbSession,
 ):
-    # SECURITY: This endpoint dispatches an email through caller-supplied SMTP
-    # settings. It MUST be authenticated and scoped to the caller's own hotel,
-    # otherwise it is an open mail relay / SMTP-credential-probe / SSRF primitive.
     if hotel_id != current_user.hotel_id and current_user.role != "SUPER_ADMIN":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only test email settings for your own property",
         )
+    # Validate test_email is a reasonable email address (basic check)
+    test_email = request.test_email.strip()
+    if "@" not in test_email or len(test_email) > 254:
+        raise HTTPException(status_code=400, detail="Invalid test email address")
+
+    # SECURITY: Never use client-supplied SMTP settings directly — that allows
+    # open relay and SSRF. Load the hotel's own stored settings from the DB.
+    from app.integration.integration import IntegrationSettings
+    from sqlmodel import select as sql_select
+    stored = (await session.execute(
+        sql_select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
+    )).scalar_one_or_none()
+    if not stored:
+        raise HTTPException(status_code=404, detail="Integration settings not found. Save your SMTP settings first.")
+
+    from app.core.auth.vault import resolve_settings_secrets
+    hotel_settings = await resolve_settings_secrets(stored, session)
+
     try:
         from app.services.email_service import EmailService
-        
-        # Dispatch a test email directly via the existing service flow
-        hotel_settings = request.settings
-        test_email = request.test_email
-        
-        # Construct simple test HTML
-        html_content = """
-        <html>
-            <body>
-                <h2>Test Connection Successful!</h2>
-                <p>If you are reading this, your email settings are working correctly.</p>
-            </body>
-        </html>
-        """
-        
-        success = await email_service._dispatch_hotel_email(
+        email_svc = EmailService()
+        html_content = "<html><body><h2>Test Connection Successful!</h2><p>Your email settings are working correctly.</p></body></html>"
+        success = await email_svc._dispatch_hotel_email(
             hotel_settings=hotel_settings,
             to_emails=[test_email],
             subject="Test Email Connection - StayBooker",
-            html_content=html_content
+            html_content=html_content,
         )
-        
         if success:
             return {"status": "success", "message": "Test email sent successfully"}
-        else:
-            raise HTTPException(status_code=400, detail="Failed to send test email. Check your credentials.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=400, detail="Failed to send test email. Check your SMTP credentials.")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("test-email-connection failed for hotel %s", hotel_id)
+        raise HTTPException(status_code=500, detail="Email test failed. Check your SMTP settings.")
 
 

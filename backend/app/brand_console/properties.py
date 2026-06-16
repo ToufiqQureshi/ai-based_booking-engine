@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlmodel import select, and_, SQLModel
 import uuid
 
-from app.core.auth.deps import CurrentUser, DbSession
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.brand_console.hotel import Hotel, HotelRead
 from app.bookings.links import UserHotelLink
 from app.guests.user import User
@@ -69,7 +69,7 @@ async def list_properties(request: Request, current_user: CurrentUser, session: 
     return properties
 
 
-@router.post("", response_model=PropertyRead)
+@router.post("", response_model=PropertyRead, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
 async def add_property(prop_data: PropertyCreate, current_user: CurrentUser, session: DbSession):
     """
     Create a new property for the existing user.
