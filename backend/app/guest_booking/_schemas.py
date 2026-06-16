@@ -112,6 +112,11 @@ class LoyaltyOfferCheckResponse(BaseModel):
     reward_label: Optional[str] = None
     nudge_title: Optional[str] = None
     nudge_message: Optional[str] = None
+    # Hotelier-controlled presentation of the unlocked offer on the room card.
+    room_type_id: Optional[str] = None  # which room this offer is scoped to (None = all)
+    apply_mode: str = "auto"            # auto | manual_claim
+    display_style: str = "banner"      # banner | badge
+    unlocked_message: Optional[str] = None  # custom room-card upsell text
 
 
 class LoyaltyCheckResponse(BaseModel):

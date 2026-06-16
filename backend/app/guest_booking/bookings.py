@@ -391,6 +391,53 @@ async def create_public_booking(
                 session.add(best_promo)
                 effective_promo_code = best_promo.code or best_promo.name
 
+        # Stay-offer discount (night-threshold upsell). Computed entirely server-side
+        # from the active LoyaltyOffer row — the client's displayed offer price is only
+        # a preview and is never trusted. Applied only when no promo discount already
+        # applies, so a stay offer and a promo code don't silently stack.
+        stay_offer_applied = None
+        if discount_amount == 0:
+            nights_booked = (booking_data.check_out - booking_data.check_in).days
+            booked_room_ids = {r.room_type_id for r in booking_data.rooms}
+            candidate_offers = [
+                o for o in (await session.execute(
+                    select(LoyaltyOffer).where(
+                        LoyaltyOffer.hotel_id == hotel_id,
+                        LoyaltyOffer.is_active == True,  # noqa: E712
+                        or_(
+                            LoyaltyOffer.room_type_id.in_(booked_room_ids),
+                            LoyaltyOffer.room_type_id.is_(None),
+                        ),
+                    )
+                )).scalars().all()
+                if nights_booked >= o.min_nights
+            ]
+            best_offer_discount = 0.0
+            for o in candidate_offers:
+                # Room-specific offers discount only their room's portion; a
+                # hotel-wide offer (room_type_id NULL) discounts the whole stay.
+                if o.room_type_id:
+                    base = sum(rm.total_price for rm in booking_data.rooms
+                               if rm.room_type_id == o.room_type_id)
+                else:
+                    base = sum(rm.total_price for rm in booking_data.rooms)
+                if o.reward_type == "percentage":
+                    d = base * o.reward_value / 100
+                elif o.reward_type == "fixed_amount":
+                    d = o.reward_value
+                elif o.reward_type == "free_night":
+                    # One free night ≈ the average nightly portion of the base.
+                    d = base / nights_booked if nights_booked > 0 else 0.0
+                else:
+                    d = 0.0
+                d = min(d, total_before_discount)
+                if d > best_offer_discount:
+                    best_offer_discount = d
+                    stay_offer_applied = o
+            if best_offer_discount > 0:
+                discount_amount = best_offer_discount
+                effective_promo_code = effective_promo_code or f"STAY_OFFER_{stay_offer_applied.id[:8]}"
+
         # Loyalty points redemption
         points_redeemed = 0.0
         if booking_data.redeem_points and booking_data.redeem_points > 0:
@@ -580,6 +627,13 @@ def _reward_label(reward_type: str, reward_value: float) -> str:
     return f"{int(reward_value)}% off"
 
 
+def _render_unlocked_message(offer, reward_label: str) -> str:
+    """Fill the hotelier's room-card upsell copy with {nights}/{reward}."""
+    template = getattr(offer, "unlocked_message", None) \
+        or "Book this room for {nights} nights to unlock {reward}!"
+    return template.replace("{nights}", str(offer.min_nights)).replace("{reward}", reward_label)
+
+
 @router.post("/loyalty-offers", response_model=LoyaltyOfferCheckResponse)
 @limiter.limit("30/minute")
 async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest, session: DbSession):
@@ -627,6 +681,12 @@ async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest,
                 reward_value=offer.reward_value,
                 reward_label=_reward_label(offer.reward_type, offer.reward_value),
                 nudge_title=offer.nudge_title,
+                room_type_id=offer.room_type_id,
+                apply_mode=getattr(offer, "apply_mode", "auto"),
+                display_style=getattr(offer, "display_style", "banner"),
+                unlocked_message=_render_unlocked_message(
+                    offer, _reward_label(offer.reward_type, offer.reward_value)
+                ),
             )
 
         # Find the next nearest offer above current nights, honouring the
@@ -646,6 +706,10 @@ async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest,
                 min_nights=offer.min_nights, current_nights=nights, nights_remaining=remaining,
                 reward_type=offer.reward_type, reward_value=offer.reward_value,
                 reward_label=label, nudge_title=offer.nudge_title, nudge_message=msg,
+                room_type_id=offer.room_type_id,
+                apply_mode=getattr(offer, "apply_mode", "auto"),
+                display_style=getattr(offer, "display_style", "banner"),
+                unlocked_message=_render_unlocked_message(offer, label),
             )
 
         # If no higher offer exists, just return the highest unlocked one
@@ -660,6 +724,10 @@ async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest,
                 reward_label=label,
                 nudge_title="Offer Unlocked! 🎉",
                 nudge_message=f"You've unlocked {label} on this stay!",
+                room_type_id=offer.room_type_id,
+                apply_mode=getattr(offer, "apply_mode", "auto"),
+                display_style=getattr(offer, "display_style", "banner"),
+                unlocked_message=_render_unlocked_message(offer, label),
             )
 
     except HTTPException:

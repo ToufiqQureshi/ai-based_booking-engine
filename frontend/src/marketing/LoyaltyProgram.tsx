@@ -64,6 +64,9 @@ interface StayOffer {
     nudge_from_nights: number;
     nudge_title: string;
     nudge_message: string;
+    apply_mode: 'auto' | 'manual_claim';
+    display_style: 'banner' | 'badge';
+    unlocked_message: string;
 }
 
 interface RoomLite {
@@ -81,6 +84,9 @@ const BLANK_OFFER = {
     nudge_from_nights: 1,
     nudge_title: 'Stay a little longer!',
     nudge_message: 'Stay {remaining} more night(s) and unlock {reward}!',
+    apply_mode: 'auto' as 'auto' | 'manual_claim',
+    display_style: 'banner' as 'banner' | 'badge',
+    unlocked_message: 'Book this room for {nights} nights to unlock {reward}!',
 };
 
 const BLANK_MILESTONE: LoyaltyMilestone = {
@@ -211,6 +217,9 @@ export default function LoyaltyProgramPage() {
             nudge_from_nights: o.nudge_from_nights ?? 1,
             nudge_title: o.nudge_title,
             nudge_message: o.nudge_message,
+            apply_mode: o.apply_mode ?? 'auto',
+            display_style: o.display_style ?? 'banner',
+            unlocked_message: o.unlocked_message ?? BLANK_OFFER.unlocked_message,
         });
     }
 
@@ -785,6 +794,71 @@ export default function LoyaltyProgramPage() {
                                     />
                                     <p className="text-[11px] text-muted-foreground mt-1">
                                         Use <code className="bg-muted px-1 rounded">{'{remaining}'}</code> for nights left
+                                        and <code className="bg-muted px-1 rounded">{'{reward}'}</code> for the reward label.
+                                    </p>
+                                </div>
+
+                                {/* ── How the unlocked offer applies & shows on the room card ───── */}
+                                <div className="pt-2 border-t">
+                                    <Label>When the guest qualifies, apply the discount</Label>
+                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                        {[
+                                            { value: 'auto', label: 'Automatically', desc: 'Price drops on the room instantly' },
+                                            { value: 'manual_claim', label: 'On "Claim" tap', desc: 'Guest taps Claim to apply' },
+                                        ].map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => setOfferForm(f => ({ ...f, apply_mode: opt.value as any }))}
+                                                className={cn(
+                                                    'flex flex-col items-start gap-0.5 p-2.5 rounded-lg border-2 text-left transition-all',
+                                                    offerForm.apply_mode === opt.value
+                                                        ? 'border-primary bg-primary/5 text-primary'
+                                                        : 'border-border hover:border-primary/30'
+                                                )}
+                                            >
+                                                <span className="text-xs font-semibold">{opt.label}</span>
+                                                <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label>Room-card notification style</Label>
+                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                        {[
+                                            { value: 'banner', label: 'Banner', desc: 'Full-width strip in the room card' },
+                                            { value: 'badge', label: 'Badge', desc: 'Compact corner tag' },
+                                        ].map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => setOfferForm(f => ({ ...f, display_style: opt.value as any }))}
+                                                className={cn(
+                                                    'flex flex-col items-start gap-0.5 p-2.5 rounded-lg border-2 text-left transition-all',
+                                                    offerForm.display_style === opt.value
+                                                        ? 'border-primary bg-primary/5 text-primary'
+                                                        : 'border-border hover:border-primary/30'
+                                                )}
+                                            >
+                                                <span className="text-xs font-semibold">{opt.label}</span>
+                                                <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="unlocked-msg">Room-card upsell message</Label>
+                                    <Textarea
+                                        id="unlocked-msg"
+                                        value={offerForm.unlocked_message}
+                                        onChange={e => setOfferForm(f => ({ ...f, unlocked_message: e.target.value }))}
+                                        className="mt-1 resize-none"
+                                        rows={2}
+                                    />
+                                    <p className="text-[11px] text-muted-foreground mt-1">
+                                        Shown on the room card to drive the upsell. Use
+                                        <code className="bg-muted px-1 rounded mx-1">{'{nights}'}</code> for the required nights
                                         and <code className="bg-muted px-1 rounded">{'{reward}'}</code> for the reward label.
                                     </p>
                                 </div>

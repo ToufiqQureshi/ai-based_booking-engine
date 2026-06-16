@@ -144,6 +144,30 @@ export default function BookingSelection() {
     // Set to true the first time the user explicitly picks dates via the calendar;
     // prevents the popup from firing silently on initial page-load with default dates.
     const userPickedDatesRef = useRef(false);
+    // The popup should NOT fire aggressively the instant dates change. We stash the
+    // eligible offer here and only reveal it once the guest shows intent — i.e. they
+    // scroll down toward the rooms or start interacting with the list.
+    const pendingStayOfferRef = useRef<Parameters<typeof setStayOffer>[0] | null>(null);
+    const stayOfferRevealedRef = useRef(false);
+
+    // Per-room stay offer for the room-card notification + discounted price preview.
+    // Keyed by room id. The PRICE shown is a preview only — the real discount is
+    // recomputed and applied server-side at booking time (never trusts the client).
+    interface RoomOffer {
+        offer_id: string;
+        unlocked: boolean;
+        apply_mode: 'auto' | 'manual_claim';
+        display_style: 'banner' | 'badge';
+        unlocked_message: string;
+        reward_type: 'percentage' | 'fixed_amount' | 'free_night';
+        reward_value: number;
+        reward_label: string;
+        min_nights: number;
+        nights_remaining: number;
+    }
+    const [roomOffers, setRoomOffers] = useState<Record<string, RoomOffer>>({});
+    // Guests can manually claim when the hotelier chose apply_mode = "manual_claim".
+    const [claimedOffers, setClaimedOffers] = useState<Set<string>>(new Set());
 
     const applyLoyaltyCoupon = (couponCode: string) => {
         setPromoCode(couponCode);
@@ -206,10 +230,13 @@ export default function BookingSelection() {
 
                 if (!res?.has_offer) return;
 
+                // Build the popup payload but DON'T open it yet — stash it and let the
+                // scroll-intent effect reveal it so the guest isn't ambushed instantly.
+                let payload: Parameters<typeof setStayOffer>[0] | null = null;
+
                 // Case 1: Guest is below the threshold — nudge them to add more nights
                 if (!res.unlocked && (res.nights_remaining || 0) > 0) {
-                    stayOfferShownRef.current.add(datePairKey);
-                    setStayOffer({
+                    payload = {
                         isOpen: true,
                         title: res.title || 'Stay Offer',
                         nudgeTitle: res.nudge_title || 'Stay a little longer!',
@@ -217,12 +244,11 @@ export default function BookingSelection() {
                         rewardLabel: res.reward_label || '',
                         currentNights: res.current_nights || nights,
                         minNights: res.min_nights || nights + (res.nights_remaining || 1),
-                    });
+                    };
                 }
                 // Case 2: Guest has met the threshold — show "you've unlocked it!" popup
                 else if (res.unlocked) {
-                    stayOfferShownRef.current.add(datePairKey);
-                    setStayOffer({
+                    payload = {
                         isOpen: true,
                         title: res.title || 'Reward Unlocked! 🎉',
                         nudgeTitle: res.nudge_title || 'Offer Unlocked! 🎉',
@@ -230,7 +256,17 @@ export default function BookingSelection() {
                         rewardLabel: res.reward_label || '',
                         currentNights: res.current_nights || nights,
                         minNights: res.min_nights || nights,
-                    });
+                    };
+                }
+
+                if (!payload) return;
+                stayOfferShownRef.current.add(datePairKey);
+                // If the guest has already shown intent earlier this session, reveal
+                // immediately; otherwise hold it until they scroll/interact.
+                if (stayOfferRevealedRef.current) {
+                    setStayOffer(payload);
+                } else {
+                    pendingStayOfferRef.current = payload;
                 }
             } catch (_) {
                 // Loyalty is best-effort — never block the booking flow.
@@ -238,6 +274,73 @@ export default function BookingSelection() {
         })();
         return () => { cancelled = true; };
     }, [hotel?.id, checkInDate, checkOutDate]);
+
+    // Reveal a stashed stay-offer popup on the first sign of intent — a downward
+    // scroll toward the room list. This replaces the old behaviour of firing the
+    // popup the instant the guest changed dates, which felt aggressive.
+    useEffect(() => {
+        const revealPending = () => {
+            stayOfferRevealedRef.current = true;
+            if (pendingStayOfferRef.current) {
+                setStayOffer(pendingStayOfferRef.current);
+                pendingStayOfferRef.current = null;
+            }
+        };
+        const onScroll = () => {
+            if (window.scrollY > 250) revealPending();
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
+
+    // Resolve the per-room stay offer for the room-card notification + price preview.
+    // Bounded: one request per room, cached by "roomId|nights" so re-renders and
+    // SSE refreshes never refetch. Best-effort — failures never block the page.
+    const roomOffersFetchedRef = useRef<Set<string>>(new Set());
+    useEffect(() => {
+        const hid = hotel?.id;
+        if (!hid || !checkInDate || !checkOutDate || rooms.length === 0) return;
+        const nights = differenceInDays(checkOutDate, checkInDate);
+        if (nights <= 0) return;
+
+        let cancelled = false;
+        (async () => {
+            for (const room of rooms) {
+                const key = `${room.id}|${nights}`;
+                if (roomOffersFetchedRef.current.has(key)) continue;
+                roomOffersFetchedRef.current.add(key);
+                try {
+                    const res = await apiClient.post<any>('/public/loyalty-offers', {
+                        hotel_id: hid,
+                        room_type_id: room.id,
+                        nights,
+                    });
+                    if (cancelled || !res?.has_offer) continue;
+                    // Only surface offers actually scoped to this room or hotel-wide;
+                    // ignore another room's exclusive offer leaking through.
+                    if (res.room_type_id && res.room_type_id !== room.id) continue;
+                    setRoomOffers(prev => ({
+                        ...prev,
+                        [room.id]: {
+                            offer_id: res.offer_id,
+                            unlocked: !!res.unlocked,
+                            apply_mode: res.apply_mode || 'auto',
+                            display_style: res.display_style || 'banner',
+                            unlocked_message: res.unlocked_message || '',
+                            reward_type: res.reward_type || 'percentage',
+                            reward_value: res.reward_value || 0,
+                            reward_label: res.reward_label || '',
+                            min_nights: res.min_nights || 0,
+                            nights_remaining: res.nights_remaining || 0,
+                        },
+                    }));
+                } catch (_) {
+                    // best-effort
+                }
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [hotel?.id, rooms, checkInDate, checkOutDate]);
 
     const handleCheckLoyalty = async () => {
         if (!loyaltyEmail) return;
@@ -1096,6 +1199,21 @@ export default function BookingSelection() {
                                                 isRefreshing={
                                                     refreshingRoomIds.has(room.id) ||
                                                     refreshingRoomIds.has('__ALL__')
+                                                }
+                                                stayOffer={roomOffers[room.id]}
+                                                offerClaimed={
+                                                    roomOffers[room.id]
+                                                        ? claimedOffers.has(roomOffers[room.id].offer_id)
+                                                        : false
+                                                }
+                                                onClaimOffer={() => {
+                                                    const off = roomOffers[room.id];
+                                                    if (off) setClaimedOffers(prev => new Set(prev).add(off.offer_id));
+                                                }}
+                                                nights={
+                                                    checkInDate && checkOutDate
+                                                        ? differenceInDays(checkOutDate, checkInDate)
+                                                        : 1
                                                 }
                                             />
                                         );

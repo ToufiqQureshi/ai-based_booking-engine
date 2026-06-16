@@ -85,6 +85,23 @@ class LoyaltyOffer(SQLModel, table=True):
     nudge_title: str = Field(default="Stay a little longer!")
     nudge_message: str = Field(default="Stay {remaining} more night(s) and unlock {reward}!")
 
+    # ── Hotelier-controlled presentation of the unlocked offer ────────────────
+    # apply_mode: how the discount applies once the guest meets min_nights.
+    #   "auto"         → price auto-discounts on the eligible room (strikethrough
+    #                    original + new offer price), no guest action needed.
+    #   "manual_claim" → guest taps a "Claim" button on the room to apply it.
+    apply_mode: str = Field(default="auto")
+
+    # display_style: how the room-card notification renders for this offer.
+    #   "banner" → full-width gradient banner inside the room card.
+    #   "badge"  → compact corner badge that reveals the text on hover/tap.
+    display_style: str = Field(default="banner")
+
+    # unlocked_message: hotelier's custom text on the room card driving the
+    # room-specific upsell, e.g. "Book this room for 5 nights to get 20% off".
+    # Supports {nights} and {reward} placeholders.
+    unlocked_message: str = Field(default="Book this room for {nights} nights to unlock {reward}!")
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

@@ -1,9 +1,24 @@
-import { Bed, BedDouble, User, Maximize, Wifi, Check, Sparkles, Gift, Info, X } from 'lucide-react';
+import { Bed, BedDouble, User, Maximize, Wifi, Check, Sparkles, Gift, Info, X, BadgePercent, CalendarPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PublicRoomSearchResult, RateOption } from '@/core/types/api';
 import { RoomImageCarousel } from './RoomImageCarousel';
 import { ICONS } from '@/core/lib/amenityIcons';
+
+// A stay offer scoped to this room (or hotel-wide). The discounted price shown
+// here is a PREVIEW only; the real discount is recomputed server-side at booking.
+export interface RoomStayOffer {
+    offer_id: string;
+    unlocked: boolean;
+    apply_mode: 'auto' | 'manual_claim';
+    display_style: 'banner' | 'badge';
+    unlocked_message: string;
+    reward_type: 'percentage' | 'fixed_amount' | 'free_night';
+    reward_value: number;
+    reward_label: string;
+    min_nights: number;
+    nights_remaining: number;
+}
 
 interface RoomCardProps {
     room: PublicRoomSearchResult;
@@ -15,6 +30,19 @@ interface RoomCardProps {
     setIsModalOpen: (val: boolean) => void;
     getImageUrl: (url?: string | null) => string;
     isRefreshing?: boolean;
+    stayOffer?: RoomStayOffer;
+    offerClaimed?: boolean;
+    onClaimOffer?: () => void;
+    nights?: number;
+}
+
+// Preview-only discounted price for an unlocked offer. Server is the source of
+// truth at booking; this just mirrors the same formula for display.
+function previewDiscountedPrice(total: number, offer: RoomStayOffer, nights: number): number {
+    if (offer.reward_type === 'percentage') return Math.max(0, total * (1 - offer.reward_value / 100));
+    if (offer.reward_type === 'fixed_amount') return Math.max(0, total - offer.reward_value);
+    if (offer.reward_type === 'free_night' && nights > 0) return Math.max(0, total * (nights - 1) / nights);
+    return total;
 }
 
 export function RoomCard({
@@ -27,9 +55,19 @@ export function RoomCard({
     setIsModalOpen,
     getImageUrl,
     isRefreshing = false,
+    stayOffer,
+    offerClaimed = false,
+    onClaimOffer,
+    nights = 1,
 }: RoomCardProps) {
     const displayRates = filteredRates || (room.rate_options || []).filter(o => !o.is_package);
     const isSoldOut = room.available_rooms === 0;
+    // The discount is live on the price when the offer is unlocked AND either the
+    // hotelier set auto-apply OR the guest tapped Claim.
+    const offerActive = !!stayOffer && stayOffer.unlocked &&
+        (stayOffer.apply_mode === 'auto' || offerClaimed);
+    const showClaimCta = !!stayOffer && stayOffer.unlocked &&
+        stayOffer.apply_mode === 'manual_claim' && !offerClaimed;
 
     return (
         <div className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 hover:border-slate-300 transition-all duration-300 group">
@@ -50,10 +88,68 @@ export function RoomCard({
                             </div>
                         )}
                     </div>
+
+                    {/* Stay-offer badge (compact corner tag) */}
+                    {stayOffer && stayOffer.display_style === 'badge' && !isSoldOut && (
+                        <div className="absolute top-6 right-6 z-10 group/badge" title={stayOffer.unlocked_message}>
+                            <div
+                                className="px-3 py-2 rounded-2xl shadow-lg flex items-center gap-1.5 text-white"
+                                style={{ backgroundColor: themeColor }}
+                            >
+                                <BadgePercent className="w-3.5 h-3.5" />
+                                <span className="text-[10px] font-black uppercase tracking-wider">
+                                    {stayOffer.unlocked ? stayOffer.reward_label : `${stayOffer.min_nights}+ nights`}
+                                </span>
+                            </div>
+                            <div className="absolute right-0 mt-1 w-52 opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none z-20">
+                                <div className="bg-slate-900 text-white text-[11px] font-medium rounded-lg p-2.5 shadow-xl leading-snug">
+                                    {stayOffer.unlocked_message}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Content Section: Minimalist & Clean */}
                 <div className="flex-1 flex flex-col p-5 lg:p-6">
+                    {/* Stay-offer banner (full-width strip) — hotelier's custom upsell copy */}
+                    {stayOffer && stayOffer.display_style === 'banner' && !isSoldOut && (
+                        <div
+                            className="mb-4 rounded-xl p-3 flex items-center justify-between gap-3 border"
+                            style={{
+                                backgroundColor: `${themeColor}0d`,
+                                borderColor: `${themeColor}33`,
+                            }}
+                        >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white"
+                                    style={{ backgroundColor: themeColor }}
+                                >
+                                    {stayOffer.unlocked ? <Sparkles className="w-4 h-4" /> : <CalendarPlus className="w-4 h-4" />}
+                                </div>
+                                <p className="text-[12px] font-bold leading-snug" style={{ color: themeColor }}>
+                                    {stayOffer.unlocked_message}
+                                </p>
+                            </div>
+                            {showClaimCta && (
+                                <Button
+                                    size="sm"
+                                    className="text-white font-bold text-[11px] h-8 px-4 rounded-lg shrink-0"
+                                    style={{ backgroundColor: themeColor }}
+                                    onClick={onClaimOffer}
+                                >
+                                    Claim
+                                </Button>
+                            )}
+                            {offerActive && (
+                                <span className="text-[10px] font-black uppercase tracking-wider text-green-600 shrink-0">
+                                    Applied ✓
+                                </span>
+                            )}
+                        </div>
+                    )}
+
                     {/* Header Area */}
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
                         <div className="space-y-0.5">
@@ -149,6 +245,21 @@ export function RoomCard({
                                                 <div className="h-6 w-20 bg-slate-100 animate-pulse rounded ml-auto" />
                                                 <div className="h-3 w-14 bg-slate-100 animate-pulse rounded ml-auto" />
                                             </div>
+                                        ) : offerActive && stayOffer ? (
+                                            <>
+                                                {/* Offer applied — show original (strikethrough) + discounted price.
+                                                    Preview only; server recomputes the real total at booking. */}
+                                                <div className="flex items-baseline justify-end gap-1">
+                                                    <span className="text-lg font-black" style={{ color: themeColor }}>
+                                                        {formatCurrency(previewDiscountedPrice(plan.total_price, stayOffer, nights))}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 font-medium">total</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-400 line-through">
+                                                    {formatCurrency(plan.total_price)}
+                                                </p>
+                                                <p className="text-[10px] font-bold text-green-600">{stayOffer.reward_label}</p>
+                                            </>
                                         ) : (
                                             <>
                                                 <div className="flex items-baseline justify-end gap-1">

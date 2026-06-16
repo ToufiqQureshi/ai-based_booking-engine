@@ -207,6 +207,9 @@ class LoyaltyOfferCreate(BaseModel):
     nudge_from_nights: int = 1                  # show nudge only when guest >= this many nights
     nudge_title: str = "Stay a little longer!"
     nudge_message: str = "Stay {remaining} more night(s) and unlock {reward}!"
+    apply_mode: str = "auto"                    # auto | manual_claim
+    display_style: str = "banner"              # banner | badge
+    unlocked_message: str = "Book this room for {nights} nights to unlock {reward}!"
 
 
 class LoyaltyOfferUpdate(BaseModel):
@@ -219,9 +222,14 @@ class LoyaltyOfferUpdate(BaseModel):
     nudge_from_nights: Optional[int] = None
     nudge_title: Optional[str] = None
     nudge_message: Optional[str] = None
+    apply_mode: Optional[str] = None
+    display_style: Optional[str] = None
+    unlocked_message: Optional[str] = None
 
 
 _VALID_REWARD_TYPES = {"percentage", "fixed_amount", "free_night"}
+_VALID_APPLY_MODES = {"auto", "manual_claim"}
+_VALID_DISPLAY_STYLES = {"banner", "badge"}
 
 
 async def _assert_room_belongs_to_hotel(session, room_type_id: Optional[str], hotel_id: str):
@@ -259,6 +267,10 @@ async def create_offer(
         raise HTTPException(status_code=400, detail="nudge_from_nights must be at least 1")
     if data.nudge_from_nights >= data.min_nights:
         raise HTTPException(status_code=400, detail="nudge_from_nights must be less than min_nights")
+    if data.apply_mode not in _VALID_APPLY_MODES:
+        raise HTTPException(status_code=400, detail="Invalid apply_mode")
+    if data.display_style not in _VALID_DISPLAY_STYLES:
+        raise HTTPException(status_code=400, detail="Invalid display_style")
     await _assert_room_belongs_to_hotel(session, data.room_type_id, current_user.hotel_id)
 
     offer = LoyaltyOffer(
@@ -273,6 +285,9 @@ async def create_offer(
         nudge_from_nights=data.nudge_from_nights,
         nudge_title=data.nudge_title,
         nudge_message=data.nudge_message,
+        apply_mode=data.apply_mode,
+        display_style=data.display_style,
+        unlocked_message=data.unlocked_message,
     )
     session.add(offer)
     await session.commit()
@@ -297,6 +312,10 @@ async def update_offer(
         raise HTTPException(status_code=400, detail="Invalid reward_type")
     if "min_nights" in updates and updates["min_nights"] < 1:
         raise HTTPException(status_code=400, detail="min_nights must be at least 1")
+    if "apply_mode" in updates and updates["apply_mode"] not in _VALID_APPLY_MODES:
+        raise HTTPException(status_code=400, detail="Invalid apply_mode")
+    if "display_style" in updates and updates["display_style"] not in _VALID_DISPLAY_STYLES:
+        raise HTTPException(status_code=400, detail="Invalid display_style")
     if "room_type_id" in updates:
         await _assert_room_belongs_to_hotel(session, updates["room_type_id"], current_user.hotel_id)
 

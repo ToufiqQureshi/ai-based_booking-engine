@@ -270,6 +270,13 @@ async def init_db():
         "ALTER TABLE promo_codes ADD COLUMN auto_apply BOOLEAN DEFAULT FALSE",
         "ALTER TABLE promo_codes ADD COLUMN name VARCHAR(255)",
         "CREATE INDEX IF NOT EXISTS idx_promo_codes_auto_apply ON promo_codes (auto_apply)",
+        # DB-11: hotelier-controlled stay-offer presentation on loyalty_offers
+        # (added 2026-06-16). Lets the hotelier choose how an unlocked offer
+        # applies and renders on the public room card. Defaults preserve prior
+        # behaviour (auto-apply, banner style, generic upsell copy).
+        "ALTER TABLE loyalty_offers ADD COLUMN apply_mode VARCHAR(50) NOT NULL DEFAULT 'auto'",
+        "ALTER TABLE loyalty_offers ADD COLUMN display_style VARCHAR(50) NOT NULL DEFAULT 'banner'",
+        "ALTER TABLE loyalty_offers ADD COLUMN unlocked_message TEXT DEFAULT 'Book this room for {nights} nights to unlock {reward}!'",
     ]:
         try:
             async with engine.begin() as conn:
