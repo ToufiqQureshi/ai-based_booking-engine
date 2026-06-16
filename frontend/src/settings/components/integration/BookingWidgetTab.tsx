@@ -91,88 +91,11 @@ export const BookingWidgetTab = ({
                     />
                 ) : (
                     <div className="space-y-8">
-                        {/* WIDGET STYLES */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <Paintbrush className="w-4 h-4 text-primary" />
-                                <h3 className="font-semibold text-lg">1. Choose Widget Style</h3>
-                            </div>
-                            
-                            <RadioGroup 
-                                value={layout} 
-                                onValueChange={(val) => onUpdateSettings?.({ widget_layout: val })}
-                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                            >
-                                {WIDGET_STYLES.map(style => (
-                                    <div key={style.id} className="relative">
-                                        <RadioGroupItem value={style.id} id={`style-${style.id}`} className="peer sr-only" />
-                                        <Label
-                                            htmlFor={`style-${style.id}`}
-                                            className="flex flex-col p-4 border-2 rounded-xl cursor-pointer bg-white hover:bg-slate-50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 transition-all"
-                                        >
-                                            <span className="font-semibold">{style.name}</span>
-                                            <span className="text-xs text-slate-500 mt-1">{style.desc}</span>
-                                        </Label>
-                                    </div>
-                                ))}
-                            </RadioGroup>
-                        </div>
-
-                        {/* CUSTOM CODE BUILDER */}
-                        <Accordion type="single" collapsible className="w-full">
-                            <AccordionItem value="custom-code" className="border rounded-xl px-4">
-                                <AccordionTrigger className="hover:no-underline">
-                                    <div className="flex items-center gap-2">
-                                        <Code2 className="w-4 h-4 text-primary" />
-                                        <span className="font-semibold">Advanced: Custom CSS</span>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="space-y-4 pt-2 pb-4">
-                                    <Alert className="bg-amber-50 text-amber-900 border-amber-200">
-                                        <AlertDescription>
-                                            <strong>Widget Rules & Limitations:</strong>
-                                            <ul className="list-disc pl-5 mt-2 space-y-1 text-xs">
-                                                <li>You may inject custom CSS to alter fonts, colors, and border-radii.</li>
-                                                <li>Custom JavaScript execution is strictly prohibited for PCI-DSS payment compliance.</li>
-                                                <li>Do NOT attempt to override iframe positioning with <code>!important</code>.</li>
-                                                <li>Host page z-index issues should be fixed on your website's header, not by forcing the widget behind elements.</li>
-                                            </ul>
-                                        </AlertDescription>
-                                    </Alert>
-                                    <div className="space-y-2">
-                                        <Label>Custom CSS</Label>
-                                        <Textarea 
-                                            placeholder="/* e.g. .calendar-container { border-radius: 0px !important; } */"
-                                            className="font-mono text-xs h-32"
-                                            value={settings?.widget_custom_css || ''}
-                                            onChange={(e) => onUpdateSettings?.({ widget_custom_css: e.target.value })}
-                                        />
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Accordion>
-
-                        {/* EMBED SNIPPET */}
-                        {widgetCode && (
-                            <div className="space-y-4 pt-4 border-t">
-                                <h3 className="font-semibold text-lg">2. Copy Embed Code</h3>
-                                <div>
-                                    <Label className="mb-2 block text-slate-500">HTML Container</Label>
-                                    <pre className="p-4 bg-slate-900 text-slate-50 rounded-lg overflow-x-auto text-xs font-mono border">
-                                        {htmlCode}
-                                    </pre>
-                                    <Button size="sm" variant="secondary" className="mt-2" onClick={() => copyToClipboard(htmlCode || '')}>Copy HTML</Button>
-                                </div>
-
-                                <div>
-                                    <Label className="mb-2 block text-slate-500">JavaScript Loader (High Performance)</Label>
-                                    <pre className="p-4 bg-slate-900 text-slate-50 rounded-lg overflow-x-auto text-xs font-mono border">
-                                        {widgetCode.javascript_code}
-                                    </pre>
-                                    <Button size="sm" variant="secondary" className="mt-2" onClick={() => copyToClipboard(widgetCode.javascript_code)}>Copy JS</Button>
-                                </div>
-                            </div>
-                        )}
+                        <Alert className="bg-blue-50 text-blue-900 border-blue-200">
+                            <AlertDescription>
+                                This tab provides a direct URL to your booking engine. If you want to embed the Search Widget directly into your website (like MakeMyTrip), please go to the <strong>Search Widget</strong> tab.
+                            </AlertDescription>
+                        </Alert>
                     </div>
                 )}
             </CardContent>

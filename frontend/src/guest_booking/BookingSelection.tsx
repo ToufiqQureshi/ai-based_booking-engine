@@ -789,6 +789,8 @@ export default function BookingSelection() {
                     hotelSlug={hotelSlug}
                     currency={hotel?.settings?.currency || 'INR'}
                     calendarRefreshTrigger={calendarRefreshTrigger}
+                    minNights={hotel?.settings?.min_nights ?? 1}
+                    advancePurchaseDays={hotel?.settings?.advance_purchase_days ?? 0}
                 />
 
                 {/* Loyalty Program Member Verification Banner */}
