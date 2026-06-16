@@ -572,6 +572,12 @@ export default function BookingSelection() {
                     refreshRatesOnlyRef.current(data.room_type_ids ?? null);
                     // Also refresh calendar prices (Redis cache cleared by bump_rate_version)
                     setCalendarRefreshTrigger(t => t + 1);
+                } else if (data.type === 'hotel_update') {
+                    // Full refresh of hotel info, addons, and rooms (for metadata/amenities changes)
+                    if (fetchDataRef.current) {
+                        fetchDataRef.current();
+                    }
+                    setCalendarRefreshTrigger(t => t + 1);
                 }
             } catch (_) {
                 // ignore parse errors

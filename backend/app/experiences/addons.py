@@ -7,6 +7,7 @@ from sqlmodel import select
 from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.experiences.addon import AddOn, AddOnCreate, AddOnUpdate
 from app.core.cache.cache import cache_response, invalidate_cache
+from app.revenue.rate_signals import bump_hotel_version
 
 router = APIRouter(prefix="/addons", tags=["Addons"])
 
@@ -37,6 +38,7 @@ async def create_addon(
     await session.commit()
     await session.refresh(addon)
     invalidate_cache(f"addons:{current_user.hotel_id}:*")
+    bump_hotel_version(current_user.hotel_id)
     return addon
 
 @router.patch("/{addon_id}", response_model=AddOn, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
@@ -71,6 +73,7 @@ async def update_addon(
     await session.commit()
     await session.refresh(addon)
     invalidate_cache(f"addons:{current_user.hotel_id}:*")
+    bump_hotel_version(current_user.hotel_id)
     return addon
 
 @router.delete("/{addon_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
@@ -98,4 +101,5 @@ async def delete_addon(
     await session.delete(addon)
     await session.commit()
     invalidate_cache(f"addons:{current_user.hotel_id}:*")
+    bump_hotel_version(current_user.hotel_id)
 

@@ -17,7 +17,7 @@ from app.calendar import clear_availability_cache
 from app.core.cache.cache import cache_response, invalidate_cache
 from app.ai_engine.guest_agent import invalidate_guest_agent_cache
 from fastapi import Request
-from app.revenue.rate_signals import bump_rate_version
+from app.revenue.rate_signals import bump_rate_version, bump_hotel_version
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
@@ -89,6 +89,7 @@ async def create_room(
     invalidate_cache(f"rooms:{current_user.hotel_id}:*")
     invalidate_guest_agent_cache(current_user.hotel_id)
     bump_rate_version(current_user.hotel_id, room.id)
+    bump_hotel_version(current_user.hotel_id)
     return room
 
 
@@ -177,6 +178,7 @@ async def update_room(
     invalidate_cache(f"room:{current_user.hotel_id}:*/rooms/{room_id}*")
     invalidate_guest_agent_cache(current_user.hotel_id)
     bump_rate_version(current_user.hotel_id, room_id)
+    bump_hotel_version(current_user.hotel_id)
     return room
 
 
@@ -217,5 +219,6 @@ async def delete_room(room_id: str, current_user: CurrentUser, session: DbSessio
     invalidate_cache(f"room:{current_user.hotel_id}:*/rooms/{room_id}*")
     invalidate_guest_agent_cache(current_user.hotel_id)
     bump_rate_version(current_user.hotel_id, room_id)
+    bump_hotel_version(current_user.hotel_id)
 
 

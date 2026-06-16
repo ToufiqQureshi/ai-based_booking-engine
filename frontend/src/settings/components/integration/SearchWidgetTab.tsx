@@ -9,8 +9,6 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/core/lib/utils';
 import { ChainWidgetTab } from '@/settings/components/integration/ChainWidgetTab';
 import { PremiumLockNotice } from '@/settings/components/integration/PremiumLockNotice';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 
 interface IntegrationSettings {

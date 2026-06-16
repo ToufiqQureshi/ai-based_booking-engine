@@ -111,6 +111,9 @@ async def update_integration_settings(
         redis_client.delete_key(f"public:widget-config:{current_user.hotel_id}")
     except Exception as e:
         logger.error("Failed to clear widget-config cache: %s", e)
+        
+    from app.revenue.rate_signals import bump_hotel_version
+    bump_hotel_version(current_user.hotel_id)
 
     return settings
 
