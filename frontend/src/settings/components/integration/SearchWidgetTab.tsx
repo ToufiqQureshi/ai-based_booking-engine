@@ -9,8 +9,6 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/core/lib/utils';
 import { ChainWidgetTab } from '@/settings/components/integration/ChainWidgetTab';
 import { PremiumLockNotice } from '@/settings/components/integration/PremiumLockNotice';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 
 interface IntegrationSettings {
@@ -114,7 +112,7 @@ export const SearchWidgetTab = ({
                                 </div>
                                 <div>
                                     <p className={cn('font-bold text-sm', widgetMode === 'single' ? 'text-indigo-700 dark:text-indigo-400' : 'text-foreground')}>
-                                        Single Hotel Widget
+                                        Booking Widget
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                                         Current hotel ki rooms directly dikhao. Best for individual property website.
@@ -230,58 +228,60 @@ export const SearchWidgetTab = ({
                         {/* WIDGET STYLES */}
                         <div className="pt-4 border-t space-y-4">
                             <Label className="text-sm font-semibold block">Widget Style & Layout</Label>
-                            <RadioGroup 
-                                value={settings.widget_layout || 'modern'} 
-                                onValueChange={(val) => onUpdateSettings({ widget_layout: val })}
-                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                            >
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {WIDGET_STYLES.map(style => (
-                                    <div key={style.id} className="relative">
-                                        <RadioGroupItem value={style.id} id={`style-${style.id}`} className="peer sr-only" />
-                                        <Label
-                                            htmlFor={`style-${style.id}`}
-                                            className="flex flex-col p-4 border-2 rounded-xl cursor-pointer bg-white hover:bg-slate-50 peer-data-[state=checked]:border-indigo-500 peer-data-[state=checked]:bg-indigo-50/60 dark:bg-slate-950 dark:hover:bg-slate-900 transition-all"
-                                        >
-                                            <span className="font-semibold">{style.name}</span>
-                                            <span className="text-xs text-muted-foreground mt-1">{style.desc}</span>
-                                        </Label>
-                                    </div>
+                                    <label
+                                        key={style.id}
+                                        className={cn(
+                                            "flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all",
+                                            (settings.widget_layout || 'modern') === style.id
+                                                ? "border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/30"
+                                                : "border-border bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
+                                        )}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="widget_layout"
+                                            value={style.id}
+                                            checked={(settings.widget_layout || 'modern') === style.id}
+                                            onChange={(e) => onUpdateSettings({ widget_layout: e.target.value })}
+                                            className="sr-only"
+                                        />
+                                        <span className="font-semibold">{style.name}</span>
+                                        <span className="text-xs text-muted-foreground mt-1">{style.desc}</span>
+                                    </label>
                                 ))}
-                            </RadioGroup>
+                            </div>
                         </div>
 
                         {/* CUSTOM CSS */}
-                        <Accordion type="single" collapsible className="w-full">
-                            <AccordionItem value="custom-code" className="border rounded-xl px-4">
-                                <AccordionTrigger className="hover:no-underline">
-                                    <div className="flex items-center gap-2">
-                                        <Code className="w-4 h-4 text-indigo-500" />
-                                        <span className="font-semibold text-sm">Advanced: Custom CSS</span>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="space-y-4 pt-2 pb-4">
-                                    <Alert className="bg-amber-50 text-amber-900 border-amber-200">
-                                        <AlertDescription>
-                                            <strong>Widget Rules & Limitations:</strong>
-                                            <ul className="list-disc pl-5 mt-2 space-y-1 text-xs">
-                                                <li>You may inject custom CSS to alter fonts, colors, and border-radii.</li>
-                                                <li>Custom JavaScript execution is strictly prohibited for PCI-DSS payment compliance.</li>
-                                                <li>Do NOT attempt to override iframe positioning with <code>!important</code>.</li>
-                                            </ul>
-                                        </AlertDescription>
-                                    </Alert>
-                                    <div className="space-y-2">
-                                        <Label>Custom CSS</Label>
-                                        <Textarea 
-                                            placeholder="/* e.g. .calendar-container { border-radius: 0px !important; } */"
-                                            className="font-mono text-xs h-32"
-                                            value={(settings as any).widget_custom_css || ''}
-                                            onChange={(e) => onUpdateSettings({ widget_custom_css: e.target.value } as any)}
-                                        />
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Accordion>
+                        <details className="w-full border rounded-xl group">
+                            <summary className="flex items-center gap-2 p-4 cursor-pointer list-none hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+                                <Code className="w-4 h-4 text-indigo-500" />
+                                <span className="font-semibold text-sm">Advanced: Custom CSS</span>
+                            </summary>
+                            <div className="space-y-4 p-4 pt-0 border-t">
+                                <Alert className="bg-amber-50 text-amber-900 border-amber-200 mt-4">
+                                    <AlertDescription>
+                                        <strong>Widget Rules & Limitations:</strong>
+                                        <ul className="list-disc pl-5 mt-2 space-y-1 text-xs">
+                                            <li>You may inject custom CSS to alter fonts, colors, and border-radii.</li>
+                                            <li>Custom JavaScript execution is strictly prohibited for PCI-DSS payment compliance.</li>
+                                            <li>Do NOT attempt to override iframe positioning with <code>!important</code>.</li>
+                                        </ul>
+                                    </AlertDescription>
+                                </Alert>
+                                <div className="space-y-2">
+                                    <Label>Custom CSS</Label>
+                                    <Textarea 
+                                        placeholder="/* e.g. .calendar-container { border-radius: 0px !important; } */"
+                                        className="font-mono text-xs h-32"
+                                        value={(settings as any).widget_custom_css || ''}
+                                        onChange={(e) => onUpdateSettings({ widget_custom_css: e.target.value } as any)}
+                                    />
+                                </div>
+                            </div>
+                        </details>
 
 
 

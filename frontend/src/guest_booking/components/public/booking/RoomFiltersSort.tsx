@@ -13,6 +13,15 @@ interface RoomFiltersSortProps {
     filteredRoomsCount: number;
     isFilterOpen: boolean;
     setIsFilterOpen: (val: boolean) => void;
+    selectedAmenities: string[];
+    setSelectedAmenities: (amenities: string[]) => void;
+    selectedBedTypes: string[];
+    setSelectedBedTypes: (bedTypes: string[]) => void;
+    selectedPolicies: string[];
+    setSelectedPolicies: (policies: string[]) => void;
+    availableAmenities: string[];
+    availableBedTypes: string[];
+    availablePolicies: string[];
     themeColor: string;
 }
 
@@ -27,6 +36,15 @@ export function RoomFiltersSort({
     filteredRoomsCount,
     isFilterOpen,
     setIsFilterOpen,
+    selectedAmenities,
+    setSelectedAmenities,
+    selectedBedTypes,
+    setSelectedBedTypes,
+    selectedPolicies,
+    setSelectedPolicies,
+    availableAmenities,
+    availableBedTypes,
+    availablePolicies,
     themeColor,
 }: RoomFiltersSortProps) {
     return (
@@ -40,9 +58,9 @@ export function RoomFiltersSort({
                 >
                     <SlidersHorizontal className="w-4 h-4" />
                     Filters
-                    {(selectedMealPlans.length > 0 || priceRange[1] < 20000) && (
+                    {(selectedMealPlans.length > 0 || priceRange[1] < 20000 || selectedAmenities.length > 0 || selectedBedTypes.length > 0 || selectedPolicies.length > 0) && (
                         <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center" style={{ backgroundColor: themeColor }}>
-                            {selectedMealPlans.length + (priceRange[1] < 20000 ? 1 : 0)}
+                            {selectedMealPlans.length + (priceRange[1] < 20000 ? 1 : 0) + selectedAmenities.length + selectedBedTypes.length + selectedPolicies.length}
                         </span>
                     )}
                 </button>
@@ -102,6 +120,84 @@ export function RoomFiltersSort({
                                 ))}
                             </div>
                         </div>
+
+                        {/* Dynamic Bed Types Filter */}
+                        {availableBedTypes.length > 0 && (
+                            <div className="pt-4 border-t border-slate-100">
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-3 block">Bed Type</label>
+                                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                    {availableBedTypes.map(bedType => (
+                                        <label key={bedType} className="flex items-center gap-3 cursor-pointer group">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedBedTypes.includes(bedType)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedBedTypes([...selectedBedTypes, bedType]);
+                                                    else setSelectedBedTypes(selectedBedTypes.filter(p => p !== bedType));
+                                                }}
+                                                className="w-4 h-4 rounded border-slate-300 focus:ring-0"
+                                                style={{ accentColor: themeColor }}
+                                            />
+                                            <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
+                                                {bedType}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Dynamic Room Policies Filter */}
+                        {availablePolicies.length > 0 && (
+                            <div className="pt-4 border-t border-slate-100">
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-3 block">Room Policies</label>
+                                <div className="space-y-2">
+                                    {availablePolicies.map(policy => (
+                                        <label key={policy} className="flex items-center gap-3 cursor-pointer group">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedPolicies.includes(policy)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedPolicies([...selectedPolicies, policy]);
+                                                    else setSelectedPolicies(selectedPolicies.filter(p => p !== policy));
+                                                }}
+                                                className="w-4 h-4 rounded border-slate-300 focus:ring-0"
+                                                style={{ accentColor: themeColor }}
+                                            />
+                                            <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
+                                                {policy}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Dynamic Amenities Filter */}
+                        {availableAmenities.length > 0 && (
+                            <div className="pt-4 border-t border-slate-100">
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-3 block">Room Amenities</label>
+                                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                    {availableAmenities.map(amenity => (
+                                        <label key={amenity} className="flex items-center gap-3 cursor-pointer group">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedAmenities.includes(amenity)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedAmenities([...selectedAmenities, amenity]);
+                                                    else setSelectedAmenities(selectedAmenities.filter(p => p !== amenity));
+                                                }}
+                                                className="w-4 h-4 rounded border-slate-300 focus:ring-0"
+                                                style={{ accentColor: themeColor }}
+                                            />
+                                            <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
+                                                {amenity}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     
                     <Button 
@@ -110,6 +206,9 @@ export function RoomFiltersSort({
                         onClick={() => {
                             setPriceRange([0, 20000]);
                             setSelectedMealPlans([]);
+                            setSelectedAmenities([]);
+                            setSelectedBedTypes([]);
+                            setSelectedPolicies([]);
                         }}
                     >
                         Reset All Filters

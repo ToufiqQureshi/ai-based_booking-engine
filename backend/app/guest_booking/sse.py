@@ -26,8 +26,9 @@ async def rate_update_stream(hotel_id: str, request: Request):
     Sends a heartbeat every 30s to keep the connection alive through proxies.
     """
     async def event_generator():
-        last_version = redis_client.get_value(f"rate_version:{hotel_id}") or "0"
-        yield f"data: {json.dumps({'type': 'connected', 'version': last_version})}\n\n"
+        last_rate_version = redis_client.get_value(f"rate_version:{hotel_id}") or "0"
+        last_hotel_version = redis_client.get_value(f"hotel_version:{hotel_id}") or "0"
+        yield f"data: {json.dumps({'type': 'connected', 'version': last_rate_version, 'hotel_version': last_hotel_version})}\n\n"
 
         started_at = time.monotonic()
         polls_since_heartbeat = 0
@@ -39,14 +40,25 @@ async def rate_update_stream(hotel_id: str, request: Request):
                 break
 
             try:
-                current_version = redis_client.get_value(f"rate_version:{hotel_id}") or "0"
-                if current_version != last_version:
-                    last_version = current_version
-                    polls_since_heartbeat = 0
-                    # Read which room changed (set by bump_rate_version with 10s TTL)
+                current_rate_version = redis_client.get_value(f"rate_version:{hotel_id}") or "0"
+                current_hotel_version = redis_client.get_value(f"hotel_version:{hotel_id}") or "0"
+                
+                did_yield = False
+
+                if current_rate_version != last_rate_version:
+                    last_rate_version = current_rate_version
                     changed = redis_client.get_value(f"rate_changed_room:{hotel_id}")
                     room_type_ids = None if (not changed or changed == "ALL") else [changed]
-                    yield f"data: {json.dumps({'type': 'rate_update', 'hotel_id': hotel_id, 'version': current_version, 'room_type_ids': room_type_ids})}\n\n"
+                    yield f"data: {json.dumps({'type': 'rate_update', 'hotel_id': hotel_id, 'version': current_rate_version, 'room_type_ids': room_type_ids})}\n\n"
+                    did_yield = True
+
+                if current_hotel_version != last_hotel_version:
+                    last_hotel_version = current_hotel_version
+                    yield f"data: {json.dumps({'type': 'hotel_update', 'hotel_id': hotel_id, 'hotel_version': current_hotel_version})}\n\n"
+                    did_yield = True
+
+                if did_yield:
+                    polls_since_heartbeat = 0
                 else:
                     polls_since_heartbeat += 1
                     if polls_since_heartbeat >= HEARTBEAT_EVERY_N_POLLS:

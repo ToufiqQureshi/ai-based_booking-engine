@@ -29,6 +29,50 @@ export default function BookingWidget() {
     const [calendarData, setCalendarData] = useState<Record<string, any>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
     const fetchedMonths = useRef<Set<string>>(new Set());
+    
+    // Add refresh trigger for SSE updates
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    // SSE Listener for real-time config & rate updates
+    useEffect(() => {
+        if (!hotelSlug) return;
+        const getApiUrl = () => {
+            const hostname = window.location.hostname;
+            if (hostname.includes('staybooker.ai')) return 'https://api.staybooker.ai/api/v1';
+            if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+            return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
+        };
+        const apiUrl = getApiUrl();
+        
+        // We first need the hotel_id to subscribe to SSE, so fetch it once or rely on the config fetch 
+        // Actually the SSE route needs hotel_id, not hotelSlug. 
+        // We will fetch hotel info just to get the ID, or use a new route /public/hotels/slug/{slug}/rate-updates?
+        // It's easier to just fetch it once.
+        let es: EventSource | null = null;
+        
+        fetch(`${apiUrl}/public/hotels/${hotelSlug}`)
+            .then(res => res.json())
+            .then(hotel => {
+                if (hotel?.id) {
+                    es = new EventSource(`${apiUrl}/public/hotels/${hotel.id}/rate-updates`);
+                    es.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            if (data.type === 'hotel_update' || data.type === 'rate_update') {
+                                // Trigger re-fetch of config and calendar
+                                setRefreshTrigger(t => t + 1);
+                                fetchedMonths.current.clear(); // force calendar refetch
+                            }
+                        } catch (_) {}
+                    };
+                }
+            })
+            .catch(() => {});
+            
+        return () => {
+            if (es) es.close();
+        };
+    }, [hotelSlug]);
 
     // Fetch Widget Configuration and Starting Price
     useEffect(() => {
@@ -83,7 +127,7 @@ export default function BookingWidget() {
                 }
             })
             .catch(err => console.error("Failed to fetch rooms for widget price:", err));
-    }, [hotelSlug]);
+    }, [hotelSlug, refreshTrigger]);
 
     // Ensure iframe body is transparent
     useEffect(() => {
@@ -131,7 +175,7 @@ export default function BookingWidget() {
                 fetchMonth(m);
             }
         });
-    }, [hotelSlug, displayMonth]);
+    }, [hotelSlug, displayMonth, refreshTrigger]);
 
     // State
     const [checkInDate, setCheckInDate] = useState<Date | undefined>(new Date());

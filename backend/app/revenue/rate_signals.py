@@ -23,3 +23,14 @@ def bump_rate_version(hotel_id: str, room_type_id: str | None = None) -> None:
         redis_client.set_value(f"rate_changed_room:{hotel_id}", value, expire=10)
     except Exception:
         pass
+
+
+def bump_hotel_version(hotel_id: str) -> None:
+    """
+    Signal the SSE stream that hotel configuration (settings, addons, room metadata) changed.
+    Triggers a full refresh of hotel info on the booking page.
+    """
+    try:
+        redis_client.set_value(f"hotel_version:{hotel_id}", str(int(time.time())), expire=86400)
+    except Exception:
+        pass
