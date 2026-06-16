@@ -84,7 +84,7 @@ const IntegrationPage = () => {
         if (activeTab === 'widget' || activeTab === 'search-widget') {
             loadWidgetData();
         }
-        if (activeTab === 'search-widget' || activeTab === 'chat-widget' || activeTab === 'settings') {
+        if (activeTab === 'widget' || activeTab === 'search-widget' || activeTab === 'chat-widget' || activeTab === 'settings') {
             loadSettingsData();
         }
         if (activeTab === 'api-keys') {
@@ -221,12 +221,22 @@ const IntegrationPage = () => {
                 </TabsList>
 
                 <TabsContent value="widget" className="mt-0">
-                    {loadingWidget ? (
+                    {loadingWidget || (loadingSettings && !settings) ? (
                         <div className="flex items-center justify-center h-48">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
                     ) : (
-                        <BookingWidgetTab widgetCode={widgetCode} hotel={hotel} activeHotelSlug={activeHotelSlug} copyToClipboard={copyToClipboard} />
+                        <BookingWidgetTab 
+                            widgetCode={widgetCode} 
+                            hotel={hotel} 
+                            activeHotelSlug={activeHotelSlug} 
+                            copyToClipboard={copyToClipboard}
+                            settings={settings}
+                            isDirty={isDirty}
+                            isSavingSettings={isSavingSettings}
+                            onUpdateSettings={updateSettings}
+                            onSaveSettings={handleSaveSettings}
+                        />
                     )}
                 </TabsContent>
 

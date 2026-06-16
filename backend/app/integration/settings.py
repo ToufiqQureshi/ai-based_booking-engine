@@ -209,23 +209,9 @@ async def get_widget_code(current_user: CurrentUser, session: DbSession):
      data-widget-layout="{layout}">
 </div>'''
 
-    javascript_code = f'''<script>
-  (function() {{
-    var script = document.createElement('script');
-    script.src = '{frontend_url}/widget-v3.js';
-    script.async = true;
-    script.onload = function() {{
-      HotelierWidget.init({{
-        hotelSlug: '{slug}',
-        primaryColor: '{color}',
-        widgetLayout: '{layout}',
-        apiUrl: '{api_url}',
-        frontendUrl: '{frontend_url}'
-      }});
-    }};
-    document.head.appendChild(script);
-  }})();
-</script>'''
+    javascript_code = f'''<!-- Preload for instant execution -->
+<link rel="preload" href="{frontend_url}/widget-v3.js" as="script">
+<script src="{frontend_url}/widget-v3.js" defer></script>'''
 
     css_code = '''<style>
   #hotelier-booking-widget {
@@ -237,10 +223,12 @@ async def get_widget_code(current_user: CurrentUser, session: DbSession):
 
     instructions = f'''# Integration Instructions
 
-## Step 1: Add the HTML
+## Step 1: Add the Widget Container
+Place this where you want the search bar to appear on your page.
 {html_code}
 
-## Step 2: Add the JavaScript
+## Step 2: Add the Scripts
+Place this just before the closing </body> tag.
 {javascript_code}
 
 ## Direct Booking Link:

@@ -39,6 +39,7 @@ interface RoomSearchHeaderProps {
     currency?: string;
     calendarRefreshTrigger?: number;
     hideAdvancedOptions?: boolean;
+    layoutStyle?: string;
 }
 
 export function RoomSearchHeader({
@@ -69,7 +70,8 @@ export function RoomSearchHeader({
     hotelSlug,
     currency = 'INR',
     calendarRefreshTrigger,
-    hideAdvancedOptions = false
+    hideAdvancedOptions = false,
+    layoutStyle = 'modern'
 }: RoomSearchHeaderProps) {
     const [calendarData, setCalendarData] = useState<Record<string, CalendarDay>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
@@ -245,9 +247,28 @@ export function RoomSearchHeader({
         </>
     );
 
+    let containerClasses = "mb-6 sm:mb-10 max-w-6xl mx-auto ";
+    let containerStyle: React.CSSProperties = {};
+    
+    if (layoutStyle === 'minimal') {
+        containerClasses += "bg-transparent p-2 sm:p-4";
+    } else if (layoutStyle === 'classic') {
+        containerClasses += "bg-white p-6 sm:p-8 rounded-lg shadow-md border border-slate-200 max-w-4xl";
+    } else if (layoutStyle === 'floating') {
+        containerClasses = "fixed bottom-4 left-4 right-4 z-50 bg-white/95 backdrop-blur-xl p-3 sm:p-4 rounded-2xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.3)] border border-white/40 max-w-4xl mx-auto";
+    } else if (layoutStyle === 'ota') {
+        containerClasses += "p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)]";
+        containerStyle = { backgroundColor: themeColor };
+    } else {
+        // modern
+        containerClasses += "bg-white/95 backdrop-blur-2xl p-4 sm:p-6 rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] border border-white/60";
+    }
+
+    const isOta = layoutStyle === 'ota';
+
     return (
-        <div id="hotelier-search-widget" className="bg-white/95 backdrop-blur-2xl p-4 sm:p-6 rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] mb-6 sm:mb-10 max-w-6xl mx-auto border border-white/60">
-            {!hideAdvancedOptions && (
+        <div id="hotelier-search-widget" className={containerClasses} style={containerStyle}>
+            {!hideAdvancedOptions && !isOta && (
                 <div className="flex justify-center mb-4">
                     <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/50 backdrop-blur-sm">
                         <button
@@ -276,46 +297,77 @@ export function RoomSearchHeader({
                 </div>
             )}
 
-            <div className="flex flex-col lg:flex-row items-stretch gap-3">
+            <div className="flex flex-col lg:flex-row items-stretch gap-3 lg:gap-4">
                 {/* Date Selector Popover (Check-In & Check-Out) */}
                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
                         <button 
-                            className="flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
-                            style={{ borderColor: isCalendarOpen ? themeColor : '#f1f5f9', backgroundColor: '#fff' }}
+                            className={isOta 
+                                ? "flex-[2] flex flex-row items-center p-3 sm:p-4 bg-white rounded-lg border border-transparent shadow-sm text-left hover:bg-slate-50 transition-colors min-h-[80px]"
+                                : "flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                            }
+                            style={isOta ? {} : { borderColor: isCalendarOpen ? themeColor : '#f1f5f9', backgroundColor: '#fff' }}
                             onClick={() => { setIsCalendarOpen(!isCalendarOpen); setIsGuestOpen(false); }}
                         >
-                            <div className="flex-1 flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                     style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
-                                    <CalendarIcon className="w-5 h-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
-                                    <span className="text-sm font-extrabold text-slate-800 block">
-                                        {checkInDate ? format(checkInDate, 'dd MMM yyyy') : 'Select Date'}
-                                    </span>
-                                    <span className="text-xs text-slate-500 block truncate">
-                                        {checkInDate ? format(checkInDate, 'EEEE') : 'Add date'}
-                                    </span>
-                                </div>
-                            </div>
-                            <ArrowRight className="w-5 h-5 text-slate-300 shrink-0" />
-                            <div className="flex-1 flex items-center gap-3 pl-3 border-l border-slate-100 min-w-0">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                     style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
-                                    <CalendarIcon className="w-5 h-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
-                                    <span className="text-sm font-extrabold text-slate-800 block">
-                                        {checkOutDate ? format(checkOutDate, 'dd MMM yyyy') : 'Select Date'}
-                                    </span>
-                                    <span className="text-xs text-slate-500 block truncate">
-                                        {checkOutDate ? format(checkOutDate, 'EEEE') : 'Add date'}
-                                    </span>
-                                </div>
-                            </div>
+                            {isOta ? (
+                                <>
+                                    <div className="flex-1 min-w-0 px-1 sm:px-2">
+                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Check-In</span>
+                                        <span className="text-2xl sm:text-3xl font-black text-slate-900 block leading-none flex items-baseline gap-1">
+                                            {checkInDate ? format(checkInDate, 'dd') : '--'}
+                                            <span className="text-base sm:text-lg font-bold">{checkInDate ? format(checkInDate, 'MMM') : ''}</span>
+                                        </span>
+                                        <span className="text-xs font-semibold text-slate-500 block mt-1 truncate">
+                                            {checkInDate ? format(checkInDate, 'EEEE, yy') : 'Select Date'}
+                                        </span>
+                                    </div>
+                                    <div className="w-px bg-slate-200 self-stretch my-2 mx-2 shrink-0"></div>
+                                    <div className="flex-1 min-w-0 px-1 sm:px-2">
+                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Check-Out</span>
+                                        <span className="text-2xl sm:text-3xl font-black text-slate-900 block leading-none flex items-baseline gap-1">
+                                            {checkOutDate ? format(checkOutDate, 'dd') : '--'}
+                                            <span className="text-base sm:text-lg font-bold">{checkOutDate ? format(checkOutDate, 'MMM') : ''}</span>
+                                        </span>
+                                        <span className="text-xs font-semibold text-slate-500 block mt-1 truncate">
+                                            {checkOutDate ? format(checkOutDate, 'EEEE, yy') : 'Select Date'}
+                                        </span>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex-1 flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                             style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
+                                            <CalendarIcon className="w-5 h-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check In</span>
+                                            <span className="text-sm font-extrabold text-slate-800 block">
+                                                {checkInDate ? format(checkInDate, 'dd MMM yyyy') : 'Select Date'}
+                                            </span>
+                                            <span className="text-xs text-slate-500 block truncate">
+                                                {checkInDate ? format(checkInDate, 'EEEE') : 'Add date'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <ArrowRight className="w-5 h-5 text-slate-300 shrink-0" />
+                                    <div className="flex-1 flex items-center gap-3 pl-3 border-l border-slate-100 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                             style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
+                                            <CalendarIcon className="w-5 h-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Check Out</span>
+                                            <span className="text-sm font-extrabold text-slate-800 block">
+                                                {checkOutDate ? format(checkOutDate, 'dd MMM yyyy') : 'Select Date'}
+                                            </span>
+                                            <span className="text-xs text-slate-500 block truncate">
+                                                {checkOutDate ? format(checkOutDate, 'EEEE') : 'Add date'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </button>
                     </PopoverTrigger>
 
@@ -366,25 +418,44 @@ export function RoomSearchHeader({
                 <Popover open={isGuestOpen} onOpenChange={setIsGuestOpen}>
                     <PopoverTrigger asChild>
                         <button
-                            className="flex-1 flex items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
-                            style={{ borderColor: isGuestOpen ? themeColor : '#f1f5f9', backgroundColor: '#fff' }}
+                            className={isOta
+                                ? "flex-1 flex flex-col justify-center p-3 sm:p-4 bg-white rounded-lg border border-transparent shadow-sm text-left hover:bg-slate-50 transition-colors relative min-h-[80px]"
+                                : "flex-1 flex items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                            }
+                            style={isOta ? {} : { borderColor: isGuestOpen ? themeColor : '#f1f5f9', backgroundColor: '#fff' }}
                             onClick={() => { setIsGuestOpen(!isGuestOpen); setIsCalendarOpen(false); }}
                         >
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                 style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
-                                <User className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
-                                <span className="text-sm font-extrabold text-slate-800 block">
-                                    {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
-                                </span>
-                                <span className="text-xs text-slate-500 block truncate">
-                                    {roomsCount} Room{roomsCount !== 1 ? 's' : ''}, {adults} Adult{adults !== 1 ? 's' : ''}
-                                </span>
-                            </div>
-                            <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0"
-                                         style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                            {isOta ? (
+                                <div className="px-1 sm:px-2 w-full pr-6">
+                                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Guests & Rooms</span>
+                                    <span className="text-2xl sm:text-3xl font-black text-slate-900 block leading-none flex items-baseline gap-1">
+                                        {adults + children}
+                                        <span className="text-base sm:text-lg font-bold">{adults + children === 1 ? 'Guest' : 'Guests'}</span>
+                                    </span>
+                                    <span className="text-xs font-semibold text-slate-500 block mt-1 truncate">
+                                        {roomsCount} Room{roomsCount !== 1 ? 's' : ''}
+                                    </span>
+                                    <ChevronDown className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                         style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
+                                        <User className="w-5 h-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
+                                        <span className="text-sm font-extrabold text-slate-800 block">
+                                            {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
+                                        </span>
+                                        <span className="text-xs text-slate-500 block truncate">
+                                            {roomsCount} Room{roomsCount !== 1 ? 's' : ''}, {adults} Adult{adults !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 ml-auto shrink-0"
+                                                 style={{ transform: isGuestOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                                </>
+                            )}
                         </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-6 bg-white border-slate-100 shadow-2xl rounded-3xl" align="center">
@@ -441,23 +512,31 @@ export function RoomSearchHeader({
                 </Popover>
 
                 {/* Promo Input */}
-                <div className="hidden lg:flex w-40 flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
-                    <input 
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        placeholder="Optional"
-                        className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none focus:ring-0 shadow-none placeholder:text-slate-300 text-slate-800 w-full"
-                    />
-                </div>
+                {!isOta && (
+                    <div className="hidden lg:flex w-40 flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
+                        <input 
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                            placeholder="Optional"
+                            className="bg-transparent border-0 font-extrabold text-sm p-0 focus:outline-none focus:ring-0 shadow-none placeholder:text-slate-300 text-slate-800 w-full"
+                        />
+                    </div>
+                )}
 
                 {/* Search Button */}
                 <button
-                    className="h-[76px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all shrink-0"
-                    style={{ backgroundImage: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)` }}
+                    className={isOta
+                        ? "h-[76px] sm:h-auto px-8 py-4 rounded-lg font-black text-xl flex items-center justify-center gap-2 shadow-xl transition-transform active:scale-[0.98] shrink-0 uppercase tracking-wide hover:shadow-2xl"
+                        : "h-[76px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all shrink-0"
+                    }
+                    style={isOta
+                        ? { backgroundColor: '#fff', color: themeColor }
+                        : { backgroundImage: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)` }
+                    }
                     onClick={handleSearch}
                 >
-                    <Search className="w-5 h-5 stroke-[2.5]" />
+                    <Search className={isOta ? "w-6 h-6 stroke-[3]" : "w-5 h-5 stroke-[2.5]"} />
                     Search
                 </button>
             </div>
