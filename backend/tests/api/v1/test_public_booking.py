@@ -244,6 +244,67 @@ class TestLoyaltyCheck:
         assert "message" in body
         assert "points_balance" in body
 
+    async def test_first_time_guest_with_active_program(self, client: AsyncClient, seeded_hotel: Hotel):
+        """
+        Regression: a first-time guest at a hotel WITH an active loyalty program
+        used to hit `NameError: name 'milestone' is not defined` (the broad except
+        masked it as a generic fallback). Assert the real first-timer response.
+        """
+        from tests.conftest import engine
+        from app.loyalty.loyalty_model import LoyaltyProgram
+        from sqlmodel import select as _select
+
+        # Get-or-create: loyalty_programs.hotel_id is unique and another test may
+        # have already seeded one for this shared hotel fixture.
+        created_prog = False
+        async with AsyncSession(engine) as session:
+            existing = (await session.execute(
+                _select(LoyaltyProgram).where(LoyaltyProgram.hotel_id == seeded_hotel.id)
+            )).scalars().first()
+            if existing:
+                prog_id = existing.id
+                existing.is_active = True
+                existing.milestone_bookings = 3
+                existing.milestones = []
+                session.add(existing)
+            else:
+                prog_id = str(uuid.uuid4())
+                created_prog = True
+                session.add(LoyaltyProgram(
+                    id=prog_id,
+                    hotel_id=seeded_hotel.id,
+                    is_active=True,
+                    milestone_bookings=3,
+                    reward_type="percentage",
+                    reward_value=10.0,
+                ))
+            await session.commit()
+
+        # Tests the loyalty path, not rate limiting — neutralise the shared
+        # /public/loyalty-check limiter bucket that other tests consume.
+        from app.core.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/loyalty-check", json={
+                "email": f"newguest-{uuid.uuid4().hex[:6]}@test.com",
+                "hotel_id": seeded_hotel.id,
+            })
+            assert r.status_code == 200
+            body = r.json()
+            assert body["is_repeat_guest"] is False
+            # Real path, not the error fallback: first milestone needs 3 bookings.
+            assert body["bookings_to_reward"] == 3
+            assert body["message"] == "Welcome! We're excited to have you here."
+        finally:
+            limiter.enabled = prev_enabled
+            if created_prog:
+                async with AsyncSession(engine) as session:
+                    p = await session.get(LoyaltyProgram, prog_id)
+                    if p:
+                        await session.delete(p)
+                    await session.commit()
+
     async def test_unknown_hotel_returns_graceful_response(self, client: AsyncClient):
         r = await client.post("/api/v1/public/loyalty-check", json={
             "email": "anyone@test.com",
