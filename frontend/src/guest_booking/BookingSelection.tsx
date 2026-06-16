@@ -294,6 +294,30 @@ export default function BookingSelection() {
     const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'recommended'>('recommended');
     const [searchType, setSearchType] = useState<'room' | 'package'>('room');
 
+    const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+    const [selectedBedTypes, setSelectedBedTypes] = useState<string[]>([]);
+    const [selectedPolicies, setSelectedPolicies] = useState<string[]>([]);
+
+    const availableAmenities = useMemo(() => {
+        const set = new Set<string>();
+        rooms.forEach(r => r.amenities?.forEach((a: any) => set.add(a.name)));
+        return Array.from(set).sort();
+    }, [rooms]);
+
+    const availableBedTypes = useMemo(() => {
+        const set = new Set<string>();
+        rooms.forEach(r => { if (r.bed_type) set.add(r.bed_type); });
+        return Array.from(set).sort();
+    }, [rooms]);
+
+    const availablePolicies = useMemo(() => {
+        const policies = [];
+        if (rooms.some(r => r.smoking_allowed)) policies.push('Smoking Allowed');
+        if (rooms.some(r => r.is_pet_friendly)) policies.push('Pet Friendly');
+        if (rooms.some(r => r.extra_bed_allowed)) policies.push('Extra Bed Allowed');
+        return policies;
+    }, [rooms]);
+
     // Filtered rooms logic
     const filteredRooms = rooms
         .filter(room => {
@@ -306,7 +330,17 @@ export default function BookingSelection() {
             const minPrice = Math.min(...displayRates.map(o => o.total_price || 0));
             const matchesPrice = minPrice <= priceRange[1] || priceRange[1] === 0 || priceRange[1] >= 20000;
             const matchesMeal = selectedMealPlans.length === 0 || displayRates.some(o => selectedMealPlans.includes(o.meal_plan_code || ''));
-            return matchesPrice && matchesMeal;
+            
+            const matchesAmenities = selectedAmenities.length === 0 || selectedAmenities.every(sa => room.amenities?.some((a: any) => a.name === sa));
+            const matchesBedType = selectedBedTypes.length === 0 || selectedBedTypes.includes(room.bed_type || '');
+            const matchesPolicies = selectedPolicies.length === 0 || selectedPolicies.every(sp => {
+                if (sp === 'Smoking Allowed') return room.smoking_allowed;
+                if (sp === 'Pet Friendly') return room.is_pet_friendly;
+                if (sp === 'Extra Bed Allowed') return room.extra_bed_allowed;
+                return true;
+            });
+
+            return matchesPrice && matchesMeal && matchesAmenities && matchesBedType && matchesPolicies;
         })
         .sort((a, b) => {
             const getMinPrice = (r: any) => {
@@ -865,6 +899,15 @@ export default function BookingSelection() {
                             setPriceRange={setPriceRange}
                             selectedMealPlans={selectedMealPlans}
                             setSelectedMealPlans={setSelectedMealPlans}
+                            selectedAmenities={selectedAmenities}
+                            setSelectedAmenities={setSelectedAmenities}
+                            selectedBedTypes={selectedBedTypes}
+                            setSelectedBedTypes={setSelectedBedTypes}
+                            selectedPolicies={selectedPolicies}
+                            setSelectedPolicies={setSelectedPolicies}
+                            availableAmenities={availableAmenities}
+                            availableBedTypes={availableBedTypes}
+                            availablePolicies={availablePolicies}
                             sortBy={sortBy}
                             setSortBy={setSortBy}
                             searchType={searchType}
@@ -1065,6 +1108,7 @@ export default function BookingSelection() {
                 onOpenChange={setIsModalOpen}
                 onBook={handleSelectRate}
                 guests={(adults + children).toString() || '1'}
+                themeColor={themeColor}
             />
 
             {/* Enhancements Add-on Sheet */}

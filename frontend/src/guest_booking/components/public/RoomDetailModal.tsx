@@ -65,9 +65,10 @@ interface RoomDetailModalProps {
     onOpenChange: (open: boolean) => void;
     onBook: (room: PublicRoomSearchResult, ratePlan: RateOption) => void;
     guests: string;
+    themeColor?: string;
 }
 
-export function RoomDetailModal({ room, open, onOpenChange, onBook, guests }: RoomDetailModalProps) {
+export function RoomDetailModal({ room, open, onOpenChange, onBook, guests, themeColor }: RoomDetailModalProps) {
     if (!room) return null;
 
     const formatCurrency = (amount: number) => {
@@ -131,7 +132,7 @@ export function RoomDetailModal({ room, open, onOpenChange, onBook, guests }: Ro
                             <div className="space-y-8">
                                 <div>
                                     <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center">
-                                        <Info className="w-5 h-5 mr-2 text-primary" /> About this Room
+                                        <Info className="w-5 h-5 mr-2" style={{ color: themeColor || 'var(--primary)' }} /> About this Room
                                     </h3>
                                     <p className="text-slate-600 leading-relaxed text-sm md:text-base">
                                         {room.description || "Experience comfort and luxury in our well-appointed rooms, designed to meet all your needs."}
@@ -145,7 +146,7 @@ export function RoomDetailModal({ room, open, onOpenChange, onBook, guests }: Ro
                                             const IconComponent = AMENITY_ICONS[am.icon_slug || am.icon] || Wifi;
                                             return (
                                                 <div key={i} className="flex items-center text-sm text-slate-600">
-                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 text-primary shrink-0">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 shrink-0" style={{ color: themeColor || 'var(--primary)' }}>
                                                         <IconComponent className="w-4 h-4" />
                                                     </div>
                                                     {am.name}
@@ -204,7 +205,7 @@ export function RoomDetailModal({ room, open, onOpenChange, onBook, guests }: Ro
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <Button size="sm" onClick={() => onBook(room, plan)}>
+                                                <Button size="sm" onClick={() => onBook(room, plan)} style={themeColor ? { backgroundColor: themeColor } : {}}>
                                                     Select
                                                 </Button>
                                             </div>
