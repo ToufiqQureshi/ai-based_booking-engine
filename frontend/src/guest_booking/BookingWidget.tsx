@@ -215,7 +215,11 @@ export default function BookingWidget() {
         if (window.parent === window) return;
         cancelAnimationFrame(postHeightRafRef.current);
         postHeightRafRef.current = requestAnimationFrame(() => {
-            const mainContainer = document.getElementById('widget-main-container');
+            const widgetEl = document.getElementById('widget-main-container');
+            // We must find the actual visual container (e.g. RoomSearchHeader or FARWidget)
+            // because the <style> tags injected above have a height of 0.
+            const mainContainer = widgetEl ? Array.from(widgetEl.children).find(c => c.tagName !== 'STYLE') : null;
+            
             const baseHeight = mainContainer
                 ? mainContainer.getBoundingClientRect().height
                 : document.body.scrollHeight;

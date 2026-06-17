@@ -63,7 +63,7 @@ export const SearchWidgetTab = ({
 
     useEffect(() => {
         const handleResize = (event: MessageEvent) => {
-            if (event.data && event.data.type === 'RESIZE_SEARCH_WIDGET') {
+            if (event.data && (event.data.type === 'RESIZE_SEARCH_WIDGET' || event.data.type === 'WIDGET_HEIGHT')) {
                 if (event.data.height) setPreviewHeight(event.data.height);
             }
         };
