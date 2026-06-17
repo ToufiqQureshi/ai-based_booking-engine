@@ -90,7 +90,7 @@ class IntegrationSettings(SQLModel, table=True):
     google_business_account_id: Optional[str] = Field(default=None)
 
     # Google Hotel Ads Integration
-    google_hotel_ads_enabled: bool = Field(default=False)
+    google_hotel_ads_enabled: Optional[bool] = Field(default=False)
     google_hotel_center_id: Optional[str] = Field(default=None)
     google_ads_account_id: Optional[str] = Field(default=None)
     google_ads_last_ari_sync: Optional[datetime] = Field(default=None)
@@ -101,8 +101,8 @@ class IntegrationSettings(SQLModel, table=True):
     widget_custom_js: Optional[str] = Field(default="")
 
     # Booking constraints — enforced in widget
-    widget_min_nights: int = Field(default=1, ge=1, le=365)
-    widget_advance_purchase_days: int = Field(default=0, ge=0, le=365)
+    widget_min_nights: Optional[int] = Field(default=1, ge=1, le=365)
+    widget_advance_purchase_days: Optional[int] = Field(default=0, ge=0, le=365)
     widget_room_type_filter: Optional[str] = Field(default=None)
 
     # Metadata
@@ -150,8 +150,8 @@ class IntegrationSettingsRead(BaseModel):
     cors_enabled: bool
     webhook_url: Optional[str]
     webhook_events: str
-    rate_limit_per_hour: int
-    require_https: bool
+    rate_limit_per_hour: Optional[int] = 1000
+    require_https: Optional[bool] = True
     ai_provider: Optional[str] = "groq"
     ai_api_key: Optional[str] = None
     ai_model: Optional[str] = "llama-3.1-70b-versatile"
@@ -162,15 +162,15 @@ class IntegrationSettingsRead(BaseModel):
     google_business_refresh_token: Optional[str] = None
     google_business_location_id: Optional[str] = None
     google_business_account_id: Optional[str] = None
-    google_hotel_ads_enabled: bool = False
+    google_hotel_ads_enabled: Optional[bool] = False
     google_hotel_center_id: Optional[str] = None
     google_ads_account_id: Optional[str] = None
     google_ads_last_ari_sync: Optional[datetime] = None
-    google_ads_status: str = "inactive"
+    google_ads_status: Optional[str] = "inactive"
     widget_custom_css: Optional[str] = ""
     widget_custom_js: Optional[str] = ""
-    widget_min_nights: int = 1
-    widget_advance_purchase_days: int = 0
+    widget_min_nights: Optional[int] = 1
+    widget_advance_purchase_days: Optional[int] = 0
     widget_room_type_filter: Optional[str] = None
 
 
