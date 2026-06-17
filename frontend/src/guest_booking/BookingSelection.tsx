@@ -451,16 +451,18 @@ export default function BookingSelection() {
     const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
 
     // Ref to the current fetchData so SSE can trigger a refresh without stale closures
-    const fetchDataRef = useRef<(() => void) | null>(null);
+    const fetchDataRef = useRef<((isBackgroundRefresh?: boolean) => void) | null>(null);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchData = async (isBackgroundRefresh = false) => {
             if (!hotelSlug || !checkIn || !checkOut) {
                 setIsLoading(false);
                 return;
             }
             try {
-                setIsLoading(true);
+                if (!isBackgroundRefresh) {
+                    setIsLoading(true);
+                }
                 setLoadError(false);
                 // Clear any cached checkout state if we are starting a fresh search
                 sessionStorage.removeItem(`checkout_state:${hotelSlug}`);
@@ -513,7 +515,9 @@ export default function BookingSelection() {
                 console.error('Failed to fetch data:', error);
                 setLoadError(true);
             } finally {
-                setIsLoading(false);
+                if (!isBackgroundRefresh) {
+                    setIsLoading(false);
+                }
             }
         };
         fetchDataRef.current = fetchData;
@@ -600,7 +604,7 @@ export default function BookingSelection() {
                 } else if (data.type === 'hotel_update') {
                     // Full refresh of hotel info, addons, and rooms (for metadata/amenities changes)
                     if (fetchDataRef.current) {
-                        fetchDataRef.current();
+                        fetchDataRef.current(true); // background refresh, no loading spinner
                     }
                     setCalendarRefreshTrigger(t => t + 1);
                 }
