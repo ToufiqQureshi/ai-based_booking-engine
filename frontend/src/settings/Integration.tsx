@@ -251,11 +251,11 @@ const IntegrationPage = () => {
                 </TabsContent>
 
                 <TabsContent value="search-widget" className="mt-0">
-                    {loadingWidget ? (
+                    {loadingSettings || loadingWidget ? (
                         <div className="flex items-center justify-center h-48">
                             <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
-                    ) : (
+                    ) : settings ? (
                         <SearchWidgetTab
                             settings={settings}
                             hotel={hotel}
@@ -269,6 +269,10 @@ const IntegrationPage = () => {
                             chainSlug={chainSlug || undefined}
                             chainName={chainName || undefined}
                         />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+                            <p>Failed to load settings. Please try refreshing the page.</p>
+                        </div>
                     )}
                 </TabsContent>
 
