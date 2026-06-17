@@ -53,7 +53,7 @@
         injectLoaderStyles();
 
         if (container) {
-            renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout);
+            renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout, primaryColor);
         } else {
             console.warn('Hotelier Widget: #hotelier-booking-widget container not found — booking bar skipped, chat widget only');
         }
@@ -106,7 +106,7 @@
         return skel;
     }
 
-    function renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout) {
+    function renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout, primaryColor) {
         if (container.getAttribute('data-hotelier-widget-ready') === '1') return;
         container.setAttribute('data-hotelier-widget-ready', '1');
 
