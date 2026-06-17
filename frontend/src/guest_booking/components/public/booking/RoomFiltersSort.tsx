@@ -19,9 +19,15 @@ interface RoomFiltersSortProps {
     setSelectedBedTypes: (bedTypes: string[]) => void;
     selectedPolicies: string[];
     setSelectedPolicies: (policies: string[]) => void;
+    selectedViews: string[];
+    setSelectedViews: (views: string[]) => void;
+    selectedCancellation: string[];
+    setSelectedCancellation: (cancels: string[]) => void;
     availableAmenities: string[];
     availableBedTypes: string[];
     availablePolicies: string[];
+    availableViews: string[];
+    availableCancellationTypes: string[];
     themeColor: string;
 }
 
@@ -42,9 +48,15 @@ export function RoomFiltersSort({
     setSelectedBedTypes,
     selectedPolicies,
     setSelectedPolicies,
+    selectedViews,
+    setSelectedViews,
+    selectedCancellation,
+    setSelectedCancellation,
     availableAmenities,
     availableBedTypes,
     availablePolicies,
+    availableViews,
+    availableCancellationTypes,
     themeColor,
 }: RoomFiltersSortProps) {
     return (
@@ -58,9 +70,9 @@ export function RoomFiltersSort({
                 >
                     <SlidersHorizontal className="w-4 h-4" />
                     Filters
-                    {(selectedMealPlans.length > 0 || priceRange[1] < 20000 || selectedAmenities.length > 0 || selectedBedTypes.length > 0 || selectedPolicies.length > 0) && (
+                    {(selectedMealPlans.length > 0 || priceRange[1] < 20000 || selectedAmenities.length > 0 || selectedBedTypes.length > 0 || selectedPolicies.length > 0 || selectedViews.length > 0 || selectedCancellation.length > 0) && (
                         <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center" style={{ backgroundColor: themeColor }}>
-                            {selectedMealPlans.length + (priceRange[1] < 20000 ? 1 : 0) + selectedAmenities.length + selectedBedTypes.length + selectedPolicies.length}
+                            {selectedMealPlans.length + (priceRange[1] < 20000 ? 1 : 0) + selectedAmenities.length + selectedBedTypes.length + selectedPolicies.length + selectedViews.length + selectedCancellation.length}
                         </span>
                     )}
                 </button>
@@ -120,6 +132,58 @@ export function RoomFiltersSort({
                                 ))}
                             </div>
                         </div>
+
+                        {/* Dynamic Cancellation Policy Filter */}
+                        {availableCancellationTypes.length > 0 && (
+                            <div className="pt-4 border-t border-slate-100">
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-3 block">Cancellation Policy</label>
+                                <div className="space-y-2">
+                                    {availableCancellationTypes.map(cType => (
+                                        <label key={cType} className="flex items-center gap-3 cursor-pointer group">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedCancellation.includes(cType)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedCancellation([...selectedCancellation, cType]);
+                                                    else setSelectedCancellation(selectedCancellation.filter(p => p !== cType));
+                                                }}
+                                                className="w-4 h-4 rounded border-slate-300 focus:ring-0"
+                                                style={{ accentColor: themeColor }}
+                                            />
+                                            <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
+                                                {cType}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Dynamic Room Views Filter */}
+                        {availableViews.length > 0 && (
+                            <div className="pt-4 border-t border-slate-100">
+                                <label className="text-xs font-bold text-slate-500 uppercase mb-3 block">Room View</label>
+                                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                    {availableViews.map(view => (
+                                        <label key={view} className="flex items-center gap-3 cursor-pointer group">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedViews.includes(view)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedViews([...selectedViews, view]);
+                                                    else setSelectedViews(selectedViews.filter(p => p !== view));
+                                                }}
+                                                className="w-4 h-4 rounded border-slate-300 focus:ring-0"
+                                                style={{ accentColor: themeColor }}
+                                            />
+                                            <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
+                                                {view}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Dynamic Bed Types Filter */}
                         {availableBedTypes.length > 0 && (
@@ -209,6 +273,8 @@ export function RoomFiltersSort({
                             setSelectedAmenities([]);
                             setSelectedBedTypes([]);
                             setSelectedPolicies([]);
+                            setSelectedViews([]);
+                            setSelectedCancellation([]);
                         }}
                     >
                         Reset All Filters

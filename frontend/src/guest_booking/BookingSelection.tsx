@@ -297,6 +297,8 @@ export default function BookingSelection() {
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
     const [selectedBedTypes, setSelectedBedTypes] = useState<string[]>([]);
     const [selectedPolicies, setSelectedPolicies] = useState<string[]>([]);
+    const [selectedViews, setSelectedViews] = useState<string[]>([]);
+    const [selectedCancellation, setSelectedCancellation] = useState<string[]>([]);
 
     const availableAmenities = useMemo(() => {
         const set = new Set<string>();
@@ -318,6 +320,23 @@ export default function BookingSelection() {
         return policies;
     }, [rooms]);
 
+    const availableViews = useMemo(() => {
+        const set = new Set<string>();
+        rooms.forEach(r => { if (r.view) set.add(r.view); });
+        return Array.from(set).sort();
+    }, [rooms]);
+
+    const availableCancellationTypes = useMemo(() => {
+        const set = new Set<string>();
+        rooms.forEach(r => {
+            (r.rate_options || []).forEach(o => {
+                if (o.is_refundable) set.add('Free Cancellation');
+                else set.add('Non-Refundable');
+            });
+        });
+        return Array.from(set).sort();
+    }, [rooms]);
+
     // Filtered rooms logic
     const filteredRooms = rooms
         .filter(room => {
@@ -333,6 +352,12 @@ export default function BookingSelection() {
             
             const matchesAmenities = selectedAmenities.length === 0 || selectedAmenities.every(sa => room.amenities?.some((a: any) => a.name === sa));
             const matchesBedType = selectedBedTypes.length === 0 || selectedBedTypes.includes(room.bed_type || '');
+            const matchesView = selectedViews.length === 0 || selectedViews.includes(room.view || '');
+            const matchesCancellation = selectedCancellation.length === 0 || selectedCancellation.some(sc => {
+                if (sc === 'Free Cancellation') return displayRates.some(o => o.is_refundable);
+                if (sc === 'Non-Refundable') return displayRates.some(o => !o.is_refundable);
+                return true;
+            });
             const matchesPolicies = selectedPolicies.length === 0 || selectedPolicies.every(sp => {
                 if (sp === 'Smoking Allowed') return room.smoking_allowed;
                 if (sp === 'Pet Friendly') return room.is_pet_friendly;
@@ -340,7 +365,7 @@ export default function BookingSelection() {
                 return true;
             });
 
-            return matchesPrice && matchesMeal && matchesAmenities && matchesBedType && matchesPolicies;
+            return matchesPrice && matchesMeal && matchesAmenities && matchesBedType && matchesView && matchesCancellation && matchesPolicies;
         })
         .sort((a, b) => {
             const getMinPrice = (r: any) => {
@@ -911,9 +936,15 @@ export default function BookingSelection() {
                             setSelectedBedTypes={setSelectedBedTypes}
                             selectedPolicies={selectedPolicies}
                             setSelectedPolicies={setSelectedPolicies}
+                            selectedViews={selectedViews}
+                            setSelectedViews={setSelectedViews}
+                            selectedCancellation={selectedCancellation}
+                            setSelectedCancellation={setSelectedCancellation}
                             availableAmenities={availableAmenities}
                             availableBedTypes={availableBedTypes}
                             availablePolicies={availablePolicies}
+                            availableViews={availableViews}
+                            availableCancellationTypes={availableCancellationTypes}
                             sortBy={sortBy}
                             setSortBy={setSortBy}
                             searchType={searchType}
