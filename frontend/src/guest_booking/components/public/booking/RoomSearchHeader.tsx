@@ -317,7 +317,7 @@ export function RoomSearchHeader({
                 </div>
             )}
 
-            <div className="flex flex-col lg:flex-row items-stretch gap-3 lg:gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4">
                 {/* Date Selector Popover (Check-In & Check-Out) */}
                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
@@ -533,7 +533,7 @@ export function RoomSearchHeader({
 
                 {/* Promo Input */}
                 {!isOta && (
-                    <div className="hidden lg:flex w-40 flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
+                    <div className="hidden md:flex w-40 flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
                         <input 
                             value={promoCode}
