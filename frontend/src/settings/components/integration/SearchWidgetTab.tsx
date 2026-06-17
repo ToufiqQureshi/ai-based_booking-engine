@@ -70,9 +70,9 @@ export const SearchWidgetTab = ({
     const { refreshHotel } = useAuth();
 
     const { data: rooms = [] } = useQuery<any[]>({
-        queryKey: ['rooms', hotel?.slug],
-        queryFn: () => apiClient.get(`/public/hotels/${hotel?.slug}/rooms`),
-        enabled: !!hotel?.slug,
+        queryKey: ['rooms', hotel?.id],
+        queryFn: () => apiClient.get('/rooms'),
+        enabled: !!hotel?.id,
     });
 
     useEffect(() => {
