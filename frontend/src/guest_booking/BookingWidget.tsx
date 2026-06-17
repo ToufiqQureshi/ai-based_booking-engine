@@ -111,13 +111,17 @@ export default function BookingWidget() {
             .catch(err => console.error("Failed to fetch rooms for widget price:", err));
     }, [hotelSlug, refreshTrigger]);
 
-    // Ensure iframe body is transparent
+    // Ensure iframe body is transparent and hide scrollbars
     useEffect(() => {
         document.body.style.backgroundColor = 'transparent';
         document.documentElement.style.backgroundColor = 'transparent';
+        document.body.style.overflowY = 'hidden';
+        document.documentElement.style.overflowY = 'hidden';
         return () => {
             document.body.style.backgroundColor = '';
             document.documentElement.style.backgroundColor = '';
+            document.body.style.overflowY = '';
+            document.documentElement.style.overflowY = '';
         };
     }, []);
 
@@ -221,7 +225,7 @@ export default function BookingWidget() {
             const mainContainer = widgetEl ? Array.from(widgetEl.children).find(c => c.tagName !== 'STYLE') : null;
             
             const baseHeight = mainContainer
-                ? mainContainer.getBoundingClientRect().height
+                ? mainContainer.getBoundingClientRect().height + 48 // +48px for box-shadow & bottom margins
                 : document.body.scrollHeight;
 
             let overlayHeight = baseHeight;
