@@ -134,7 +134,7 @@
         var skeleton = buildSkeleton(barHeight);
 
         var iframe = document.createElement('iframe');
-        iframe.src = frontendUrl + '/book/' + encodeURIComponent(hotelSlug) + '/widget?preview_layout=' + encodeURIComponent(widgetLayout);
+        iframe.src = frontendUrl + '/book/' + encodeURIComponent(hotelSlug) + '/widget?preview_layout=' + encodeURIComponent(widgetLayout) + '&preview_primary_color=' + encodeURIComponent(primaryColor || '');
         iframe.title = 'Hotel Booking Search';
         iframe.loading = 'eager';
         iframe.setAttribute('fetchpriority', 'high');

@@ -240,9 +240,9 @@ export default function BookingWidget() {
         });
     };
 
-    // Ready + height reporting (config render hone ke baad)
+    // Ready + height reporting
     useEffect(() => {
-        if (window.parent === window || config === null) return;
+        if (window.parent === window) return;
         window.parent.postMessage({ type: 'WIDGET_READY' }, PARENT_ORIGIN);
         const raf = requestAnimationFrame(postHeight);
         const ro = new ResizeObserver(() => requestAnimationFrame(postHeight));
@@ -519,9 +519,7 @@ export default function BookingWidget() {
 
     const layoutStyle = urlParams.get('preview_layout') || config?.widget_layout || 'modern';
 
-    if (config === null) {
-        return null; // Prevents flashing of default layout before config is fetched
-    }
+    // Removed config === null check to allow instant paint (solves the 5-second blank delay)
 
     const stateBag = {
         config, setConfig, startingPrice, setStartingPrice, checkInDate, setCheckInDate,
