@@ -148,9 +148,10 @@
             'sandbox',
             'allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation'
         );
+        iframe.scrolling = 'no';
         iframe.style.cssText =
             'position:absolute;top:0;left:0;width:100%;height:' + barHeight + 'px;' +
-            'border:none;z-index:9999;background:transparent;color-scheme:normal;' +
+            'border:none;z-index:9999;background:transparent;color-scheme:normal;overflow:hidden;' +
             'opacity:0;transition:opacity .3s ease,height .2s ease;';
 
         container.innerHTML = '';
