@@ -139,17 +139,17 @@ class APIKeyWithSecret(APIKeyRead):
 class IntegrationSettingsRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     hotel_id: str
-    widget_enabled: bool
-    widget_theme: str
-    widget_primary_color: str
-    widget_background_color: str
-    widget_position: str
+    widget_enabled: Optional[bool] = True
+    widget_theme: Optional[str] = "light"
+    widget_primary_color: Optional[str] = "#7C3AED"
+    widget_background_color: Optional[str] = "#FFFFFF"
+    widget_position: Optional[str] = "bottom-right"
     widget_layout: Optional[str] = "modern"
     widget_logo_url: Optional[str] = None
-    allowed_domains: str
-    cors_enabled: bool
-    webhook_url: Optional[str]
-    webhook_events: str
+    allowed_domains: Optional[str] = ""
+    cors_enabled: Optional[bool] = True
+    webhook_url: Optional[str] = None
+    webhook_events: Optional[str] = "booking.created,booking.cancelled"
     rate_limit_per_hour: Optional[int] = 1000
     require_https: Optional[bool] = True
     ai_provider: Optional[str] = "groq"
