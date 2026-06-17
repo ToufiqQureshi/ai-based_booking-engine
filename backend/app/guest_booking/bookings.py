@@ -411,6 +411,7 @@ async def create_public_booking(
                     )
                 )).scalars().all()
                 if nights_booked >= o.min_nights
+                and (getattr(o, "apply_mode", "auto") != "manual_claim" or o.id in booking_data.claimed_offer_ids)
             ]
             best_offer_discount = 0.0
             for o in candidate_offers:

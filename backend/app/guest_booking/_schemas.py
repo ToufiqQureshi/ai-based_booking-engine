@@ -69,6 +69,7 @@ class PublicBookingCreate(BaseModel):
     # "ai_agent" when the guest arrived via an AI-concierge booking link
     source: Optional[str] = None
     redeem_points: Optional[float] = None
+    claimed_offer_ids: List[str] = []
 
 
 class PublicBookingResponse(BaseModel):

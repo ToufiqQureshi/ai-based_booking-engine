@@ -292,6 +292,80 @@ class TestSeasonalAutoApply:
                 await session.delete(o)
             await session.commit()
 
+    async def test_stay_offer_manual_claim_requires_claim(self, client: AsyncClient, seeded_hotel: Hotel):
+        """A manual_claim stay offer should only apply if its ID is included in claimed_offer_ids."""
+        from tests.conftest import engine
+        from app.loyalty.loyalty_model import LoyaltyOffer
+
+        room_type = RoomType(
+            id=str(uuid.uuid4()),
+            hotel_id=seeded_hotel.id,
+            name="Manual Offer Room",
+            base_price=1000.0,
+            total_inventory=5,
+            base_occupancy=2,
+            max_occupancy=3,
+        )
+        offer_id = str(uuid.uuid4())
+        offer = LoyaltyOffer(
+            id=offer_id,
+            hotel_id=seeded_hotel.id,
+            room_type_id=room_type.id,
+            is_active=True,
+            title="Stay 3, Save 10%",
+            min_nights=3,
+            reward_type="percentage",
+            reward_value=10.0,
+            apply_mode="manual_claim",
+        )
+        async with AsyncSession(engine) as session:
+            session.add(room_type)
+            session.add(offer)
+            await session.commit()
+            await session.refresh(room_type)
+
+        from app.core.utils.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            # First request: NOT claiming the offer -> No discount
+            r1 = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(55), "check_out": _future(58),
+                "guest": {"first_name": "No", "last_name": "Claim", "email": "no@claim.com", "phone": "999"},
+                "rooms": [{
+                    "room_type_id": room_type.id,
+                    "room_type_name": room_type.name,
+                    "price_per_night": 1000.0,
+                    "total_price": 3000.0,
+                }],
+                "payment_method": "pay_at_property",
+            })
+            assert r1.status_code == 200
+            assert r1.json()["discount_amount"] == 0.0
+
+            # Second request: claiming the offer -> Discount applied
+            r2 = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(60), "check_out": _future(63),
+                "guest": {"first_name": "Yes", "last_name": "Claim", "email": "yes@claim.com", "phone": "999"},
+                "rooms": [{
+                    "room_type_id": room_type.id,
+                    "room_type_name": room_type.name,
+                    "price_per_night": 1000.0,
+                    "total_price": 3000.0,
+                }],
+                "claimed_offer_ids": [offer_id],
+                "payment_method": "pay_at_property",
+            })
+            assert r2.status_code == 200
+            assert r2.json()["discount_amount"] == pytest.approx(300.0)
+        finally:
+            limiter.enabled = prev_enabled
+            async with AsyncSession(engine) as session:
+                o = await session.get(LoyaltyOffer, offer_id)
+                if o:
+                    await session.delete(o)
+                await session.commit()
+
     async def test_stay_offer_not_applied_below_min_nights(self, client: AsyncClient, seeded_hotel: Hotel):
         """No discount when the booked nights are below the offer's min_nights."""
         from tests.conftest import engine

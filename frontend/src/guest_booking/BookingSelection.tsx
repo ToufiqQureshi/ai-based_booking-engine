@@ -783,7 +783,8 @@ export default function BookingSelection() {
                 addons: selectedAddons,
                 guest_prefill: isLoyaltyChecked ? {
                     email: loyaltyEmail
-                } : undefined
+                } : undefined,
+                claimedOffers: Array.from(claimedOffers)
             }
         });
     };

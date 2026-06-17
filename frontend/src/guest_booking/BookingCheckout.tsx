@@ -57,6 +57,7 @@ interface BookingState {
     totalRoomPrice: number;
     addons?: AddOn[];
     source?: string; // 'ai_agent' when the checkout was launched from an AI-concierge booking link
+    claimedOffers?: string[];
 }
 interface CheckoutFormData {
     firstName: string;
@@ -446,6 +447,7 @@ function BookingCheckoutInner() {
                 source: state.source === 'ai_agent' ? 'ai_agent' : undefined,
                 idempotency_key: idempotencyKeyRef.current,
                 redeem_points: redeemPointsActive ? redeemPointsAmount : undefined,
+                claimed_offer_ids: state.claimedOffers || [],
             };
 
             // Fetch a short-lived anti-automation token to send with the booking.
