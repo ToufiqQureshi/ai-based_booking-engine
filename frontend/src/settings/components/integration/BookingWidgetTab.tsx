@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { PremiumLockNotice } from '@/settings/components/integration/PremiumLockNotice';
 import { Loader2, Code2, Paintbrush, Save } from 'lucide-react';
 

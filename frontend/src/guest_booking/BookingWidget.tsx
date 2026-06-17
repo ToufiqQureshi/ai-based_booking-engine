@@ -73,7 +73,7 @@ export default function BookingWidget() {
         const checkInStr = format(new Date(), 'yyyy-MM-dd');
         const checkOutStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
         Promise.all([
-            fetch(`${API_BASE_URL}/public/hotels/slug/${hotelSlug}/widget-config`).then(res => res.ok ? res.json() : {}),
+            fetch(`${API_BASE_URL}/public/hotels/slug/${hotelSlug}/widget-config`).then(res => res.ok ? res.json() : {} as any),
             fetch(`${API_BASE_URL}/public/hotels/${hotelSlug}/rooms?check_in=${checkInStr}&check_out=${checkOutStr}`).then(res => res.ok ? res.json() : [])
         ]).then(([configData, rooms]) => {
             setConfig(configData);
