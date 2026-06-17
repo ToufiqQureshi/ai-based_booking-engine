@@ -28,8 +28,15 @@ async def rate_update_stream(hotel_id: str, request: Request):
     Sends a heartbeat every 30s to keep the connection alive through proxies.
     """
     async def event_generator():
-        last_rate_version = redis_client.get_value(f"rate_version:{hotel_id}") or "0"
-        last_hotel_version = redis_client.get_value(f"hotel_version:{hotel_id}") or "0"
+        # redis_client is a synchronous (blocking) client. Calling it directly
+        # inside this async generator would freeze the whole worker's event
+        # loop for every poll tick — and with many concurrent SSE connections
+        # (one per open widget/booking page) all polling every 2s, a single
+        # Redis blip stalls every other request on the worker (e.g. the
+        # QueuePool timeouts on /api/v1/users/me seen when Redis DNS flaked).
+        # Run each call in a thread so a slow/down Redis can't block the loop.
+        last_rate_version = await asyncio.to_thread(redis_client.get_value, f"rate_version:{hotel_id}") or "0"
+        last_hotel_version = await asyncio.to_thread(redis_client.get_value, f"hotel_version:{hotel_id}") or "0"
         yield f"data: {json.dumps({'type': 'connected', 'version': last_rate_version, 'hotel_version': last_hotel_version})}\n\n"
 
         started_at = time.monotonic()
@@ -42,14 +49,14 @@ async def rate_update_stream(hotel_id: str, request: Request):
                 break
 
             try:
-                current_rate_version = redis_client.get_value(f"rate_version:{hotel_id}") or "0"
-                current_hotel_version = redis_client.get_value(f"hotel_version:{hotel_id}") or "0"
-                
+                current_rate_version = await asyncio.to_thread(redis_client.get_value, f"rate_version:{hotel_id}") or "0"
+                current_hotel_version = await asyncio.to_thread(redis_client.get_value, f"hotel_version:{hotel_id}") or "0"
+
                 did_yield = False
 
                 if current_rate_version != last_rate_version:
                     last_rate_version = current_rate_version
-                    changed = redis_client.get_value(f"rate_changed_room:{hotel_id}")
+                    changed = await asyncio.to_thread(redis_client.get_value, f"rate_changed_room:{hotel_id}")
                     room_type_ids = None if (not changed or changed == "ALL") else [changed]
                     yield f"data: {json.dumps({'type': 'rate_update', 'hotel_id': hotel_id, 'version': current_rate_version, 'room_type_ids': room_type_ids})}\n\n"
                     did_yield = True
