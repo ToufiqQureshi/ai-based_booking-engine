@@ -10,6 +10,11 @@ import { cn } from '@/core/lib/utils';
 import { ChainWidgetTab } from '@/settings/components/integration/ChainWidgetTab';
 import { PremiumLockNotice } from '@/settings/components/integration/PremiumLockNotice';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/core/api/client';
+import { useAuth } from '@/core/contexts/AuthContext';
+import { useToast } from '@/core/hooks/use-toast';
 
 interface IntegrationSettings {
     widget_enabled: boolean;
@@ -60,6 +65,15 @@ export const SearchWidgetTab = ({
     const [previewHeight, setPreviewHeight] = useState(160);
     const isChainUser = !!chainSlug;
     const [widgetMode, setWidgetMode] = useState<'single' | 'chain'>('single');
+    const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+    const { toast } = useToast();
+    const { refreshHotel } = useAuth();
+
+    const { data: rooms = [] } = useQuery<any[]>({
+        queryKey: ['rooms', hotel?.slug],
+        queryFn: () => apiClient.get(`/public/hotels/${hotel?.slug}/rooms`),
+        enabled: !!hotel?.slug,
+    });
 
     useEffect(() => {
         const handleResize = (event: MessageEvent) => {
@@ -284,6 +298,67 @@ export const SearchWidgetTab = ({
                         </details>
 
 
+
+                        {/* Starting Price & Multi-Room Options */}
+                        <div className="pt-4 border-t space-y-4">
+                            <Label className="text-sm font-semibold block">Pricing & Cart Features</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Calendar Baseline Room</Label>
+                                    <p className="text-[11px] text-muted-foreground">Select which room dictates the prices shown on your public booking widget calendar.</p>
+                                    <Select
+                                        value={hotel?.settings?.featured_room_type_id || 'lowest'}
+                                        onValueChange={async (val) => {
+                                            setIsUpdatingSettings(true);
+                                            try {
+                                                const payload = { settings: { ...hotel.settings, featured_room_type_id: val === 'lowest' ? '' : val } };
+                                                await apiClient.patch('/hotels/me', payload);
+                                                await refreshHotel();
+                                                toast({ title: 'Settings Updated', description: 'Calendar baseline room updated successfully.' });
+                                            } catch (error) {
+                                                toast({ variant: 'destructive', title: 'Error', description: 'Failed to update calendar baseline room.' });
+                                            } finally {
+                                                setIsUpdatingSettings(false);
+                                            }
+                                        }}
+                                        disabled={isUpdatingSettings}
+                                    >
+                                        <SelectTrigger className="w-full bg-background border-input">
+                                            <SelectValue placeholder="Select room category..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="lowest">Dynamic Lowest Price (Automatic)</SelectItem>
+                                            {rooms.map(r => (
+                                                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Multi-Room Cart Bar</Label>
+                                    <p className="text-[11px] text-muted-foreground">Allow guests to select and combine multiple room types in a floating cart.</p>
+                                    <div className="flex items-center mt-2">
+                                        <Switch
+                                            checked={hotel?.settings?.multi_room_cart !== false}
+                                            onCheckedChange={async (checked) => {
+                                                setIsUpdatingSettings(true);
+                                                try {
+                                                    const payload = { settings: { ...hotel.settings, multi_room_cart: checked } };
+                                                    await apiClient.patch('/hotels/me', payload);
+                                                    await refreshHotel();
+                                                    toast({ title: 'Settings Updated', description: 'Multi-room cart updated.' });
+                                                } catch (error) {
+                                                    toast({ variant: 'destructive', title: 'Error', description: 'Update failed.' });
+                                                } finally {
+                                                    setIsUpdatingSettings(false);
+                                                }
+                                            }}
+                                            disabled={isUpdatingSettings}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Booking Constraints — operational settings, no premium gate */}
                         <div className="pt-4 border-t space-y-4">

@@ -387,60 +387,6 @@ export function BrandingTab({ formData, handleUpdate, handleSave, isSaving, setI
               </CardContent>
             </Card>
 
-            <Card className="mt-6 border-indigo-100 shadow-sm">
-              <CardHeader className="bg-indigo-50/50 rounded-t-xl pb-4">
-                <CardTitle className="flex items-center gap-2 text-indigo-950">
-                  <ShoppingBag className="w-5 h-5 text-indigo-600" />
-                  STAAH Multi-Room & Starting Price Engine
-                </CardTitle>
-                <CardDescription className="text-indigo-900/70">
-                  Enable OTA-like multi-room cart selection and configure starting rate highlight on the public booking engine.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border">
-                  <div className="space-y-0.5">
-                    <Label className="text-base font-bold text-foreground">Multi-Room Cart Bar</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Allow guests to select and combine multiple room types (e.g. Deluxe + Executive) in a persistent floating cart.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.settings.multi_room_cart !== false}
-                    onCheckedChange={(checked) => handleUpdate('settings', 'multi_room_cart', checked)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="featuredRoom" className="text-foreground font-bold">Featured Category for Starting Price Display</Label>
-                  <Select
-                    value={formData.settings.featured_room_type_id || ''}
-                    onValueChange={(val) => handleUpdate('settings', 'featured_room_type_id', val)}
-                  >
-                    <SelectTrigger className="w-full bg-background">
-                      <SelectValue placeholder="Select room category to highlight..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lowest">Dynamic Lowest Price (Automatic)</SelectItem>
-                      {rooms.map(r => (
-                        <SelectItem key={r.id} value={r.id}>{r.name} - ({r.base_price ? `₹${r.base_price}/night` : 'Custom Rates'})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    If set, the public booking calendar and top header will highlight starting prices from this specific room category. Otherwise, it defaults to the lowest available rate.
-                  </p>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button onClick={handleSave} disabled={isSaving} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save Booking Engine Settings
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             <SocialProofEditor hotelId={hotel?.id} />
           </TabsContent>
 

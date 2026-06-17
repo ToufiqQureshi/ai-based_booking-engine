@@ -706,7 +706,7 @@ export default function BookingSelection() {
         return Math.min(...(startingRoom.rate_options || []).map(o => o.price_per_night));
     })();
 
-    if (isLoading) {
+    if (isLoading && !hotel) {
         return (
             <div className="flex flex-col items-center justify-center p-20 min-h-[600px] bg-slate-50">
                 <BookingStepper currentStep={2} />
@@ -1125,6 +1125,7 @@ export default function BookingSelection() {
                                                 setIsModalOpen={setIsModalOpen}
                                                 getImageUrl={getImageUrl}
                                                 isRefreshing={
+                                                    isLoading ||
                                                     refreshingRoomIds.has(room.id) ||
                                                     refreshingRoomIds.has('__ALL__')
                                                 }
