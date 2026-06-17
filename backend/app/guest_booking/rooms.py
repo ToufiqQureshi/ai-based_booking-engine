@@ -530,6 +530,13 @@ async def get_calendar_availability(
     last_day = cal_mod.monthrange(year, mon)[1]
     end_date = date(year, mon, last_day)
 
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        return {}
+    featured_room_id = hotel.settings.get("featured_room_type_id") if hotel.settings else None
+    if featured_room_id == "lowest":
+        featured_room_id = None
+
     # 1. Room types
     room_types = (await session.execute(
         select(RoomType).where(RoomType.hotel_id == hotel_id, RoomType.is_active == True)
@@ -602,14 +609,27 @@ async def get_calendar_availability(
     curr = start_date
     while curr <= end_date:
         day_min_price: float | None = None
+        fallback_min_price: float | None = None
         day_available = False
         for rt in room_types:
             avail = rt.total_inventory - booked[(rt.id, curr)] - blocked[(rt.id, curr)]
             if avail > 0:
                 day_available = True
                 price = rate_override.get((rt.id, curr), float(rt.base_price))
-                if day_min_price is None or price < day_min_price:
+                
+                # Keep track of absolute lowest price as fallback
+                if fallback_min_price is None or price < fallback_min_price:
+                    fallback_min_price = price
+                    
+                if featured_room_id and rt.id == featured_room_id:
                     day_min_price = price
+                elif not featured_room_id:
+                    if day_min_price is None or price < day_min_price:
+                        day_min_price = price
+                        
+        if day_available and day_min_price is None:
+            day_min_price = fallback_min_price
+            
         result[curr.isoformat()] = {"min_price": day_min_price, "available": day_available}
         curr += timedelta(days=1)
 

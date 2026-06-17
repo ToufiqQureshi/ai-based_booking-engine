@@ -16,10 +16,13 @@ class Settings(BaseSettings):
 
     # Connection pool sizing (per worker). Keep
     # DB_POOL_SIZE * WEB_CONCURRENCY * replicas <= Supabase connection limit.
-    DB_POOL_SIZE: int = 5
-    DB_MAX_OVERFLOW: int = 5
-    DB_POOL_RECYCLE: int = 300
-    DB_POOL_TIMEOUT: int = 30
+    # With WEB_CONCURRENCY=2 (default): 2 workers × (3 + 2) = 10 connections max.
+    # Supabase free tier allows 60 direct connections — this stays well within.
+    # Increase DB_POOL_SIZE in Railway env vars if you scale to more workers.
+    DB_POOL_SIZE: int = 3
+    DB_MAX_OVERFLOW: int = 2
+    DB_POOL_RECYCLE: int = 1800   # recycle idle connections every 30 min
+    DB_POOL_TIMEOUT: int = 10     # fail fast (was 30s) so requests don't pile up
 
     # Background scheduler (APScheduler). Runs periodic jobs (social-proof
     # refresh, subscription-expiry) guarded by a Redis lock so only one

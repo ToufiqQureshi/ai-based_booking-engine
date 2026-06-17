@@ -237,6 +237,7 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         "min_nights": getattr(settings, 'widget_min_nights', 1) if settings else 1,
         "advance_purchase_days": getattr(settings, 'widget_advance_purchase_days', 0) if settings else 0,
         "room_type_filter": getattr(settings, 'widget_room_type_filter', None) if settings else None,
+        "featured_room_type_id": hotel.settings.get("featured_room_type_id") if hotel.settings else None,
     }
 
     return res_dict

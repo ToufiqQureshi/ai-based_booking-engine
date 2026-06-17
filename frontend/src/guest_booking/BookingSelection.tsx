@@ -400,6 +400,8 @@ export default function BookingSelection() {
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
     const [selectedBedTypes, setSelectedBedTypes] = useState<string[]>([]);
     const [selectedPolicies, setSelectedPolicies] = useState<string[]>([]);
+    const [selectedViews, setSelectedViews] = useState<string[]>([]);
+    const [selectedCancellation, setSelectedCancellation] = useState<string[]>([]);
 
     const availableAmenities = useMemo(() => {
         const set = new Set<string>();
@@ -421,6 +423,23 @@ export default function BookingSelection() {
         return policies;
     }, [rooms]);
 
+    const availableViews = useMemo(() => {
+        const set = new Set<string>();
+        rooms.forEach(r => { if (r.view) set.add(r.view); });
+        return Array.from(set).sort();
+    }, [rooms]);
+
+    const availableCancellationTypes = useMemo(() => {
+        const set = new Set<string>();
+        rooms.forEach(r => {
+            (r.rate_options || []).forEach(o => {
+                if (o.is_refundable) set.add('Free Cancellation');
+                else set.add('Non-Refundable');
+            });
+        });
+        return Array.from(set).sort();
+    }, [rooms]);
+
     // Filtered rooms logic
     const filteredRooms = rooms
         .filter(room => {
@@ -436,6 +455,12 @@ export default function BookingSelection() {
             
             const matchesAmenities = selectedAmenities.length === 0 || selectedAmenities.every(sa => room.amenities?.some((a: any) => a.name === sa));
             const matchesBedType = selectedBedTypes.length === 0 || selectedBedTypes.includes(room.bed_type || '');
+            const matchesView = selectedViews.length === 0 || selectedViews.includes(room.view || '');
+            const matchesCancellation = selectedCancellation.length === 0 || selectedCancellation.some(sc => {
+                if (sc === 'Free Cancellation') return displayRates.some(o => o.is_refundable);
+                if (sc === 'Non-Refundable') return displayRates.some(o => !o.is_refundable);
+                return true;
+            });
             const matchesPolicies = selectedPolicies.length === 0 || selectedPolicies.every(sp => {
                 if (sp === 'Smoking Allowed') return room.smoking_allowed;
                 if (sp === 'Pet Friendly') return room.is_pet_friendly;
@@ -443,7 +468,7 @@ export default function BookingSelection() {
                 return true;
             });
 
-            return matchesPrice && matchesMeal && matchesAmenities && matchesBedType && matchesPolicies;
+            return matchesPrice && matchesMeal && matchesAmenities && matchesBedType && matchesView && matchesCancellation && matchesPolicies;
         })
         .sort((a, b) => {
             const getMinPrice = (r: any) => {
@@ -529,16 +554,18 @@ export default function BookingSelection() {
     const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
 
     // Ref to the current fetchData so SSE can trigger a refresh without stale closures
-    const fetchDataRef = useRef<(() => void) | null>(null);
+    const fetchDataRef = useRef<((isBackgroundRefresh?: boolean) => void) | null>(null);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchData = async (isBackgroundRefresh = false) => {
             if (!hotelSlug || !checkIn || !checkOut) {
                 setIsLoading(false);
                 return;
             }
             try {
-                setIsLoading(true);
+                if (!isBackgroundRefresh) {
+                    setIsLoading(true);
+                }
                 setLoadError(false);
                 // Clear any cached checkout state if we are starting a fresh search
                 sessionStorage.removeItem(`checkout_state:${hotelSlug}`);
@@ -591,7 +618,9 @@ export default function BookingSelection() {
                 console.error('Failed to fetch data:', error);
                 setLoadError(true);
             } finally {
-                setIsLoading(false);
+                if (!isBackgroundRefresh) {
+                    setIsLoading(false);
+                }
             }
         };
         fetchDataRef.current = fetchData;
@@ -678,7 +707,7 @@ export default function BookingSelection() {
                 } else if (data.type === 'hotel_update') {
                     // Full refresh of hotel info, addons, and rooms (for metadata/amenities changes)
                     if (fetchDataRef.current) {
-                        fetchDataRef.current();
+                        fetchDataRef.current(true); // background refresh, no loading spinner
                     }
                     setCalendarRefreshTrigger(t => t + 1);
                 }
@@ -784,7 +813,7 @@ export default function BookingSelection() {
         return Math.min(...(startingRoom.rate_options || []).map(o => o.price_per_night));
     })();
 
-    if (isLoading) {
+    if (isLoading && !hotel) {
         return (
             <div className="flex flex-col items-center justify-center p-20 min-h-[600px] bg-slate-50">
                 <BookingStepper currentStep={2} />
@@ -1014,9 +1043,15 @@ export default function BookingSelection() {
                             setSelectedBedTypes={setSelectedBedTypes}
                             selectedPolicies={selectedPolicies}
                             setSelectedPolicies={setSelectedPolicies}
+                            selectedViews={selectedViews}
+                            setSelectedViews={setSelectedViews}
+                            selectedCancellation={selectedCancellation}
+                            setSelectedCancellation={setSelectedCancellation}
                             availableAmenities={availableAmenities}
                             availableBedTypes={availableBedTypes}
                             availablePolicies={availablePolicies}
+                            availableViews={availableViews}
+                            availableCancellationTypes={availableCancellationTypes}
                             sortBy={sortBy}
                             setSortBy={setSortBy}
                             searchType={searchType}
@@ -1197,6 +1232,7 @@ export default function BookingSelection() {
                                                 setIsModalOpen={setIsModalOpen}
                                                 getImageUrl={getImageUrl}
                                                 isRefreshing={
+                                                    isLoading ||
                                                     refreshingRoomIds.has(room.id) ||
                                                     refreshingRoomIds.has('__ALL__')
                                                 }

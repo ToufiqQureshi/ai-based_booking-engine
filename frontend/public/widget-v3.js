@@ -53,7 +53,7 @@
         injectLoaderStyles();
 
         if (container) {
-            renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout);
+            renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout, primaryColor);
         } else {
             console.warn('Hotelier Widget: #hotelier-booking-widget container not found — booking bar skipped, chat widget only');
         }
@@ -106,7 +106,7 @@
         return skel;
     }
 
-    function renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout) {
+    function renderWidget(container, hotelSlug, frontendUrl, widgetOrigin, widgetLayout, primaryColor) {
         if (container.getAttribute('data-hotelier-widget-ready') === '1') return;
         container.setAttribute('data-hotelier-widget-ready', '1');
 
@@ -134,7 +134,7 @@
         var skeleton = buildSkeleton(barHeight);
 
         var iframe = document.createElement('iframe');
-        iframe.src = frontendUrl + '/book/' + encodeURIComponent(hotelSlug) + '/widget?preview_layout=' + encodeURIComponent(widgetLayout);
+        iframe.src = frontendUrl + '/book/' + encodeURIComponent(hotelSlug) + '/widget?preview_layout=' + encodeURIComponent(widgetLayout) + '&preview_primary_color=' + encodeURIComponent(primaryColor || '');
         iframe.title = 'Hotel Booking Search';
         iframe.loading = 'eager';
         iframe.setAttribute('fetchpriority', 'high');
@@ -148,9 +148,10 @@
             'sandbox',
             'allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation'
         );
+        iframe.scrolling = 'no';
         iframe.style.cssText =
             'position:absolute;top:0;left:0;width:100%;height:' + barHeight + 'px;' +
-            'border:none;z-index:9999;background:transparent;color-scheme:normal;' +
+            'border:none;z-index:9999;background:transparent;color-scheme:normal;overflow:hidden;' +
             'opacity:0;transition:opacity .3s ease,height .2s ease;';
 
         container.innerHTML = '';

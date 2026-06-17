@@ -69,55 +69,66 @@ export default function BookingWidget() {
     useEffect(() => {
         if (!hotelSlug) return;
 
-        // Fetch config
-        fetch(`${API_BASE_URL}/public/hotels/slug/${hotelSlug}/widget-config`)
-            .then(res => {
-                if (res.ok) return res.json();
-                throw new Error("Failed to fetch config");
-            })
-            .then(data => setConfig(data))
-            .catch(() => {
-                setConfig({}); // Fallback to empty object to allow default settings rendering
-            });
-
-        // Fetch rooms to calculate live starting price and extract room types for filter dropdown
+        // Fetch config and rooms in parallel
         const checkInStr = format(new Date(), 'yyyy-MM-dd');
         const checkOutStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
-        fetch(`${API_BASE_URL}/public/hotels/${hotelSlug}/rooms?check_in=${checkInStr}&check_out=${checkOutStr}`)
-            .then(res => res.ok ? res.json() : [])
-            .then((rooms: any[]) => {
-                if (rooms && rooms.length > 0) {
-                    let lowest = Infinity;
-                    rooms.forEach(r => {
+        Promise.all([
+            fetch(`${API_BASE_URL}/public/hotels/slug/${hotelSlug}/widget-config`).then(res => res.ok ? res.json() : {} as any),
+            fetch(`${API_BASE_URL}/public/hotels/${hotelSlug}/rooms?check_in=${checkInStr}&check_out=${checkOutStr}`).then(res => res.ok ? res.json() : [])
+        ]).then(([configData, rooms]) => {
+            setConfig(configData);
+            
+            if (rooms && rooms.length > 0) {
+                let lowest = Infinity;
+                const featuredRoomId = configData.featured_room_type_id;
+                const featuredRoom = featuredRoomId && featuredRoomId !== 'lowest' 
+                    ? rooms.find((r: any) => r.id === featuredRoomId) 
+                    : null;
+                    
+                if (featuredRoom) {
+                    featuredRoom.rate_options?.forEach((o: any) => {
+                        if (o.price_per_night < lowest) lowest = o.price_per_night;
+                    });
+                } else {
+                    rooms.forEach((r: any) => {
                         r.rate_options?.forEach((o: any) => {
                             if (o.price_per_night < lowest) lowest = o.price_per_night;
                         });
                     });
-                    if (lowest !== Infinity && lowest > 0) {
-                        setStartingPrice(lowest);
-                    }
-                    // Extract unique room types for the filter dropdown
-                    const seen = new Set<string>();
-                    const types: Array<{ id: string; name: string }> = [];
-                    rooms.forEach(r => {
-                        if (r.id && r.name && !seen.has(r.id)) {
-                            seen.add(r.id);
-                            types.push({ id: r.id, name: r.name });
-                        }
-                    });
-                    setRoomTypes(types);
                 }
-            })
-            .catch(err => console.error("Failed to fetch rooms for widget price:", err));
+                
+                if (lowest !== Infinity && lowest > 0) {
+                    setStartingPrice(lowest);
+                }
+                
+                // Extract unique room types for the filter dropdown
+                const seen = new Set<string>();
+                const types: Array<{ id: string; name: string }> = [];
+                rooms.forEach((r: any) => {
+                    if (r.id && r.name && !seen.has(r.id)) {
+                        seen.add(r.id);
+                        types.push({ id: r.id, name: r.name });
+                    }
+                });
+                setRoomTypes(types);
+            }
+        }).catch(err => {
+            console.error("Failed to fetch widget data:", err);
+            setConfig({});
+        });
     }, [hotelSlug, refreshTrigger]);
 
-    // Ensure iframe body is transparent
+    // Ensure iframe body is transparent and hide scrollbars
     useEffect(() => {
         document.body.style.backgroundColor = 'transparent';
         document.documentElement.style.backgroundColor = 'transparent';
+        document.body.style.overflowY = 'hidden';
+        document.documentElement.style.overflowY = 'hidden';
         return () => {
             document.body.style.backgroundColor = '';
             document.documentElement.style.backgroundColor = '';
+            document.body.style.overflowY = '';
+            document.documentElement.style.overflowY = '';
         };
     }, []);
 
@@ -215,9 +226,13 @@ export default function BookingWidget() {
         if (window.parent === window) return;
         cancelAnimationFrame(postHeightRafRef.current);
         postHeightRafRef.current = requestAnimationFrame(() => {
-            const mainContainer = document.getElementById('widget-main-container');
+            const widgetEl = document.getElementById('widget-main-container');
+            // We must find the actual visual container (e.g. RoomSearchHeader or FARWidget)
+            // because the <style> tags injected above have a height of 0.
+            const mainContainer = widgetEl ? Array.from(widgetEl.children).find(c => c.tagName !== 'STYLE') : null;
+            
             const baseHeight = mainContainer
-                ? mainContainer.getBoundingClientRect().height
+                ? mainContainer.getBoundingClientRect().height + 48 // +48px for box-shadow & bottom margins
                 : document.body.scrollHeight;
 
             let overlayHeight = baseHeight;
@@ -240,9 +255,9 @@ export default function BookingWidget() {
         });
     };
 
-    // Ready + height reporting (config render hone ke baad)
+    // Ready + height reporting
     useEffect(() => {
-        if (window.parent === window || config === null) return;
+        if (window.parent === window) return;
         window.parent.postMessage({ type: 'WIDGET_READY' }, PARENT_ORIGIN);
         const raf = requestAnimationFrame(postHeight);
         const ro = new ResizeObserver(() => requestAnimationFrame(postHeight));
@@ -519,9 +534,7 @@ export default function BookingWidget() {
 
     const layoutStyle = urlParams.get('preview_layout') || config?.widget_layout || 'modern';
 
-    if (config === null) {
-        return null; // Prevents flashing of default layout before config is fetched
-    }
+    // Removed config === null check to allow instant paint (solves the 5-second blank delay)
 
     const stateBag = {
         config, setConfig, startingPrice, setStartingPrice, checkInDate, setCheckInDate,
@@ -693,6 +706,7 @@ export default function BookingWidget() {
                     layoutStyle={layoutStyle}
                     minNights={config?.min_nights ?? 1}
                     advancePurchaseDays={config?.advance_purchase_days ?? 0}
+                    calendarRefreshTrigger={refreshTrigger}
                 />
             )}
         </div>

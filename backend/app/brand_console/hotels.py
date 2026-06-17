@@ -130,6 +130,8 @@ async def update_my_hotel(
     try:
         from app.core.cache.redis_client import redis_client
         from app.calendar import clear_availability_cache
+        from app.revenue.rate_signals import bump_hotel_version
+        
         # Bust both old and new slug — covers slug-change scenario
         for slug in {old_slug, hotel.slug}:
             redis_client.delete_key(f"public:slug-to-id:{slug}")
@@ -138,6 +140,9 @@ async def update_my_hotel(
         redis_client.delete_key(f"public:widget-config:{hotel.id}")
         redis_client.delete_key(f"public:slug-to-id:{hotel.id}")
         clear_availability_cache(hotel.id)
+        
+        # Trigger SSE for connected widgets
+        bump_hotel_version(hotel.id)
     except Exception:
         pass
 

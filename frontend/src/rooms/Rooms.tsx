@@ -1,4 +1,4 @@
-﻿// Rooms Page - Management with Clean & Professional UI
+// Rooms Page - Management with Clean & Professional UI
 import { Plus, Search, Grid, List, Bed, Package, Loader2 } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +13,10 @@ import { RoomCard } from '@/rooms/components/RoomCard';
 import { RoomListItem } from '@/rooms/components/RoomListItem';
 import { PageShell } from '@/components/layout/PageShell';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/core/contexts/AuthContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 // Lazy load dialog components
 const RoomDialog = lazy(() => import('@/rooms/components/RoomDialog').then(m => ({ default: m.RoomDialog })));
@@ -30,9 +34,11 @@ export function RoomsPage() {
   const [selectedRoom, setSelectedRoom] = useState<RoomType | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<RatePlan | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hotel, refreshHotel } = useAuth();
 
   const { data: rooms = [], isLoading: isLoadingRooms } = useQuery<RoomType[]>({
     queryKey: ['rooms'],
@@ -96,6 +102,28 @@ export function RoomsPage() {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleUpdateFeaturedRoom = async (val: string) => {
+    if (!hotel) return;
+    setIsUpdatingSettings(true);
+    try {
+      const payload = { settings: { ...hotel.settings, featured_room_type_id: val } };
+      await apiClient.patch('/hotels/me', payload);
+      await refreshHotel();
+      toast({
+        title: 'Settings Updated',
+        description: 'Calendar baseline room updated successfully.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update calendar baseline room.',
+      });
+    } finally {
+      setIsUpdatingSettings(false);
     }
   };
 
