@@ -20,7 +20,7 @@ const getBaseUrl = () => {
   if (hostname.includes('staging')) {
     return 'https://api-staging.staybooker.ai/api/v1';
   }
-  if (hostname.includes('staybooker.ai')) {
+  if (hostname.includes('staybooker.ai') || hostname.includes('pages.dev')) {
     return 'https://api.staybooker.ai/api/v1';
   }
   

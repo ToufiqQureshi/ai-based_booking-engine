@@ -505,7 +505,7 @@ import calendar as cal_mod
 async def get_calendar_availability(
     hotel_slug: str,
     session: DbSession,
-    month: str = Query(..., regex=r"^\d{4}-\d{2}$"),
+    month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
 ):
     """
     Per-date availability + min price for a calendar month.
