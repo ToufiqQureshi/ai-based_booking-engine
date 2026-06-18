@@ -706,7 +706,6 @@ export default function BookingWidget() {
                     layoutStyle={layoutStyle}
                     minNights={config?.min_nights ?? 1}
                     advancePurchaseDays={config?.advance_purchase_days ?? 0}
-                    calendarRefreshTrigger={refreshTrigger}
                 />
             )}
         </div>
