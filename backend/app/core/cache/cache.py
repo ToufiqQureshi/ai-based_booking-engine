@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import json
 import logging
@@ -47,8 +48,14 @@ def cache_response(
             cache_key = f"{key_prefix}{tenant_id}:{path}:{query}"
 
             # 2. Try to get from Cache
+            # redis_client is a synchronous (blocking) client. When Redis is down
+            # it serves from memory immediately, but once per cooldown it makes a
+            # real reconnect attempt that blocks for the socket timeout. Calling it
+            # directly here would freeze the worker's event loop for that attempt,
+            # stalling every other in-flight request — so run it in a thread (same
+            # pattern as the SSE poll loop fix).
             try:
-                cached_data = redis_client.get_value(cache_key)
+                cached_data = await asyncio.to_thread(redis_client.get_value, cache_key)
                 if cached_data:
                     return json.loads(cached_data)
             except Exception as e:
@@ -67,7 +74,9 @@ def cache_response(
                 else:
                     serializable_data = response_data
 
-                redis_client.set_value(cache_key, json.dumps(serializable_data), expire=expire)
+                await asyncio.to_thread(
+                    redis_client.set_value, cache_key, json.dumps(serializable_data), expire
+                )
             except Exception as e:
                 logger.warning(f"Cache write failed for {cache_key}: {e}")
 
