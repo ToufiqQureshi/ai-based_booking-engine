@@ -16,11 +16,23 @@ class Settings(BaseSettings):
 
     # Connection pool sizing (per worker). Keep
     # DB_POOL_SIZE * WEB_CONCURRENCY * replicas <= Supabase connection limit.
-    # With WEB_CONCURRENCY=2 (default): 2 workers × (3 + 2) = 10 connections max.
-    # Supabase free tier allows 60 direct connections — this stays well within.
-    # Increase DB_POOL_SIZE in Railway env vars if you scale to more workers.
-    DB_POOL_SIZE: int = 3
-    DB_MAX_OVERFLOW: int = 2
+    #
+    # We connect through the Supabase transaction pooler (pgbouncer on :6543,
+    # statement cache disabled), so the Postgres backend limit (60) is shared via
+    # multiplexing — the client pool does not map 1:1 to backend connections.
+    # The previous 3+2 (=5/worker) was far too small: on a single page load the
+    # frontend fires several authed requests at once (dashboard stats, users/me,
+    # notifications poll, integration settings) and every one checks out a
+    # connection via get_current_user. With only 5, requests queued past the 10s
+    # pool_timeout and threw "QueuePool limit ... connection timed out", which
+    # surfaced to users as generic "could not load" errors on every page.
+    #
+    # 10+10 (=20/worker) gives ~4x headroom. With WEB_CONCURRENCY=2 that is 40,
+    # plus Supabase's own internal connections (~10) — still under the 60 cap.
+    # If you scale to >2 workers/replicas, lower these via Railway env vars to
+    # keep DB_POOL_SIZE * WEB_CONCURRENCY * replicas <= 60.
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 10
     DB_POOL_RECYCLE: int = 1800   # recycle idle connections every 30 min
     DB_POOL_TIMEOUT: int = 10     # fail fast (was 30s) so requests don't pile up
 
