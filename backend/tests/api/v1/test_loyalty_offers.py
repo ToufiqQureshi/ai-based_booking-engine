@@ -183,3 +183,18 @@ class TestPublicOfferCheck:
         body = r.json()
         assert body["has_offer"] is True
         assert body["needs_dates"] is True
+
+    async def test_below_nudge_gate_returns_false_not_500(self, client: AsyncClient):
+        """Regression: an offer gated by nudge_from_nights above the guest's
+        nights (and below min_nights) used to fall through to an implicit
+        return None, which FastAPI rejected with ResponseValidationError (500).
+        It must respond 200 with has_offer=False instead."""
+        hotel_id = await _fresh_hotel_with_offers(
+            {"title": "Stay 5", "min_nights": 5, "reward_type": "percentage",
+             "reward_value": 20, "nudge_from_nights": 3},
+        )
+        r = await client.post("/api/v1/public/loyalty-offers", json={
+            "hotel_id": hotel_id, "nights": 2,
+        })
+        assert r.status_code == 200, r.text
+        assert r.json()["has_offer"] is False

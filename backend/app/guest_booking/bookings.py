@@ -731,6 +731,12 @@ async def check_loyalty_offers(request: Request, data: LoyaltyOfferCheckRequest,
                 unlocked_message=_render_unlocked_message(offer, label),
             )
 
+        # Offers exist but none apply to this guest yet (below the
+        # nudge_from_nights gate and below every min_nights). Without this
+        # the function fell through and implicitly returned None, which
+        # FastAPI rejected with ResponseValidationError → 500 on the widget.
+        return LoyaltyOfferCheckResponse(has_offer=False)
+
     except HTTPException:
         raise
     except Exception:
