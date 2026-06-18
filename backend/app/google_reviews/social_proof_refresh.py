@@ -32,7 +32,16 @@ from app.core.utils.time import utcnow
 from app.bookings.booking import Booking, BookingStatus
 from app.brand_console.hotel import Hotel
 from app.google_reviews.social_proof_model import HotelSocialProofSettings
-from app.models.review import Review  # type: ignore  # may not exist yet
+
+# The Review model doesn't exist in this build yet. A bare module-level import
+# raised ModuleNotFoundError at import time, which broke the *entire* module —
+# every social-proof refresh (manual + startup) failed and Sentry logged
+# "No module named 'app.models.review'". Guard it so a missing model degrades
+# to "no review stats" instead of taking the whole refresh down.
+try:
+    from app.models.review import Review  # type: ignore
+except ImportError:
+    Review = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -75,18 +84,19 @@ async def _refresh_one_hotel(session, hotel_id: str, slug: str) -> bool:
         # Review aggregate (if a Review model exists)
         review_count = 0
         avg_rating = 0.0
-        try:
-            review_q = select(
-                func.count(Review.id), func.avg(Review.rating)
-            ).where(Review.hotel_id == hotel_id)
-            r_res = await session.execute(review_q)
-            rc, ar = r_res.one()
-            review_count = int(rc or 0)
-            avg_rating = float(ar or 0.0)
-        except Exception:
-            # Review model not present in this build — skip.
-            review_count = 0
-            avg_rating = 0.0
+        if Review is not None:
+            try:
+                review_q = select(
+                    func.count(Review.id), func.avg(Review.rating)
+                ).where(Review.hotel_id == hotel_id)
+                r_res = await session.execute(review_q)
+                rc, ar = r_res.one()
+                review_count = int(rc or 0)
+                avg_rating = float(ar or 0.0)
+            except Exception:
+                # Review aggregation failed (e.g. schema mismatch) — skip.
+                review_count = 0
+                avg_rating = 0.0
 
         # Upsert settings
         sp_q = select(HotelSocialProofSettings).where(
