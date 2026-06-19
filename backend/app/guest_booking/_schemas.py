@@ -5,7 +5,8 @@ Kept separate so route handlers stay focused on business logic.
 from datetime import date
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
 
 from app.rooms.room import RoomTypeRead
 
@@ -39,9 +40,6 @@ class PublicGuestCreate(BaseModel):
     nationality: str = Field(default="IN", max_length=2)
     id_type: str = Field(default="passport", max_length=50)
     id_number: str = Field(default="PENDING", max_length=100)
-
-    from pydantic import field_validator
-    import re
 
     @field_validator("first_name", "last_name", "phone", "id_number", mode="before")
     @classmethod
@@ -80,9 +78,6 @@ class PublicBookingCreate(BaseModel):
     source: Optional[str] = None
     redeem_points: Optional[float] = None
     claimed_offer_ids: List[str] = []
-
-    from pydantic import field_validator
-    import re
 
     @field_validator("special_requests", mode="before")
     @classmethod
