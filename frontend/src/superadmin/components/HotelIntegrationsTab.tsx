@@ -3,12 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/core/hooks/use-toast';
 import { apiClient } from '@/core/api/client';
-import { Loader2, Save, Sparkles, MessageSquare, Mail, Server, Key, ShieldOff, ShieldCheck, AlertTriangle, Eye, EyeOff, RefreshCw, Database, Pause, Play, CreditCard } from 'lucide-react';
+import { Loader2, Save, Sparkles, MessageSquare, Mail, Server, Key, ShieldOff, ShieldCheck, AlertTriangle, Eye, EyeOff, RefreshCw, Database, Pause, CreditCard } from 'lucide-react';
 
 interface HotelIntegrationsRead {
     hotel_id: string;
@@ -71,8 +70,6 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
     const [razorpayKeySecret, setRazorpayKeySecret] = useState('');
     const [showRzpSecret, setShowRzpSecret] = useState(false);
     const [waCredits, setWaCredits] = useState('1000');
-    const [isPaused, setIsPaused] = useState(false);
-    const [pauseReason, setPauseReason] = useState('');
 
     // Show / hide password fields
     const [showAiKey, setShowAiKey] = useState(false);
@@ -114,8 +111,6 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             setSmtpFromEmail(res.smtp_from_email || '');
             setRazorpayKeyId(res.razorpay_key_id || '');
             setWaCredits(String(res.ai_whatsapp_credits || 1000));
-            setIsPaused(res.is_paused || false);
-            setPauseReason(res.pause_reason || '');
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Error', description: error?.message || 'Failed to load integrations' });
         } finally {
@@ -151,12 +146,6 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
             if (razorpayKeyId !== (data?.razorpay_key_id || '')) payload.razorpay_key_id = razorpayKeyId;
             if (razorpayKeySecret) payload.razorpay_key_secret = razorpayKeySecret;
             if (Number(waCredits) !== data?.ai_whatsapp_credits) payload.ai_whatsapp_credits = Number(waCredits);
-            if (isPaused !== data?.is_paused) {
-                payload.is_paused = isPaused;
-                payload.pause_reason = isPaused ? (pauseReason || 'Paused by super-admin') : '';
-            } else if (pauseReason !== (data?.pause_reason || '')) {
-                payload.pause_reason = pauseReason;
-            }
 
             if (Object.keys(payload).length === 0) {
                 toast({ title: 'No changes to save' });
@@ -210,7 +199,7 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                                 <CardDescription>Overview of all configured integrations for {data?.hotel_name}</CardDescription>
                             </div>
                         </div>
-                        {isPaused && (
+                        {data?.is_paused && (
                             <Badge variant="destructive" className="rounded-full">
                                 <Pause className="w-3 h-3 mr-1" /> Paused
                             </Badge>
@@ -400,10 +389,11 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                 </CardContent>
             </Card>
 
-            {/* Quotas & Pause */}
+            {/* Quotas */}
             <Card className="border-border bg-card dark:border-white/10 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-foreground flex items-center gap-2"><Database className="w-4 h-4 text-emerald-500" /> Quotas & Operational State</CardTitle>
+                    <CardTitle className="text-foreground flex items-center gap-2"><Database className="w-4 h-4 text-emerald-500" /> Quotas</CardTitle>
+                    <CardDescription>Pause/lock controls live in the Danger Zone tab to avoid two places editing the same state.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
@@ -411,25 +401,6 @@ export function HotelIntegrationsTab({ hotel }: HotelIntegrationsTabProps) {
                             <Label className="text-xs font-bold text-foreground/80">AI WhatsApp Credits (monthly)</Label>
                             <Input type="number" value={waCredits} onChange={e => setWaCredits(e.target.value)} className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
                         </div>
-                    </div>
-                    <Separator className="bg-border dark:bg-white/5" />
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                           <div>
-                                <Label className="text-sm font-bold text-foreground flex items-center gap-2">
-                                    {isPaused ? <Pause className="w-4 h-4 text-rose-500" /> : <Play className="w-4 h-4 text-emerald-500" />}
-                                    Hotel Pause State
-                                </Label>
-                                <p className="text-xs text-muted-foreground mt-1">When paused, the public booking page shows "temporarily unavailable" but the hotelier can still log in.</p>
-                            </div>
-                            <Switch checked={isPaused} onCheckedChange={setIsPaused} />
-                        </div>
-                        {isPaused && (
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold text-foreground/80">Pause reason (shown on public page)</Label>
-                                <Input value={pauseReason} onChange={e => setPauseReason(e.target.value)} placeholder="Temporarily unavailable" className="bg-background border-border text-foreground dark:bg-slate-950/50 dark:border-white/10 dark:text-white rounded-xl h-11" />
-                            </div>
-                        )}
                     </div>
                 </CardContent>
             </Card>

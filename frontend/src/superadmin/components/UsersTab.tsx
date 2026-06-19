@@ -40,7 +40,8 @@ export function UsersTab() {
         onSuccess: () => {
             toast.success("User role updated successfully");
             queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
-        }
+        },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to update user role'),
     });
 
     const toggleUserStatusMutation = useMutation({
@@ -49,7 +50,8 @@ export function UsersTab() {
         onSuccess: () => {
             toast.success("User status updated");
             queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
-        }
+        },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to update user status'),
     });
 
     const deleteUserMutation = useMutation({
@@ -57,7 +59,8 @@ export function UsersTab() {
         onSuccess: () => {
             toast.success("User permanently deleted");
             queryClient.invalidateQueries({ queryKey: ['superadmin-users'] });
-        }
+        },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to delete user'),
     });
 
     const filteredUsers = users.filter((u: any) => 

@@ -15,18 +15,18 @@ import {
     CheckCircle2, Clock, Activity
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient, tokenStorage } from '@/core/api/client';
+import { apiClient } from '@/core/api/client';
 import { toast } from 'sonner';
 import { HotelIntegrationsTab } from './HotelIntegrationsTab';
 import { cn } from '@/core/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
-
 interface HotelWorkspaceProps {
     hotel: any;
     onBack: () => void;
     users: any[];
+    onImpersonate: () => void;
+    isImpersonating: boolean;
 }
 
 // All Staybooker feature flags with labels and descriptions
@@ -58,7 +58,7 @@ const AVAILABLE_ROUTES = [
     { path: '/settings', label: 'Settings' },
 ];
 
-export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) => {
+export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImpersonating }: HotelWorkspaceProps) => {
     const qc = useQueryClient();
 
     // Subscription form state
@@ -71,7 +71,9 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
     // Quotas form state
     const [waCredits, setWaCredits] = useState(hotel.subscription?.whatsapp_credits?.toString() || '1000');
     const [smsCredits, setSmsCredits] = useState(hotel.subscription?.sms_credits?.toString() || '1000');
-    const [aiLimit, setAiLimit] = useState(hotel.subscription?.ai_usage_limit?.toString() || '50000');
+    const [aiHotelierLimit, setAiHotelierLimit] = useState(hotel.subscription?.ai_hotelier_daily_limit?.toString() || '50000');
+    const [aiGuestChatLimit, setAiGuestChatLimit] = useState(hotel.subscription?.ai_guest_chat_daily_limit?.toString() || '100000');
+    const [aiWhatsappLimit, setAiWhatsappLimit] = useState(hotel.subscription?.ai_whatsapp_daily_limit?.toString() || '100000');
 
     // Permissions state
     const [permissions, setPermissions] = useState<Record<string, string[]>>(() => {
@@ -178,21 +180,6 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
         },
     });
 
-    const impersonateMutation = useMutation({
-        mutationFn: () => apiClient.post(`/superadmin/impersonate/${hotel.id}`, {}),
-        onSuccess: (data: any) => {
-            if (!data?.access_token) { toast.error('No token returned'); return; }
-            try {
-                const orig = tokenStorage.getAccessToken();
-                if (!orig) { toast.error('Missing superadmin session'); return; }
-                localStorage.setItem(SUPERADMIN_ORIGINAL_TOKENS_KEY, JSON.stringify({ access_token: orig, refresh_token: tokenStorage.getRefreshToken() ?? '' }));
-                tokenStorage.setTokens({ access_token: data.access_token, refresh_token: data.refresh_token ?? '', token_type: 'Bearer', expires_in: 3600 });
-                window.location.href = '/';
-            } catch { tokenStorage.clearTokens(); localStorage.removeItem(SUPERADMIN_ORIGINAL_TOKENS_KEY); toast.error('Impersonation failed'); }
-        },
-        onError: (e: any) => toast.error(e?.message ?? 'Impersonation failed'),
-    });
-
     const pauseMutation = useMutation({
         mutationFn: (pause: boolean) => apiClient.patch(`/superadmin/hotels/${hotel.id}`, {
             is_paused: pause, pause_reason: pause ? 'Paused by superadmin' : null,
@@ -269,8 +256,8 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
 
                 <Button
                     className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-9 gap-2 font-bold text-sm"
-                    onClick={() => impersonateMutation.mutate()}
-                    disabled={impersonateMutation.isPending}
+                    onClick={onImpersonate}
+                    disabled={isImpersonating}
                 >
                     <UserCheck className="w-4 h-4" /> Login as Owner
                 </Button>
@@ -355,7 +342,7 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
 
                     <div className="border border-border rounded-2xl p-5 bg-background space-y-4">
                         <h3 className="text-sm font-black text-foreground">App Quotas & Limits</h3>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label className="text-xs font-bold">WhatsApp Credits</Label>
                                 <Input type="number" className="mt-1 rounded-xl" value={waCredits} onChange={e => setWaCredits(e.target.value)} />
@@ -365,14 +352,28 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                                 <Input type="number" className="mt-1 rounded-xl" value={smsCredits} onChange={e => setSmsCredits(e.target.value)} />
                             </div>
                             <div>
-                                <Label className="text-xs font-bold">AI Token Limit</Label>
-                                <Input type="number" className="mt-1 rounded-xl" value={aiLimit} onChange={e => setAiLimit(e.target.value)} />
+                                <Label className="text-xs font-bold">AI Limit — Hotelier Agent (daily)</Label>
+                                <Input type="number" className="mt-1 rounded-xl" value={aiHotelierLimit} onChange={e => setAiHotelierLimit(e.target.value)} />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-bold">AI Limit — Guest Chat Bot (daily)</Label>
+                                <Input type="number" className="mt-1 rounded-xl" value={aiGuestChatLimit} onChange={e => setAiGuestChatLimit(e.target.value)} />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-bold">AI Limit — WhatsApp Bot (daily)</Label>
+                                <Input type="number" className="mt-1 rounded-xl" value={aiWhatsappLimit} onChange={e => setAiWhatsappLimit(e.target.value)} />
                             </div>
                         </div>
                         <Button
                             variant="outline"
                             className="w-full rounded-xl font-bold"
-                            onClick={() => updateQuotasMutation.mutate({ whatsapp_credits: +waCredits, sms_credits: +smsCredits, ai_usage_limit: +aiLimit })}
+                            onClick={() => updateQuotasMutation.mutate({
+                                whatsapp_credits: +waCredits,
+                                sms_credits: +smsCredits,
+                                ai_hotelier_daily_limit: +aiHotelierLimit,
+                                ai_guest_chat_daily_limit: +aiGuestChatLimit,
+                                ai_whatsapp_daily_limit: +aiWhatsappLimit,
+                            })}
                             disabled={updateQuotasMutation.isPending}
                         >
                             {updateQuotasMutation.isPending ? 'Saving…' : 'Update Quotas'}
@@ -386,28 +387,6 @@ export const HotelWorkspace = ({ hotel, onBack, users }: HotelWorkspaceProps) =>
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-black text-foreground">Feature Access Control</h3>
                             <p className="text-[10px] text-muted-foreground">Changes apply immediately</p>
-                        </div>
-                        {/* Competitor limit — super-admin controlled */}
-                        <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20">
-                            <div>
-                                <p className="text-sm font-bold text-foreground">Max Competitors (Rate Shopper)</p>
-                                <p className="text-[10px] text-muted-foreground">Hotelier can track up to this many OTA channels. Default: 5.</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="number"
-                                    min={1}
-                                    max={50}
-                                    defaultValue={hotel.max_competitors ?? 5}
-                                    className="w-16 h-8 text-center border border-border rounded-lg text-sm font-bold bg-background text-foreground"
-                                    onBlur={(e) => {
-                                        const val = parseInt(e.target.value, 10);
-                                        if (!isNaN(val) && val >= 1 && val !== (hotel.max_competitors ?? 5)) {
-                                            toggleFeatureMutation.mutate({ flag: 'max_competitors' as any, value: val as any });
-                                        }
-                                    }}
-                                />
-                            </div>
                         </div>
                         <div className="space-y-1">
                         {FEATURE_FLAGS.map((f, i) => {

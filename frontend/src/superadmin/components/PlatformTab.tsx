@@ -70,11 +70,13 @@ function ApiKeysSection({ hotels }: { hotels: any[] }) {
             setForm({ hotel_id: '', label: '', scopes: 'read', expires_in_days: '' });
             qc.invalidateQueries({ queryKey: ['api-keys'] });
         },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to create API key'),
     });
 
     const revokeMutation = useMutation({
         mutationFn: (id: string) => apiClient.post(`/superadmin/api-keys/${id}/revoke`, { reason: 'Manual revoke' }),
         onSuccess: () => { toast.success('Key revoked'); qc.invalidateQueries({ queryKey: ['api-keys'] }); },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to revoke key'),
     });
 
     return (
@@ -187,14 +189,17 @@ function DomainsSection({ hotels }: { hotels: any[] }) {
             setOpenDns(data);
             qc.invalidateQueries({ queryKey: ['domains'] });
         },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to map domain'),
     });
     const verifyMutation = useMutation({
         mutationFn: (id: string) => apiClient.post(`/superadmin/domains/${id}/verify`, {}),
         onSuccess: () => { toast.success('Domain verified'); qc.invalidateQueries({ queryKey: ['domains'] }); },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Domain verification failed'),
     });
     const deleteMutation = useMutation({
         mutationFn: (id: string) => apiClient.delete(`/superadmin/domains/${id}`),
         onSuccess: () => { toast.success('Domain removed'); qc.invalidateQueries({ queryKey: ['domains'] }); },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to remove domain'),
     });
 
     return (
@@ -300,10 +305,12 @@ function TemplatesSection({ hotels }: { hotels: any[] }) {
     const upsertMutation = useMutation({
         mutationFn: (data: any) => apiClient.post('/superadmin/email-templates', data),
         onSuccess: () => { toast.success('Template saved'); setEditing(null); qc.invalidateQueries({ queryKey: ['email-templates'] }); },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to save template'),
     });
     const deleteMutation = useMutation({
         mutationFn: (id: string) => apiClient.delete(`/superadmin/email-templates/${id}`),
         onSuccess: () => { toast.success('Template deleted'); qc.invalidateQueries({ queryKey: ['email-templates'] }); },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to delete template'),
     });
 
     return (
@@ -422,10 +429,12 @@ function RolesSection({ admins }: { admins: any[] }) {
     const upsertMutation = useMutation({
         mutationFn: (data: any) => apiClient.post('/superadmin/admin-roles', data),
         onSuccess: () => { toast.success('Role saved'); setEditing(null); qc.invalidateQueries({ queryKey: ['admin-roles'] }); },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to save role'),
     });
     const deleteMutation = useMutation({
         mutationFn: (id: string) => apiClient.delete(`/superadmin/admin-roles/${id}`),
         onSuccess: () => { toast.success('Role removed'); qc.invalidateQueries({ queryKey: ['admin-roles'] }); },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to remove role'),
     });
 
     const superAdmins = admins.filter(a => a.role === 'SUPER_ADMIN');
@@ -534,11 +543,13 @@ function InvoicesSection({ hotels }: { hotels: any[] }) {
             setShowBulk(false);
             qc.invalidateQueries({ queryKey: ['platform-invoices'] });
         },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to generate invoices'),
     });
 
     const paidMutation = useMutation({
         mutationFn: (id: string) => apiClient.post(`/superadmin/invoices/${id}/mark-paid`, {}),
         onSuccess: () => { toast.success('Invoice marked paid'); qc.invalidateQueries({ queryKey: ['platform-invoices'] }); },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to mark invoice paid'),
     });
 
     return (

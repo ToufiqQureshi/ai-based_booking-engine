@@ -58,6 +58,7 @@ export function KycTab() {
             qc.invalidateQueries({ queryKey: ['kyc-profiles'] });
             qc.invalidateQueries({ queryKey: ['kyc-overview'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to approve document'),
     });
 
     const rejectMutation = useMutation({
@@ -71,6 +72,7 @@ export function KycTab() {
             qc.invalidateQueries({ queryKey: ['kyc-profiles'] });
             qc.invalidateQueries({ queryKey: ['kyc-overview'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to reject document'),
     });
 
     const deleteDocMutation = useMutation({
@@ -80,6 +82,7 @@ export function KycTab() {
             qc.invalidateQueries({ queryKey: ['kyc-detail'] });
             qc.invalidateQueries({ queryKey: ['kyc-profiles'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to remove document'),
     });
 
     const addDocMutation = useMutation({

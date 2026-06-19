@@ -55,7 +55,8 @@ export function BroadcastsTab() {
         onSuccess: (data: any) => {
             toast.success(`${data.published} scheduled broadcast(s) published`);
             queryClient.invalidateQueries({ queryKey: ['broadcasts'] });
-        }
+        },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to publish due broadcasts'),
     });
 
     const deleteBroadcastMutation = useMutation({
@@ -63,7 +64,8 @@ export function BroadcastsTab() {
         onSuccess: () => {
             toast.success("Broadcast deactivated and removed.");
             queryClient.invalidateQueries({ queryKey: ['broadcasts'] });
-        }
+        },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to delete broadcast'),
     });
 
   return (

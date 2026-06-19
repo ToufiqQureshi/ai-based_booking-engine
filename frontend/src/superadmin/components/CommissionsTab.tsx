@@ -37,6 +37,7 @@ export function CommissionsTab({ hotels = [] }: { hotels?: any[] }) {
             setEditing(null);
             qc.invalidateQueries({ queryKey: ['commission-rules'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to save rule'),
     });
 
     const deleteMutation = useMutation({
@@ -45,6 +46,7 @@ export function CommissionsTab({ hotels = [] }: { hotels?: any[] }) {
             toast.success('Rule deleted');
             qc.invalidateQueries({ queryKey: ['commission-rules'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to delete rule'),
     });
 
     return (

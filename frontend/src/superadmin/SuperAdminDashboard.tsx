@@ -301,6 +301,8 @@ export default function SuperAdminDashboard() {
                                 hotel={selectedHotel}
                                 users={users}
                                 onBack={() => setSelectedHotelId(null)}
+                                onImpersonate={() => impersonateMutation.mutate(selectedHotel.id)}
+                                isImpersonating={impersonateMutation.isPending}
                             />
                         ) : (
                             <>

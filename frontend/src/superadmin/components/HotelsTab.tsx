@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, UserCheck, Settings, ChevronUp, ChevronDown, BrainCircuit, Zap, CheckSquare, Square, X, Download } from 'lucide-react';
+import { Building2, UserCheck, ChevronUp, ChevronDown, BrainCircuit, Zap, CheckSquare, Square, X, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -271,18 +271,11 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className="h-7 text-[11px] px-3 rounded-lg font-bold border-border hidden sm:flex"
+                                                className="h-7 text-[11px] px-3 rounded-lg font-bold border-border"
                                                 onClick={() => onImpersonate(hotel.id)}
                                                 disabled={isImpersonating}
                                             >
                                                 <UserCheck className="w-3 h-3 mr-1" /> Login As
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                className="h-7 text-[11px] px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
-                                                onClick={() => onSelectHotel(hotel)}
-                                            >
-                                                <Settings className="w-3 h-3 mr-1" /> Manage
                                             </Button>
                                         </div>
                                     </td>

@@ -69,6 +69,7 @@ export function PayoutsTab({ hotels = [] }: { hotels?: any[] }) {
             qc.invalidateQueries({ queryKey: ['payouts'] });
             qc.invalidateQueries({ queryKey: ['payouts-summary'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to mark payout as paid'),
     });
 
     const cancelMutation = useMutation({
@@ -78,6 +79,7 @@ export function PayoutsTab({ hotels = [] }: { hotels?: any[] }) {
             qc.invalidateQueries({ queryKey: ['payouts'] });
             qc.invalidateQueries({ queryKey: ['payouts-summary'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to cancel payout'),
     });
 
     const upsertBankMutation = useMutation({
@@ -87,6 +89,7 @@ export function PayoutsTab({ hotels = [] }: { hotels?: any[] }) {
             setBankForm({});
             qc.invalidateQueries({ queryKey: ['bank-accounts'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to save bank account'),
     });
 
     const verifyBankMutation = useMutation({
@@ -94,6 +97,7 @@ export function PayoutsTab({ hotels = [] }: { hotels?: any[] }) {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['bank-accounts'] });
         },
+        onError: (e: any) => toast.error(e?.response?.data?.detail || e?.message || 'Failed to update bank verification'),
     });
 
     return (
