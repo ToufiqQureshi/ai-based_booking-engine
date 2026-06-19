@@ -5,9 +5,19 @@ Kept separate so route handlers stay focused on business logic.
 from datetime import date
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+import re
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.rooms.room import RoomTypeRead
+
+
+def strip_html_tags(value):
+    """Strip angle-bracket tags from guest-supplied text to block stored XSS.
+    Non-str values pass through unchanged so type validation still runs."""
+    if not isinstance(value, str):
+        return value
+    return re.sub(r'<[^>]*>', '', value).strip()
 
 
 class RateOption(BaseModel):
@@ -40,15 +50,10 @@ class PublicGuestCreate(BaseModel):
     id_type: str = Field(default="passport", max_length=50)
     id_number: str = Field(default="PENDING", max_length=100)
 
-    from pydantic import field_validator
-    import re
-
     @field_validator("first_name", "last_name", "phone", "id_number", mode="before")
     @classmethod
     def sanitize_strings(cls, v):
-        if not isinstance(v, str):
-            return v
-        return re.sub(r'<[^>]*>', '', v).strip()
+        return strip_html_tags(v)
 
 
 class PublicRoomBooking(BaseModel):
@@ -81,15 +86,10 @@ class PublicBookingCreate(BaseModel):
     redeem_points: Optional[float] = None
     claimed_offer_ids: List[str] = []
 
-    from pydantic import field_validator
-    import re
-
     @field_validator("special_requests", mode="before")
     @classmethod
     def sanitize_strings(cls, v):
-        if not isinstance(v, str):
-            return v
-        return re.sub(r'<[^>]*>', '', v).strip()
+        return strip_html_tags(v)
 
 
 class PublicBookingResponse(BaseModel):
