@@ -14,7 +14,7 @@ from app.core.auth.deps import DbSession
 from app.core.cache.redis_client import redis_client
 from app.guests.user import User
 from app.system.audit import AuditLog
-from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip
+from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -71,7 +71,7 @@ def _parse_sessions() -> list[dict]:
 
 
 @router.get("/sessions")
-async def list_active_sessions(super_admin: User = Depends(get_super_admin)):
+async def list_active_sessions(super_admin: User = Depends(require_permission("superadmin.sessions.read"))):
     """List all active user sessions tracked in Redis."""
     sessions = _parse_sessions()
     sessions.sort(key=lambda s: s.get("last_seen", ""), reverse=True)
@@ -86,7 +86,7 @@ async def revoke_user_sessions(
     user_id: str,
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.sessions.write")),
 ):
     """Force-logout all sessions for a user by revoking their token prefixes."""
     r = redis_client.get_instance()

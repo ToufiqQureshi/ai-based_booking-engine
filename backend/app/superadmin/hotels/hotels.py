@@ -154,7 +154,7 @@ DEFAULT_ROLE_PERMISSIONS = {
 
 
 @router.get("/hotels", response_model=List[dict])
-async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_admin)):
+async def list_hotels(session: DbSession, super_admin: User = Depends(require_permission("superadmin.hotels.read"))):
     """List all hotels with owner and subscription details."""
     hotels = (await session.execute(select(Hotel))).scalars().all()
     if not hotels:
@@ -215,7 +215,7 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(get_super_
 @router.patch("/hotels/{hotel_id}/permissions")
 async def update_role_permissions(
     hotel_id: str, permissions: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
@@ -241,7 +241,7 @@ async def update_role_permissions(
 @router.patch("/hotels/{hotel_id}")
 async def update_hotel_status(
     hotel_id: str, update_data: HotelUpdate, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Update hotel feature flags, slug, or active status."""
     hotel = await session.get(Hotel, hotel_id)
@@ -356,7 +356,7 @@ async def delete_hotel(
 @router.post("/impersonate/{hotel_id}")
 async def impersonate_hotel(
     hotel_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Generate a login token to access a hotel as its owner."""
     hotel = await session.get(Hotel, hotel_id)
@@ -404,7 +404,7 @@ async def refresh_social_proof_stats(
     request: Request,
     session: DbSession,
     hotel_id: Optional[str] = None,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.read")),
 ):
     """Recompute social proof cache for one or all hotels."""
     from app.google_reviews.social_proof_refresh import refresh_all_social_proof_stats, refresh_one_hotel_now

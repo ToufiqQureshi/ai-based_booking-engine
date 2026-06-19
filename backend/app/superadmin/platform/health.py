@@ -16,7 +16,7 @@ from app.rate_plans.rates_model import RatePlan
 from app.rooms.room import RoomType
 from app.superadmin.subscriptions.subscription import Subscription
 from app.guests.user import User
-from app.superadmin.hotels.hotels import get_super_admin
+from app.superadmin.hotels.hotels import get_super_admin, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -156,7 +156,7 @@ async def _hotel_health(session, hotel: Hotel) -> dict:
 @router.get("/health")
 async def platform_health(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.health.read")),
 ):
     """Platform-wide health overview — all hotels, statuses, dormant alerts."""
     hotels_res = await session.execute(select(Hotel))
@@ -196,7 +196,7 @@ async def platform_health(
 async def hotel_health(
     hotel_id: str,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.health.read")),
 ):
     """Detailed health report for a single hotel."""
     hotel = await session.get(Hotel, hotel_id)

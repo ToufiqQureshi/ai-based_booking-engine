@@ -14,7 +14,7 @@ from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel
 from app.superadmin.subscriptions.subscription import Subscription
 from app.guests.user import User
-from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip, load_plan_features
+from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip, load_plan_features, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -36,7 +36,7 @@ async def bulk_hotel_action(
     payload: BulkActionPayload,
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Apply an action to multiple hotels at once."""
     if not payload.hotel_ids:

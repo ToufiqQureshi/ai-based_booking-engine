@@ -193,8 +193,13 @@ async def create_staybooker_employee(
 ):
     """
     Add a new Staybooker employee as SUPER_ADMIN.
-    Only existing super admins can call this — no public signup allowed.
+    Creating a SUPER_ADMIN is a privilege grant, so — like promote-to-SUPER_ADMIN
+    — it is restricted to master admins. A limited-tier super-admin employee
+    must not be able to mint new platform admins.
     """
+    if not _is_master_admin(super_admin):
+        raise HTTPException(status_code=403, detail="Only master admins can add Staybooker employees")
+
     import app.core.auth.security as security
     from app.core.db.supabase import get_supabase
 
@@ -259,9 +264,13 @@ async def create_staybooker_employee(
 @router.post("/hotels/{hotel_id}/users")
 async def create_hotel_user(
     hotel_id: str, data: SuperAdminUserCreate, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.users.write")),
 ):
     """Create a new employee user for a hotel."""
+    # Creating a SUPER_ADMIN via the hotel-user path would bypass the master-admin
+    # gate on /employees, so block it here too.
+    if data.role == UserRole.SUPER_ADMIN.value and not _is_master_admin(super_admin):
+        raise HTTPException(status_code=403, detail="Only master admins can create SUPER_ADMIN users")
     import app.core.auth.security as security
     from app.core.db.supabase import get_supabase
 

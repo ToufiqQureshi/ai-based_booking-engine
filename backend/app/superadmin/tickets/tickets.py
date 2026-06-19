@@ -33,7 +33,7 @@ async def _next_ticket_number(session) -> str:
 @router.get("/tickets/summary")
 async def tickets_summary(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.tickets.read")),
 ):
     rows = (await session.execute(
         select(SupportTicket.status, func.count(SupportTicket.id))
@@ -71,7 +71,7 @@ async def list_tickets(
     assigned_to: Optional[str] = None,
     hotel_id: Optional[str] = None,
     limit: int = 100,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.tickets.read")),
 ):
     q = select(SupportTicket)
     if status_filter:
@@ -89,7 +89,7 @@ async def list_tickets(
 @router.get("/tickets/{ticket_id}")
 async def get_ticket(
     ticket_id: str, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.tickets.read")),
 ):
     ticket = await session.get(SupportTicket, ticket_id)
     if not ticket:
@@ -115,7 +115,7 @@ async def get_ticket(
 @router.post("/tickets")
 async def create_ticket(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.tickets.write")),
 ):
     """Super admin can also raise a ticket on behalf of a hotelier."""
     priority = data.get("priority", "normal")
@@ -159,7 +159,7 @@ async def create_ticket(
 @router.post("/tickets/{ticket_id}/reply")
 async def reply_ticket(
     ticket_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.tickets.write")),
 ):
     ticket = await session.get(SupportTicket, ticket_id)
     if not ticket:
@@ -197,7 +197,7 @@ async def reply_ticket(
 @router.patch("/tickets/{ticket_id}")
 async def update_ticket(
     ticket_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.tickets.write")),
 ):
     ticket = await session.get(SupportTicket, ticket_id)
     if not ticket:
@@ -257,7 +257,7 @@ async def delete_ticket(
 @router.post("/tickets/{ticket_id}/assign")
 async def assign_ticket(
     ticket_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.tickets.assign")),
 ):
     ticket = await session.get(SupportTicket, ticket_id)
     if not ticket:
