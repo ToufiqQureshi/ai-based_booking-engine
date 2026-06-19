@@ -5,8 +5,9 @@ API Keys, Webhooks, and Integration Settings for external hotel websites
 from datetime import datetime
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Relationship
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 import secrets
+import re
 
 class APIKey(SQLModel, table=True):
     """
@@ -109,6 +110,21 @@ class IntegrationSettings(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+    @field_validator("webhook_url", mode="before")
+    @classmethod
+    def validate_webhook_url(cls, v: Optional[str]) -> Optional[str]:
+        if v and not v.startswith(("http://", "https://")):
+            raise ValueError("Webhook URL must start with http:// or https://")
+        return v
+
+    @field_validator("allowed_domains", mode="before")
+    @classmethod
+    def validate_allowed_domains(cls, v: str) -> str:
+        if v:
+            # Strip potential SQLi/XSS characters, allow only standard domain chars
+            v = re.sub(r"[^a-zA-Z0-9.,\-* ]", "", v)
+        return v
+
 
 # Pydantic Models for API
 
@@ -208,6 +224,21 @@ class IntegrationSettingsUpdate(BaseModel):
     widget_min_nights: Optional[int] = None
     widget_advance_purchase_days: Optional[int] = None
     widget_room_type_filter: Optional[str] = None
+
+    @field_validator("webhook_url", mode="before")
+    @classmethod
+    def validate_webhook_url(cls, v: Optional[str]) -> Optional[str]:
+        if v and not v.startswith(("http://", "https://")):
+            raise ValueError("Webhook URL must start with http:// or https://")
+        return v
+
+    @field_validator("allowed_domains", mode="before")
+    @classmethod
+    def validate_allowed_domains(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            # Strip potential SQLi/XSS characters
+            v = re.sub(r"[^a-zA-Z0-9.,\-* ]", "", v)
+        return v
 
 
 class WidgetCodeResponse(BaseModel):

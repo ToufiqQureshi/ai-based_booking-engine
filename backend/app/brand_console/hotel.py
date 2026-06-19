@@ -5,9 +5,11 @@ Frontend ke Hotel interface se match karta hai.
 """
 from sqlmodel import SQLModel, Field, Relationship, Column
 from sqlalchemy import JSON
+from pydantic import field_validator
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 import uuid
+import re
 
 if TYPE_CHECKING:
     from app.guests.user import User
@@ -93,7 +95,7 @@ class HotelSettings(SQLModel):
 
     # Tax Configurations
     tax_name: str = "GST"
-    room_tax_rate: float = 0.0
+    room_tax_rate: float = Field(default=0.0, ge=0.0, le=100.0)
     room_tax_type: str = "exclusive"  # "inclusive" or "exclusive"
     room_tax_calculation_method: str = "flat"  # "flat" or "slab"
     room_tax_slabs: List[dict] = [
@@ -101,8 +103,15 @@ class HotelSettings(SQLModel):
         {"from": 1000.0, "to": 7499.0, "rate": 12.0},
         {"from": 7500.0, "to": 999999.0, "rate": 18.0}
     ]
-    addon_tax_rate: float = 0.0
+    addon_tax_rate: float = Field(default=0.0, ge=0.0, le=100.0)
     addon_tax_type: str = "exclusive"  # "inclusive" or "exclusive"
+
+    @field_validator("tax_name", mode="before")
+    @classmethod
+    def strip_html_tax(cls, v: str) -> str:
+        if v:
+            return re.sub(r'<[^>]*>', '', v)
+        return v
 
 
 
@@ -116,6 +125,12 @@ class HotelBase(SQLModel):
     primary_color: Optional[str] = Field(default="#7C3AED")
     amenities: List[str] = Field(default_factory=list, sa_column=Column(JSON)) # Property-level amenities like "Free Parking", "Pool"
     
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def strip_html_hotel(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            return re.sub(r'<[^>]*>', '', v)
+        return v
 
     # Feature Flags (Controlled by Super Admin)
     feature_ai_agent: bool = Field(default=False)
@@ -230,3 +245,10 @@ class HotelUpdate(SQLModel):
     paused_at: Optional[datetime] = None
     is_active: Optional[bool] = None
     chain_id: Optional[str] = None
+
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def strip_html_hotel(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            return re.sub(r'<[^>]*>', '', v)
+        return v

@@ -5,10 +5,12 @@ Frontend Booking, Guest, BookingRoom interfaces se match.
 """
 from sqlmodel import SQLModel, Field, Relationship, Column
 from sqlalchemy import JSON
+from pydantic import EmailStr, field_validator
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, date
 from enum import Enum
 import uuid
+import re
 
 if TYPE_CHECKING:
     from app.brand_console.hotel import Hotel
@@ -50,12 +52,19 @@ class GuestBase(SQLModel):
     """Guest base fields"""
     first_name: str
     last_name: str
-    email: str = Field(index=True)
-    phone: Optional[str] = None
+    email: EmailStr = Field(index=True)
+    phone: Optional[str] = Field(default=None, max_length=20)
     nationality: Optional[str] = None
     id_type: Optional[str] = None
     id_number: Optional[str] = None
     address: Optional[str] = None
+
+    @field_validator("first_name", "last_name", mode="before")
+    @classmethod
+    def strip_html_guest(cls, v: str) -> str:
+        if v:
+            return re.sub(r'<[^>]*>', '', v)
+        return v
 
 
 class Guest(GuestBase, table=True):
