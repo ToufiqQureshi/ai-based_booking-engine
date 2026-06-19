@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Plus, Search, Loader2, Sparkles, Pencil, Trash2, ImageOff,
     Wifi, Tv, Snowflake, Waves, Dumbbell, Car, Utensils, Star,
@@ -76,7 +77,9 @@ const AMENITY_CATEGORIES = [
 
 export default function AddonsPage() {
     const { toast } = useToast();
-    const [activeTab, setActiveTab] = useState('services');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'services';
+    const setActiveTab = (tab: string) => setSearchParams({ tab });
 
     // ==========================================
     // TAB 1: ADD-ON SERVICES STATE & LOGIC

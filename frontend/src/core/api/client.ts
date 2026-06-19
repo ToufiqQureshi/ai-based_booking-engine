@@ -167,7 +167,7 @@ let refreshPromise: Promise<boolean> | null = null;
 let refreshAttempts = 0;
 const MAX_REFRESH_ATTEMPTS = 1;
 
-const tryRefreshToken = async (): Promise<boolean> => {
+export const tryRefreshToken = async (): Promise<boolean> => {
   if (isRefreshing) {
     return refreshPromise!;
   }

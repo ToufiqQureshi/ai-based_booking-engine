@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/core/contexts/AuthContext';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -98,7 +98,9 @@ export function ChainDashboard() {
   const navigate = useNavigate();
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const [period, setPeriod] = useState('30d');
-  const [activeTab, setActiveTab] = useState<'overview' | 'guests' | 'promotions' | 'loyalty' | 'upsell'>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'overview' | 'guests' | 'promotions' | 'loyalty' | 'upsell') || 'overview';
+  const setActiveTab = (tab: string) => setSearchParams({ tab });
   const [chainNavOpen, setChainNavOpen] = useState(true);
 
   // Chain-wide upsell broadcast form state

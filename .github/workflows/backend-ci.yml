@@ -1,15 +1,26 @@
 name: Backend CI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Runs on PRs (any target) and on pushes to main/develop/feature branches,
 # so regressions are caught before merge rather than after deploy.
 on:
   push:
     branches: [ "main", "develop", "claude/**" ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
   pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     defaults:
       run:

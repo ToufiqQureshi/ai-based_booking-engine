@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Gift, Users, TrendingUp, Save, Loader2, Star, Trophy,
     Sparkles, CheckCircle2, Crown, Zap, ToggleLeft, ToggleRight,
@@ -106,7 +107,9 @@ export default function LoyaltyProgramPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'setup' | 'offers' | 'points' | 'guests'>('guests');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = (searchParams.get('tab') as 'setup' | 'offers' | 'points' | 'guests') || 'guests';
+    const setActiveTab = (tab: 'setup' | 'offers' | 'points' | 'guests') => setSearchParams({ tab });
     const [program, setProgram] = useState<LoyaltyProgram | null>(null);
     const [guests, setGuests] = useState<GuestLoyaltySummary[]>([]);
     const [guestsLoading, setGuestsLoading] = useState(false);

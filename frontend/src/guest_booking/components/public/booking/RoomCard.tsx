@@ -270,7 +270,7 @@ export function RoomCard({
                                                 </div>
                                                 {(plan.market_price || room.market_price) && (
                                                     <p className="text-[10px] text-slate-300 line-through">
-                                                        {formatCurrency(plan.market_price || room.market_price || 0)}
+                                                        {formatCurrency((plan.market_price || room.market_price || 0) * nights)}
                                                     </p>
                                                 )}
                                             </>

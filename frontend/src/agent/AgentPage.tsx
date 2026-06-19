@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { apiClient } from "@/core/api/client";
 import ReactMarkdown from 'react-markdown';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/core/contexts/AuthContext';
 import {
     LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -305,7 +306,9 @@ const QUICK_ASKS = [
 
 const AgentPage = () => {
     const { hotel } = useAuth();
-    const [activeTab, setActiveTab] = useState<'chat' | 'usage'>('chat');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = (searchParams.get('tab') as 'chat' | 'usage') || 'chat';
+    const setActiveTab = (tab: string) => setSearchParams({ tab });
     const [messages, setMessages] = useState<Message[]>([
         { role: 'ai', content: 'Namaste! Main Staybooker AI hun. Main aapki hotel growth aur operations mein kaise madad kar sakta hun?' }
     ]);

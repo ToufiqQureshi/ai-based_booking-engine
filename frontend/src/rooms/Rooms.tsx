@@ -1,6 +1,7 @@
 // Rooms Page - Management with Clean & Professional UI
 import { Plus, Search, Grid, List, Bed, Package, Loader2 } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,8 @@ const PackageCard = lazy(() => import('@/rooms/components/PackageCard').then(m =
 
 export function RoomsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState<'room' | 'package'>('room');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'room' | 'package') || 'room';
   const [searchQuery, setSearchQuery] = useState('');
 
   // Dialog State
@@ -57,7 +59,7 @@ export function RoomsPage() {
   const isLoading = activeTab === 'room' ? isLoadingRooms : isLoadingRates;
 
   const handleTabChange = (tab: 'room' | 'package') => {
-    setActiveTab(tab);
+    setSearchParams({ tab });
     setSearchQuery('');
     // Packages don't have a list view — force grid
     if (tab === 'package') setViewMode('grid');

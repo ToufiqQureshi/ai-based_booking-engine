@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { API_BASE_URL, tokenStorage } from '@/core/api/client';
+import { API_BASE_URL, tokenStorage, tryRefreshToken } from '@/core/api/client';
 
 export interface WsEvent {
   type: string;
@@ -78,9 +78,23 @@ export function useHotelWebSocket({ onEvent, enabled = true }: Options): void {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = async () => {
       wsRef.current = null;
       if (!enabled || !tokenStorage.getAccessToken()) return;
+
+      // Check if token is expired (or close to expiring < 5 mins) before reconnecting
+      try {
+        const token = tokenStorage.getAccessToken();
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.exp * 1000 < Date.now() + 300000) {
+            await tryRefreshToken();
+          }
+        }
+      } catch (err) {
+        // ignore JSON/b64 parse errors
+      }
+
       // Exponential backoff reconnect
       clearReconnectTimer();
       reconnectTimer.current = setTimeout(() => {
