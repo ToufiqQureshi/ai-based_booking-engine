@@ -22,6 +22,7 @@ from app.services.email_service import get_email_service
 from app.core.utils.config import get_settings
 from app.core.utils.time import utcnow
 from app.core.utils.limiter import limiter
+from app.guest_booking._booking_helpers import _update_guest_loyalty
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -359,7 +360,6 @@ async def verify_razorpay_payment(
             session.add(booking)
 
             # Update loyalty progress for this confirmed booking
-            from app.api.v1.public.bookings import _update_guest_loyalty
             guest_res = await session.execute(
                 select(Guest).where(Guest.id == booking.guest_id)
             )
@@ -623,7 +623,6 @@ async def razorpay_webhook(
             session.add(booking)
 
             # Update loyalty counters via webhook confirmation path
-            from app.api.v1.public.bookings import _update_guest_loyalty
             guest_res = await session.execute(
                 select(Guest).where(Guest.id == booking.guest_id)
             )
