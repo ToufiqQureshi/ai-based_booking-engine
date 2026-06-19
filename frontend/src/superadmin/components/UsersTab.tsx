@@ -63,7 +63,8 @@ export function UsersTab() {
         onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to delete user'),
     });
 
-    const filteredUsers = users.filter((u: any) => 
+    const superAdmins = users.filter((u: any) => u.role === 'SUPER_ADMIN');
+    const filteredUsers = superAdmins.filter((u: any) => 
         (u.email?.toLowerCase() || '').includes(userSearchQuery.toLowerCase()) ||
         (u.name?.toLowerCase() || '').includes(userSearchQuery.toLowerCase())
     );
@@ -129,8 +130,8 @@ export function UsersTab() {
             <Card className="border-border shadow-sm rounded-2xl p-8 bg-background min-h-[400px]">
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h3 className="text-2xl font-black text-foreground tracking-tight">System User Governance</h3>
-                        <p className="text-sm text-muted-foreground font-medium mt-1">Review and manage platform administration levels.</p>
+                        <h3 className="text-2xl font-black text-foreground tracking-tight">Staybooker Core Team</h3>
+                        <p className="text-sm text-muted-foreground font-medium mt-1">Manage internal Super Admins with full platform access.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="relative">
@@ -164,16 +165,8 @@ export function UsersTab() {
                                         <UserIcon className="w-6 h-6" />
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider border shadow-none ${
-                                            u.role === 'SUPER_ADMIN' 
-                                                ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 font-bold' 
-                                                : u.role === 'OWNER'
-                                                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 font-bold'
-                                                : u.role === 'MANAGER'
-                                                ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 font-bold'
-                                                : 'bg-muted/40 text-muted-foreground border-border'
-                                        }`}>
-                                            {u.role}
+                                        <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider border shadow-none bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 font-bold`}>
+                                            Super Admin
                                         </Badge>
                                         <Badge className={`rounded-lg px-2 py-0.5 text-[8px] uppercase tracking-wider border shadow-none ${
                                             u.is_active 
@@ -243,8 +236,8 @@ export function UsersTab() {
                                     <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                                     
                                     <div className="flex items-center gap-1.5 pt-2">
-                                        <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                                        <span className="text-xs font-semibold text-foreground truncate">{u.hotel_name || "Platform / Super Admin"}</span>
+                                        <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+                                        <span className="text-xs font-semibold text-foreground truncate">Staybooker Platform</span>
                                     </div>
                                 </div>
                             </div>
