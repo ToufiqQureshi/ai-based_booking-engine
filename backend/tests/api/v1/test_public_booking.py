@@ -603,3 +603,90 @@ class TestPublicCancellation:
             "email": "any@test.com",
         })
         assert r.status_code == 404
+
+
+# ─── Add-on price tampering (price-integrity hardening) ───────────────────────
+
+class TestAddOnPriceIntegrity:
+    """A guest must never be able to influence the charged amount via add-on
+    prices: the server uses the catalog price and rejects unknown/negative ones.
+    """
+
+    async def _seed(self, hotel_id):
+        from tests.conftest import engine
+        from app.experiences.addon import AddOn
+        room_type = RoomType(
+            id=str(uuid.uuid4()), hotel_id=hotel_id, name="Std",
+            base_price=2000.0, total_inventory=5, base_occupancy=2, max_occupancy=3,
+        )
+        addon = AddOn(id=str(uuid.uuid4()), hotel_id=hotel_id, name="Spa", price=500.0, is_active=True)
+        async with AsyncSession(engine) as session:
+            session.add(room_type)
+            session.add(addon)
+            await session.commit()
+            await session.refresh(room_type)
+            await session.refresh(addon)
+        return room_type, addon
+
+    async def test_tampered_low_addon_price_uses_server_price(self, client: AsyncClient, seeded_hotel: Hotel):
+        room_type, addon = await self._seed(seeded_hotel.id)
+        # Exercises pricing, not rate limiting — neutralise the shared limiter bucket.
+        from app.core.utils.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(20), "check_out": _future(21),
+                "guest": {"first_name": "Mal", "last_name": "Ory", "email": "mal@test.com", "phone": "9876500000"},
+                "rooms": [{
+                    "room_type_id": room_type.id, "room_type_name": room_type.name,
+                    "price_per_night": 2000.0, "total_price": 2000.0,
+                }],
+                "addons": [{"id": addon.id, "name": "Spa", "price": 1.0}],  # tampered: real is 500
+                "payment_method": "pay_at_property",
+            })
+        finally:
+            limiter.enabled = prev_enabled
+        assert r.status_code == 200, r.text
+        # Server must charge room (2000) + catalog addon (500), ignoring the spoofed 1.0
+        assert r.json()["total_amount"] == 2500.0
+
+    async def test_negative_addon_price_rejected_at_boundary(self, client: AsyncClient, seeded_hotel: Hotel):
+        room_type, addon = await self._seed(seeded_hotel.id)
+        from app.core.utils.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(22), "check_out": _future(23),
+                "guest": {"first_name": "Mal", "last_name": "Ory", "email": "mal2@test.com", "phone": "9876500001"},
+                "rooms": [{
+                    "room_type_id": room_type.id, "room_type_name": room_type.name,
+                    "price_per_night": 2000.0, "total_price": 2000.0,
+                }],
+                "addons": [{"id": addon.id, "name": "Spa", "price": -5000.0}],  # would drag total negative
+                "payment_method": "pay_at_property",
+            })
+        finally:
+            limiter.enabled = prev_enabled
+        assert r.status_code == 422
+
+    async def test_unknown_addon_rejected(self, client: AsyncClient, seeded_hotel: Hotel):
+        room_type, _ = await self._seed(seeded_hotel.id)
+        from app.core.utils.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(24), "check_out": _future(25),
+                "guest": {"first_name": "Mal", "last_name": "Ory", "email": "mal3@test.com", "phone": "9876500002"},
+                "rooms": [{
+                    "room_type_id": room_type.id, "room_type_name": room_type.name,
+                    "price_per_night": 2000.0, "total_price": 2000.0,
+                }],
+                "addons": [{"id": str(uuid.uuid4()), "name": "Ghost", "price": 100.0}],
+                "payment_method": "pay_at_property",
+            })
+        finally:
+            limiter.enabled = prev_enabled
+        assert r.status_code == 400
