@@ -5,7 +5,7 @@ Kept separate so route handlers stay focused on business logic.
 from datetime import date
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 
 from app.rooms.room import RoomTypeRead
 
@@ -32,13 +32,23 @@ class PublicRoomSearchResult(RoomTypeRead):
 
 
 class PublicGuestCreate(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    phone: str
-    nationality: str = "IN"
-    id_type: str = "passport"
-    id_number: str = "PENDING"
+    first_name: str = Field(max_length=100)
+    last_name: str = Field(max_length=100)
+    email: EmailStr = Field(max_length=255)
+    phone: str = Field(max_length=20)
+    nationality: str = Field(default="IN", max_length=2)
+    id_type: str = Field(default="passport", max_length=50)
+    id_number: str = Field(default="PENDING", max_length=100)
+
+    from pydantic import field_validator
+    import re
+
+    @field_validator("first_name", "last_name", "phone", "id_number", mode="before")
+    @classmethod
+    def sanitize_strings(cls, v):
+        if not isinstance(v, str):
+            return v
+        return re.sub(r'<[^>]*>', '', v).strip()
 
 
 class PublicRoomBooking(BaseModel):
@@ -63,13 +73,23 @@ class PublicBookingCreate(BaseModel):
     guest: PublicGuestCreate
     rooms: List[PublicRoomBooking]
     addons: List[PublicAddOn] = []
-    special_requests: Optional[str] = None
+    special_requests: Optional[str] = Field(default=None, max_length=2000)
     promo_code: Optional[str] = None
     payment_method: Optional[str] = None
     # "ai_agent" when the guest arrived via an AI-concierge booking link
     source: Optional[str] = None
     redeem_points: Optional[float] = None
     claimed_offer_ids: List[str] = []
+
+    from pydantic import field_validator
+    import re
+
+    @field_validator("special_requests", mode="before")
+    @classmethod
+    def sanitize_strings(cls, v):
+        if not isinstance(v, str):
+            return v
+        return re.sub(r'<[^>]*>', '', v).strip()
 
 
 class PublicBookingResponse(BaseModel):

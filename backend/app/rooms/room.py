@@ -6,9 +6,11 @@ Frontend RoomType interface se match karta hai.
 """
 from sqlmodel import SQLModel, Field, Relationship, Column
 from sqlalchemy import JSON
+from pydantic import field_validator
 from typing import Optional, List, TYPE_CHECKING, Dict, Any
 from datetime import datetime, date
 import uuid
+import re
 
 if TYPE_CHECKING:
     from app.brand_console.hotel import Hotel
@@ -43,7 +45,7 @@ class RoomTypeBase(SQLModel):
     total_inventory: int = Field(default=1, ge=0)
     is_active: bool = Field(default=True)
     bed_type: Optional[str] = Field(default="Queen")
-    room_size: Optional[int] = Field(default=None, description="Size in sq ft")
+    room_size: Optional[int] = Field(default=None, ge=0, description="Size in sq ft")
     extra_person_price: float = Field(default=0.0, ge=0)
     extra_adult_price: float = Field(default=0.0, ge=0)
     extra_child_price: float = Field(default=0.0, ge=0)
@@ -54,6 +56,13 @@ class RoomTypeBase(SQLModel):
     market_price: Optional[float] = Field(default=None, description="Original price for strike-through display at room level")
     cancellation_policy: Optional[str] = None
     rate_plan_overrides: Optional[Dict[str, Any]] = Field(default_factory=dict, sa_column=Column(JSON, nullable=True))
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_html_room(cls, v: str) -> str:
+        if v:
+            return re.sub(r'<[^>]*>', '', v)
+        return v
 
 
 class RoomType(RoomTypeBase, table=True):

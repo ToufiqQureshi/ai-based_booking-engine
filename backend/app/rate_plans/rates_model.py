@@ -6,32 +6,44 @@ from sqlmodel import SQLModel, Field, Relationship, Column
 from sqlalchemy import JSON
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime, date
+from pydantic import field_validator
 import uuid
+import re
+
+def strip_html_tags(value: str) -> str:
+    if not isinstance(value, str):
+        return value
+    return re.sub(r'<[^>]*>', '', value).strip()
 
 if TYPE_CHECKING:
     from app.models.hotel import Hotel
     from app.models.room import RoomType
 
 class RatePlanBase(SQLModel):
-    name: str
-    description: Optional[str] = None
-    meal_plan: str = Field(default="EP")  # EP, CP, MAP, AP (European, Continental, Modified American, American)
-    price_adjustment: float = Field(default=0.0) # Added amount on top of base price
+    name: str = Field(max_length=150)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    meal_plan: str = Field(default="EP", max_length=20)  # EP, CP, MAP, AP
+    price_adjustment: float = Field(default=0.0, ge=-1000000, le=1000000) # Added amount on top of base price
     is_refundable: bool = True
-    cancellation_hours: int = 24
+    cancellation_hours: int = Field(default=24, ge=0, le=8760)
     is_active: bool = True
     # New Fields
-    min_los: int = Field(default=1, description="Minimum Length of Stay")
-    advance_purchase_days: int = Field(default=0, description="Book X days in advance for this rate")
+    min_los: int = Field(default=1, ge=1, le=365, description="Minimum Length of Stay")
+    advance_purchase_days: int = Field(default=0, ge=0, le=365, description="Book X days in advance for this rate")
     inclusions: list = Field(default_factory=list, sa_column=Column(JSON))  # e.g. ["Free WiFi", "Airport Pickup"]
     is_package: bool = Field(default=False)
     package_items: list = Field(default_factory=list, sa_column=Column(JSON)) # Specific bundle items for packages
-    market_price: Optional[float] = Field(default=None, description="Original price for strike-through display")
-    image_url: Optional[str] = None
+    market_price: Optional[float] = Field(default=None, ge=0, le=10000000, description="Original price for strike-through display")
+    image_url: Optional[str] = Field(default=None, max_length=1000)
     # Optional validity window — lets a package run only for a season/date range.
     # NULL on both sides means always available.
     valid_from: Optional[date] = Field(default=None, description="Package bookable from this date")
     valid_to: Optional[date] = Field(default=None, description="Package bookable until this date")
+
+    @field_validator("name", "description", "meal_plan", "image_url", mode="before")
+    @classmethod
+    def sanitize_strings(cls, v):
+        return strip_html_tags(v)
 
 class RatePlan(RatePlanBase, table=True):
     __tablename__ = "rate_plans"
