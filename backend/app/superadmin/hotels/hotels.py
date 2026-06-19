@@ -298,13 +298,14 @@ async def delete_hotel(
     # Snapshot all media (hotel + every room) BEFORE the cascade deletes so we
     # can purge it from storage afterwards — otherwise deleting a hotel orphans
     # all its images forever. Best-effort; failures here never block the delete.
-    media_to_clean = list(hotel.photos or [])
+    media_to_clean = list(hotel.photos or []) + list(getattr(hotel, "videos", None) or [])
     try:
         room_media_rows = (await session.execute(
-            select(RoomType.photos).where(RoomType.hotel_id == hotel_id)
+            select(RoomType.photos, RoomType.videos).where(RoomType.hotel_id == hotel_id)
         )).all()
-        for (photos,) in room_media_rows:
+        for photos, videos in room_media_rows:
             media_to_clean.extend(photos or [])
+            media_to_clean.extend(videos or [])
     except Exception as e:
         logger.warning("Could not snapshot room media for hotel %s: %s", hotel_id, e)
 
