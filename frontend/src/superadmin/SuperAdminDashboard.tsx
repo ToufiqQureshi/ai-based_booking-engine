@@ -130,7 +130,12 @@ export default function SuperAdminDashboard() {
                     token_type: 'Bearer',
                     expires_in: data.expires_in ?? 3600,
                 });
-                window.location.href = '/';
+                
+                // Redirect to the normal hotel dashboard (app subdomain) instead of staying on superadmin
+                const appUrl = window.location.hostname.includes('superadmin.')
+                    ? window.location.origin.replace('superadmin.', 'app.')
+                    : window.location.origin;
+                window.location.href = `${appUrl}/dashboard`;
             } catch (err) {
                 localStorage.removeItem(SUPERADMIN_ORIGINAL_TOKENS_KEY);
                 tokenStorage.clearTokens();

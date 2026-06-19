@@ -103,12 +103,11 @@ const App = () => {
                 {isSuperAdmin ? (
                   <Route path="/">
                     {/* Only login is allowed on superadmin subdomain — no public signup */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/" element={<SuperAdminDashboard />} />
-                    <Route path="/:section" element={<SuperAdminDashboard />} />
-                    <Route index element={<Navigate to="/" replace />} />
+                    <Route path="login" element={<LoginPage />} />
+                    <Route index element={<Navigate to="/overview" replace />} />
+                    <Route path=":section" element={<SuperAdminDashboard />} />
                     {/* Everything else (including /signup) redirects to superadmin panel */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<Navigate to="/overview" replace />} />
                   </Route>
                 ) : (
                   <>
