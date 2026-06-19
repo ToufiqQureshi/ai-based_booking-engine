@@ -186,9 +186,10 @@ async def test_superadmin_flush_all_cache_audit(super_admin_client: AsyncClient)
 
 @pytest.mark.anyio
 async def test_superadmin_update_user_role_audit(super_admin_client: AsyncClient, seeded_user: User):
-    # 1. Update role
+    # 1. Update role (role is sent in the request body, matching the frontend)
     res = await super_admin_client.patch(
-        f"/api/v1/superadmin/users/{seeded_user.id}/role?role=MANAGER"
+        f"/api/v1/superadmin/users/{seeded_user.id}/role",
+        json={"role": "MANAGER"}
     )
     assert res.status_code == 200
 
