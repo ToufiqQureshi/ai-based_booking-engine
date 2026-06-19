@@ -102,8 +102,25 @@ export default function SuperAdminDashboard() {
         queryKey: ['superadmin-users'],
         queryFn: () => apiClient.get('/superadmin/users'),
         staleTime: 1000 * 60 * 2,
-        enabled: !!user && user.role === 'SUPER_ADMIN' && 
+        enabled: !!user && user.role === 'SUPER_ADMIN' &&
             ['overview', 'hotels', 'brands', 'analytics', 'tickets', 'platform'].includes(activeSection),
+    });
+
+    // Real platform revenue + support-queue figures for the Overview cards/alerts.
+    const { data: revenue } = useQuery<any>({
+        queryKey: ['superadmin-revenue'],
+        queryFn: () => apiClient.get('/superadmin/revenue'),
+        staleTime: 1000 * 60 * 5,
+        retry: false,
+        enabled: !!user && user.role === 'SUPER_ADMIN' && activeSection === 'overview',
+    });
+
+    const { data: ticketSummary } = useQuery<any>({
+        queryKey: ['superadmin-ticket-summary'],
+        queryFn: () => apiClient.get('/superadmin/tickets/summary'),
+        staleTime: 1000 * 60 * 2,
+        retry: false,
+        enabled: !!user && user.role === 'SUPER_ADMIN' && activeSection === 'overview',
     });
 
     const impersonateMutation = useMutation({
@@ -326,6 +343,8 @@ export default function SuperAdminDashboard() {
                                             usersCount={users.length}
                                             aiCount={hotels.filter((h: any) => h.feature_ai_agent).length}
                                             activeCount={activeHotels}
+                                            mrr={revenue?.mrr}
+                                            activeSubscriptions={revenue?.active_subscriptions}
                                         />
 
                                         {/* Super Admin Charts */}
@@ -341,12 +360,25 @@ export default function SuperAdminDashboard() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
-                                                        <span className="text-muted-foreground font-medium">Active Support Tickets (High Priority)</span>
-                                                        <Badge variant="destructive">3 Open</Badge>
+                                                        <span className="text-muted-foreground font-medium">Open Support Tickets</span>
+                                                        {(() => {
+                                                            const open = (ticketSummary?.by_status?.open || 0) + (ticketSummary?.by_status?.in_progress || 0);
+                                                            return open > 0
+                                                                ? <Badge variant="destructive">{open} Open</Badge>
+                                                                : <span className="text-emerald-600 font-bold text-xs">All clear</span>;
+                                                        })()}
                                                     </div>
                                                     <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
-                                                        <span className="text-muted-foreground font-medium">Stripe API Webhook Sync</span>
-                                                        <span className="text-emerald-600 font-bold flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Healthy</span>
+                                                        <span className="text-muted-foreground font-medium">SLA Breaches</span>
+                                                        {(ticketSummary?.sla_breach || 0) > 0
+                                                            ? <Badge variant="destructive">{ticketSummary.sla_breach}</Badge>
+                                                            : <span className="text-emerald-600 font-bold text-xs flex items-center gap-1"><RefreshCw className="w-3 h-3" /> On track</span>}
+                                                    </div>
+                                                    <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
+                                                        <span className="text-muted-foreground font-medium">Subscriptions Expiring (7d)</span>
+                                                        {(revenue?.expiring_soon?.length || 0) > 0
+                                                            ? <Badge variant="destructive">{revenue.expiring_soon.length}</Badge>
+                                                            : <span className="text-emerald-600 font-bold text-xs">None</span>}
                                                     </div>
                                                 </div>
                                             </div>

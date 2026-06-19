@@ -5,31 +5,31 @@ interface StatsProps {
     hotelsCount: number;
     usersCount: number;
     aiCount: number;
-    activeCount?: number; // hotels with active subscription
-    mrr?: number;
-    gbv?: number;
-    conversionRate?: number;
+    activeCount?: number;  // hotels with active subscription
+    mrr?: number;          // real monthly recurring revenue (INR) from /superadmin/revenue
+    activeSubscriptions?: number;
 }
 
-export const StatsGrid = ({ hotelsCount, usersCount, aiCount, activeCount, mrr = 12500, gbv = 1450000, conversionRate = 3.2 }: StatsProps) => {
+export const StatsGrid = ({ hotelsCount, usersCount, aiCount, activeCount, mrr, activeSubscriptions }: StatsProps) => {
     const activeHotels = activeCount ?? hotelsCount;
     const aiPct = hotelsCount > 0 ? Math.round((aiCount / hotelsCount) * 100) : 0;
+    const mrrDisplay = mrr === undefined ? '—' : `₹${mrr.toLocaleString('en-IN')}`;
 
     const stats = [
         {
-            label: 'Total MRR',
-            value: `$${mrr.toLocaleString()}`,
-            sub: '+12% from last month',
-            icon: Activity, // You can change icon later if needed, but Activity is good for revenue
+            label: 'Monthly Recurring Rev',
+            value: mrrDisplay,
+            sub: activeSubscriptions !== undefined ? `${activeSubscriptions} active subscriptions` : 'Recurring / month',
+            icon: Activity,
             color: 'text-emerald-600',
             bg: 'bg-emerald-50 dark:bg-emerald-950/30',
             border: 'border-emerald-100 dark:border-emerald-900/40',
             gradient: 'from-emerald-500/8 via-transparent to-transparent',
         },
         {
-            label: 'Gross Booking Val',
-            value: `$${(gbv / 1000).toFixed(1)}k`,
-            sub: 'Processed 30 days',
+            label: 'Active Properties',
+            value: activeHotels,
+            sub: `Out of ${hotelsCount} total`,
             icon: Building2,
             color: 'text-indigo-600',
             bg: 'bg-indigo-50 dark:bg-indigo-950/30',
@@ -37,9 +37,9 @@ export const StatsGrid = ({ hotelsCount, usersCount, aiCount, activeCount, mrr =
             gradient: 'from-indigo-500/8 via-transparent to-transparent',
         },
         {
-            label: 'Global Conversion',
-            value: `${conversionRate}%`,
-            sub: 'Search to Booking',
+            label: 'AI-Enabled Hotels',
+            value: aiCount,
+            sub: `${aiPct}% of properties`,
             icon: BrainCircuit,
             color: 'text-purple-600',
             bg: 'bg-purple-50 dark:bg-purple-950/30',
@@ -47,9 +47,9 @@ export const StatsGrid = ({ hotelsCount, usersCount, aiCount, activeCount, mrr =
             gradient: 'from-purple-500/8 via-transparent to-transparent',
         },
         {
-            label: 'Active Properties',
-            value: activeHotels,
-            sub: `Out of ${hotelsCount} total`,
+            label: 'Total Users',
+            value: usersCount,
+            sub: 'Across all properties',
             icon: Users,
             color: 'text-blue-600',
             bg: 'bg-blue-50 dark:bg-blue-950/30',

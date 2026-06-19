@@ -165,11 +165,8 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                             >
                                 Status <SortIcon col="status" />
                             </th>
-                            <th
-                                className="text-left py-3 px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-foreground select-none hidden lg:table-cell"
-                                onClick={() => toggleSort('status')}
-                            >
-                                Health <SortIcon col="status" />
+                            <th className="text-left py-3 px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground hidden lg:table-cell">
+                                Users
                             </th>
                             <th className="text-left py-3 px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground hidden xl:table-cell">
                                 Insight
@@ -243,35 +240,28 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                                         </div>
                                     </td>
 
-                                    {/* Health Score */}
+                                    {/* User count (real) */}
                                     <td className="py-3.5 px-3 hidden lg:table-cell">
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex items-center justify-between max-w-[80px]">
-                                                <span className="text-xs font-bold text-foreground tabular-nums">
-                                                    {hotel.is_active ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 30) + 30}/100
-                                                </span>
-                                            </div>
-                                            <div className="w-[80px] h-1.5 bg-muted rounded-full overflow-hidden">
-                                                <div 
-                                                    className={cn("h-full rounded-full", hotel.is_active ? "bg-emerald-500" : "bg-red-500")}
-                                                    style={{ width: `${hotel.is_active ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 30) + 30}%` }}
-                                                />
-                                            </div>
-                                        </div>
+                                        <span className="text-xs font-semibold text-foreground tabular-nums">
+                                            {hotelUsers.length} {hotelUsers.length === 1 ? 'user' : 'users'}
+                                        </span>
                                     </td>
 
-                                    {/* Insights (Upsell / Onboarding) */}
+                                    {/* Insights — derived from real account state only */}
                                     <td className="py-3.5 px-3 hidden xl:table-cell">
                                         <div className="flex flex-col gap-1.5 items-start">
                                             {!hotel.is_active && (
-                                                <Badge variant="destructive" className="text-[9px] px-1.5 py-0">High Churn Risk</Badge>
+                                                <Badge variant="destructive" className="text-[9px] px-1.5 py-0">Suspended</Badge>
                                             )}
-                                            {plan === 'basic' && hotel.is_active && Math.random() > 0.5 && (
-                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-indigo-200 text-indigo-700 bg-indigo-50">Ready for Pro</Badge>
+                                            {hotel.is_paused && (
+                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-amber-200 text-amber-700 bg-amber-50">Paused</Badge>
                                             )}
-                                            {Math.random() > 0.8 && (
-                                                <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"/> Incomplete Setup
+                                            {hotel.is_active && plan === 'free' && (
+                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-indigo-200 text-indigo-700 bg-indigo-50">Upsell opportunity</Badge>
+                                            )}
+                                            {hotel.is_active && !hotel.is_paused && plan !== 'free' && (
+                                                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/> Healthy
                                                 </span>
                                             )}
                                         </div>
