@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from sqlmodel import select
 
 from app.core.auth.deps import CurrentUser, DbSession
@@ -282,15 +282,31 @@ async def update_hotel_status(
 @router.delete("/hotels/{hotel_id}")
 async def delete_hotel(
     hotel_id: str, request: Request, session: DbSession,
+    background_tasks: BackgroundTasks,
     super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Permanently delete a hotel and all associated data."""
     from sqlalchemy import text
     from app.core.db.supabase import get_supabase
+    from app.core.storage import delete_media_objects
+    from app.rooms.room import RoomType
 
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
+
+    # Snapshot all media (hotel + every room) BEFORE the cascade deletes so we
+    # can purge it from storage afterwards — otherwise deleting a hotel orphans
+    # all its images forever. Best-effort; failures here never block the delete.
+    media_to_clean = list(hotel.photos or [])
+    try:
+        room_media_rows = (await session.execute(
+            select(RoomType.photos).where(RoomType.hotel_id == hotel_id)
+        )).all()
+        for (photos,) in room_media_rows:
+            media_to_clean.extend(photos or [])
+    except Exception as e:
+        logger.warning("Could not snapshot room media for hotel %s: %s", hotel_id, e)
 
     users_to_delete = (await session.execute(select(User).where(User.hotel_id == hotel_id))).scalars().all()
 
@@ -347,6 +363,9 @@ async def delete_hotel(
             ip_address=_get_client_ip(request),
         ))
         await session.commit()
+        # Purge hotel + room media from storage after the response (best-effort).
+        if media_to_clean:
+            background_tasks.add_task(delete_media_objects, media_to_clean)
         return {"message": "Hotel and all associated data deleted successfully"}
     except Exception as e:
         await session.rollback()
