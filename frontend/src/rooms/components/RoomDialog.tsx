@@ -39,6 +39,7 @@ import { apiClient } from '@/core/api/client';
 import { RoomType, Amenity, RoomPhoto, RoomAmenity, RatePlan } from '@/core/types/api';
 import { useToast } from '@/core/hooks/use-toast';
 import { RoomImageUploader } from './RoomImageUploader';
+import { VideoUploader, MediaVideo } from '@/components/common/VideoUploader';
 import { cn } from '@/core/lib/utils';
 
 const roomSchema = z.object({
@@ -67,6 +68,12 @@ const roomSchema = z.object({
         order: z.number().optional().default(0),
         sort_order: z.number().optional(),
     })).default([]),
+    videos: z.array(z.object({
+        id: z.string().optional(),
+        url: z.string(),
+        type: z.string().optional(),
+        mime: z.string().optional(),
+    })).max(2, 'A room can have at most 2 videos').default([]),
     amenity_ids: z.array(z.string()).default([]),
     market_price: z.coerce.number().min(0).optional().nullable(),
     cancellation_policy: z.string().optional(),
@@ -112,6 +119,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
             smoking_allowed: false,
             is_pet_friendly: false,
             photos: [],
+            videos: [],
             amenity_ids: [],
             market_price: undefined,
             cancellation_policy: '',
@@ -162,6 +170,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     smoking_allowed: initialData.smoking_allowed || false,
                     is_pet_friendly: initialData.is_pet_friendly || false,
                     photos: initialData.photos || [],
+                    videos: initialData.videos || [],
                     market_price: initialData.market_price,
                     cancellation_policy: initialData.cancellation_policy || '',
                     amenity_ids: (initialData.amenities as RoomAmenity[])?.map(a => a.id) || [],
@@ -188,6 +197,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                     smoking_allowed: false,
                     is_pet_friendly: false,
                     photos: [],
+                    videos: [],
                     amenity_ids: [],
                     market_price: undefined,
                     cancellation_policy: '',
@@ -423,6 +433,27 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                                 <RoomImageUploader
                                                     images={field.value as RoomPhoto[]}
                                                     onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="videos"
+                                    render={({ field }) => (
+                                        <FormItem className="mt-8">
+                                            <div className="mb-4">
+                                                <h3 className="text-sm font-bold text-foreground mb-1">Room Videos</h3>
+                                                <p className="text-xs text-muted-foreground">Optional short walkthrough clips (MP4/WebM, up to 2). Shown to guests alongside the photos.</p>
+                                            </div>
+                                            <FormControl>
+                                                <VideoUploader
+                                                    videos={(field.value as MediaVideo[]) || []}
+                                                    onChange={field.onChange}
+                                                    max={2}
                                                 />
                                             </FormControl>
                                             <FormMessage />

@@ -163,6 +163,7 @@ export interface RoomType {
   is_pet_friendly?: boolean;
   market_price?: number;
   photos: RoomPhoto[];
+  videos?: MediaVideo[];
   amenities: RoomAmenity[];
   cancellation_policy?: string;
   rate_plan_overrides?: Record<string, any>;
@@ -178,6 +179,13 @@ export interface RoomPhoto {
   is_primary?: boolean;
   order?: number;
   sort_order?: number;
+}
+
+export interface MediaVideo {
+  id?: string;
+  url: string;
+  type?: string;
+  mime?: string;
 }
 
 // Amenity as stored in room JSON column (subset of full Amenity)
