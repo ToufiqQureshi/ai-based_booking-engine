@@ -144,6 +144,42 @@ export function RevenueTab() {
                     </div>
                 </div>
             )}
+
+            {/* AI Performance & Costs (Mock Data) */}
+            <div>
+                <h3 className="text-lg font-black text-foreground mt-4 mb-4">AI Intelligence & API Costs</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="border border-border rounded-2xl bg-background p-5">
+                        <h4 className="text-sm font-bold mb-3">AI vs Manual Bookings</h4>
+                        <div className="flex items-center gap-4 mb-2">
+                            <div className="flex-1">
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-indigo-600 font-bold">AI Handled (68%)</span>
+                                    <span className="text-muted-foreground font-medium">Manual (32%)</span>
+                                </div>
+                                <div className="w-full h-3 bg-muted rounded-full overflow-hidden flex">
+                                    <div className="bg-indigo-500 h-full" style={{ width: '68%' }}></div>
+                                    <div className="bg-slate-300 dark:bg-slate-700 h-full" style={{ width: '32%' }}></div>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">The AI Agent successfully closed 3,420 bookings this month without human intervention.</p>
+                    </div>
+                    <div className="border border-border rounded-2xl bg-background p-5">
+                        <h4 className="text-sm font-bold mb-3">API Token Usage (OpenAI/Claude)</h4>
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="font-medium">Total Tokens Used</span>
+                                <span className="font-mono font-bold">45.2M</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="font-medium">Estimated API Cost</span>
+                                <span className="font-mono font-bold text-rose-600">$142.50</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

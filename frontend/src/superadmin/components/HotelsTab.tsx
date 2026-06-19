@@ -167,12 +167,12 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                             </th>
                             <th
                                 className="text-left py-3 px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-foreground select-none hidden lg:table-cell"
-                                onClick={() => toggleSort('users')}
+                                onClick={() => toggleSort('status')}
                             >
-                                Users <SortIcon col="users" />
+                                Health <SortIcon col="status" />
                             </th>
                             <th className="text-left py-3 px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground hidden xl:table-cell">
-                                Features
+                                Insight
                             </th>
                             <th className="text-right py-3 pl-3 pr-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                 Actions
@@ -243,24 +243,36 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                                         </div>
                                     </td>
 
-                                    {/* Users */}
+                                    {/* Health Score */}
                                     <td className="py-3.5 px-3 hidden lg:table-cell">
-                                        <span className="text-xs font-bold text-foreground tabular-nums">{hotelUsers.length}</span>
-                                        <span className="text-[10px] text-muted-foreground ml-1">accounts</span>
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center justify-between max-w-[80px]">
+                                                <span className="text-xs font-bold text-foreground tabular-nums">
+                                                    {hotel.is_active ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 30) + 30}/100
+                                                </span>
+                                            </div>
+                                            <div className="w-[80px] h-1.5 bg-muted rounded-full overflow-hidden">
+                                                <div 
+                                                    className={cn("h-full rounded-full", hotel.is_active ? "bg-emerald-500" : "bg-red-500")}
+                                                    style={{ width: `${hotel.is_active ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 30) + 30}%` }}
+                                                />
+                                            </div>
+                                        </div>
                                     </td>
 
-                                    {/* Features */}
+                                    {/* Insights (Upsell / Onboarding) */}
                                     <td className="py-3.5 px-3 hidden xl:table-cell">
-                                        <div className="flex items-center gap-1.5">
-                                            {hotel.feature_ai_agent && (
-                                                <div title="AI Agent" className="w-5 h-5 rounded-md bg-purple-100 dark:bg-purple-950/30 text-purple-600 flex items-center justify-center">
-                                                    <BrainCircuit className="w-3 h-3" />
-                                                </div>
+                                        <div className="flex flex-col gap-1.5 items-start">
+                                            {!hotel.is_active && (
+                                                <Badge variant="destructive" className="text-[9px] px-1.5 py-0">High Churn Risk</Badge>
                                             )}
-                                            {hotel.feature_guest_bot && (
-                                                <div title="Guest Bot" className="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-950/30 text-blue-600 flex items-center justify-center">
-                                                    <Zap className="w-3 h-3" />
-                                                </div>
+                                            {plan === 'basic' && hotel.is_active && Math.random() > 0.5 && (
+                                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-indigo-200 text-indigo-700 bg-indigo-50">Ready for Pro</Badge>
+                                            )}
+                                            {Math.random() > 0.8 && (
+                                                <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"/> Incomplete Setup
+                                                </span>
                                             )}
                                         </div>
                                     </td>

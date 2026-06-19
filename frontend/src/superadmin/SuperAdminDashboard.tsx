@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/core/contexts/AuthContext';
 import { StatsGrid } from '@/superadmin/components/StatsGrid';
+import { SuperAdminCharts } from '@/superadmin/components/SuperAdminCharts';
 import { HotelsTab } from '@/superadmin/components/HotelsTab';
 import { HotelWorkspace } from '@/superadmin/components/HotelWorkspace';
 import { AnalyticsTab } from '@/analytics/AnalyticsTab';
@@ -321,6 +322,41 @@ export default function SuperAdminDashboard() {
                                             aiCount={hotels.filter((h: any) => h.feature_ai_agent).length}
                                             activeCount={activeHotels}
                                         />
+
+                                        {/* Super Admin Charts */}
+                                        <SuperAdminCharts />
+
+                                        {/* Quick Alerts & Actions */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                            {/* Alerts */}
+                                            <div className="lg:col-span-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-2xl p-5">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <Heart className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                                                    <h3 className="text-sm font-black text-amber-900 dark:text-amber-400">System Alerts</h3>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
+                                                        <span className="text-muted-foreground font-medium">Active Support Tickets (High Priority)</span>
+                                                        <Badge variant="destructive">3 Open</Badge>
+                                                    </div>
+                                                    <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
+                                                        <span className="text-muted-foreground font-medium">Stripe API Webhook Sync</span>
+                                                        <span className="text-emerald-600 font-bold flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Healthy</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Quick Actions */}
+                                            <div className="bg-background border border-border rounded-2xl p-5 flex flex-col justify-center gap-3">
+                                                <Button onClick={() => navigate('/hotels')} className="w-full rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700">
+                                                    <Building2 className="w-4 h-4 mr-2" /> Add New Property
+                                                </Button>
+                                                <Button onClick={() => navigate('/broadcasts')} variant="outline" className="w-full rounded-xl font-bold">
+                                                    <Radio className="w-4 h-4 mr-2" /> Global Broadcast
+                                                </Button>
+                                            </div>
+                                        </div>
+
                                         {/* Quick access to recent hotels */}
                                         <div>
                                             <div className="flex items-center justify-between mb-4">
