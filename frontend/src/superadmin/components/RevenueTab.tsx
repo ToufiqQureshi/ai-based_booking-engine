@@ -145,41 +145,66 @@ export function RevenueTab() {
                 </div>
             )}
 
-            {/* AI Performance & Costs (Mock Data) */}
-            <div>
-                <h3 className="text-lg font-black text-foreground mt-4 mb-4">AI Intelligence & API Costs</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="border border-border rounded-2xl bg-background p-5">
-                        <h4 className="text-sm font-bold mb-3">AI vs Manual Bookings</h4>
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className="flex-1">
-                                <div className="flex justify-between text-xs mb-1">
-                                    <span className="text-indigo-600 font-bold">AI Handled (68%)</span>
-                                    <span className="text-muted-foreground font-medium">Manual (32%)</span>
-                                </div>
-                                <div className="w-full h-3 bg-muted rounded-full overflow-hidden flex">
-                                    <div className="bg-indigo-500 h-full" style={{ width: '68%' }}></div>
-                                    <div className="bg-slate-300 dark:bg-slate-700 h-full" style={{ width: '32%' }}></div>
+            {/* AI Intelligence — real platform-wide usage from AIUsageDaily (current month) */}
+            {(() => {
+                const ai = d.ai_usage ?? {};
+                const byAgent: { agent: string; tokens: number; messages: number }[] = ai.by_agent ?? [];
+                const totalMsgs = ai.total_messages ?? 0;
+                const AGENT_LABEL: Record<string, string> = { hotelier: 'Hotelier Assistant', guest: 'Guest Chat', whatsapp: 'WhatsApp Bot' };
+                const AGENT_COLOR: Record<string, string> = { hotelier: 'bg-indigo-500', guest: 'bg-emerald-500', whatsapp: 'bg-amber-500' };
+                const fmtNum = (n: number) =>
+                    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` :
+                    n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` :
+                    `${(n ?? 0).toLocaleString('en-IN')}`;
+                return (
+                    <div>
+                        <h3 className="text-lg font-black text-foreground mt-4 mb-1">AI Intelligence</h3>
+                        <p className="text-xs text-muted-foreground mb-4">Platform-wide LLM usage · {ai.month ?? 'this month'}</p>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="border border-border rounded-2xl bg-background p-5">
+                                <h4 className="text-sm font-bold mb-3">Conversations by Agent</h4>
+                                {totalMsgs === 0 ? (
+                                    <p className="text-xs text-muted-foreground py-4">No AI activity recorded this month yet.</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {byAgent.map((a) => {
+                                            const pct = totalMsgs ? Math.round((a.messages / totalMsgs) * 100) : 0;
+                                            return (
+                                                <div key={a.agent}>
+                                                    <div className="flex justify-between text-xs mb-1">
+                                                        <span className="font-bold">{AGENT_LABEL[a.agent] ?? a.agent}</span>
+                                                        <span className="text-muted-foreground font-medium">{fmtNum(a.messages)} msgs ({pct}%)</span>
+                                                    </div>
+                                                    <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
+                                                        <div className={`${AGENT_COLOR[a.agent] ?? 'bg-slate-500'} h-full`} style={{ width: `${pct}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="border border-border rounded-2xl bg-background p-5">
+                                <h4 className="text-sm font-bold mb-3">Token Usage (this month)</h4>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="font-medium">Total Tokens Used</span>
+                                        <span className="font-mono font-bold">{fmtNum(ai.total_tokens ?? 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="font-medium">AI Messages Handled</span>
+                                        <span className="font-mono font-bold">{fmtNum(totalMsgs)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="font-medium">Unique Participants Served</span>
+                                        <span className="font-mono font-bold">{fmtNum(ai.unique_participants ?? 0)}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <p className="text-[11px] text-muted-foreground">The AI Agent successfully closed 3,420 bookings this month without human intervention.</p>
                     </div>
-                    <div className="border border-border rounded-2xl bg-background p-5">
-                        <h4 className="text-sm font-bold mb-3">API Token Usage (OpenAI/Claude)</h4>
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="font-medium">Total Tokens Used</span>
-                                <span className="font-mono font-bold">45.2M</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="font-medium">Estimated API Cost</span>
-                                <span className="font-mono font-bold text-rose-600">$142.50</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                );
+            })()}
         </div>
     );
 }
