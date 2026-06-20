@@ -16,8 +16,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary: Indigo */
-    --primary: 239 84% 60%;
+    /* Primary: Red */
+    --primary: 353 86% 44%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 214 32% 96%;
@@ -36,22 +36,22 @@
     --info-foreground: 0 0% 100%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 239 84% 60%;
+    --ring: 353 84% 44%;
     --radius: 0.625rem;
 
     /* Sidebar — Light White */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 239 84% 60%;
+    --sidebar-primary: 353 86% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 214 32% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 239 84% 60%;
+    --sidebar-ring: 353 86% 44%;
     --sidebar-muted: 215 16% 47%;
 
     /* Chart colors */
-    --chart-1: 239 84% 60%;
+    --chart-1: 353 86% 44%;
     --chart-2: 142 76% 36%;
     --chart-3: 38 92% 50%;
     --chart-4: 280 65% 60%;
@@ -66,7 +66,7 @@
     --card-foreground: 210 40% 95%;
     --popover: 222 47% 9%;
     --popover-foreground: 210 40% 95%;
-    --primary: 239 84% 65%;
+    --primary: 353 86% 55%;
     --primary-foreground: 0 0% 100%;
     --secondary: 217 33% 14%;
     --secondary-foreground: 210 40% 95%;
@@ -84,17 +84,17 @@
     --info-foreground: 210 40% 98%;
     --border: 217 33% 16%;
     --input: 217 33% 16%;
-    --ring: 239 84% 65%;
+    --ring: 353 84% 55%;
 
     /* Sidebar — dark equivalent */
     --sidebar-background: 222 47% 7%;
     --sidebar-foreground: 215 20% 75%;
-    --sidebar-primary: 239 84% 65%;
+    --sidebar-primary: 353 86% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 47% 12%;
     --sidebar-accent-foreground: 215 20% 90%;
     --sidebar-border: 222 47% 12%;
-    --sidebar-ring: 239 84% 65%;
+    --sidebar-ring: 353 84% 55%;
     --sidebar-muted: 215 20% 45%;
   }
 }
@@ -139,7 +139,7 @@
 
   /* Top progress bar for page transitions */
   .page-progress {
-    @apply fixed top-0 left-0 z-[9999] h-0.5 bg-indigo-500;
+    @apply fixed top-0 left-0 z-[9999] h-0.5 bg-red-600;
     animation: progress-slide 0.5s ease-out forwards;
   }
 

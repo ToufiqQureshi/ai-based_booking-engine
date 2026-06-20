@@ -121,7 +121,7 @@ export default function BookingCancel() {
         return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
     };
 
-    const themeColor = hotel?.primary_color || '#7c3aed';
+    const themeColor = hotel?.primary_color || '#d11026';
 
     if (loadingHotel) {
         return (

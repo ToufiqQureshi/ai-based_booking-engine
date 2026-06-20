@@ -176,7 +176,7 @@ export default function ChainBookingWidget() {
         }
     };
 
-    const primaryColor = previewColor || selectedProperty?.primary_color || chain?.primary_color || '#4f46e5';
+    const primaryColor = previewColor || selectedProperty?.primary_color || chain?.primary_color || '#d11026';
 
     const filteredProperties = (chain?.properties || []).filter(p =>
         p.name.toLowerCase().includes(propertySearch.toLowerCase()) ||

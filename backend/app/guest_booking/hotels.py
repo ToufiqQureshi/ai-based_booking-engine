@@ -183,6 +183,22 @@ async def get_public_hotel_by_slug(request: Request, hotel_slug: str, session: D
         raise HTTPException(status_code=404, detail="Hotel not found")
 
     masked = mask_hotel_for_hotelier(hotel)
+    
+    from app.integration.integration import IntegrationSettings
+    settings_query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel.id)
+    settings_res = await session.execute(settings_query)
+    int_settings = settings_res.scalar_one_or_none()
+    
+    if int_settings:
+        if getattr(hotel, 'feature_custom_widget', False) and getattr(int_settings, 'widget_primary_color', None):
+            masked["primary_color"] = int_settings.widget_primary_color
+        elif not getattr(hotel, 'feature_custom_widget', False):
+            masked["primary_color"] = None
+            
+        if not masked.get("settings"):
+            masked["settings"] = {}
+        masked["settings"]["min_nights"] = getattr(int_settings, 'widget_min_nights', 1) or 1
+        masked["settings"]["advance_purchase_days"] = getattr(int_settings, 'widget_advance_purchase_days', 0) or 0
 
     try:
         redis_client.set_value(cache_key, json.dumps(masked, default=str), expire=300)
@@ -221,17 +237,19 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         allowed_domains = settings.allowed_domains or ""
         widget_enabled = settings.widget_enabled
         
+    has_custom = getattr(hotel, 'feature_custom_widget', False)
+
     res_dict = {
         "hotel_name": hotel.name,
-        "logo_url": (getattr(settings, 'widget_logo_url', None) or hotel.logo_url) if settings else hotel.logo_url,
-        "primary_color": hotel.primary_color,
-        "widget_layout": getattr(settings, 'widget_layout', 'modern') if settings else "modern",
-        "widget_background_color": settings.widget_background_color if settings else "#FFFFFF",
-        "widget_theme": getattr(settings, 'widget_theme', 'light') if settings else "light",
+        "logo_url": ((getattr(settings, 'widget_logo_url', None) or hotel.logo_url) if settings else hotel.logo_url) if has_custom else None,
+        "primary_color": hotel.primary_color if has_custom else None,
+        "widget_layout": (getattr(settings, 'widget_layout', 'modern') if settings else "modern") if has_custom else "modern",
+        "widget_background_color": (settings.widget_background_color if settings else "#FFFFFF") if has_custom else "#FFFFFF",
+        "widget_theme": (getattr(settings, 'widget_theme', 'light') if settings else "light") if has_custom else "light",
         # custom CSS is sanitized before it ever reaches a guest browser;
         # custom JS is deliberately NOT exposed on this public endpoint (it would
         # be a remote-code-execution sink in every guest's widget).
-        "widget_custom_css": _sanitize_widget_css(getattr(settings, 'widget_custom_css', '') if settings else ''),
+        "widget_custom_css": _sanitize_widget_css(getattr(settings, 'widget_custom_css', '') if settings else '') if has_custom else '',
         "allowed_domains": allowed_domains,
         "widget_enabled": widget_enabled,
         "min_nights": getattr(settings, 'widget_min_nights', 1) if settings else 1,
@@ -275,8 +293,13 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
     settings_res = await session.execute(settings_query)
     int_settings = settings_res.scalar_one_or_none()
     masked = mask_hotel_for_hotelier(hotel)
-    if int_settings and getattr(int_settings, 'widget_primary_color', None):
-        masked["primary_color"] = int_settings.widget_primary_color
+    if int_settings:
+        if getattr(int_settings, 'widget_primary_color', None):
+            masked["primary_color"] = int_settings.widget_primary_color
+        if not masked.get("settings"):
+            masked["settings"] = {}
+        masked["settings"]["min_nights"] = getattr(int_settings, 'widget_min_nights', 1) or 1
+        masked["settings"]["advance_purchase_days"] = getattr(int_settings, 'widget_advance_purchase_days', 0) or 0
 
     try:
         redis_client.set_value(cache_key, json.dumps(masked, default=str), expire=300)

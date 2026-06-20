@@ -38,7 +38,7 @@ export function PropertyDetailsFooter({ hotel }: PropertyDetailsFooterProps) {
 
     // Determine the main display image. If hotel has photos, use the first one. Otherwise fallback to logo_url.
     const displayImage = photos && photos.length > 0 ? photos[0].url : logo_url;
-    const primaryColor = hotel?.primary_color || '#7c3aed';
+    const primaryColor = hotel?.primary_color || '#d11026';
 
     const handleLinkClick = (e: React.MouseEvent, title: string, content: string) => {
         e.preventDefault();

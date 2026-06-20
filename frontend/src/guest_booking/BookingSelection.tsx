@@ -846,7 +846,7 @@ export default function BookingSelection() {
         );
     }
 
-    const themeColor = hotel?.primary_color || '#7c3aed';
+    const themeColor = hotel?.primary_color || '#d11026';
     const grandTotal = (selectedRatePlan?.total_price || 0) + selectedAddons.reduce((sum, a) => sum + a.price, 0);
 
     return (
