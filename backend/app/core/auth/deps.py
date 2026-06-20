@@ -278,3 +278,27 @@ def require_hotel_role(*allowed_roles: str):
         )
 
     return _dep
+
+def require_feature(feature_flag: str):
+    """Dependency factory enforcing that the current user's hotel has a specific feature enabled.
+    
+    Usage:
+        @router.post("/", dependencies=[Depends(require_feature("feature_ai_agent"))])
+    """
+    async def _dep(current_user: CurrentUser) -> User:
+        if current_user.hotel and not getattr(current_user.hotel, feature_flag, False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"This feature ({feature_flag}) is locked for your property. Please upgrade your plan."
+            )
+        return current_user
+    return _dep
+
+
+def check_hotel_feature(hotel, feature_flag: str) -> None:
+    """Helper function to enforce feature lock on public/unauthenticated routes."""
+    if not hotel or not getattr(hotel, feature_flag, False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Feature {feature_flag} is currently disabled for this property."
+        )
