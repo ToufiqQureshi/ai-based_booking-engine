@@ -14,7 +14,7 @@ import {
     AlertTriangle, Download, Users, RefreshCw, ServerCrash,
     CheckCircle2, Clock, Activity
 } from 'lucide-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/core/api/client';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
@@ -59,20 +59,6 @@ const AVAILABLE_ROUTES = [
 
 export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImpersonating }: HotelWorkspaceProps) => {
     const qc = useQueryClient();
-
-    // Subscription form state
-    const [plan, setPlan] = useState(hotel.subscription?.plan || 'Free');
-    const [subStatus, setSubStatus] = useState(hotel.subscription?.status || 'inactive');
-    const [endDate, setEndDate] = useState(
-        hotel.subscription?.end_date ? hotel.subscription.end_date.split('T')[0] : ''
-    );
-
-    // Quotas form state
-    const [waCredits, setWaCredits] = useState(hotel.subscription?.whatsapp_credits?.toString() || '1000');
-    const [smsCredits, setSmsCredits] = useState(hotel.subscription?.sms_credits?.toString() || '1000');
-    const [aiHotelierLimit, setAiHotelierLimit] = useState(hotel.subscription?.ai_hotelier_daily_limit?.toString() || '50000');
-    const [aiGuestChatLimit, setAiGuestChatLimit] = useState(hotel.subscription?.ai_guest_chat_daily_limit?.toString() || '100000');
-    const [aiWhatsappLimit, setAiWhatsappLimit] = useState(hotel.subscription?.ai_whatsapp_daily_limit?.toString() || '100000');
 
     // Permissions state
     const [permissions, setPermissions] = useState<Record<string, string[]>>(() => {
@@ -130,18 +116,6 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
     const hotelUsers = users.filter((u: any) => u.hotel_id === hotel.id);
 
     // Mutations
-    const updateSubMutation = useMutation({
-        mutationFn: (data: any) => apiClient.post(`/superadmin/hotels/${hotel.id}/subscription`, data),
-        onSuccess: () => { toast.success('Subscription updated'); qc.invalidateQueries({ queryKey: ['superadmin-hotels'] }); },
-        onError: () => toast.error('Failed to update subscription'),
-    });
-
-    const updateQuotasMutation = useMutation({
-        mutationFn: (data: any) => apiClient.patch(`/superadmin/hotels/${hotel.id}/quotas`, data),
-        onSuccess: () => { toast.success('Quotas updated'); qc.invalidateQueries({ queryKey: ['superadmin-hotels'] }); },
-        onError: () => toast.error('Failed to update quotas'),
-    });
-
     const toggleFeatureMutation = useMutation({
         mutationFn: ({ flag, value }: { flag: string; value: boolean }) =>
             apiClient.patch(`/superadmin/hotels/${hotel.id}`, { [flag]: value }),
@@ -201,15 +175,6 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
         onSuccess: () => { toast.success('Hotel permanently deleted'); qc.invalidateQueries({ queryKey: ['superadmin-hotels'] }); onBack(); },
         onError: () => toast.error('Failed to delete'),
     });
-
-    const handleExport = async (type: string, label: string) => {
-        try {
-            await apiClient.download(`/superadmin/hotels/${hotel.id}/export/${type}`, `${hotel.slug}-${type}.csv`);
-            toast.success(`${label} exported`);
-        } catch {
-            toast.error(`Failed to export ${label.toLowerCase()}`);
-        }
-    };
 
     const healthStatus = health?.health_status ?? 'loading';
     const STATUS_COLOR: Record<string, string> = {
@@ -283,7 +248,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
             )}
 
             {/* Main tabs */}
-            <Tabs defaultValue="plan" className="space-y-5">
+            <Tabs defaultValue="features" className="space-y-5">
                 <TabsList className="rounded-xl bg-muted/50 p-1 flex-wrap h-auto gap-1">
                     <TabsTrigger value="features" className="rounded-lg text-xs font-bold">Features</TabsTrigger>
                     <TabsTrigger value="permissions" className="rounded-lg text-xs font-bold">Permissions</TabsTrigger>
