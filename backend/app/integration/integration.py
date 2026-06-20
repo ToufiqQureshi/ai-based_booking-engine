@@ -53,7 +53,7 @@ class IntegrationSettings(SQLModel, table=True):
     # Widget Configuration
     widget_enabled: bool = Field(default=True)
     widget_theme: str = Field(default="light")  # light, dark, auto
-    widget_primary_color: str = Field(default="#7C3AED")
+    widget_primary_color: str = Field(default="#d11026")
     widget_background_color: str = Field(default="#FFFFFF")
     widget_position: str = Field(default="bottom-right")  # bottom-right, bottom-left, etc.
     widget_layout: str = Field(default="modern") # modern, classic, minimal
@@ -157,7 +157,7 @@ class IntegrationSettingsRead(BaseModel):
     hotel_id: str
     widget_enabled: Optional[bool] = True
     widget_theme: Optional[str] = "light"
-    widget_primary_color: Optional[str] = "#7C3AED"
+    widget_primary_color: Optional[str] = "#d11026"
     widget_background_color: Optional[str] = "#FFFFFF"
     widget_position: Optional[str] = "bottom-right"
     widget_layout: Optional[str] = "modern"

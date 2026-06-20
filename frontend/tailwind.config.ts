@@ -17,6 +17,8 @@ export default {
   	extend: {
   		colors: {
   			indigo: colors.red,
+  			violet: colors.red,
+  			purple: colors.red,
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',

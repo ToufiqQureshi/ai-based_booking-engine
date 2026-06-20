@@ -7,7 +7,7 @@ interface BookingStepperProps {
     primaryColor?: string;
 }
 
-const PURPLE = '#7c3aed';
+const FALLBACK_COLOR = '#d11026';
 
 export function BookingStepper({ currentStep, primaryColor }: BookingStepperProps) {
     const { hotelSlug } = useParams();
@@ -22,7 +22,7 @@ export function BookingStepper({ currentStep, primaryColor }: BookingStepperProp
         { id: 4, label: 'Guest Info',   shortLabel: 'Details',  path: `/book/${hotelSlug}/checkout${queryString}` },
     ];
 
-    const activeColor = PURPLE;
+    const activeColor = primaryColor || FALLBACK_COLOR;
 
     return (
         <div className="w-full bg-white border-b border-slate-200 shadow-sm">
@@ -77,7 +77,7 @@ export function BookingStepper({ currentStep, primaryColor }: BookingStepperProp
                                 key={step.id}
                                 className={cn(
                                     "relative flex items-center justify-center p-4 text-sm font-medium transition-all select-none border-b-2",
-                                    isActive ? "bg-violet-50/60 border-b-violet-600" : "bg-white border-transparent",
+                                    isActive ? "bg-red-50/60 border-b-red-600" : "bg-white border-transparent",
                                     isClickable ? "cursor-pointer hover:bg-slate-50" : "cursor-default"
                                 )}
                                 onClick={() => {
@@ -88,7 +88,7 @@ export function BookingStepper({ currentStep, primaryColor }: BookingStepperProp
                                     <div
                                         className={cn(
                                             "flex items-center justify-center w-7 h-7 rounded-full text-xs font-black border-2 transition-all",
-                                            isActive ? "text-white border-violet-600"
+                                            isActive ? "text-white border-red-600"
                                                 : isCompleted ? "border-emerald-500 bg-emerald-500 text-white"
                                                     : "border-slate-200 bg-white text-slate-400"
                                         )}
@@ -98,7 +98,7 @@ export function BookingStepper({ currentStep, primaryColor }: BookingStepperProp
                                     </div>
                                     <span className={cn(
                                         "text-[13px] tracking-wide",
-                                        isActive ? "font-bold text-violet-700" : isCompleted ? "font-semibold text-slate-600" : "font-medium text-slate-400"
+                                        isActive ? "font-bold text-red-700" : isCompleted ? "font-semibold text-slate-600" : "font-medium text-slate-400"
                                     )}>
                                         {step.label}
                                     </span>
