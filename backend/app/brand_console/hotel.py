@@ -217,8 +217,8 @@ class HotelRead(HotelBase):
     photos: List[dict] = []
     videos: List[dict] = []
     amenities: List[str] = []
-    created_at: datetime
-    updated_at: datetime
+    created_at: Union[datetime, str]
+    updated_at: Union[datetime, str]
 
 
 class HotelUpdate(SQLModel):
