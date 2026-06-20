@@ -141,7 +141,11 @@ for origin in extra_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://([a-zA-Z0-9-]+\.)?staybooker\.pages\.dev",
+    # Cloudflare Pages serves previews on *.ai-based-booking-engine.pages.dev
+    # (the project name), not *.staybooker.pages.dev — the old regex never
+    # matched, so every PR-preview API call was blocked by CORS and login
+    # failed. Allow both the production-style and the actual project domain.
+    allow_origin_regex=r"https://([a-zA-Z0-9-]+\.)?(staybooker|ai-based-booking-engine)\.pages\.dev",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
