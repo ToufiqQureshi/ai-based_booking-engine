@@ -2,7 +2,7 @@ import { useState, useRef, ChangeEvent } from 'react';
 import { Upload, X, Loader2, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn, getImageUrl } from '@/core/lib/utils';
-import { apiClient } from '@/core/api/client';
+import { supabase } from '@/core/lib/supabase';
 
 export interface MediaVideo {
     id?: string;
@@ -56,12 +56,22 @@ export function VideoUploader({ videos, onChange, max = 2 }: VideoUploaderProps)
         const added: MediaVideo[] = [];
         for (const file of valid) {
             try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const response = await apiClient.post<{ url: string }>('/upload', formData);
+                // Upload straight to Supabase Storage (not through the API). Videos
+                // are far bigger than images; routing them through the backend hit
+                // the 30s request timeout / gateway body limits, so uploads failed.
+                // The hotel-assets bucket's RLS allows authenticated inserts, and
+                // we force a video/* content-type so the public URL can never be
+                // served as executable HTML.
+                const ext = file.name.split('.').pop()?.toLowerCase() || (file.type === 'video/webm' ? 'webm' : 'mp4');
+                const path = `videos/${crypto.randomUUID()}.${ext}`;
+                const { error: upErr } = await supabase.storage
+                    .from('hotel-assets')
+                    .upload(path, file, { contentType: file.type, upsert: false });
+                if (upErr) throw upErr;
+                const { data: pub } = supabase.storage.from('hotel-assets').getPublicUrl(path);
                 added.push({
                     id: Math.random().toString(36).slice(2, 11),
-                    url: response.url,
+                    url: pub.publicUrl,
                     type: 'video',
                     mime: file.type,
                 });
