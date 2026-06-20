@@ -87,3 +87,67 @@ class TestDeleteMediaObjects:
         monkeypatch.setattr(storage, "get_supabase", _raise)
         # Must swallow the error and report 0 — cleanup can never break a delete.
         assert storage.delete_media_objects([{"url": f"{BASE}a.jpg"}]) == 0
+
+
+# ─── Orphaned-media sweep (scheduled cleanup) ─────────────────────────────────
+
+import pytest as _pytest
+import uuid as _uuid
+from datetime import datetime as _dt, timezone as _tz
+from sqlalchemy.ext.asyncio import AsyncSession as _AS
+
+
+class _FakeBucket:
+    def __init__(self, objects):
+        self._objects = objects
+        self.removed = []
+
+    def list(self, path="", options=None):
+        # single page (test set is small)
+        off = (options or {}).get("offset", 0)
+        return self._objects if off == 0 else []
+
+    def remove(self, paths):
+        self.removed.extend(paths)
+
+
+class _FakeStorage:
+    def __init__(self, bucket):
+        self._bucket = bucket
+
+    def from_(self, name):
+        return self._bucket
+
+
+@_pytest.mark.asyncio
+async def test_sweep_deletes_only_old_unreferenced(monkeypatch, seeded_hotel):
+    from tests.conftest import engine
+    from app.rooms.room import RoomType
+    from app.core import storage
+
+    base = "https://x/storage/v1/object/public/hotel-assets/"
+    # A room that references "keep.jpg" — must never be deleted.
+    async with _AS(engine) as s:
+        s.add(RoomType(
+            id=str(_uuid.uuid4()), hotel_id=seeded_hotel.id, name="R",
+            base_price=1000.0, total_inventory=1, base_occupancy=2, max_occupancy=2,
+            photos=[{"url": base + "keep.jpg"}],
+        ))
+        await s.commit()
+
+    old = "2020-01-01T00:00:00+00:00"
+    new = _dt.now(_tz.utc).isoformat()
+    objs = [
+        {"name": "keep.jpg",      "created_at": old},  # referenced -> keep
+        {"name": "orphan-old.jpg","created_at": old},  # unreferenced + old -> DELETE
+        {"name": "orphan-new.jpg","created_at": new},  # unreferenced but within grace -> keep
+        {"name": ".emptyFolderPlaceholder", "created_at": old},  # ignored
+    ]
+    bucket = _FakeBucket(objs)
+    monkeypatch.setattr(storage, "get_supabase", lambda: type("C", (), {"storage": _FakeStorage(bucket)})())
+
+    result = await storage.sweep_orphaned_media(grace_hours=24)
+
+    assert bucket.removed == ["orphan-old.jpg"]
+    assert result["deleted"] == 1
+    assert result["scanned"] == 3  # placeholder skipped

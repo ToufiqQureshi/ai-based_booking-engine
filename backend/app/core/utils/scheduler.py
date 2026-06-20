@@ -78,9 +78,24 @@ async def _tick_subscription_expiry() -> None:
     await _run_locked("subscription_expiry", 3600, _job_subscription_expiry)
 
 
+async def _job_orphan_media() -> None:
+    from app.core.storage import sweep_orphaned_media
+    result = await sweep_orphaned_media(grace_hours=24)
+    logger.info(
+        "Orphan-media sweep: scanned=%s referenced=%s orphaned=%s deleted=%s",
+        result.get("scanned"), result.get("referenced"),
+        result.get("orphaned"), result.get("deleted"),
+    )
+
+
 async def _tick_abandoned_recovery() -> None:
     # lock TTL (50 min) < hourly interval so a crashed run releases in time.
     await _run_locked("abandoned_recovery", 3000, _job_abandoned_recovery)
+
+
+async def _tick_orphan_media() -> None:
+    # lock TTL (12h) < 24h interval so a crashed run releases before next tick.
+    await _run_locked("orphan_media", 43200, _job_orphan_media)
 
 
 def start_scheduler() -> None:
@@ -94,11 +109,13 @@ def start_scheduler() -> None:
                   id="subscription_expiry", max_instances=1, coalesce=True)
     sched.add_job(_tick_abandoned_recovery, "interval", hours=1,
                   id="abandoned_recovery", max_instances=1, coalesce=True)
+    sched.add_job(_tick_orphan_media, "interval", hours=24,
+                  id="orphan_media", max_instances=1, coalesce=True)
     sched.start()
     _scheduler = sched
     logger.info(
         "Background scheduler started "
-        "(social_proof=15m, subscription_expiry=24h, abandoned_recovery=1h)"
+        "(social_proof=15m, subscription_expiry=24h, abandoned_recovery=1h, orphan_media=24h)"
     )
 
 

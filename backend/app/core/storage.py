@@ -91,3 +91,87 @@ def delete_media_objects(*media_lists: Iterable) -> int:
     except Exception as exc:  # pragma: no cover - cleanup must never break a delete
         logger.warning("Storage cleanup failed (non-fatal): %s", exc)
         return 0
+
+
+def _is_older_than(created_at, cutoff) -> bool:
+    """True only if we can confirm the object is older than `cutoff`.
+    Unparseable / missing timestamps return False — fail-safe, so a freshly
+    uploaded object whose age we can't read is never deleted."""
+    if not created_at:
+        return False
+    try:
+        from datetime import datetime
+        ts = str(created_at).replace("Z", "+00:00")
+        dt = datetime.fromisoformat(ts)
+        return dt < cutoff
+    except Exception:
+        return False
+
+
+async def sweep_orphaned_media(grace_hours: int = 24) -> dict:
+    """Delete hotel-assets objects that no room/hotel record references AND that
+    are older than `grace_hours` (so in-progress uploads aren't nuked).
+
+    This is the safety net for the orphans that per-delete cleanup can't catch:
+    a photo uploaded then removed from the form before saving, a replaced image,
+    or a booking widget asset that was swapped out. Runs on a schedule and can
+    be triggered manually. Best-effort; never raises.
+
+    Returns {"scanned", "referenced", "orphaned", "deleted"}.
+    """
+    from datetime import datetime, timezone, timedelta
+    from sqlmodel import select
+    from app.core.db.database import async_session
+    from app.rooms.room import RoomType
+    from app.brand_console.hotel import Hotel
+
+    try:
+        # 1. Every object path still referenced by a room or hotel (photos+videos).
+        referenced: set = set()
+        async with async_session() as s:
+            for model in (RoomType, Hotel):
+                rows = (await s.execute(select(model.photos, model.videos))).all()
+                for photos, videos in rows:
+                    for p in collect_object_paths(photos or []):
+                        referenced.add(p)
+                    for p in collect_object_paths(videos or []):
+                        referenced.add(p)
+
+        # 2. List every object in the public bucket (Supabase pages at 100).
+        client = get_supabase()
+        bucket = client.storage.from_(PUBLIC_BUCKET)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=grace_hours)
+        orphans: List[str] = []
+        scanned = 0
+        offset = 0
+        while True:
+            batch = bucket.list("", {"limit": 100, "offset": offset, "sortBy": {"column": "name", "order": "asc"}})
+            if not batch:
+                break
+            for obj in batch:
+                name = obj.get("name")
+                # Skip folder placeholders / unnamed rows.
+                if not name or name == ".emptyFolderPlaceholder":
+                    continue
+                scanned += 1
+                if name not in referenced and _is_older_than(obj.get("created_at"), cutoff):
+                    orphans.append(name)
+            if len(batch) < 100:
+                break
+            offset += 100
+
+        # 3. Remove orphans in batches.
+        deleted = 0
+        for i in range(0, len(orphans), 100):
+            chunk = orphans[i:i + 100]
+            bucket.remove(chunk)
+            deleted += len(chunk)
+
+        result = {"scanned": scanned, "referenced": len(referenced),
+                  "orphaned": len(orphans), "deleted": deleted}
+        logger.info("Orphan media sweep: %s", result)
+        return result
+    except Exception as exc:
+        logger.warning("Orphan media sweep failed (non-fatal): %s", exc)
+        return {"scanned": 0, "referenced": 0, "orphaned": 0, "deleted": 0, "error": str(exc)}
+
