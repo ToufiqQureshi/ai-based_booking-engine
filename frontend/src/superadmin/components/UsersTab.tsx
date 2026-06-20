@@ -29,9 +29,11 @@ export function UsersTab() {
         onError: (err: any) => toast.error(err?.message ?? 'Failed to add employee'),
     });
 
+    // Only the internal Super Admin team is shown here. Filtering by role on the
+    // server keeps other tenants' user PII off the wire entirely.
     const { data: users = [], isLoading: isLoadingUsers } = useQuery<any[]>({
-        queryKey: ['superadmin-users'],
-        queryFn: () => apiClient.get('/superadmin/users')
+        queryKey: ['superadmin-users', 'SUPER_ADMIN'],
+        queryFn: () => apiClient.get('/superadmin/users', { role: 'SUPER_ADMIN' })
     });
 
     const updateRoleMutation = useMutation({
@@ -63,8 +65,7 @@ export function UsersTab() {
         onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to delete user'),
     });
 
-    const superAdmins = users.filter((u: any) => u.role === 'SUPER_ADMIN');
-    const filteredUsers = superAdmins.filter((u: any) => 
+    const filteredUsers = users.filter((u: any) =>
         (u.email?.toLowerCase() || '').includes(userSearchQuery.toLowerCase()) ||
         (u.name?.toLowerCase() || '').includes(userSearchQuery.toLowerCase())
     );
@@ -156,6 +157,12 @@ export function UsersTab() {
                     {isLoadingUsers ? (
                         <div className="col-span-full h-48 flex items-center justify-center">
                             <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    ) : filteredUsers.length === 0 ? (
+                        <div className="col-span-full h-48 flex flex-col items-center justify-center text-muted-foreground">
+                            <ShieldCheck className="w-10 h-10 mb-3 opacity-30" />
+                            <p className="font-semibold">{userSearchQuery ? 'No team members match your search' : 'No Super Admins yet'}</p>
+                            <p className="text-xs mt-1">Use “Add Employee” to invite your first core team member.</p>
                         </div>
                     ) : filteredUsers.map((u: any) => (
                         <div key={u.id} className="p-6 rounded-2xl border border-border bg-muted/15 hover:border-primary/20 hover:bg-background hover:shadow-lg hover:shadow-primary/5 dark:hover:shadow-none transition-all group relative overflow-hidden flex flex-col justify-between">

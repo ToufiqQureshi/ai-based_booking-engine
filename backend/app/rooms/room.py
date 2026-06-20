@@ -77,6 +77,7 @@ class RoomType(RoomTypeBase, table=True):
     
     # JSON columns for arrays
     photos: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    videos: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     amenities: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -86,11 +87,22 @@ class RoomType(RoomTypeBase, table=True):
     rates: List["RoomRate"] = Relationship(back_populates="room_type")
     hotel: Optional["Hotel"] = Relationship(back_populates="room_types")
 
+MAX_ROOM_VIDEOS = 2  # per-room showcase video cap
+
+
 class RoomTypeCreate(RoomTypeBase):
     """Create room type schema"""
     photos: List[Dict[str, Any]] = []
+    videos: List[Dict[str, Any]] = []
     amenities: List[Dict[str, Any]] = []
     amenity_ids: List[str] = []
+
+    @field_validator("videos")
+    @classmethod
+    def _cap_videos(cls, v):
+        if v and len(v) > MAX_ROOM_VIDEOS:
+            raise ValueError(f"A room can have at most {MAX_ROOM_VIDEOS} videos")
+        return v
 
 
 class RoomTypeRead(RoomTypeBase):
@@ -98,6 +110,7 @@ class RoomTypeRead(RoomTypeBase):
     id: str
     hotel_id: str
     photos: List[Dict[str, Any]]
+    videos: List[Dict[str, Any]] = []
     amenities: List[Dict[str, Any]]
     created_at: datetime
     updated_at: datetime
@@ -114,9 +127,17 @@ class RoomTypeUpdate(SQLModel):
     total_inventory: Optional[int] = None
     is_active: Optional[bool] = None
     photos: Optional[List[Dict[str, Any]]] = None
+    videos: Optional[List[Dict[str, Any]]] = None
     amenities: Optional[List[Dict[str, Any]]] = None
     amenity_ids: Optional[List[str]] = None
     max_children: Optional[int] = None
+
+    @field_validator("videos")
+    @classmethod
+    def _cap_videos(cls, v):
+        if v and len(v) > MAX_ROOM_VIDEOS:
+            raise ValueError(f"A room can have at most {MAX_ROOM_VIDEOS} videos")
+        return v
     extra_bed_allowed: Optional[bool] = None
     bed_type: Optional[str] = None
     room_size: Optional[int] = None

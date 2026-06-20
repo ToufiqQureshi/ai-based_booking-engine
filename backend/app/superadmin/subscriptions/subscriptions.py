@@ -193,7 +193,7 @@ async def update_plan_features(
 @router.get("/audit-logs")
 async def get_audit_logs(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.audit.read")),
     limit: int = 50,
 ):
     result = await session.execute(select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit))
@@ -204,7 +204,7 @@ async def get_audit_logs(
 async def get_broadcasts(
     session: DbSession,
     include_scheduled: bool = True,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.broadcasts.read")),
 ):
     q = select(SystemBroadcast).where(SystemBroadcast.is_active == True)
     if not include_scheduled:
@@ -217,7 +217,7 @@ async def get_broadcasts(
 @router.post("/broadcasts")
 async def create_broadcast(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.broadcasts.write")),
 ):
     scheduled_at = None
     if data.get("scheduled_at"):
@@ -258,7 +258,7 @@ async def create_broadcast(
 @router.patch("/broadcasts/{broadcast_id}")
 async def update_broadcast(
     broadcast_id: str, data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.broadcasts.write")),
 ):
     bc = await session.get(SystemBroadcast, broadcast_id)
     if not bc:
@@ -285,7 +285,7 @@ async def update_broadcast(
 @router.post("/broadcasts/publish-due")
 async def publish_due_broadcasts(
     request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.broadcasts.write")),
 ):
     """Publishes any scheduled broadcasts whose scheduled_at has passed."""
     now = datetime.utcnow()
@@ -314,7 +314,7 @@ async def publish_due_broadcasts(
 @router.delete("/broadcasts/{broadcast_id}")
 async def delete_broadcast(
     broadcast_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.broadcasts.write")),
 ):
     broadcast = await session.get(SystemBroadcast, broadcast_id)
     if not broadcast:

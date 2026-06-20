@@ -919,6 +919,25 @@ export default function BookingSelection() {
                 </div>
             )}
 
+            {/* Property showcase videos */}
+            {hotel && (hotel as any).videos && (hotel as any).videos.length > 0 && (
+                <div className="max-w-7xl mx-auto px-3 sm:px-4 mt-4 sm:mt-6">
+                    <h3 className="text-sm font-bold text-foreground mb-3">Property Videos</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {(hotel as any).videos.map((v: any, i: number) => (
+                            <video
+                                key={v.id || i}
+                                src={v.url}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="w-full aspect-video rounded-xl bg-black object-cover"
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="max-w-7xl mx-auto px-3 sm:px-4 mt-4 sm:mt-8">
                 {/* Seasonal deal banner (auto-applied at checkout) */}
                 {seasonalDeal?.active && (

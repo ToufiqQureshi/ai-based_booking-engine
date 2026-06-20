@@ -26,6 +26,7 @@ from app.loyalty.loyalty_model import GuestLoyalty, LoyaltyProgram, LoyaltyOffer
 from app.rate_plans.promo import PromoCode
 from app.rate_plans.rates_model import RatePlan, RoomRate
 from app.rooms.room import RoomBlock, RoomType
+from app.experiences.addon import AddOn
 from app.revenue.pricing_model import PricingRule
 from app.revenue.pricing_engine import apply_pricing_rules
 
@@ -181,7 +182,11 @@ async def create_public_booking(
         )).scalars().all()
         lead_time_days = (booking_data.check_in - date.today()).days
 
-        # Per-room: availability check + server-side price recomputation
+        # Per-room: availability check + server-side price recomputation.
+        # server_room_charges retains the SERVER-computed total/nightly per room
+        # (aligned with booking_data.rooms) so the final charge + tax are based on
+        # trusted values, never the client's submitted price.
+        server_room_charges: list[dict] = []
         for room_req in booking_data.rooms:
             rt = locked_room_types.get(room_req.room_type_id)
             if not rt:
@@ -253,6 +258,12 @@ async def create_public_booking(
                     ),
                 )
 
+            _nights = (booking_data.check_out - booking_data.check_in).days or 1
+            server_room_charges.append({
+                "total": round(recalculated_total, 2),
+                "nightly": round(recalculated_total / _nights, 2),
+            })
+
         # Upsert guest record
         guest_data = booking_data.guest
         guest = (await session.execute(
@@ -302,9 +313,12 @@ async def create_public_booking(
 
         room_subtotal = 0.0
         room_tax_amount = 0.0
-        for room in booking_data.rooms:
-            r_rate = resolve_room_rate_tax(room.price_per_night)
-            r_total = room.total_price
+        # Use SERVER-recomputed totals/nightly (not client-submitted) for the
+        # charge and tax-slab resolution, so a tampered price_per_night or
+        # total_price can never reduce the amount or dodge a tax slab.
+        for charge in server_room_charges:
+            r_rate = resolve_room_rate_tax(charge["nightly"])
+            r_total = charge["total"]
             if room_tax_type == "inclusive":
                 r_sub = r_total / (1 + (r_rate / 100))
                 r_tax = r_total - r_sub
@@ -314,7 +328,31 @@ async def create_public_booking(
             room_subtotal += r_sub
             room_tax_amount += r_tax
 
-        addon_total = sum(addon.price for addon in booking_data.addons)
+        # Add-on prices are looked up server-side from the hotel's catalog — the
+        # client's submitted price is NEVER trusted. This blocks the critical
+        # under/negative-price tampering path (e.g. a -₹10,000 add-on that would
+        # otherwise drag the whole booking total below the room cost).
+        verified_addons: list[dict] = []
+        addon_total = 0.0
+        if booking_data.addons:
+            addon_ids = [a.id for a in booking_data.addons]
+            catalog = (await session.execute(
+                select(AddOn).where(
+                    AddOn.id.in_(addon_ids),
+                    AddOn.hotel_id == hotel_id,
+                    AddOn.is_active == True,  # noqa: E712
+                )
+            )).scalars().all()
+            catalog_by_id = {a.id: a for a in catalog}
+            for a in booking_data.addons:
+                cat = catalog_by_id.get(a.id)
+                if cat is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Add-on '{a.name}' is not available for this property.",
+                    )
+                addon_total += float(cat.price)
+                verified_addons.append({"id": cat.id, "name": cat.name, "price": float(cat.price)})
         if addon_tax_type == "inclusive":
             addon_subtotal = addon_total / (1 + (addon_tax_rate / 100))
             addon_tax_amount = addon_total - addon_subtotal
@@ -473,7 +511,9 @@ async def create_public_booking(
             loyal.points_balance = float(loyal.points_balance) - points_used
             session.add(loyal)
 
-        total_amount = round(total_before_discount - discount_amount - points_redeemed, 2)
+        # Never allow the charge to go negative (stacked discounts/points are
+        # each capped above, but clamp as a final guard).
+        total_amount = max(0.0, round(total_before_discount - discount_amount - points_redeemed, 2))
         discount_amount = round(discount_amount, 2)
 
         tax_details = {
@@ -521,7 +561,7 @@ async def create_public_booking(
             hotel_id=hotel_id, guest_id=guest.id,
             booking_number=generate_booking_number(),
             check_in=booking_data.check_in, check_out=booking_data.check_out,
-            rooms=rooms_list, addons=[addon.model_dump() for addon in booking_data.addons],
+            rooms=rooms_list, addons=verified_addons,
             special_requests=booking_data.special_requests, promo_code=effective_promo_code,
             total_amount=total_amount, subtotal_amount=subtotal_amount,
             tax_amount=tax_amount, discount_amount=discount_amount,

@@ -9,14 +9,14 @@ from app.core.cache.redis_client import redis_client
 from app.brand_console.hotel import Hotel
 from app.guests.user import User
 from app.system.audit import AuditLog
-from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip
+from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 @router.get("/cache/stats")
-async def cache_stats(super_admin: User = Depends(get_super_admin)):
+async def cache_stats(super_admin: User = Depends(require_permission("superadmin.cache.read"))):
     """Redis cache statistics."""
     r = redis_client.get_instance()
     if not r:
@@ -48,7 +48,7 @@ async def cache_stats(super_admin: User = Depends(get_super_admin)):
 @router.get("/cache/keys")
 async def list_cache_keys(
     pattern: str = "*",
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.cache.read")),
 ):
     """List cache keys matching a pattern (max 200)."""
     r = redis_client.get_instance()
@@ -67,7 +67,7 @@ async def clear_hotel_cache(
     hotel_id: str,
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.cache.flush")),
 ):
     """Clear all cache entries for a specific hotel."""
     hotel = await session.get(Hotel, hotel_id)
@@ -121,7 +121,7 @@ async def clear_hotel_cache(
 async def flush_all_cache(
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.cache.flush")),
 ):
     """Flush the entire Redis cache. USE WITH CAUTION."""
     r = redis_client.get_instance()

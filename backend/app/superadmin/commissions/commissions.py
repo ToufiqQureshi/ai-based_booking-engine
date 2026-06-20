@@ -33,7 +33,7 @@ async def list_commission_rules(
 @router.post("/commissions/rules")
 async def upsert_commission_rule(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
+    super_admin: User = Depends(require_permission("superadmin.commissions.write")),
 ):
     """Create or update commission rule. If id provided, update; else create."""
     rule_id = data.get("id")
@@ -64,7 +64,7 @@ async def upsert_commission_rule(
 @router.delete("/commissions/rules/{rule_id}")
 async def delete_commission_rule(
     rule_id: str, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
+    super_admin: User = Depends(require_permission("superadmin.commissions.write")),
 ):
     rule = await session.get(CommissionRule, rule_id)
     if not rule:
@@ -139,7 +139,7 @@ async def commissions_summary(
 @router.post("/commissions/ledger")
 async def add_ledger_entry(
     data: dict, request: Request, session: DbSession,
-    super_admin: User = Depends(require_permission("superadmin.commissions.read")),
+    super_admin: User = Depends(require_permission("superadmin.commissions.write")),
 ):
     """Manually add a ledger entry (e.g. adjustment, manual booking)."""
     if not data.get("hotel_id") or "booking_amount" not in data:

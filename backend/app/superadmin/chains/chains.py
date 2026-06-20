@@ -10,7 +10,7 @@ from app.system.audit import AuditLog
 from app.superadmin.chains.chain import Chain
 from app.brand_console.hotel import Hotel
 from app.guests.user import User
-from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip
+from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chains", tags=["Super Admin Chains"])
@@ -31,7 +31,7 @@ class ChainLinkRequest(BaseModel):
 @router.get("", response_model=List[dict])
 async def list_chains(
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.read")),
 ):
     """List all chains with linked hotels and users — bulk-loaded, no N+1."""
     chains = (await session.execute(select(Chain))).scalars().all()
@@ -79,7 +79,7 @@ async def create_chain(
     request: Request,
     data: ChainCreateUpdate,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Create a new hotel chain group."""
     # Check if slug is unique
@@ -113,7 +113,7 @@ async def update_chain(
     request: Request,
     data: ChainCreateUpdate,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Update chain details."""
     chain = await session.get(Chain, chain_id)
@@ -149,7 +149,7 @@ async def delete_chain(
     chain_id: str,
     request: Request,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Delete a chain (unlinks linked hotels and users)."""
     chain = await session.get(Chain, chain_id)
@@ -195,7 +195,7 @@ async def add_property_to_chain(
     request: Request,
     data: AddPropertyToChainRequest,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Create a new hotel and immediately link it to the chain."""
     chain = await session.get(Chain, chain_id)
@@ -238,7 +238,7 @@ async def link_entities_to_chain(
     request: Request,
     data: ChainLinkRequest,
     session: DbSession,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
 ):
     """Link multiple hotels and users to a chain and unlink removed ones."""
     chain = await session.get(Chain, chain_id)

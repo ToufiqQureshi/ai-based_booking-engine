@@ -74,7 +74,7 @@ export function RoomCard({
             <div className="flex flex-col lg:flex-row">
                 {/* Visual Section */}
                 <div className="lg:w-[35%] h-64 lg:h-auto bg-slate-50 relative overflow-hidden">
-                    <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
+                    <RoomImageCarousel photos={room.photos} videos={(room as any).videos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
                     <div className="absolute top-6 left-6 z-10">
                         {isSoldOut ? (
                             <div className="bg-red-600/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm flex items-center gap-2">
@@ -331,7 +331,7 @@ export function PackageCard({
                         onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }}
                     />
                 ) : (
-                    <RoomImageCarousel photos={room.photos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
+                    <RoomImageCarousel photos={room.photos} videos={(room as any).videos} roomName={room.name} onClick={() => { setSelectedRoom(room); setIsModalOpen(true); }} />
                 )}
                 <div className="absolute top-4 left-4 z-10">
                     <div 

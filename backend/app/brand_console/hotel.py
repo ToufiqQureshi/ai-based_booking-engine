@@ -164,7 +164,8 @@ class Hotel(HotelBase, table=True):
     contact: dict = Field(default_factory=dict, sa_column=Column(JSON))
     settings: dict = Field(default_factory=lambda: HotelSettings().model_dump(), sa_column=Column(JSON))
     photos: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
-    
+    videos: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
+
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -214,6 +215,7 @@ class HotelRead(HotelBase):
     contact: dict
     settings: dict
     photos: List[dict] = []
+    videos: List[dict] = []
     amenities: List[str] = []
     created_at: datetime
     updated_at: datetime
@@ -231,6 +233,7 @@ class HotelUpdate(SQLModel):
     contact: Optional[dict] = None
     settings: Optional[dict] = None
     photos: Optional[List[dict]] = None
+    videos: Optional[List[dict]] = None
     # Feature Flags
     feature_ai_agent: Optional[bool] = None
     feature_guest_bot: Optional[bool] = None
@@ -251,4 +254,12 @@ class HotelUpdate(SQLModel):
     def strip_html_hotel(cls, v: Optional[str]) -> Optional[str]:
         if v:
             return re.sub(r'<[^>]*>', '', v)
+        return v
+
+    @field_validator("videos")
+    @classmethod
+    def _cap_property_videos(cls, v):
+        # Max 5 property showcase videos.
+        if v and len(v) > 5:
+            raise ValueError("A property can have at most 5 videos")
         return v

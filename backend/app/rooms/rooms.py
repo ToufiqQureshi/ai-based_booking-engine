@@ -5,7 +5,7 @@ Rooms page ke liye endpoints.
 """
 from typing import List
 from datetime import datetime
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status, BackgroundTasks
 from sqlmodel import select
 
 from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
@@ -18,6 +18,7 @@ from app.core.cache.cache import cache_response, invalidate_cache
 from app.ai_engine.guest_agent import invalidate_guest_agent_cache
 from fastapi import Request
 from app.revenue.rate_signals import bump_rate_version, bump_hotel_version
+from app.core.storage import delete_media_objects
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
@@ -183,7 +184,7 @@ async def update_room(
 
 
 @router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
-async def delete_room(room_id: str, current_user: CurrentUser, session: DbSession):
+async def delete_room(room_id: str, current_user: CurrentUser, session: DbSession, background_tasks: BackgroundTasks):
     """Room type delete karo"""
     result = await session.execute(
         select(RoomType).where(
@@ -192,13 +193,17 @@ async def delete_room(room_id: str, current_user: CurrentUser, session: DbSessio
         )
     )
     room = result.scalar_one_or_none()
-    
+
     if not room:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Room type not found"
         )
-    
+
+    # Snapshot media before deletion so we can clean up storage afterwards
+    # (orphaned-file prevention). Captured now because the row is about to go.
+    room_media = list(room.photos or []) + list(getattr(room, "videos", []) or [])
+
     # --- Manual Cascade Delete ---
     # Delete Room Amenities Links
     stmt_links = delete(RoomAmenityLink).where(RoomAmenityLink.room_id == room_id)
@@ -220,5 +225,9 @@ async def delete_room(room_id: str, current_user: CurrentUser, session: DbSessio
     invalidate_guest_agent_cache(current_user.hotel_id)
     bump_rate_version(current_user.hotel_id, room_id)
     bump_hotel_version(current_user.hotel_id)
+    # Remove the room's media from storage after the response is sent
+    # (best-effort; never blocks or breaks the delete).
+    if room_media:
+        background_tasks.add_task(delete_media_objects, room_media)
 
 

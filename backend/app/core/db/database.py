@@ -277,6 +277,12 @@ async def init_db():
         "ALTER TABLE loyalty_offers ADD COLUMN apply_mode VARCHAR(50) NOT NULL DEFAULT 'auto'",
         "ALTER TABLE loyalty_offers ADD COLUMN display_style VARCHAR(50) NOT NULL DEFAULT 'banner'",
         "ALTER TABLE loyalty_offers ADD COLUMN unlocked_message TEXT DEFAULT 'Book this room for {nights} nights to unlock {reward}!'",
+        # DB-12: room/property showcase videos (added 2026-06-19). `photos`
+        # already existed; `videos` is a new JSON array column that create_all
+        # won't add to the existing room_types/hotels tables. Postgres backfills
+        # existing rows with the default ([]), so reads stay safe.
+        f"ALTER TABLE room_types ADD COLUMN videos JSON DEFAULT {json_default}",
+        f"ALTER TABLE hotels ADD COLUMN videos JSON DEFAULT {json_default}",
     ]:
         try:
             async with engine.begin() as conn:

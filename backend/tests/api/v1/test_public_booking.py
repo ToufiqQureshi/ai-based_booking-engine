@@ -603,3 +603,177 @@ class TestPublicCancellation:
             "email": "any@test.com",
         })
         assert r.status_code == 404
+
+
+# ─── Add-on price tampering (price-integrity hardening) ───────────────────────
+
+class TestAddOnPriceIntegrity:
+    """A guest must never be able to influence the charged amount via add-on
+    prices: the server uses the catalog price and rejects unknown/negative ones.
+    """
+
+    async def _seed(self, hotel_id):
+        from tests.conftest import engine
+        from app.experiences.addon import AddOn
+        room_type = RoomType(
+            id=str(uuid.uuid4()), hotel_id=hotel_id, name="Std",
+            base_price=2000.0, total_inventory=5, base_occupancy=2, max_occupancy=3,
+        )
+        addon = AddOn(id=str(uuid.uuid4()), hotel_id=hotel_id, name="Spa", price=500.0, is_active=True)
+        async with AsyncSession(engine) as session:
+            session.add(room_type)
+            session.add(addon)
+            await session.commit()
+            await session.refresh(room_type)
+            await session.refresh(addon)
+        return room_type, addon
+
+    async def test_tampered_low_addon_price_uses_server_price(self, client: AsyncClient, seeded_hotel: Hotel):
+        room_type, addon = await self._seed(seeded_hotel.id)
+        # Exercises pricing, not rate limiting — neutralise the shared limiter bucket.
+        from app.core.utils.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(20), "check_out": _future(21),
+                "guest": {"first_name": "Mal", "last_name": "Ory", "email": "mal@test.com", "phone": "9876500000"},
+                "rooms": [{
+                    "room_type_id": room_type.id, "room_type_name": room_type.name,
+                    "price_per_night": 2000.0, "total_price": 2000.0,
+                }],
+                "addons": [{"id": addon.id, "name": "Spa", "price": 1.0}],  # tampered: real is 500
+                "payment_method": "pay_at_property",
+            })
+        finally:
+            limiter.enabled = prev_enabled
+        assert r.status_code == 200, r.text
+        # Server must charge room (2000) + catalog addon (500), ignoring the spoofed 1.0
+        assert r.json()["total_amount"] == 2500.0
+
+    async def test_negative_addon_price_rejected_at_boundary(self, client: AsyncClient, seeded_hotel: Hotel):
+        room_type, addon = await self._seed(seeded_hotel.id)
+        from app.core.utils.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(22), "check_out": _future(23),
+                "guest": {"first_name": "Mal", "last_name": "Ory", "email": "mal2@test.com", "phone": "9876500001"},
+                "rooms": [{
+                    "room_type_id": room_type.id, "room_type_name": room_type.name,
+                    "price_per_night": 2000.0, "total_price": 2000.0,
+                }],
+                "addons": [{"id": addon.id, "name": "Spa", "price": -5000.0}],  # would drag total negative
+                "payment_method": "pay_at_property",
+            })
+        finally:
+            limiter.enabled = prev_enabled
+        assert r.status_code == 422
+
+    async def test_unknown_addon_rejected(self, client: AsyncClient, seeded_hotel: Hotel):
+        room_type, _ = await self._seed(seeded_hotel.id)
+        from app.core.utils.limiter import limiter
+        prev_enabled = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(24), "check_out": _future(25),
+                "guest": {"first_name": "Mal", "last_name": "Ory", "email": "mal3@test.com", "phone": "9876500002"},
+                "rooms": [{
+                    "room_type_id": room_type.id, "room_type_name": room_type.name,
+                    "price_per_night": 2000.0, "total_price": 2000.0,
+                }],
+                "addons": [{"id": str(uuid.uuid4()), "name": "Ghost", "price": 100.0}],
+                "payment_method": "pay_at_property",
+            })
+        finally:
+            limiter.enabled = prev_enabled
+        assert r.status_code == 400
+
+
+# ─── Online payment verification confirms booking (regression: PAY loyalty import) ─
+
+class TestOnlinePaymentVerifyConfirms:
+    """Regression guard: /razorpay/verify must confirm a paid booking end-to-end.
+
+    A stale `from app.api.v1.public.bookings import _update_guest_loyalty` used to
+    raise ModuleNotFoundError right before commit, so every real online payment
+    returned HTTP 500 and the paid booking was never confirmed.
+    """
+
+    async def test_verify_confirms_paid_booking(self, client: AsyncClient, seeded_hotel: Hotel, monkeypatch):
+        from tests.conftest import engine
+        import app.guest_booking.payments as pay
+        from app.bookings.booking import BookingStatus
+
+        async with AsyncSession(engine) as session:
+            hotel = await session.get(Hotel, seeded_hotel.id)
+            hotel.settings = {**(hotel.settings or {}), "razorpay_key_id": "rzp_test_k", "razorpay_key_secret": "sek"}
+            session.add(hotel)
+            rt = RoomType(
+                id=str(uuid.uuid4()), hotel_id=seeded_hotel.id, name="Deluxe",
+                base_price=3000.0, total_inventory=5, base_occupancy=2, max_occupancy=3,
+            )
+            session.add(rt)
+            await session.commit()
+            await session.refresh(rt)
+
+        from app.core.utils.limiter import limiter
+        prev = limiter.enabled
+        limiter.enabled = False
+        try:
+            r = await client.post("/api/v1/public/bookings", json={
+                "check_in": _future(30), "check_out": _future(31),
+                "guest": {"first_name": "Pay", "last_name": "Er", "email": "payer@test.com", "phone": "9000000001"},
+                "rooms": [{
+                    "room_type_id": rt.id, "room_type_name": rt.name,
+                    "price_per_night": 3000.0, "total_price": 3000.0,
+                }],
+                "payment_method": "online",
+            })
+            assert r.status_code == 200, r.text
+            body = r.json()
+            booking_id = body["id"]
+            assert body["status"] == "pending"
+            expected_paise = int(round(float(body["total_amount"]) * 100))
+            order_id = "order_TEST12345"
+
+            # Mock the Razorpay client so signature + gateway checks pass with the
+            # server-expected amount, exercising the real confirmation + loyalty path.
+            class _Utility:
+                def verify_payment_signature(self, d):
+                    return None
+
+            class _Order:
+                def fetch(self, oid):
+                    return {"id": oid, "receipt": booking_id, "amount": expected_paise, "amount_paid": expected_paise}
+
+            class _Payment:
+                def fetch(self, pid):
+                    return {"id": pid, "amount": expected_paise, "status": "captured", "order_id": order_id}
+
+            class _FakeClient:
+                def __init__(self, *a, **k):
+                    self.utility = _Utility()
+                    self.order = _Order()
+                    self.payment = _Payment()
+
+            monkeypatch.setattr(pay.razorpay, "Client", _FakeClient)
+
+            v = await client.post("/api/v1/public/razorpay/verify", json={
+                "razorpay_order_id": order_id,
+                "razorpay_payment_id": "pay_TEST12345",
+                "razorpay_signature": "s" * 40,
+                "booking_id": booking_id,
+            })
+        finally:
+            limiter.enabled = prev
+
+        assert v.status_code == 200, v.text
+        assert v.json()["status"] == "success"
+
+        async with AsyncSession(engine) as session:
+            confirmed = await session.get(Booking, booking_id)
+            assert confirmed.status == BookingStatus.CONFIRMED
+            assert confirmed.paid_amount == 3000.0

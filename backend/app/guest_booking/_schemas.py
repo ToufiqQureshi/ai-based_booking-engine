@@ -5,10 +5,19 @@ Kept separate so route handlers stay focused on business logic.
 from datetime import date
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
 from app.rooms.room import RoomTypeRead
+
+
+def strip_html_tags(value):
+    """Strip angle-bracket tags from guest-supplied text to block stored XSS.
+    Non-str values pass through unchanged so type validation still runs."""
+    if not isinstance(value, str):
+        return value
+    return re.sub(r'<[^>]*>', '', value).strip()
 
 
 class RateOption(BaseModel):
@@ -44,17 +53,15 @@ class PublicGuestCreate(BaseModel):
     @field_validator("first_name", "last_name", "phone", "id_number", mode="before")
     @classmethod
     def sanitize_strings(cls, v):
-        if not isinstance(v, str):
-            return v
-        return re.sub(r'<[^>]*>', '', v).strip()
+        return strip_html_tags(v)
 
 
 class PublicRoomBooking(BaseModel):
     room_type_id: str
     room_type_name: str
-    price_per_night: float
-    total_price: float
-    guests: int = 1
+    price_per_night: float = Field(ge=0)
+    total_price: float = Field(ge=0)
+    guests: int = Field(default=1, ge=1, le=50)
     rate_plan_id: Optional[str] = None
     rate_plan_name: Optional[str] = None
 
@@ -62,7 +69,9 @@ class PublicRoomBooking(BaseModel):
 class PublicAddOn(BaseModel):
     id: str
     name: str
-    price: float
+    # Defense-in-depth: a negative price is always invalid. The booking flow
+    # additionally ignores this value and uses the server-side catalog price.
+    price: float = Field(ge=0)
 
 
 class PublicBookingCreate(BaseModel):
@@ -82,9 +91,7 @@ class PublicBookingCreate(BaseModel):
     @field_validator("special_requests", mode="before")
     @classmethod
     def sanitize_strings(cls, v):
-        if not isinstance(v, str):
-            return v
-        return re.sub(r'<[^>]*>', '', v).strip()
+        return strip_html_tags(v)
 
 
 class PublicBookingResponse(BaseModel):

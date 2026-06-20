@@ -26,6 +26,7 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PromoManager } from './components/PromoManager';
 import { PropertyGallery } from './components/PropertyGallery';
+import { VideoUploader, MediaVideo } from '@/components/common/VideoUploader';
 
 import { GeneralTab } from './components/GeneralTab';
 import { BrandingTab } from './components/BrandingTab';
@@ -354,6 +355,27 @@ export function SettingsPage() {
                   }
                 }}
               />
+
+              {/* Property Videos */}
+              <div className="border-t border-border pt-6">
+                <div className="mb-4">
+                  <h3 className="text-base font-bold text-foreground">Property Videos</h3>
+                  <p className="text-sm text-muted-foreground">Showcase clips (walkthrough, lobby, pool…). MP4/WebM, up to 5. Saved automatically.</p>
+                </div>
+                <VideoUploader
+                  videos={((formData as any).videos as MediaVideo[]) || []}
+                  max={5}
+                  onChange={async (videos) => {
+                    setFormData(prev => ({ ...prev, videos }));
+                    try {
+                      const updatedHotel = await apiClient.patch<Hotel>('/hotels/me', { videos });
+                      setHotel(updatedHotel);
+                    } catch (error) {
+                      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save property videos.' });
+                    }
+                  }}
+                />
+              </div>
             </TabsContent>
           )}
 

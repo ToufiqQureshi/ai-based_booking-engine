@@ -81,6 +81,37 @@ async def revenue_analytics(
         if s.end_date and s.end_date <= now + timedelta(days=7)
     ]
 
+    # Platform-wide AI usage this month — real numbers from the durable
+    # AIUsageDaily table (source of truth, survives Redis outages). Summed
+    # across all hotels and grouped by agent type. No fabricated values.
+    from app.ai_assistant.ai_usage import AIUsageDaily, AIUsageParticipant
+    month_date = month_start.date()
+    ai_rows = (await session.execute(
+        select(
+            AIUsageDaily.agent_type,
+            func.coalesce(func.sum(AIUsageDaily.total_tokens), 0),
+            func.coalesce(func.sum(AIUsageDaily.message_count), 0),
+        )
+        .where(AIUsageDaily.usage_date >= month_date)
+        .group_by(AIUsageDaily.agent_type)
+    )).all()
+    by_agent = [
+        {"agent": agent, "tokens": int(tokens or 0), "messages": int(messages or 0)}
+        for agent, tokens, messages in ai_rows
+    ]
+    # Distinct participants served this month (hashed ids, never raw PII).
+    unique_participants = (await session.execute(
+        select(func.count(func.distinct(AIUsageParticipant.user_hash)))
+        .where(AIUsageParticipant.usage_date >= month_date)
+    )).scalar() or 0
+    ai_usage = {
+        "month": month_start.strftime("%b %Y"),
+        "total_tokens": sum(a["tokens"] for a in by_agent),
+        "total_messages": sum(a["messages"] for a in by_agent),
+        "unique_participants": int(unique_participants),
+        "by_agent": by_agent,
+    }
+
     # MRR trend (last 6 months) - simplified: based on created_at
     mrr_trend = []
     for i in range(5, -1, -1):
@@ -119,6 +150,7 @@ async def revenue_analytics(
             for s in expiring_soon
         ],
         "mrr_trend": mrr_trend,
+        "ai_usage": ai_usage,
     }
 
 

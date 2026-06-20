@@ -19,7 +19,7 @@ from app.core.auth.vault import (
 from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel
 from app.guests.user import User
-from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip
+from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -96,7 +96,7 @@ def _preview_secret(value: Optional[str]) -> Optional[str]:
 @router.get("/hotels/{hotel_id}/integrations", response_model=HotelIntegrationsRead)
 async def get_hotel_integrations(
     hotel_id: str,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.integrations.read")),
     session: DbSession = None,
 ):
     """Read all integration credentials for a hotel (secrets masked)."""
@@ -164,7 +164,7 @@ async def update_hotel_integrations(
     hotel_id: str,
     payload: HotelIntegrationsUpdate,
     request: Request,
-    super_admin: User = Depends(get_super_admin),
+    super_admin: User = Depends(require_permission("superadmin.integrations.write")),
     session: DbSession = None,
 ):
     """Update hotel integration credentials. Empty string = clear field."""
