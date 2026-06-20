@@ -44,7 +44,7 @@ async def logic_get_revenue_trend(session, hotel_id: str, days: int = 30) -> str
         "title": f"Daily Revenue — Last {days} Days",
         "data": data,
         "xKey": "date",
-        "yKeys": [{"key": "revenue", "label": "Revenue (₹)", "color": "#7C3AED"}]
+        "yKeys": [{"key": "revenue", "label": "Revenue (₹)", "color": "#d11026"}]
     }
     return f"**Total Revenue (Last {days} days): ₹{total:,}**" + _chart(chart)
 
@@ -130,7 +130,7 @@ async def logic_get_booking_source_breakdown(session, hotel_id: str, days: int =
         "title": f"Booking Sources — Last {days} Days",
         "data": data,
         "xKey": "source",
-        "yKeys": [{"key": "bookings", "label": "Bookings", "color": "#7C3AED"}]
+        "yKeys": [{"key": "bookings", "label": "Bookings", "color": "#d11026"}]
     }
     return f"**Booking Source Breakdown (Last {days} days):**" + _chart(chart)
 
@@ -170,7 +170,7 @@ async def logic_get_room_performance(session, hotel_id: str, days: int = 30) -> 
         "data": data,
         "xKey": "room",
         "yKeys": [
-            {"key": "revenue", "label": "Revenue (₹)", "color": "#7C3AED"},
+            {"key": "revenue", "label": "Revenue (₹)", "color": "#d11026"},
             {"key": "bookings", "label": "Bookings", "color": "#10B981"}
         ]
     }

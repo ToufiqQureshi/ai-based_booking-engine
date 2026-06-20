@@ -122,7 +122,7 @@ class HotelBase(SQLModel):
     description: Optional[str] = None
     star_rating: Optional[int] = Field(default=None, ge=1, le=5)
     logo_url: Optional[str] = None
-    primary_color: Optional[str] = Field(default="#7C3AED")
+    primary_color: Optional[str] = Field(default="#d11026")
     amenities: List[str] = Field(default_factory=list, sa_column=Column(JSON)) # Property-level amenities like "Free Parking", "Pool"
     
     @field_validator("name", "description", mode="before")
@@ -217,8 +217,8 @@ class HotelRead(HotelBase):
     photos: List[dict] = []
     videos: List[dict] = []
     amenities: List[str] = []
-    created_at: datetime
-    updated_at: datetime
+    created_at: Union[datetime, str]
+    updated_at: Union[datetime, str]
 
 
 class HotelUpdate(SQLModel):

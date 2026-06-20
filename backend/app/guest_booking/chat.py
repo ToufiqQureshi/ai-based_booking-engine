@@ -212,12 +212,9 @@ async def chat_with_guest_ai(
         if not getattr(hotel, "is_active", True):
             raise HTTPException(status_code=404, detail="Hotel not found")
 
-        # Enforce SaaS feature flag guard
-        if not getattr(hotel, "feature_guest_bot", False):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Guest chatbot feature is not enabled for this hotel"
-            )
+        # Enforce SaaS feature flag guard centrally
+        from app.core.auth.deps import check_hotel_feature
+        check_hotel_feature(hotel, "feature_guest_bot")
 
         # Bound the prompt-injection / cost surface: cap guest input length.
         payload.message = _bound_guest_text(payload.message)
@@ -386,11 +383,8 @@ async def stream_guest_ai(
         if not getattr(hotel, "is_active", True):
             raise HTTPException(status_code=404, detail="Hotel not found")
 
-        if not getattr(hotel, "feature_guest_bot", False):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Guest chatbot feature is not enabled for this hotel",
-            )
+        from app.core.auth.deps import check_hotel_feature
+        check_hotel_feature(hotel, "feature_guest_bot")
 
         # Bound the prompt-injection / cost surface: cap guest input length.
         payload.message = _bound_guest_text(payload.message)
