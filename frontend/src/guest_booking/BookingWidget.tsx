@@ -549,6 +549,20 @@ export default function BookingWidget() {
         calendarData, formatPrice,
     };
 
+    // Until the hotel's widget config loads, paint a NEUTRAL skeleton — not the
+    // default-branded "modern" widget. Previously the instant paint used fallback
+    // layout/colour, so guests briefly saw a generic Staybooker widget before it
+    // snapped to the hotelier's chosen style (the "default flash"). A plain shimmer
+    // keeps instant paint (no blank delay) without showing the wrong widget. All
+    // hooks above run unconditionally, so this early return is safe.
+    if (!config) {
+        return (
+            <div id="widget-main-container" className="light w-full flex justify-center font-sans p-2 lg:p-4">
+                <div className="w-full max-w-5xl h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" aria-hidden="true" />
+            </div>
+        );
+    }
+
     return (
         <div id="widget-main-container" ref={widgetRef} className="light w-full flex justify-center font-sans p-2 lg:p-4 relative z-50 overflow-visible">
             <style>{`
