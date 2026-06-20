@@ -6,7 +6,7 @@ Frontend ke Hotel interface se match karta hai.
 from sqlmodel import SQLModel, Field, Relationship, Column
 from sqlalchemy import JSON
 from pydantic import field_validator
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, Union, TYPE_CHECKING
 from datetime import datetime
 import uuid
 import re
