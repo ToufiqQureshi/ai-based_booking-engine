@@ -453,3 +453,32 @@ async def refresh_social_proof_stats(
     return {"status": "success", **summary}
 
 
+@router.post("/media/sweep-orphans")
+async def sweep_orphan_media(
+    request: Request,
+    session: DbSession,
+    grace_hours: int = 24,
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
+):
+    """Manually run the orphaned-media sweep (also runs daily on a schedule).
+
+    Removes hotel-assets objects that no room/hotel references and that are
+    older than `grace_hours`. Lets the admin reclaim storage on demand instead
+    of waiting for the next scheduled run.
+    """
+    from app.core.storage import sweep_orphaned_media
+    grace = max(0, min(int(grace_hours), 24 * 30))  # clamp 0..30 days
+    result = await sweep_orphaned_media(grace_hours=grace)
+    session.add(AuditLog(
+        user_id=super_admin.id, user_email=super_admin.email,
+        action="SWEEP_ORPHAN_MEDIA",
+        description=(
+            f"Orphan-media sweep — scanned {result.get('scanned')}, "
+            f"deleted {result.get('deleted')} (grace {grace}h)"
+        ),
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+    return {"status": "success", **result}
+
+

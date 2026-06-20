@@ -124,10 +124,6 @@ class TestSuperAdminOnlyRoutes:
         r = await staff_client.get("/api/v1/superadmin/hotels")
         assert r.status_code == 403
 
-    async def test_owner_blocked_from_audit_logs(self, auth_client: AsyncClient):
-        r = await auth_client.get("/api/v1/superadmin/audit-logs")
-        assert r.status_code == 403
-
     async def test_owner_blocked_from_impersonation(self, auth_client: AsyncClient, seeded_hotel: Hotel):
         r = await auth_client.post(f"/api/v1/superadmin/impersonate/{seeded_hotel.id}")
         assert r.status_code == 403

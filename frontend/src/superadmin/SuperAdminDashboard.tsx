@@ -13,58 +13,25 @@ import { useTheme } from '@/core/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/core/contexts/AuthContext';
-import { StatsGrid } from '@/superadmin/components/StatsGrid';
-import { SuperAdminCharts } from '@/superadmin/components/SuperAdminCharts';
 import { HotelsTab } from '@/superadmin/components/HotelsTab';
 import { HotelWorkspace } from '@/superadmin/components/HotelWorkspace';
-import { AnalyticsTab } from '@/analytics/AnalyticsTab';
-import { BroadcastsTab } from '@/superadmin/components/BroadcastsTab';
 import { UsersTab } from '@/superadmin/components/UsersTab';
-import { PlanFeaturesTab } from '@/superadmin/components/PlanFeaturesTab';
-import { AuditLogsTab } from '@/superadmin/components/AuditLogsTab';
-import { HealthTab } from '@/superadmin/components/HealthTab';
-import { RevenueTab } from '@/superadmin/components/RevenueTab';
-import { CacheTab } from '@/superadmin/components/CacheTab';
-import { SessionsTab } from '@/superadmin/components/SessionsTab';
-import { BrandsTab } from '@/superadmin/components/BrandsTab';
-import { KycTab } from '@/superadmin/components/KycTab';
-import { CommissionsTab } from '@/superadmin/components/CommissionsTab';
-import { PayoutsTab } from '@/superadmin/components/PayoutsTab';
-import { TicketsTab } from '@/superadmin/components/TicketsTab';
-import { PlatformTab } from '@/superadmin/components/PlatformTab';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 
 const SUPERADMIN_ORIGINAL_TOKENS_KEY = 'superadmin_original_tokens';
 
-type NavSection = 'overview' | 'hotels' | 'users' | 'plans' | 'analytics' |
-    'broadcasts' | 'audit' | 'health' | 'revenue' | 'cache' | 'sessions' | 'brands' |
-    'kyc' | 'commissions' | 'payouts' | 'tickets' | 'platform';
+type NavSection = 'hotels' | 'users';
 
 const NAV_ITEMS: { id: NavSection; label: string; icon: any; group?: string }[] = [
-    { id: 'overview',    label: 'Overview',        icon: LayoutGrid,    group: 'main' },
     { id: 'hotels',      label: 'Properties',      icon: Building2,     group: 'main' },
     { id: 'users',       label: 'Users',           icon: Users,         group: 'main' },
-    { id: 'brands',      label: 'Brand Groups',    icon: Network,       group: 'main' },
-    { id: 'plans',       label: 'Plan Features',   icon: Crown,         group: 'main' },
-    { id: 'kyc',         label: 'KYC',             icon: ShieldCheck,   group: 'finance' },
-    { id: 'commissions', label: 'Commissions',     icon: Percent,       group: 'finance' },
-    { id: 'payouts',     label: 'Payouts',         icon: Banknote,      group: 'finance' },
-    { id: 'tickets',     label: 'Support Tickets', icon: Ticket,        group: 'support' },
-    { id: 'analytics',   label: 'Analytics',       icon: BarChart3,     group: 'insights' },
-    { id: 'revenue',     label: 'Revenue',         icon: DollarSign,    group: 'insights' },
-    { id: 'health',      label: 'Health Monitor',  icon: Heart,         group: 'insights' },
-    { id: 'broadcasts',  label: 'Broadcasts',      icon: Radio,         group: 'system' },
-    { id: 'audit',       label: 'Audit Trail',     icon: ClipboardList, group: 'system' },
-    { id: 'sessions',    label: 'Sessions',        icon: Shield,        group: 'system' },
-    { id: 'cache',       label: 'Cache',           icon: Database,      group: 'system' },
-    { id: 'platform',    label: 'Platform Settings', icon: Settings2,   group: 'system' },
 ];
 
 export default function SuperAdminDashboard() {
     const { user, logout, isLoading: authLoading } = useAuth();
     const { theme, toggleTheme } = useTheme();
-    const { section = 'overview' } = useParams<{ section?: string }>();
+    const { section = 'hotels' } = useParams<{ section?: string }>();
     const activeSection = section as NavSection;
     const navigate = useNavigate();
 
@@ -104,23 +71,6 @@ export default function SuperAdminDashboard() {
         staleTime: 1000 * 60 * 2,
         enabled: !!user && user.role === 'SUPER_ADMIN' &&
             ['overview', 'hotels', 'brands', 'analytics', 'tickets', 'platform'].includes(activeSection),
-    });
-
-    // Real platform revenue + support-queue figures for the Overview cards/alerts.
-    const { data: revenue } = useQuery<any>({
-        queryKey: ['superadmin-revenue'],
-        queryFn: () => apiClient.get('/superadmin/revenue'),
-        staleTime: 1000 * 60 * 5,
-        retry: false,
-        enabled: !!user && user.role === 'SUPER_ADMIN' && activeSection === 'overview',
-    });
-
-    const { data: ticketSummary } = useQuery<any>({
-        queryKey: ['superadmin-ticket-summary'],
-        queryFn: () => apiClient.get('/superadmin/tickets/summary'),
-        staleTime: 1000 * 60 * 2,
-        retry: false,
-        enabled: !!user && user.role === 'SUPER_ADMIN' && activeSection === 'overview',
     });
 
     const impersonateMutation = useMutation({
@@ -315,7 +265,7 @@ export default function SuperAdminDashboard() {
                                 <p className="text-sm text-muted-foreground mt-1">
                                     Your admin role ({access?.tier}) does not have access to this section.
                                 </p>
-                                <Button variant="outline" size="sm" className="mt-4 rounded-xl" onClick={() => navigate('/overview')}>
+                                <Button variant="outline" size="sm" className="mt-4 rounded-xl" onClick={() => navigate('/hotels')}>
                                     Back to Overview
                                 </Button>
                             </div>
@@ -329,90 +279,6 @@ export default function SuperAdminDashboard() {
                             />
                         ) : (
                             <>
-                                {/* Overview section always shows stats */}
-                                {activeSection === 'overview' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h1 className="text-2xl font-black text-foreground">Platform Overview</h1>
-                                            <p className="text-sm text-muted-foreground mt-0.5">
-                                                {hotels.length} properties · {users.length} users · {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                            </p>
-                                        </div>
-                                        <StatsGrid
-                                            hotelsCount={hotels.length}
-                                            usersCount={users.length}
-                                            aiCount={hotels.filter((h: any) => h.feature_ai_agent).length}
-                                            activeCount={activeHotels}
-                                            mrr={revenue?.mrr}
-                                            activeSubscriptions={revenue?.active_subscriptions}
-                                        />
-
-                                        {/* Super Admin Charts */}
-                                        <SuperAdminCharts />
-
-                                        {/* Quick Alerts & Actions */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                            {/* Alerts */}
-                                            <div className="lg:col-span-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-2xl p-5">
-                                                <div className="flex items-center gap-3 mb-3">
-                                                    <Heart className="w-5 h-5 text-amber-600 dark:text-amber-500" />
-                                                    <h3 className="text-sm font-black text-amber-900 dark:text-amber-400">System Alerts</h3>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
-                                                        <span className="text-muted-foreground font-medium">Open Support Tickets</span>
-                                                        {(() => {
-                                                            const open = (ticketSummary?.by_status?.open || 0) + (ticketSummary?.by_status?.in_progress || 0);
-                                                            return open > 0
-                                                                ? <Badge variant="destructive">{open} Open</Badge>
-                                                                : <span className="text-emerald-600 font-bold text-xs">All clear</span>;
-                                                        })()}
-                                                    </div>
-                                                    <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
-                                                        <span className="text-muted-foreground font-medium">SLA Breaches</span>
-                                                        {(ticketSummary?.sla_breach || 0) > 0
-                                                            ? <Badge variant="destructive">{ticketSummary.sla_breach}</Badge>
-                                                            : <span className="text-emerald-600 font-bold text-xs flex items-center gap-1"><RefreshCw className="w-3 h-3" /> On track</span>}
-                                                    </div>
-                                                    <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
-                                                        <span className="text-muted-foreground font-medium">Subscriptions Expiring (7d)</span>
-                                                        {(revenue?.expiring_soon?.length || 0) > 0
-                                                            ? <Badge variant="destructive">{revenue.expiring_soon.length}</Badge>
-                                                            : <span className="text-emerald-600 font-bold text-xs">None</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Quick Actions */}
-                                            <div className="bg-background border border-border rounded-2xl p-5 flex flex-col justify-center gap-3">
-                                                <Button onClick={() => navigate('/hotels')} className="w-full rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700">
-                                                    <Building2 className="w-4 h-4 mr-2" /> Add New Property
-                                                </Button>
-                                                <Button onClick={() => navigate('/broadcasts')} variant="outline" className="w-full rounded-xl font-bold">
-                                                    <Radio className="w-4 h-4 mr-2" /> Global Broadcast
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {/* Quick access to recent hotels */}
-                                        <div>
-                                            <div className="flex items-center justify-between mb-4">
-                                                <h2 className="text-sm font-black text-foreground uppercase tracking-wider">Recent Properties</h2>
-                                                <Button variant="ghost" size="sm" className="text-xs h-7 font-semibold text-indigo-600" onClick={() => navigate('/hotels')}>
-                                                    View all <ChevronRight className="w-3 h-3 ml-1" />
-                                                </Button>
-                                            </div>
-                                            <HotelsTab
-                                                hotels={hotels.slice(0, 6)}
-                                                users={users}
-                                                onSelectHotel={handleSelectHotel}
-                                                onImpersonate={(id) => impersonateMutation.mutate(id)}
-                                                isImpersonating={impersonateMutation.isPending}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
                                 {activeSection === 'hotels' && (
                                     <div className="space-y-5">
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -445,20 +311,6 @@ export default function SuperAdminDashboard() {
                                 )}
 
                                 {activeSection === 'users' && <UsersTab />}
-                                {activeSection === 'brands' && <BrandsTab hotels={hotels} users={users} />}
-                                {activeSection === 'plans' && <PlanFeaturesTab />}
-                                {activeSection === 'analytics' && <AnalyticsTab hotels={hotels} onSelectHotel={handleSelectHotel} />}
-                                {activeSection === 'revenue' && <RevenueTab />}
-                                {activeSection === 'health' && <HealthTab onSelectHotel={handleSelectHotel} />}
-                                {activeSection === 'broadcasts' && <BroadcastsTab />}
-                                {activeSection === 'audit' && <AuditLogsTab />}
-                                {activeSection === 'sessions' && <SessionsTab />}
-                                {activeSection === 'cache' && <CacheTab hotels={hotels} />}
-                                {activeSection === 'kyc' && <KycTab />}
-                                {activeSection === 'commissions' && <CommissionsTab hotels={hotels} />}
-                                {activeSection === 'payouts' && <PayoutsTab hotels={hotels} />}
-                                {activeSection === 'tickets' && <TicketsTab hotels={hotels} admins={users} />}
-                                {activeSection === 'platform' && <PlatformTab hotels={hotels} admins={users} />}
                             </>
                         )}
                     </div>
