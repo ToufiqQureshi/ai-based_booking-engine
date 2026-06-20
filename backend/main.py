@@ -127,6 +127,8 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 allowed_origins = list(settings.CORS_ORIGINS)
 extra_origins = [
+    "https://staybooker.ai",
+    "https://www.staybooker.ai",
     "https://superadmin.staybooker.ai",
     "https://www.superadmin.staybooker.ai",
     "https://app.staybooker.ai",
