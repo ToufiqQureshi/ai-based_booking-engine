@@ -17,7 +17,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/core/api/client';
 import { toast } from 'sonner';
-import { HotelIntegrationsTab } from './HotelIntegrationsTab';
 import { cn } from '@/core/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -123,12 +122,9 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
         }
     });
 
-    // Hotel health
-    const { data: health } = useQuery<any>({
-        queryKey: ['hotel-health', hotel.id],
-        queryFn: () => apiClient.get(`/superadmin/health/${hotel.id}`),
-        staleTime: 1000 * 60 * 5,
-    });
+    // Hotel health — the platform health endpoint was removed in the Super Admin
+    // trim. UI reads health?.* defensively, so a null is safe.
+    const health: any = null;
 
     // Hotel users
     const hotelUsers = users.filter((u: any) => u.hotel_id === hotel.id);
@@ -289,97 +285,13 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
             {/* Main tabs */}
             <Tabs defaultValue="plan" className="space-y-5">
                 <TabsList className="rounded-xl bg-muted/50 p-1 flex-wrap h-auto gap-1">
-                    <TabsTrigger value="plan" className="rounded-lg text-xs font-bold">Plan & Billing</TabsTrigger>
                     <TabsTrigger value="features" className="rounded-lg text-xs font-bold">Features</TabsTrigger>
-                    <TabsTrigger value="integrations" className="rounded-lg text-xs font-bold">Integrations</TabsTrigger>
                     <TabsTrigger value="permissions" className="rounded-lg text-xs font-bold">Permissions</TabsTrigger>
                     <TabsTrigger value="users" className="rounded-lg text-xs font-bold">Users</TabsTrigger>
-                    <TabsTrigger value="exports" className="rounded-lg text-xs font-bold">Exports</TabsTrigger>
                     <TabsTrigger value="danger" className="rounded-lg text-xs font-bold text-red-600 data-[state=active]:bg-red-600 data-[state=active]:text-white">Danger Zone</TabsTrigger>
                 </TabsList>
 
                 {/* ── PLAN & BILLING ── */}
-                <TabsContent value="plan" className="mt-0 space-y-5">
-                    <div className="border border-border rounded-2xl p-5 bg-background space-y-5">
-                        <h3 className="text-sm font-black text-foreground">Subscription Plan</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label className="text-xs font-bold">Plan Tier</Label>
-                                <Select value={plan} onValueChange={setPlan}>
-                                    <SelectTrigger className="mt-1 rounded-xl"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Free">Free / Trial</SelectItem>
-                                        <SelectItem value="Basic">Basic</SelectItem>
-                                        <SelectItem value="Premium">Premium</SelectItem>
-                                        <SelectItem value="Enterprise">Enterprise</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label className="text-xs font-bold">Status</Label>
-                                <Select value={subStatus} onValueChange={setSubStatus}>
-                                    <SelectTrigger className="mt-1 rounded-xl"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="active">Active</SelectItem>
-                                        <SelectItem value="inactive">Inactive</SelectItem>
-                                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div>
-                            <Label className="text-xs font-bold">Expiry Date</Label>
-                            <Input type="date" className="mt-1 rounded-xl" value={endDate} onChange={e => setEndDate(e.target.value)} />
-                        </div>
-                        <Button
-                            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
-                            onClick={() => updateSubMutation.mutate({ plan_name: plan, status: subStatus, end_date: endDate || null })}
-                            disabled={updateSubMutation.isPending}
-                        >
-                            {updateSubMutation.isPending ? 'Saving…' : 'Save Subscription'}
-                        </Button>
-                    </div>
-
-                    <div className="border border-border rounded-2xl p-5 bg-background space-y-4">
-                        <h3 className="text-sm font-black text-foreground">App Quotas & Limits</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label className="text-xs font-bold">WhatsApp Credits</Label>
-                                <Input type="number" className="mt-1 rounded-xl" value={waCredits} onChange={e => setWaCredits(e.target.value)} />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-bold">SMS Credits</Label>
-                                <Input type="number" className="mt-1 rounded-xl" value={smsCredits} onChange={e => setSmsCredits(e.target.value)} />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-bold">AI Limit — Hotelier Agent (daily)</Label>
-                                <Input type="number" className="mt-1 rounded-xl" value={aiHotelierLimit} onChange={e => setAiHotelierLimit(e.target.value)} />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-bold">AI Limit — Guest Chat Bot (daily)</Label>
-                                <Input type="number" className="mt-1 rounded-xl" value={aiGuestChatLimit} onChange={e => setAiGuestChatLimit(e.target.value)} />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-bold">AI Limit — WhatsApp Bot (daily)</Label>
-                                <Input type="number" className="mt-1 rounded-xl" value={aiWhatsappLimit} onChange={e => setAiWhatsappLimit(e.target.value)} />
-                            </div>
-                        </div>
-                        <Button
-                            variant="outline"
-                            className="w-full rounded-xl font-bold"
-                            onClick={() => updateQuotasMutation.mutate({
-                                whatsapp_credits: +waCredits,
-                                sms_credits: +smsCredits,
-                                ai_hotelier_daily_limit: +aiHotelierLimit,
-                                ai_guest_chat_daily_limit: +aiGuestChatLimit,
-                                ai_whatsapp_daily_limit: +aiWhatsappLimit,
-                            })}
-                            disabled={updateQuotasMutation.isPending}
-                        >
-                            {updateQuotasMutation.isPending ? 'Saving…' : 'Update Quotas'}
-                        </Button>
-                    </div>
-                </TabsContent>
 
                 {/* ── FEATURES ── */}
                 <TabsContent value="features" className="mt-0">
@@ -416,9 +328,6 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                 </TabsContent>
 
                 {/* ── INTEGRATIONS ── */}
-                <TabsContent value="integrations" className="mt-0">
-                    <HotelIntegrationsTab hotel={hotel} />
-                </TabsContent>
 
                 {/* ── PERMISSIONS ── */}
                 <TabsContent value="permissions" className="mt-0">
@@ -626,30 +535,6 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                 </TabsContent>
 
                 {/* ── EXPORTS ── */}
-                <TabsContent value="exports" className="mt-0">
-                    <div className="border border-border rounded-2xl p-5 bg-background space-y-3">
-                        <h3 className="text-sm font-black text-foreground mb-4">Export Hotel Data (CSV)</h3>
-                        {[
-                            { label: 'Bookings', desc: 'All bookings with guest info, dates, amounts', type: 'bookings' },
-                            { label: 'Guest List', desc: 'All guests with contact details', type: 'guests' },
-                            { label: 'Payment Records', desc: 'All payment transactions', type: 'payments' },
-                        ].map(e => (
-                            <div key={e.type} className="flex items-center justify-between p-4 border border-border rounded-xl hover:bg-muted/20 transition-colors">
-                                <div>
-                                    <p className="font-bold text-sm text-foreground">{e.label}</p>
-                                    <p className="text-[11px] text-muted-foreground mt-0.5">{e.desc}</p>
-                                </div>
-                                <Button
-                                    variant="outline" size="sm"
-                                    className="rounded-xl gap-1.5 font-semibold h-8"
-                                    onClick={() => handleExport(e.type, e.label)}
-                                >
-                                    <Download className="w-3.5 h-3.5" /> Download
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                </TabsContent>
 
                 {/* ── DANGER ZONE ── */}
                 <TabsContent value="danger" className="mt-0">
