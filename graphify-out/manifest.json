@@ -1410,9 +1410,9 @@
     "semantic_hash": "7918eaaf4e43c59a667ccc6964287676"
   },
   "frontend/src/setupTests.ts": {
-    "mtime": 1782154881.792847,
-    "ast_hash": "00e47f7b9836e8f731101981fa2bb2de",
-    "semantic_hash": "00e47f7b9836e8f731101981fa2bb2de"
+    "mtime": 1782158084.256621,
+    "ast_hash": "3a04001fe6b798352b1cd48eb9ec2cf5",
+    "semantic_hash": ""
   },
   "frontend/src/superadmin/SuperAdminDashboard.tsx": {
     "mtime": 1782154881.792847,
@@ -2062,6 +2062,16 @@
   "frontend/src/reports/ShareReportButton.tsx": {
     "mtime": 1782157064.4245603,
     "ast_hash": "0f68fc469d64bcdaf8cbaed649787fcc",
+    "semantic_hash": ""
+  },
+  "frontend/src/analytics/__tests__/PublicReport.test.tsx": {
+    "mtime": 1782158039.4811382,
+    "ast_hash": "8acff421c988b4e3813362ff27c53072",
+    "semantic_hash": ""
+  },
+  "frontend/src/reports/__tests__/ReportView.test.tsx": {
+    "mtime": 1782158027.9512541,
+    "ast_hash": "a60135d60b794b814b2394fa748e2c39",
     "semantic_hash": ""
   }
 }
