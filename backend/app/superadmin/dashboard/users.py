@@ -8,6 +8,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlmodel import select
 
 from app.core.auth.deps import DbSession
@@ -41,6 +42,71 @@ def _is_master_admin(user: User) -> bool:
     """
     emails = get_settings().master_admin_email_set
     return bool(emails) and (user.email or "").lower().strip() in emails
+
+
+def _find_supabase_user_by_email(supabase_client, email: str):
+    """Best-effort lookup of an existing Supabase auth user by email.
+
+    Used to recover from a partial-creation orphan: the Supabase auth account
+    exists but the matching `public.users` row was never written (or was
+    deleted), which otherwise makes the email impossible to re-add — Supabase
+    rejects the create as "already registered" while our DB pre-check passes.
+    Returns the auth user object or None.
+    """
+    email = (email or "").lower().strip()
+    try:
+        page = 1
+        while page <= 20:  # bound the scan; platforms here are small
+            users = supabase_client.auth.admin.list_users(page=page, per_page=200)
+            # supabase-py may return a list or an object with `.users`.
+            batch = getattr(users, "users", users) or []
+            if not batch:
+                break
+            for u in batch:
+                if (getattr(u, "email", "") or "").lower().strip() == email:
+                    return u
+            if len(batch) < 200:
+                break
+            page += 1
+    except Exception as e:  # pragma: no cover - network/SDK variance
+        logger.warning("Supabase user lookup by email failed: %s", e)
+    return None
+
+
+def _create_or_recover_supabase_user(supabase_client, email: str, password: str, metadata: dict) -> str:
+    """Create a Supabase auth user, recovering from an orphaned auth account.
+
+    If the email is already registered in Supabase Auth but has no platform
+    row (the pre-check already guaranteed that), reuse the existing auth user
+    and reset its password/metadata so the admin-provided credentials work.
+    Returns the Supabase user id. Raises on unrecoverable failure.
+    """
+    try:
+        sb_user = supabase_client.auth.admin.create_user({
+            "email": email,
+            "password": password,
+            "email_confirm": True,
+            "user_metadata": metadata,
+        })
+        return sb_user.user.id
+    except Exception as create_err:
+        msg = str(create_err).lower()
+        already = any(s in msg for s in ("already", "registered", "exists", "duplicate"))
+        if not already:
+            raise
+        existing = _find_supabase_user_by_email(supabase_client, email)
+        if not existing:
+            raise
+        # Re-attach: align the orphaned auth account with the new credentials.
+        try:
+            supabase_client.auth.admin.update_user_by_id(
+                existing.id,
+                {"password": password, "email_confirm": True, "user_metadata": metadata},
+            )
+        except Exception as upd_err:  # pragma: no cover - best effort
+            logger.warning("Could not reset orphaned auth user %s: %s", existing.id, upd_err)
+        logger.info("Recovered orphaned Supabase auth account for %s", email)
+        return existing.id
 
 
 @router.get("/users", response_model=List[dict])
@@ -204,22 +270,19 @@ async def create_staybooker_employee(
     from app.core.db.supabase import get_supabase
 
     email = data.email.lower().strip()
-    if (await session.execute(select(User).where(User.email == email))).scalar_one_or_none():
+    if (await session.execute(
+        select(User).where(func.lower(User.email) == email)
+    )).scalars().first():
         raise HTTPException(status_code=400, detail="An account with this email already exists")
 
     supabase_client = get_supabase()
 
-    def _create_sb_user():
-        return supabase_client.auth.admin.create_user({
-            "email": email,
-            "password": data.password,
-            "email_confirm": True,
-            "user_metadata": {"name": data.name, "is_staff": True},
-        })
-
     try:
-        sb_user = await asyncio.to_thread(_create_sb_user)
-        supabase_id = sb_user.user.id
+        supabase_id = await asyncio.to_thread(
+            _create_or_recover_supabase_user,
+            supabase_client, email, data.password,
+            {"name": data.name, "is_staff": True},
+        )
     except Exception as e:
         logger.error("Supabase employee account creation failed: %s", e)
         raise HTTPException(status_code=500, detail="Failed to create account. Please try again.")
@@ -283,7 +346,10 @@ async def create_hotel_user(
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
-    if (await session.execute(select(User).where(User.email == data.email.lower().strip()))).scalar_one_or_none():
+    email = data.email.lower().strip()
+    if (await session.execute(
+        select(User).where(func.lower(User.email) == email)
+    )).scalars().first():
         raise HTTPException(status_code=400, detail="A user with this email address already exists")
 
     if data.role not in [r.value for r in UserRole]:
@@ -291,23 +357,18 @@ async def create_hotel_user(
 
     supabase_client = get_supabase()
 
-    def _create_sb_user():
-        return supabase_client.auth.admin.create_user({
-            "email": data.email.lower().strip(),
-            "password": data.password,
-            "email_confirm": True,
-            "user_metadata": {"name": data.name, "hotel_name": hotel.name},
-        })
-
     try:
-        sb_user = await asyncio.to_thread(_create_sb_user)
-        supabase_id = sb_user.user.id
+        supabase_id = await asyncio.to_thread(
+            _create_or_recover_supabase_user,
+            supabase_client, email, data.password,
+            {"name": data.name, "hotel_name": hotel.name},
+        )
     except Exception as e:
         logger.error("Supabase Auth registration failed for hotel user: %s", e)
         raise HTTPException(status_code=500, detail="Account registration failed. Please try again.")
 
     new_user = User(
-        email=data.email.lower().strip(),
+        email=email,
         name=data.name,
         role=UserRole(data.role),
         supabase_id=supabase_id,
@@ -336,9 +397,9 @@ async def create_hotel_user(
         if "ix_users_email" in error_str or "UniqueViolationError" in error_str:
             raise HTTPException(status_code=400, detail="A user with this email address already exists")
             
-        logger.error("DB save failed for new hotel user: %s", e)
-        import traceback
-        raise HTTPException(status_code=500, detail=f"Failed to save user: {repr(e)}. Traceback: {traceback.format_exc()}")
+        # Log full detail server-side; never leak internals/traceback to the client.
+        logger.exception("DB save failed for new hotel user %s", email)
+        raise HTTPException(status_code=500, detail="Failed to save user. Please try again.")
 
     return {
         "id": new_user.id, "name": new_user.name, "email": new_user.email,

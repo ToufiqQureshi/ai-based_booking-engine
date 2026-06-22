@@ -110,8 +110,14 @@ export function SettingsPage() {
       smtp_from_email: hotel?.settings?.smtp_from_email || '',
       email_sender_name: hotel?.settings?.email_sender_name || '',
       email_sender_address: hotel?.settings?.email_sender_address || '',
+      email_reply_to: hotel?.settings?.email_reply_to || '',
       email_cc_list: hotel?.settings?.email_cc_list || '',
       email_signature: hotel?.settings?.email_signature || '',
+      // Templates must be hydrated from the saved hotel settings, otherwise the
+      // editor shows blank on reload even though the values are persisted.
+      email_template: hotel?.settings?.email_template || '',
+      email_template_booking_confirmed: hotel?.settings?.email_template_booking_confirmed || '',
+      email_template_booking_cancelled: hotel?.settings?.email_template_booking_cancelled || '',
       whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
       whatsapp_phone_number_id: hotel?.settings?.whatsapp_phone_number_id || '',
       whatsapp_business_account_id: hotel?.settings?.whatsapp_business_account_id || '',
