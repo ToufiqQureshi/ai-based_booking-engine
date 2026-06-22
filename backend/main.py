@@ -55,6 +55,7 @@ from app.rate_shopper import competitors
 
 from app.analytics.reports import router as analytics_router
 from app.analytics.analytics import router as analytics_api_router
+from app.analytics.public_report import router as public_report_router
 from app.google_reviews.social_proof import router as social_proof_router
 from app.guest_booking import sse as public_sse
 from app.superadmin.chains.dashboard import router as chain_router
@@ -207,6 +208,7 @@ app.include_router(promos.router, prefix=API_V1_PREFIX + "/promos", tags=["Promo
 app.include_router(notifications.router, prefix=API_V1_PREFIX, tags=["Notifications"])
 app.include_router(analytics_router, prefix=API_V1_PREFIX + "/analytics", tags=["Analytics"])
 app.include_router(analytics_api_router, prefix=API_V1_PREFIX, tags=["Analytics"])
+app.include_router(public_report_router, prefix=API_V1_PREFIX, tags=["Public Report"])
 app.include_router(leads.router, prefix=API_V1_PREFIX + "/leads", tags=["Leads"])
 app.include_router(google_ads.router, prefix=API_V1_PREFIX)
 

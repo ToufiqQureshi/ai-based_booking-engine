@@ -24,6 +24,10 @@ class AnalyticsSession(SQLModel, table=True):
     browser: Optional[str] = None
     os: Optional[str] = None
     country: Optional[str] = None
+    # City-level geo lets hoteliers target marketing at the towns guests come
+    # from. Indexed because the dashboard groups visitors by city.
+    city: Optional[str] = Field(default=None, index=True)
+    region: Optional[str] = None
     referrer: Optional[str] = None
     
     # Session Timings
@@ -65,7 +69,41 @@ class AnalyticsEvent(SQLModel, table=True):
     # Relationships
     session: "AnalyticsSession" = Relationship(back_populates="events")
 
+class ReportShareLink(SQLModel, table=True):
+    """
+    A public, no-login share link for a hotel's analytics report (PowerBI-style
+    "publish to web"). The hotelier mints a token and can send it to anyone; the
+    public report endpoint resolves the token to exactly one hotel and returns
+    aggregate stats only (never guest PII).
+    """
+    __tablename__ = "report_share_links"
+
+    id: str = Field(default_factory=lambda: f"share_{secrets.token_urlsafe(8)}", primary_key=True)
+    hotel_id: str = Field(foreign_key="hotels.id", index=True)
+    # Unguessable token carried in the public URL (/r/<token>).
+    token: str = Field(default_factory=lambda: secrets.token_urlsafe(24), index=True, unique=True)
+
+    label: Optional[str] = None          # hotelier-facing note, e.g. "Investor deck"
+    days: int = Field(default=30)        # report window the link exposes (1..365)
+    created_by: Optional[str] = None     # user id that minted the link
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: Optional[datetime] = None  # None = never expires
+    is_revoked: bool = Field(default=False)
+
+    view_count: int = Field(default=0)
+    last_viewed_at: Optional[datetime] = None
+
+
 # --- Pydantic Models for API Requests ---
+
+
+class ShareLinkCreate(BaseModel):
+    label: Optional[str] = None
+    days: int = 30                       # report window, clamped 1..365 server-side
+    expires_in_days: Optional[int] = 30  # link validity; None = never expires
+
+
 
 class SessionStartRequest(BaseModel):
     user_agent: Optional[str] = None

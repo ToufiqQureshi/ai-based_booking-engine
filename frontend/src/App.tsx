@@ -31,6 +31,7 @@ const AdminDashboard = lazy(() => import("@/admin/AdminDashboard"));
 const AgentPage = lazy(() => import("@/agent/AgentPage").then(m => ({ default: m.default })));
 const ProfilePage = lazy(() => import("@/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/analytics/AnalyticsDashboard"));
+const PublicReport = lazy(() => import("@/analytics/PublicReport"));
 const RateShopperPage = lazy(() => import("@/dashboard/RateShopper"));
 const SuperAdminDashboard = lazy(() => import("@/superadmin/SuperAdminDashboard"));
 const GoogleReviewsPage = lazy(() => import("@/marketing/GoogleReviews"));
@@ -157,6 +158,9 @@ const App = () => {
                     <Route path="/book/chain/:chainSlug/widget" element={<ChainBookingWidget />} />
                     <Route path="/book/:hotelSlug/widget" element={<BookingWidget />} />
                     <Route path="/book/:hotelSlug/chat" element={<ChatEmbed />} />
+
+                    {/* Public shared analytics report (no login) */}
+                    <Route path="/r/:token" element={<PublicReport />} />
 
                     {/* Public Legal Routes */}
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />

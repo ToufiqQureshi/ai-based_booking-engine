@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import ShareReportButton from '@/analytics/ShareReportButton';
 
 interface AnalyticsData {
   total_visitors: number;
@@ -420,6 +421,9 @@ export const AnalyticsDashboard: React.FC = () => {
               <Download className="w-3.5 h-3.5" />
               Export CSV
             </button>
+
+            {/* Public shareable report link (PowerBI-style publish-to-web) */}
+            <ShareReportButton days={days} />
           </div>
         </motion.div>
 
