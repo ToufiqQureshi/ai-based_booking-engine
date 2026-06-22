@@ -267,21 +267,21 @@ export function RoomSearchHeader({
         </>
     );
 
-    let containerClasses = "mb-6 sm:mb-10 max-w-6xl mx-auto ";
+    let containerClasses = "mb-6 sm:mb-10 max-w-6xl mx-auto transition-all duration-500 ease-out ";
     let containerStyle: React.CSSProperties = {};
     
     if (layoutStyle === 'minimal') {
         containerClasses += "bg-transparent p-2 sm:p-4";
     } else if (layoutStyle === 'classic') {
-        containerClasses += "bg-white p-6 sm:p-8 rounded-lg shadow-md border border-slate-200 max-w-4xl";
+        containerClasses += "bg-white p-6 sm:p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 max-w-4xl";
     } else if (layoutStyle === 'floating') {
-        containerClasses = "fixed bottom-4 left-4 right-4 z-50 bg-white/95 backdrop-blur-xl p-3 sm:p-4 rounded-2xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.3)] border border-white/40 max-w-4xl mx-auto";
+        containerClasses = "fixed bottom-6 left-6 right-6 z-50 bg-white/90 backdrop-blur-2xl p-4 sm:p-5 rounded-[28px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] border border-white max-w-4xl mx-auto ring-1 ring-slate-900/5";
     } else if (layoutStyle === 'ota') {
-        containerClasses += "p-4 sm:p-6 lg:p-8 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)]";
-        containerStyle = { backgroundColor: themeColor };
+        containerClasses += "p-4 sm:p-6 lg:p-8 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] max-w-5xl mx-auto";
+        containerStyle = { backgroundColor: themeColor, backgroundImage: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)` };
     } else {
         // modern
-        containerClasses += "bg-white/95 backdrop-blur-2xl p-4 sm:p-6 rounded-[32px] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.15)] border border-white/60";
+        containerClasses += "bg-white/70 backdrop-blur-3xl p-4 sm:p-6 rounded-[32px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] border border-white max-w-5xl mx-auto ring-1 ring-white/50";
     }
 
     const isOta = layoutStyle === 'ota';
@@ -323,10 +323,14 @@ export function RoomSearchHeader({
                     <PopoverTrigger asChild>
                         <button 
                             className={isOta 
-                                ? "flex-[2] flex flex-row items-center p-3 sm:p-4 bg-white rounded-lg border border-transparent shadow-sm text-left hover:bg-slate-50 transition-colors min-h-[80px]"
-                                : "flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                                ? "flex-[2] flex flex-row items-center p-3 sm:p-4 bg-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.05)] text-left hover:bg-slate-50 transition-all min-h-[80px]"
+                                : "flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5"
                             }
-                            style={isOta ? {} : { borderColor: isCalendarOpen ? themeColor : '#f1f5f9', backgroundColor: '#fff' }}
+                            style={isOta ? {} : { 
+                                borderColor: isCalendarOpen ? themeColor : 'rgba(226, 232, 240, 0.6)', 
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                boxShadow: isCalendarOpen ? `0 0 0 4px ${themeColor}15` : undefined
+                            }}
                             onClick={() => { setIsCalendarOpen(!isCalendarOpen); setIsGuestOpen(false); }}
                         >
                             {isOta ? (
@@ -439,10 +443,14 @@ export function RoomSearchHeader({
                     <PopoverTrigger asChild>
                         <button
                             className={isOta
-                                ? "flex-1 flex flex-col justify-center p-3 sm:p-4 bg-white rounded-lg border border-transparent shadow-sm text-left hover:bg-slate-50 transition-colors relative min-h-[80px]"
-                                : "flex-1 flex items-center gap-3 p-4 rounded-[20px] border-2 transition-all text-left cursor-pointer hover:bg-slate-50/60"
+                                ? "flex-1 flex flex-col justify-center p-3 sm:p-4 bg-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.05)] text-left hover:bg-slate-50 transition-all relative min-h-[80px]"
+                                : "flex-1 flex items-center gap-3 p-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5"
                             }
-                            style={isOta ? {} : { borderColor: isGuestOpen ? themeColor : '#f1f5f9', backgroundColor: '#fff' }}
+                            style={isOta ? {} : { 
+                                borderColor: isGuestOpen ? themeColor : 'rgba(226, 232, 240, 0.6)', 
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                boxShadow: isGuestOpen ? `0 0 0 4px ${themeColor}15` : undefined
+                            }}
                             onClick={() => { setIsGuestOpen(!isGuestOpen); setIsCalendarOpen(false); }}
                         >
                             {isOta ? (
@@ -533,7 +541,7 @@ export function RoomSearchHeader({
 
                 {/* Promo Input */}
                 {!isOta && (
-                    <div className="hidden md:flex w-40 flex-col justify-center p-4 rounded-[20px] border-2 border-[#f1f5f9] bg-white transition-all hover:bg-slate-50/60 focus-within:border-slate-300">
+                    <div className="hidden md:flex w-40 flex-col justify-center p-4 rounded-[20px] border border-[rgba(226,232,240,0.6)] bg-[rgba(255,255,255,0.95)] transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 focus-within:border-slate-300 focus-within:shadow-[0_8px_20px_rgba(0,0,0,0.06)] focus-within:-translate-y-0.5">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
                         <input 
                             value={promoCode}
@@ -547,8 +555,8 @@ export function RoomSearchHeader({
                 {/* Search Button */}
                 <button
                     className={isOta
-                        ? "h-[76px] sm:h-auto px-8 py-4 rounded-lg font-black text-xl flex items-center justify-center gap-2 shadow-xl transition-transform active:scale-[0.98] shrink-0 uppercase tracking-wide hover:shadow-2xl"
-                        : "h-[76px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all shrink-0"
+                        ? "h-[76px] sm:h-auto px-8 py-4 rounded-xl font-black text-xl flex items-center justify-center gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.2)] transition-all duration-300 active:scale-[0.98] shrink-0 uppercase tracking-wide hover:shadow-[0_15px_35px_rgba(0,0,0,0.3)] hover:-translate-y-0.5"
+                        : "h-[76px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_12px_30px_-5px_rgba(0,0,0,0.3)] hover:shadow-[0_18px_40px_-5px_rgba(0,0,0,0.4)] hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] transition-all duration-300 shrink-0 border border-white/20 backdrop-blur-md"
                     }
                     style={isOta
                         ? { backgroundColor: '#fff', color: themeColor }
@@ -556,7 +564,7 @@ export function RoomSearchHeader({
                     }
                     onClick={handleSearch}
                 >
-                    <Search className={isOta ? "w-6 h-6 stroke-[3]" : "w-5 h-5 stroke-[2.5]"} />
+                    <Search className={isOta ? "w-6 h-6 stroke-[3]" : "w-5 h-5 stroke-[2.5] drop-shadow-sm"} />
                     Search
                 </button>
             </div>
