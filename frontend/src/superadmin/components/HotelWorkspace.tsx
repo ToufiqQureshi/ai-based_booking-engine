@@ -141,14 +141,18 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
     };
 
     // Small inline indicator so staff can SEE whether a secret is already stored
-    // (the value itself is never returned for security), instead of re-entering it.
-    const SecretStatus = ({ isSet }: { isSet: boolean }) => (
+    // (the raw value is never returned for security). When available it shows a
+    // masked preview (e.g. sk-b•••••8d6d) — industry-standard "last few chars"
+    // pattern so the admin RECOGNISES the stored key without re-entering it.
+    const SecretStatus = ({ isSet, hint }: { isSet: boolean; hint?: string | null }) => (
         <span className={cn(
             'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md',
             isSet ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   : 'bg-slate-50 text-slate-500 border border-slate-200'
         )}>
-            {isSet ? <><CheckCircle2 className="w-3 h-3" /> Configured</> : <>— Not set</>}
+            {isSet
+                ? <><CheckCircle2 className="w-3 h-3" /> Configured{hint ? <code className="font-mono tracking-tight">{hint}</code> : null}</>
+                : <>— Not set</>}
         </span>
     );
 
@@ -605,7 +609,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                 <div className="space-y-1">
                                     <div className="flex items-center justify-between gap-2">
                                         <Label className="text-xs font-bold">Meta Temporary / Permanent Access Token</Label>
-                                        <SecretStatus isSet={!!hotel.whatsapp_api_key_set} />
+                                        <SecretStatus isSet={!!hotel.whatsapp_api_key_set} hint={hotel.settings?.whatsapp_api_key_hint} />
                                     </div>
                                     <Input
                                         type="password"
@@ -670,7 +674,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                 <div className="space-y-1">
                                     <div className="flex items-center justify-between gap-2">
                                         <Label className="text-xs font-bold">AI API Key (Overrides platform key)</Label>
-                                        <SecretStatus isSet={!!hotel.ai_api_key_set} />
+                                        <SecretStatus isSet={!!hotel.ai_api_key_set} hint={hotel.settings?.ai_api_key_hint} />
                                     </div>
                                     <Input
                                         type="password"
@@ -713,7 +717,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                             <div className="space-y-1">
                                 <div className="flex items-center justify-between gap-2">
                                     <Label className="text-xs font-bold">Brevo API Key (Overrides platform key)</Label>
-                                    <SecretStatus isSet={!!hotel.brevo_api_key_set} />
+                                    <SecretStatus isSet={!!hotel.brevo_api_key_set} hint={hotel.settings?.brevo_api_key_hint} />
                                 </div>
                                 <Input
                                     type="password"
@@ -759,7 +763,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between gap-2">
                                         <Label className="text-xs font-bold">SMTP Password</Label>
-                                        <SecretStatus isSet={!!hotel.settings?.has_smtp_password} />
+                                        <SecretStatus isSet={!!hotel.settings?.has_smtp_password} hint={hotel.settings?.smtp_password_hint} />
                                     </div>
                                     <Input
                                         type="password"

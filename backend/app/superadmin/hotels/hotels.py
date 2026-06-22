@@ -178,6 +178,26 @@ SECRET_CLEAR_SENTINEL = "__CLEAR__"
 _SETTINGS_SECRET_FIELDS = {"whatsapp_api_key", "brevo_api_key", "smtp_password", "razorpay_key_secret"}
 
 
+def _secret_hint(value: Optional[str]) -> Optional[str]:
+    """Return a masked, non-secret preview of a credential for the admin UI.
+
+    Industry-standard "show last few + first few" pattern (Stripe/AWS style) so
+    platform staff can RECOGNISE which key is stored without it being the raw
+    value — this is what stops them re-entering a key they already configured.
+    The middle is a fixed-width mask so the real length isn't leaked. Stored as
+    a separate `<field>_hint` key (never a secret) and surfaced only to the
+    super-admin views, never to hoteliers.
+    """
+    if not value:
+        return None
+    v = str(value)
+    if len(v) <= 4:
+        return "•" * len(v)
+    if len(v) <= 9:
+        return v[0] + "•" * 6 + v[-1]
+    return v[:4] + "•" * 6 + v[-4:]
+
+
 @router.get("/hotels", response_model=List[dict])
 async def list_hotels(session: DbSession, super_admin: User = Depends(require_permission("superadmin.hotels.read"))):
     """List all hotels with owner and subscription details."""
@@ -300,6 +320,9 @@ async def update_hotel_status(
     #    A SECRET_KEEP_SENTINEL value means "unchanged" — the form never sees the
     #    real secret, so a blank/sentinel submit must not wipe it. ──
     secret_changes = []
+    # Masked previews (e.g. ai_api_key_hint) collected as secrets are written,
+    # then merged into hotel.settings below. Safe to persist + return.
+    secret_hints: dict = {}
 
     if "ai_api_key" in db_data:
         ai_key_val = db_data.pop("ai_api_key")
@@ -309,6 +332,7 @@ async def update_hotel_status(
                 None, f"hotel_{hotel_id}_ai_api_key",
             )
             secret_changes.append("ai_api_key")
+            secret_hints["ai_api_key_hint"] = None
         elif ai_key_val == SECRET_KEEP_SENTINEL or not ai_key_val:
             pass  # blank or KEEP — leave the stored secret untouched
         else:
@@ -317,6 +341,7 @@ async def update_hotel_status(
                 ai_key_val, f"hotel_{hotel_id}_ai_api_key",
             )
             secret_changes.append("ai_api_key")
+            secret_hints["ai_api_key_hint"] = _secret_hint(ai_key_val)
 
     if "settings" in db_data and isinstance(db_data["settings"], dict):
         incoming = db_data.pop("settings")
@@ -325,6 +350,7 @@ async def update_hotel_status(
             if k in _SETTINGS_SECRET_FIELDS:
                 if v == SECRET_CLEAR_SENTINEL:
                     merged = await store_settings_secret(session, merged, k, None, hotel_id)
+                    merged[f"{k}_hint"] = None
                     secret_changes.append(k)
                 elif v == SECRET_KEEP_SENTINEL or not v:
                     # Blank or KEEP — never wipe a stored secret. The form never
@@ -332,10 +358,18 @@ async def update_hotel_status(
                     continue
                 else:
                     merged = await store_settings_secret(session, merged, k, v, hotel_id)
+                    merged[f"{k}_hint"] = _secret_hint(v)
                     secret_changes.append(k)
             else:
                 merged[k] = v  # non-secret settings: shallow-merge as before
         hotel.settings = merged
+
+    # Persist any hints produced outside the settings block (e.g. the AI key,
+    # handled above) even when the payload carried no `settings` object.
+    if secret_hints:
+        merged_settings = dict(hotel.settings or {})
+        merged_settings.update(secret_hints)
+        hotel.settings = merged_settings
 
     changes = []
     for key, value in db_data.items():

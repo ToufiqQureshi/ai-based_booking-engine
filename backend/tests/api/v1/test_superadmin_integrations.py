@@ -58,6 +58,12 @@ async def test_secrets_never_returned_but_set_flags_exposed(super_admin_client):
     assert row["ai_api_key_set"] is True
     assert row["whatsapp_api_key_set"] is True
     assert row["brevo_api_key_set"] is True
+    # A masked hint (never the raw secret) is exposed so staff can recognise the
+    # stored key without re-entering it. It must NOT contain the full secret.
+    wa_hint = row["settings"].get("whatsapp_api_key_hint")
+    assert wa_hint and "•" in wa_hint
+    assert "EAA_secret_wa_456" not in wa_hint
+    assert wa_hint.endswith("_456")  # last chars preserved for recognition
     # Non-secret config still surfaces.
     assert row["ai_model"] == "llama-3.1-8b-instant"
     assert row["settings"].get("whatsapp_phone_number_id") == "123456"
