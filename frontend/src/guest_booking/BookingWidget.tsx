@@ -534,6 +534,18 @@ export default function BookingWidget() {
 
     const layoutStyle = urlParams.get('preview_layout') || config?.widget_layout || 'modern';
 
+    // Feature toggles. The Integration "Live Preview" passes these as preview_*
+    // params so a hotelier sees the effect of each switch instantly; the embedded
+    // widget falls back to the saved config (default ON when unset).
+    const previewBool = (key: string, cfg: any): boolean => {
+        const p = urlParams.get(key);
+        if (p !== null) return p !== 'false' && p !== '0';
+        return cfg !== false;
+    };
+    const showPromo = previewBool('preview_show_promo', config?.widget_show_promo);
+    const showPackages = previewBool('preview_show_packages', config?.widget_show_packages);
+    const showFlexibleDates = previewBool('preview_show_flexible', config?.widget_show_flexible_dates);
+
     // Removed config === null check to allow instant paint (solves the 5-second blank delay)
 
     const stateBag = {
@@ -720,9 +732,11 @@ export default function BookingWidget() {
                     layoutStyle={layoutStyle}
                     minNights={config?.min_nights ?? 1}
                     advancePurchaseDays={config?.advance_purchase_days ?? 0}
-                    showPromoCode={config?.widget_show_promo !== false}
-                    showPackages={config?.widget_show_packages !== false}
-                    showFlexibleDates={config?.widget_show_flexible_dates !== false}
+                    showPromoCode={showPromo}
+                    showPackages={showPackages}
+                    showFlexibleDates={showFlexibleDates}
+                    bgColor={bgColor}
+                    isBgLight={isBgLight}
                 />
             )}
         </div>

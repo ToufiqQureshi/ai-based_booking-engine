@@ -2,6 +2,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta, date
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel
 from sqlmodel import select, and_, func, or_
 
 from app.core.auth.deps import CurrentUser, DbSession
@@ -51,6 +52,89 @@ async def get_chain_info(
         "name": chain.name,
         "logo_url": chain.logo_url,
     }
+
+
+# ── Chain Widget Settings ──────────────────────────────────────────────────────
+
+# Whitelist of fields a chain admin may change on the chain widget. Keeping this
+# explicit prevents a client from writing arbitrary Chain columns (e.g. slug,
+# is_active) through this endpoint.
+_CHAIN_WIDGET_FIELDS = (
+    "widget_layout", "widget_bg_color", "widget_theme",
+    "widget_show_price", "widget_show_loyalty", "widget_show_property_count",
+    "primary_color",
+)
+_ALLOWED_CHAIN_LAYOUTS = {
+    "modern", "minimal", "classic", "floating", "far", "ota", "glassmorphism",
+}
+
+
+class ChainWidgetSettingsUpdate(BaseModel):
+    widget_layout: Optional[str] = None
+    widget_bg_color: Optional[str] = None
+    widget_theme: Optional[str] = None
+    widget_show_price: Optional[bool] = None
+    widget_show_loyalty: Optional[bool] = None
+    widget_show_property_count: Optional[bool] = None
+    primary_color: Optional[str] = None
+
+
+def _serialize_chain_widget(chain: Chain) -> Dict[str, Any]:
+    return {
+        "primary_color": chain.primary_color or "#4f46e5",
+        "widget_layout": getattr(chain, "widget_layout", "modern"),
+        "widget_bg_color": getattr(chain, "widget_bg_color", "#FFFFFF"),
+        "widget_theme": getattr(chain, "widget_theme", "light"),
+        "widget_show_price": getattr(chain, "widget_show_price", True),
+        "widget_show_loyalty": getattr(chain, "widget_show_loyalty", True),
+        "widget_show_property_count": getattr(chain, "widget_show_property_count", True),
+    }
+
+
+@router.get("/widget-settings", response_model=Dict[str, Any])
+async def get_chain_widget_settings(
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """Current chain widget appearance + feature toggles for the Integration page."""
+    chain = await session.get(Chain, current_user.chain_id)
+    if not chain:
+        raise HTTPException(status_code=404, detail="Chain not found")
+    return _serialize_chain_widget(chain)
+
+
+@router.put("/widget-settings", response_model=Dict[str, Any])
+async def update_chain_widget_settings(
+    payload: ChainWidgetSettingsUpdate,
+    session: DbSession,
+    current_user: User = Depends(get_chain_admin),
+):
+    """Persist chain widget style + features. Only whitelisted fields are written."""
+    chain = await session.get(Chain, current_user.chain_id)
+    if not chain:
+        raise HTTPException(status_code=404, detail="Chain not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+    if "widget_layout" in updates and updates["widget_layout"] not in _ALLOWED_CHAIN_LAYOUTS:
+        raise HTTPException(status_code=400, detail="Invalid widget layout")
+
+    for field in _CHAIN_WIDGET_FIELDS:
+        if field in updates and updates[field] is not None:
+            setattr(chain, field, updates[field])
+    chain.updated_at = datetime.utcnow()
+    session.add(chain)
+    await session.commit()
+    await session.refresh(chain)
+
+    # The public chain payload is cached for 5 min — clear it so the embedded
+    # widget reflects the new style/features immediately.
+    try:
+        from app.core.cache.redis_client import redis_client
+        redis_client.delete_key(f"public:chain:{chain.slug}")
+    except Exception as e:
+        logger.error("Failed to clear public chain cache: %s", e)
+
+    return _serialize_chain_widget(chain)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

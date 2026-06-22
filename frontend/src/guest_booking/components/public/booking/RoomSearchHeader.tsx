@@ -45,6 +45,8 @@ interface RoomSearchHeaderProps {
     showPromoCode?: boolean;
     showPackages?: boolean;
     showFlexibleDates?: boolean;
+    bgColor?: string;
+    isBgLight?: boolean;
 }
 
 export function RoomSearchHeader({
@@ -81,7 +83,9 @@ export function RoomSearchHeader({
     advancePurchaseDays = 0,
     showPromoCode = true,
     showPackages = true,
-    showFlexibleDates = true
+    showFlexibleDates = true,
+    bgColor,
+    isBgLight = true
 }: RoomSearchHeaderProps) {
     const [calendarData, setCalendarData] = useState<Record<string, CalendarDay>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
@@ -290,6 +294,15 @@ export function RoomSearchHeader({
     } else {
         // modern
         containerClasses += "bg-white/70 backdrop-blur-3xl p-4 sm:p-6 rounded-[32px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] border border-white max-w-5xl mx-auto ring-1 ring-white/50";
+    }
+
+    // Apply the hotelier's chosen background colour. Inner date/guest/promo inputs
+    // keep their own white surfaces (so they stay readable), only the outer card
+    // takes the brand colour — same approach OTAs use. 'minimal' stays transparent
+    // by design and 'ota' already paints itself with the primary colour.
+    const hasCustomBg = !!bgColor && !['#ffffff', '#fff', ''].includes(bgColor.toLowerCase());
+    if (hasCustomBg && layoutStyle !== 'ota' && layoutStyle !== 'minimal') {
+        containerStyle = { ...containerStyle, backgroundColor: bgColor };
     }
 
     const isOta = layoutStyle === 'ota';
