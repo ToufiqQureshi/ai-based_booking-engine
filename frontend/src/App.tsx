@@ -32,6 +32,7 @@ const AgentPage = lazy(() => import("@/agent/AgentPage").then(m => ({ default: m
 const ProfilePage = lazy(() => import("@/settings/Profile"));
 const AnalyticsDashboard = lazy(() => import("@/analytics/AnalyticsDashboard"));
 const PublicReport = lazy(() => import("@/analytics/PublicReport"));
+const HotelReport = lazy(() => import("@/reports/HotelReport"));
 const RateShopperPage = lazy(() => import("@/dashboard/RateShopper"));
 const SuperAdminDashboard = lazy(() => import("@/superadmin/SuperAdminDashboard"));
 const GoogleReviewsPage = lazy(() => import("@/marketing/GoogleReviews"));
@@ -121,6 +122,7 @@ const App = () => {
                       <Route path="/availability" element={<AvailabilityPage />} />
                       <Route path="/analytics" element={<AnalyticsDashboard />} />
                       <Route path="/analytics/:tab" element={<AnalyticsDashboard />} />
+                      <Route path="/reports" element={<HotelReport />} />
                       <Route path="/bookings" element={<BookingsPage />} />
                       <Route path="/guests" element={<GuestsPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
