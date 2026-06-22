@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, Backgrou
 from sqlmodel import select
 
 from app.core.auth.deps import CurrentUser, DbSession
+from app.core.auth.vault import store_settings_secret, store_column_secret
 from app.core.utils.config import get_settings
 from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel, HotelUpdate
@@ -152,6 +153,22 @@ DEFAULT_ROLE_PERMISSIONS = {
     "STAFF": ["/availability", "/bookings", "/guests"],
 }
 
+# hotel.settings keys whose values are secrets (or vault references to secrets).
+# These are stripped from any settings payload returned to the client.
+_SECRET_RESPONSE_KEYS = {
+    "whatsapp_api_key", "whatsapp_api_key_vault_id",
+    "brevo_api_key",
+    "smtp_password", "smtp_password_vault_id",
+    "razorpay_key_secret", "razorpay_key_secret_vault_id",
+    "ai_api_key", "ai_api_key_vault_id",
+}
+
+# Secret fields written via the super-admin integrations form. When the client
+# sends this sentinel it means "leave the stored secret unchanged" (the form
+# never receives the real value, so a blank submit must not wipe it).
+SECRET_KEEP_SENTINEL = "__KEEP__"
+_SETTINGS_SECRET_FIELDS = {"whatsapp_api_key", "brevo_api_key"}
+
 
 @router.get("/hotels", response_model=List[dict])
 async def list_hotels(session: DbSession, super_admin: User = Depends(require_permission("superadmin.hotels.read"))):
@@ -179,6 +196,10 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(require_pe
         owner = owners_map.get(hotel.id)
         sub = subs_map.get(hotel.id)
         settings_dict = hotel.settings or {}
+        # Never ship raw secrets to the client (even to a super admin). Strip the
+        # plaintext keys + their vault references from the settings copy we return,
+        # and expose only booleans saying whether each integration is configured.
+        safe_settings = {k: v for k, v in settings_dict.items() if k not in _SECRET_RESPONSE_KEYS}
         final_result.append({
             "id": hotel.id,
             "name": hotel.name,
@@ -186,9 +207,18 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(require_pe
             "is_active": hotel.is_active,
             "is_paused": hotel.is_paused,
             "pause_reason": hotel.pause_reason,
-            "settings": settings_dict,
+            "settings": safe_settings,
             "owner_email": owner.email if owner else "N/A",
             "owner_name": owner.name if owner else "N/A",
+            # Non-secret AI config is safe to send; the key itself is never returned.
+            "ai_provider": getattr(hotel, "ai_provider", "groq"),
+            "ai_model": getattr(hotel, "ai_model", "llama-3.1-70b-versatile"),
+            "ai_base_url": getattr(hotel, "ai_base_url", None),
+            "ai_max_tokens": getattr(hotel, "ai_max_tokens", None),
+            # "<secret>_set" flags so the UI can show "configured" without the value.
+            "ai_api_key_set": bool(getattr(hotel, "ai_api_key", None) or getattr(hotel, "ai_api_key_vault_id", None)),
+            "whatsapp_api_key_set": bool(settings_dict.get("whatsapp_api_key") or settings_dict.get("whatsapp_api_key_vault_id")),
+            "brevo_api_key_set": bool(settings_dict.get("brevo_api_key")),
             "feature_ai_agent": hotel.feature_ai_agent,
             "feature_guest_bot": hotel.feature_guest_bot,
             "feature_new_booking": getattr(hotel, "feature_new_booking", True),
@@ -255,28 +285,69 @@ async def update_hotel_status(
                 raise HTTPException(status_code=400, detail="This URL Slug is already taken")
             db_data["slug"] = new_slug
             
+    # ── Secrets: store via Vault (encrypted), never plain setattr/merge. Pop
+    #    them out of db_data so the generic loop below handles only non-secrets.
+    #    A SECRET_KEEP_SENTINEL value means "unchanged" — the form never sees the
+    #    real secret, so a blank/sentinel submit must not wipe it. ──
+    secret_changes = []
+
+    if "ai_api_key" in db_data:
+        ai_key_val = db_data.pop("ai_api_key")
+        if ai_key_val != SECRET_KEEP_SENTINEL:
+            await store_column_secret(
+                session, hotel, "ai_api_key", "ai_api_key_vault_id",
+                (ai_key_val or None), f"hotel_{hotel_id}_ai_api_key",
+            )
+            secret_changes.append("ai_api_key")
+
+    if "settings" in db_data and isinstance(db_data["settings"], dict):
+        incoming = db_data.pop("settings")
+        merged = dict(hotel.settings or {})
+        for k, v in incoming.items():
+            if k in _SETTINGS_SECRET_FIELDS:
+                if v == SECRET_KEEP_SENTINEL:
+                    continue  # unchanged — leave the stored secret alone
+                merged = await store_settings_secret(session, merged, k, (v or None), hotel_id)
+                secret_changes.append(k)
+            else:
+                merged[k] = v  # non-secret settings: shallow-merge as before
+        hotel.settings = merged
+
     changes = []
     for key, value in db_data.items():
         old_val = getattr(hotel, key, None)
         if old_val != value:
             changes.append(f"{key}: {old_val} -> {value}")
-            
+
     for key, value in db_data.items():
         setattr(hotel, key, value)
     hotel.updated_at = datetime.utcnow()
     session.add(hotel)
-    
+
+    # Audit secret updates by field name only — never the value.
+    all_changes = changes + [f"{k}: <updated>" for k in secret_changes]
     session.add(AuditLog(
         user_id=super_admin.id,
         user_email=super_admin.email,
         hotel_id=hotel_id,
         action="UPDATE_HOTEL",
-        description=f"Updated hotel '{hotel.name}': {', '.join(changes)}" if changes else f"Updated hotel '{hotel.name}' status/settings",
+        description=f"Updated hotel '{hotel.name}': {', '.join(all_changes)}" if all_changes else f"Updated hotel '{hotel.name}' status/settings",
         ip_address=_get_client_ip(request),
     ))
     await session.commit()
     await session.refresh(hotel)
-    return hotel
+    # Return the hotel but strip secrets: the raw model would leak the AI key and
+    # any settings secret. Keep all non-secret fields (feature flags, etc.) so
+    # existing callers are unaffected; expose only "<key>_set" booleans.
+    h_settings = hotel.settings or {}
+    data = hotel.model_dump()
+    data.pop("ai_api_key", None)
+    data.pop("ai_api_key_vault_id", None)
+    data["settings"] = {k: v for k, v in h_settings.items() if k not in _SECRET_RESPONSE_KEYS}
+    data["ai_api_key_set"] = bool(hotel.ai_api_key or getattr(hotel, "ai_api_key_vault_id", None))
+    data["whatsapp_api_key_set"] = bool(h_settings.get("whatsapp_api_key") or h_settings.get("whatsapp_api_key_vault_id"))
+    data["brevo_api_key_set"] = bool(h_settings.get("brevo_api_key"))
+    return data
 
 
 @router.delete("/hotels/{hotel_id}")

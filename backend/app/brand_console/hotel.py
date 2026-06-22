@@ -248,6 +248,13 @@ class HotelUpdate(SQLModel):
     paused_at: Optional[datetime] = None
     is_active: Optional[bool] = None
     chain_id: Optional[str] = None
+    
+    # AI dynamic configurations
+    ai_provider: Optional[str] = None
+    ai_api_key: Optional[str] = None
+    ai_model: Optional[str] = None
+    ai_base_url: Optional[str] = None
+    ai_max_tokens: Optional[int] = None
 
     @field_validator("name", "description", mode="before")
     @classmethod
