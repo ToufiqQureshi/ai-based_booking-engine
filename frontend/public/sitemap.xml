@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Staybooker public sitemap.
+  Only public, indexable pages are listed. The authenticated dashboard/admin
+  and per-guest transactional booking steps are intentionally excluded (and
+  blocked in robots.txt). Per-hotel booking pages (/book/{slug}/rooms) are
+  dynamic per tenant and are not enumerated here.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://staybooker.ai/</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://staybooker.ai/signup</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://staybooker.ai/login</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://staybooker.ai/contact-us</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://staybooker.ai/privacy-policy</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://staybooker.ai/terms-of-service</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://staybooker.ai/refund-policy</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://staybooker.ai/cookie-policy</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://staybooker.ai/data-deletion</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

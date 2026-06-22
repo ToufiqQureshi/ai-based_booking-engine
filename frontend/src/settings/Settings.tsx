@@ -51,7 +51,15 @@ export function SettingsPage() {
   useEffect(() => {
     if (activeTab === 'branding' && hotel?.slug && rooms.length === 0) {
       setLoadingRooms(true);
-      apiClient.get<any[]>(`/public/hotels/${hotel.slug}/rooms`)
+      // This endpoint is an availability search and *requires* check_in/check_out
+      // (returns 422 without them). We only need the room list here, not real
+      // availability, so pass today→tomorrow as a harmless default window.
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      const ci = today.toISOString().split('T')[0];
+      const co = tomorrow.toISOString().split('T')[0];
+      apiClient.get<any[]>(`/public/hotels/${hotel.slug}/rooms?check_in=${ci}&check_out=${co}`)
         .then(res => setRooms(res || []))
         .catch(() => {})
         .finally(() => setLoadingRooms(false));

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Code, Key, Globe, Search, MessageCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiClient } from '@/core/api/client';
+import { apiClient, ApiClientError } from '@/core/api/client';
 import { useAuth } from '@/core/contexts/AuthContext';
 import { PageShell } from '@/components/layout/PageShell';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -166,7 +166,13 @@ const IntegrationPage = () => {
             setIsDirty(false);
             toast.success('Integration settings saved successfully');
         } catch (error) {
-            toast.error('Failed to save integration settings');
+            // Surface the backend's actual reason (e.g. "webhook_url: Webhook URL
+            // must start with http:// or https://") instead of a blind generic
+            // toast, so an invalid field is fixable rather than a silent failure.
+            const msg = error instanceof ApiClientError && error.message
+                ? error.message
+                : 'Failed to save integration settings';
+            toast.error(msg);
         } finally {
             setIsSavingSettings(false);
         }

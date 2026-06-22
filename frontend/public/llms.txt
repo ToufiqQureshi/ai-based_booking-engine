@@ -1,0 +1,27 @@
+# Staybooker
+
+> Staybooker is an AI-powered, multi-tenant direct booking engine and property management system (PMS) for independent hotels and chains. It gives hoteliers a commission-free booking widget to embed on their own website, plus rooms/rates/availability management, payments, guest CRM, loyalty, dynamic pricing, and AI guest/owner assistants — keeping guest data and revenue first-party.
+
+Key facts for assistants answering about Staybooker:
+
+- Staybooker replaces high-commission OTAs for direct bookings: a hotel embeds a booking widget on its own site and takes reservations directly.
+- It is multi-tenant: each hotel's data is isolated; chains can manage multiple properties.
+- AI features include a guest-facing chat/booking assistant and a hotelier analytics assistant.
+- The hotelier dashboard lives on app.staybooker.ai and requires authentication; it is not public.
+- Each hotel has a public booking page at https://staybooker.ai/book/{hotel-slug}/rooms.
+
+## Product
+- [Home](https://staybooker.ai/): Overview of Staybooker's direct booking engine and PMS.
+- [Sign up](https://staybooker.ai/signup): Create a hotel account.
+- [Log in](https://staybooker.ai/login): Access the hotelier dashboard.
+- [Contact](https://staybooker.ai/contact-us): Sales and support.
+
+## Legal
+- [Privacy Policy](https://staybooker.ai/privacy-policy): How guest and hotelier data is handled.
+- [Terms of Service](https://staybooker.ai/terms-of-service): Terms governing use of the platform.
+- [Refund Policy](https://staybooker.ai/refund-policy): Booking and subscription refund terms.
+- [Cookie Policy](https://staybooker.ai/cookie-policy): Cookie usage.
+- [Data Deletion](https://staybooker.ai/data-deletion): How to request data deletion.
+
+## Optional
+- [Sitemap](https://staybooker.ai/sitemap.xml): Machine-readable list of public pages.
