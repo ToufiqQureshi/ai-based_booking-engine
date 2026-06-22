@@ -167,7 +167,7 @@ _SECRET_RESPONSE_KEYS = {
 # sends this sentinel it means "leave the stored secret unchanged" (the form
 # never receives the real value, so a blank submit must not wipe it).
 SECRET_KEEP_SENTINEL = "__KEEP__"
-_SETTINGS_SECRET_FIELDS = {"whatsapp_api_key", "brevo_api_key"}
+_SETTINGS_SECRET_FIELDS = {"whatsapp_api_key", "brevo_api_key", "smtp_password", "razorpay_key_secret"}
 
 
 @router.get("/hotels", response_model=List[dict])
@@ -200,6 +200,8 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(require_pe
         # plaintext keys + their vault references from the settings copy we return,
         # and expose only booleans saying whether each integration is configured.
         safe_settings = {k: v for k, v in settings_dict.items() if k not in _SECRET_RESPONSE_KEYS}
+        safe_settings["has_smtp_password"] = bool(settings_dict.get("smtp_password") or settings_dict.get("smtp_password_vault_id"))
+        safe_settings["has_razorpay_secret"] = bool(settings_dict.get("razorpay_key_secret") or settings_dict.get("razorpay_key_secret_vault_id"))
         final_result.append({
             "id": hotel.id,
             "name": hotel.name,
@@ -344,6 +346,8 @@ async def update_hotel_status(
     data.pop("ai_api_key", None)
     data.pop("ai_api_key_vault_id", None)
     data["settings"] = {k: v for k, v in h_settings.items() if k not in _SECRET_RESPONSE_KEYS}
+    data["settings"]["has_smtp_password"] = bool(h_settings.get("smtp_password") or h_settings.get("smtp_password_vault_id"))
+    data["settings"]["has_razorpay_secret"] = bool(h_settings.get("razorpay_key_secret") or h_settings.get("razorpay_key_secret_vault_id"))
     data["ai_api_key_set"] = bool(hotel.ai_api_key or getattr(hotel, "ai_api_key_vault_id", None))
     data["whatsapp_api_key_set"] = bool(h_settings.get("whatsapp_api_key") or h_settings.get("whatsapp_api_key_vault_id"))
     data["brevo_api_key_set"] = bool(h_settings.get("brevo_api_key"))

@@ -105,6 +105,7 @@ class EmailService:
     def _replace_template(self, template: str, kwargs: dict) -> str:
         for k, v in kwargs.items():
             template = template.replace(f"[{k}]", str(v))
+            template = template.replace(f"{{{k}}}", str(v))
         return template
 
     async def _dispatch_hotel_email(self, hotel_settings: dict, to_emails, subject, html_content, cc_emails=None):
