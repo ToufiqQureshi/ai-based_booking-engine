@@ -122,10 +122,24 @@ class EmailService:
                 smtp_from=hotel_settings.get("smtp_from_email") or hotel_settings.get("smtp_username"),
                 cc_emails=cc_emails,
             )
+        
+        custom_client = None
+        custom_brevo_key = hotel_settings.get("brevo_api_key")
+        if custom_brevo_key:
+            AsyncBrevo, *_ = _get_brevo()
+            if AsyncBrevo:
+                try:
+                    custom_client = AsyncBrevo(api_key=custom_brevo_key)
+                except Exception as e:
+                    logger.error("Failed to initialize custom Brevo client: %s", e)
+
         reply_to_email = hotel_settings.get("email_reply_to")
         sender_name = hotel_settings.get("email_sender_name")
         sender = self._get_sender(custom_name=sender_name)
-        return await self._send_email(to_emails, subject, html_content, sender, cc_emails, reply_to=reply_to_email)
+        return await self._send_email(
+            to_emails, subject, html_content, sender, cc_emails,
+            reply_to=reply_to_email, custom_client=custom_client
+        )
 
     async def send_guest_booking_confirmation(
         self, guest_email, guest_name, booking_number, check_in, check_out, total_amount, hotel_settings=None

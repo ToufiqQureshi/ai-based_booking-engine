@@ -189,6 +189,11 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(require_pe
             "settings": settings_dict,
             "owner_email": owner.email if owner else "N/A",
             "owner_name": owner.name if owner else "N/A",
+            "ai_provider": getattr(hotel, "ai_provider", "groq"),
+            "ai_api_key": getattr(hotel, "ai_api_key", None),
+            "ai_model": getattr(hotel, "ai_model", "llama-3.1-70b-versatile"),
+            "ai_base_url": getattr(hotel, "ai_base_url", None),
+            "ai_max_tokens": getattr(hotel, "ai_max_tokens", None),
             "feature_ai_agent": hotel.feature_ai_agent,
             "feature_guest_bot": hotel.feature_guest_bot,
             "feature_new_booking": getattr(hotel, "feature_new_booking", True),
@@ -262,7 +267,12 @@ async def update_hotel_status(
             changes.append(f"{key}: {old_val} -> {value}")
             
     for key, value in db_data.items():
-        setattr(hotel, key, value)
+        if key == "settings" and isinstance(value, dict) and isinstance(hotel.settings, dict):
+            # Merge settings instead of overwriting!
+            merged = {**hotel.settings, **value}
+            setattr(hotel, key, merged)
+        else:
+            setattr(hotel, key, value)
     hotel.updated_at = datetime.utcnow()
     session.add(hotel)
     

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,6 +59,59 @@ const AVAILABLE_ROUTES = [
 
 export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImpersonating }: HotelWorkspaceProps) => {
     const qc = useQueryClient();
+
+    // Integrations State
+    const [whatsappApiKey, setWhatsappApiKey] = useState(hotel.settings?.whatsapp_api_key || '');
+    const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState(hotel.settings?.whatsapp_phone_number_id || '');
+    const [whatsappBusinessAccountId, setWhatsappBusinessAccountId] = useState(hotel.settings?.whatsapp_business_account_id || '');
+    const [brevoApiKey, setBrevoApiKey] = useState(hotel.settings?.brevo_api_key || '');
+
+    const [aiProvider, setAiProvider] = useState(hotel.ai_provider || 'groq');
+    const [aiApiKey, setAiApiKey] = useState(hotel.ai_api_key || '');
+    const [aiModel, setAiModel] = useState(hotel.ai_model || 'llama-3.1-70b-versatile');
+    const [aiBaseUrl, setAiBaseUrl] = useState(hotel.ai_base_url || '');
+    const [aiMaxTokens, setAiMaxTokens] = useState(hotel.ai_max_tokens || '');
+
+    // Sync state when hotel prop changes
+    useEffect(() => {
+        setWhatsappApiKey(hotel.settings?.whatsapp_api_key || '');
+        setWhatsappPhoneNumberId(hotel.settings?.whatsapp_phone_number_id || '');
+        setWhatsappBusinessAccountId(hotel.settings?.whatsapp_business_account_id || '');
+        setBrevoApiKey(hotel.settings?.brevo_api_key || '');
+        setAiProvider(hotel.ai_provider || 'groq');
+        setAiApiKey(hotel.ai_api_key || '');
+        setAiModel(hotel.ai_model || 'llama-3.1-70b-versatile');
+        setAiBaseUrl(hotel.ai_base_url || '');
+        setAiMaxTokens(hotel.ai_max_tokens || '');
+    }, [hotel]);
+
+    const updateIntegrationMutation = useMutation({
+        mutationFn: (data: any) => apiClient.patch(`/superadmin/hotels/${hotel.id}`, data),
+        onSuccess: () => {
+            toast.success('Integration settings updated successfully');
+            qc.invalidateQueries({ queryKey: ['superadmin-hotels'] });
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.detail || err?.message || 'Failed to update integration settings');
+        }
+    });
+
+    const handleSaveIntegrations = () => {
+        const payload: any = {
+            ai_provider: aiProvider,
+            ai_api_key: aiApiKey || null,
+            ai_model: aiModel,
+            ai_base_url: aiBaseUrl || null,
+            ai_max_tokens: aiMaxTokens ? Number(aiMaxTokens) : null,
+            settings: {
+                whatsapp_api_key: whatsappApiKey || null,
+                whatsapp_phone_number_id: whatsappPhoneNumberId || null,
+                whatsapp_business_account_id: whatsappBusinessAccountId || null,
+                brevo_api_key: brevoApiKey || null,
+            }
+        };
+        updateIntegrationMutation.mutate(payload);
+    };
 
     // Permissions state
     const [permissions, setPermissions] = useState<Record<string, string[]>>(() => {
@@ -251,6 +304,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
             <Tabs defaultValue="features" className="space-y-5">
                 <TabsList className="rounded-xl bg-muted/50 p-1 flex-wrap h-auto gap-1">
                     <TabsTrigger value="features" className="rounded-lg text-xs font-bold">Features</TabsTrigger>
+                    <TabsTrigger value="integrations" className="rounded-lg text-xs font-bold">Integrations</TabsTrigger>
                     <TabsTrigger value="permissions" className="rounded-lg text-xs font-bold">Permissions</TabsTrigger>
                     <TabsTrigger value="users" className="rounded-lg text-xs font-bold">Users</TabsTrigger>
                     <TabsTrigger value="danger" className="rounded-lg text-xs font-bold text-red-600 data-[state=active]:bg-red-600 data-[state=active]:text-white">Danger Zone</TabsTrigger>
@@ -497,6 +551,143 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                </TabsContent>
+
+                {/* ── INTEGRATIONS ── */}
+                <TabsContent value="integrations" className="mt-0 space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* WhatsApp Meta Integration */}
+                        <div className="border border-border rounded-2xl p-6 bg-background space-y-4">
+                            <div className="flex items-center gap-2 pb-2 border-b border-border">
+                                <MessageSquare className="w-5 h-5 text-indigo-600" />
+                                <h3 className="text-sm font-black text-foreground">WhatsApp Business API Settings</h3>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold">Meta Temporary / Permanent Access Token</Label>
+                                    <Input
+                                        type="password"
+                                        placeholder="EAAGz..."
+                                        value={whatsappApiKey}
+                                        onChange={(e) => setWhatsappApiKey(e.target.value)}
+                                        className="h-10 rounded-xl"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground">Stored securely as `whatsapp_api_key` in hotel settings.</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold">WhatsApp Phone Number ID</Label>
+                                    <Input
+                                        placeholder="e.g. 102938475647382"
+                                        value={whatsappPhoneNumberId}
+                                        onChange={(e) => setWhatsappPhoneNumberId(e.target.value)}
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold">WhatsApp Business Account ID</Label>
+                                    <Input
+                                        placeholder="e.g. 987654321098765"
+                                        value={whatsappBusinessAccountId}
+                                        onChange={(e) => setWhatsappBusinessAccountId(e.target.value)}
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* AI Engine Integration */}
+                        <div className="border border-border rounded-2xl p-6 bg-background space-y-4">
+                            <div className="flex items-center gap-2 pb-2 border-b border-border">
+                                <BrainCircuit className="w-5 h-5 text-purple-600" />
+                                <h3 className="text-sm font-black text-foreground">AI Booking Agent Config</h3>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold">AI Provider</Label>
+                                    <Select value={aiProvider} onValueChange={setAiProvider}>
+                                        <SelectTrigger className="h-10 rounded-xl">
+                                            <SelectValue placeholder="Select Provider" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl">
+                                            <SelectItem value="groq">Groq</SelectItem>
+                                            <SelectItem value="openai">OpenAI</SelectItem>
+                                            <SelectItem value="openrouter">OpenRouter</SelectItem>
+                                            <SelectItem value="ollama">Ollama</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold">AI Model Name</Label>
+                                    <Input
+                                        placeholder="e.g. llama-3.1-70b-versatile, gpt-4o"
+                                        value={aiModel}
+                                        onChange={(e) => setAiModel(e.target.value)}
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold">AI API Key (Overrides platform key)</Label>
+                                    <Input
+                                        type="password"
+                                        placeholder="Leave empty to use platform default key"
+                                        value={aiApiKey}
+                                        onChange={(e) => setAiApiKey(e.target.value)}
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold">Custom API Base URL (Optional)</Label>
+                                    <Input
+                                        placeholder="e.g. https://api.openai.com/v1"
+                                        value={aiBaseUrl}
+                                        onChange={(e) => setAiBaseUrl(e.target.value)}
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-bold">Max Tokens (Optional)</Label>
+                                    <Input
+                                        type="number"
+                                        placeholder="e.g. 1000"
+                                        value={aiMaxTokens}
+                                        onChange={(e) => setAiMaxTokens(e.target.value)}
+                                        className="h-10 rounded-xl"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Email Service Integration */}
+                    <div className="border border-border rounded-2xl p-6 bg-background space-y-4 max-w-xl">
+                        <div className="flex items-center gap-2 pb-2 border-b border-border">
+                            <Zap className="w-5 h-5 text-amber-500" />
+                            <h3 className="text-sm font-black text-foreground">Email Service (Brevo) Configuration</h3>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <Label className="text-xs font-bold">Brevo API Key (Overrides platform key)</Label>
+                                <Input
+                                    type="password"
+                                    placeholder="xkeysib-..."
+                                    value={brevoApiKey}
+                                    onChange={(e) => setBrevoApiKey(e.target.value)}
+                                    className="h-10 rounded-xl"
+                                />
+                                <p className="text-[10px] text-muted-foreground">Stored securely as `brevo_api_key` in hotel settings. Leave empty to use platform default key.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                        <Button
+                            onClick={handleSaveIntegrations}
+                            className="bg-indigo-600 hover:bg-indigo-750 text-white font-bold h-11 px-8 rounded-xl transition-all"
+                            disabled={updateIntegrationMutation.isPending}
+                        >
+                            {updateIntegrationMutation.isPending ? 'Saving Integrations…' : 'Save Integration Settings'}
+                        </Button>
+                    </div>
                 </TabsContent>
 
                 {/* ── EXPORTS ── */}
