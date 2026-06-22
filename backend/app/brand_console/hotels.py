@@ -178,16 +178,14 @@ async def test_email_connection(
 
     # SECURITY: Never use client-supplied SMTP settings directly — that allows
     # open relay and SSRF. Load the hotel's own stored settings from the DB.
-    from app.integration.integration import IntegrationSettings
-    from sqlmodel import select as sql_select
-    stored = (await session.execute(
-        sql_select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
+    hotel = (await session.execute(
+        select(Hotel).where(Hotel.id == hotel_id)
     )).scalar_one_or_none()
-    if not stored:
-        raise HTTPException(status_code=404, detail="Integration settings not found. Save your SMTP settings first.")
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
 
     from app.core.auth.vault import resolve_settings_secrets
-    hotel_settings = await resolve_settings_secrets(stored, session)
+    hotel_settings = await resolve_settings_secrets(session, hotel.settings or {})
 
     try:
         from app.services.email_service import EmailService
