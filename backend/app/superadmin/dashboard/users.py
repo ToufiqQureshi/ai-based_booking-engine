@@ -249,6 +249,11 @@ async def create_staybooker_employee(
             supabase_client.auth.admin.delete_user(supabase_id)
         except Exception:
             pass
+            
+        error_str = str(e)
+        if "ix_users_email" in error_str or "UniqueViolationError" in error_str:
+            raise HTTPException(status_code=400, detail="A user with this email address already exists")
+            
         logger.error("DB save failed for new employee: %s", e)
         raise HTTPException(status_code=500, detail="Failed to save employee. Please try again.")
 
@@ -326,6 +331,11 @@ async def create_hotel_user(
             supabase_client.auth.admin.delete_user(supabase_id)
         except Exception as cleanup_err:
             logger.warning("Supabase auth user %s could not be deleted during rollback: %s", supabase_id, cleanup_err)
+        
+        error_str = str(e)
+        if "ix_users_email" in error_str or "UniqueViolationError" in error_str:
+            raise HTTPException(status_code=400, detail="A user with this email address already exists")
+            
         logger.error("DB save failed for new hotel user: %s", e)
         import traceback
         raise HTTPException(status_code=500, detail=f"Failed to save user: {repr(e)}. Traceback: {traceback.format_exc()}")
