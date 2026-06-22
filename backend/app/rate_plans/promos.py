@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime, date
 
 from app.core.auth.deps import DbSession, CurrentUser
-from app.rate_plans.promo import PromoCode
+from app.rate_plans.promo import PromoCode, PromoCodeCreate
 from app.brand_console.hotel import Hotel
 
 router = APIRouter()
@@ -21,22 +21,29 @@ async def list_promos(
 
 @router.post("/", response_model=PromoCode)
 async def create_promo(
-    promo: PromoCode,
+    promo_in: PromoCodeCreate,
     current_user: CurrentUser,
     session: DbSession
 ):
-    """Create a new promo code"""
-    promo.hotel_id = current_user.hotel_id # Ensure tenant isolation
+    """Create a new promo code.
 
-    # Check if code exists
+    Body is validated via PromoCodeCreate (not the table model) so bad/missing
+    input fails as a clean 422 instead of a 500 at DB commit, and the client
+    can't mass-assign server-owned fields.
+    """
+    # Check if code exists (tenant-scoped)
     existing_query = select(PromoCode).where(
-        PromoCode.code == promo.code,
+        PromoCode.code == promo_in.code,
         PromoCode.hotel_id == current_user.hotel_id
     )
     result = await session.execute(existing_query)
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Promo code already exists")
-        
+
+    promo = PromoCode(
+        **promo_in.model_dump(),
+        hotel_id=current_user.hotel_id,  # server-set: tenant isolation
+    )
     session.add(promo)
     await session.commit()
     await session.refresh(promo)

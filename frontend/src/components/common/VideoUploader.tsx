@@ -18,7 +18,12 @@ interface VideoUploaderProps {
     max?: number;
 }
 
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB — must match backend MAX_VIDEO_SIZE
+// Must not exceed the Supabase project's global "Maximum file size" upload
+// limit (50MB by default). Larger files are rejected by Storage with a 413
+// only after the whole file is uploaded, so we cap client-side to fail fast
+// with a clear message. Raise this only after raising the Supabase limit
+// (Dashboard → Storage → Settings).
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB — must match Supabase upload limit
 const ACCEPTED = ['video/mp4', 'video/webm'];
 
 export function VideoUploader({ videos, onChange, max = 2 }: VideoUploaderProps) {
@@ -41,7 +46,7 @@ export function VideoUploader({ videos, onChange, max = 2 }: VideoUploaderProps)
                 continue;
             }
             if (f.size > MAX_VIDEO_SIZE) {
-                setError(`${f.name} exceeds the 100MB limit.`);
+                setError(`${f.name} exceeds the 50MB limit.`);
                 continue;
             }
             valid.push(f);
@@ -133,7 +138,7 @@ export function VideoUploader({ videos, onChange, max = 2 }: VideoUploaderProps)
                             {atLimit ? `Maximum ${max} videos reached` : 'Click to upload a video'}
                         </h3>
                         <p className="text-xs text-muted-foreground">
-                            MP4 or WebM (max. 100MB) · up to {max} video{max > 1 ? 's' : ''}
+                            MP4 or WebM (max. 50MB) · up to {max} video{max > 1 ? 's' : ''}
                         </p>
                     </>
                 )}
