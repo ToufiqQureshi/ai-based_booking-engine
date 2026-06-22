@@ -753,15 +753,15 @@ export default function BookingSelection() {
         if (!pendingRoom || !selectedRatePlan) return;
 
         if (hotel?.settings?.multi_room_cart !== false) {
-            const newItem = {
+            const newItems = Array.from({ length: Math.max(1, roomsCount) }).map(() => ({
                 id: Math.random().toString(36).substring(2, 9),
                 room: pendingRoom,
                 ratePlan: selectedRatePlan,
                 addons: selectedAddons,
                 adults,
                 children
-            };
-            setCart(prev => [...prev, newItem]);
+            }));
+            setCart(prev => [...prev, ...newItems]);
             setIsAddonSheetOpen(false);
             setIsCartSheetOpen(true);
             return;
@@ -1211,7 +1211,34 @@ export default function BookingSelection() {
                             </div>
                         ) : (
                             <div className="space-y-8">
-                                {searchType === 'package' ? (
+                                {isLoading ? (
+                                    Array.from({ length: Math.max(1, rooms.length || 3) }).map((_, i) => (
+                                        <div key={i} className="bg-white rounded-xl overflow-hidden mb-8 border border-slate-200 animate-pulse">
+                                            <div className="flex flex-col lg:flex-row">
+                                                <div className="lg:w-[35%] h-64 bg-slate-200" />
+                                                <div className="flex-1 flex flex-col p-5 lg:p-6">
+                                                    <div className="h-6 bg-slate-200 rounded w-1/3 mb-2" />
+                                                    <div className="h-4 bg-slate-200 rounded w-1/4 mb-6" />
+                                                    <div className="flex gap-4 mb-6">
+                                                        <div className="h-4 bg-slate-200 rounded w-16" />
+                                                        <div className="h-4 bg-slate-200 rounded w-16" />
+                                                        <div className="h-4 bg-slate-200 rounded w-16" />
+                                                    </div>
+                                                    <div className="border-t border-slate-100 mt-auto pt-4 space-y-4">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="h-4 bg-slate-200 rounded w-1/4" />
+                                                            <div className="h-10 bg-slate-200 rounded w-24" />
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="h-4 bg-slate-200 rounded w-1/4" />
+                                                            <div className="h-10 bg-slate-200 rounded w-24" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : searchType === 'package' ? (
                                     Object.values(
                                         rooms.reduce((acc, r) => {
                                             (r.rate_options || []).filter(o => o.is_package).forEach(plan => {
@@ -1255,7 +1282,6 @@ export default function BookingSelection() {
                                                 setIsModalOpen={setIsModalOpen}
                                                 getImageUrl={getImageUrl}
                                                 isRefreshing={
-                                                    isLoading ||
                                                     refreshingRoomIds.has(room.id) ||
                                                     refreshingRoomIds.has('__ALL__')
                                                 }

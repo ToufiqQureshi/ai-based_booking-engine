@@ -139,6 +139,7 @@ async def search_public_rooms(
     guests: int = Query(2),
     adults: int = Query(1),
     children: int = Query(0),
+    rooms_count: int = Query(1, alias="rooms"),
     promo_code: Optional[str] = Query(None)
 ):
     """
@@ -148,7 +149,7 @@ async def search_public_rooms(
 
     # Short-lived cache for public searches to prevent DB hammering
     # Keys include all search parameters
-    cache_key = f"public:rooms:{hotel_id}:{check_in}:{check_out}:{guests}:{adults}:{children}:{promo_code}"
+    cache_key = f"public:rooms:{hotel_id}:{check_in}:{check_out}:{guests}:{adults}:{children}:{rooms_count}:{promo_code}"
     try:
         cached = redis_client.get_value(cache_key)
         if cached:
@@ -362,10 +363,14 @@ async def search_public_rooms(
                              nightly_rate = nightly_base + float(plan_modifier)
                              
                              # 3. Add Extra Person Charge
-                             # Priority: Fill base occupancy with adults first, then children.
-                             extra_adults = max(0, adults - rt.base_occupancy)
-                             remaining_base_slots = max(0, rt.base_occupancy - adults)
-                             extra_children = max(0, children - remaining_base_slots)
+                             # Distribute guests across the requested rooms evenly for extra charge calculations
+                             rc = max(1, rooms_count)
+                             avg_adults = adults / rc
+                             avg_children = children / rc
+                             
+                             extra_adults = max(0, avg_adults - rt.base_occupancy)
+                             remaining_base_slots = max(0, rt.base_occupancy - avg_adults)
+                             extra_children = max(0, avg_children - remaining_base_slots)
                              
                              if extra_adults > 0:
                                  rate_adult = float(rt.extra_adult_price) if rt.extra_adult_price else float(rt.extra_person_price or 1000.0)
@@ -423,9 +428,14 @@ async def search_public_rooms(
                         d_str = current_date.strftime("%Y-%m-%d")
                         nightly_base = daily_price_map.get((rt.id, d_str), float(rt.base_price))
                         # Extra person charges
-                        extra_adults = max(0, adults - rt.base_occupancy)
-                        remaining_base_slots = max(0, rt.base_occupancy - adults)
-                        extra_children = max(0, children - remaining_base_slots)
+                        rc = max(1, rooms_count)
+                        avg_adults = adults / rc
+                        avg_children = children / rc
+                        
+                        extra_adults = max(0, avg_adults - rt.base_occupancy)
+                        remaining_base_slots = max(0, rt.base_occupancy - avg_adults)
+                        extra_children = max(0, avg_children - remaining_base_slots)
+                        
                         if extra_adults > 0:
                             rate_adult = float(rt.extra_adult_price) if rt.extra_adult_price else float(rt.extra_person_price or 1000.0)
                             nightly_base += (extra_adults * rate_adult)
