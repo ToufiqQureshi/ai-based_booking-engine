@@ -875,8 +875,8 @@
     "semantic_hash": ""
   },
   "frontend/src/App.tsx": {
-    "mtime": 1782157024.900558,
-    "ast_hash": "cabb6a4d876a678fe1adde36fc79abf4",
+    "mtime": 1782157869.9086082,
+    "ast_hash": "b6b4d8213417aa28ca7028715e85a146",
     "semantic_hash": ""
   },
   "frontend/src/NotFound.tsx": {
@@ -895,8 +895,8 @@
     "semantic_hash": ""
   },
   "frontend/src/analytics/AnalyticsDashboard.tsx": {
-    "mtime": 1782157074.960561,
-    "ast_hash": "bf0504fc48094ce10fc2c490827fdecc",
+    "mtime": 1782157829.988606,
+    "ast_hash": "a57ded5a8cd468051d1f49d77208b10b",
     "semantic_hash": ""
   },
   "frontend/src/analytics/AnalyticsTab.tsx": {
@@ -960,8 +960,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/layout/AppSidebar.tsx": {
-    "mtime": 1782154881.747467,
-    "ast_hash": "17a5e867f857b71ced53771afef64ad5",
+    "mtime": 1782157856.6766074,
+    "ast_hash": "fe886b28fcd9c7a0dbeca26dfbebde7d",
     "semantic_hash": ""
   },
   "frontend/src/components/layout/DashboardLayout.tsx": {
@@ -1720,13 +1720,8 @@
     "semantic_hash": ""
   },
   "frontend/src/analytics/PublicReport.tsx": {
-    "mtime": 1782157004.5685568,
-    "ast_hash": "df27ea3434cdf45e430d0987a8c93ee5",
-    "semantic_hash": ""
-  },
-  "frontend/src/analytics/ShareReportButton.tsx": {
-    "mtime": 1782157064.4245603,
-    "ast_hash": "0f68fc469d64bcdaf8cbaed649787fcc",
+    "mtime": 1782157820.3006053,
+    "ast_hash": "3420440aec96b002652f9ef6e1802f00",
     "semantic_hash": ""
   },
   "frontend/src/bookings/components/BookingDetailsDialog.tsx": {
@@ -2052,6 +2047,21 @@
   "frontend/src/superadmin/components/UsersTab.tsx": {
     "mtime": 1782154881.7968698,
     "ast_hash": "97f4e8c66b9597c3e18100a706420b8a",
+    "semantic_hash": ""
+  },
+  "frontend/src/reports/HotelReport.tsx": {
+    "mtime": 1782157804.8726044,
+    "ast_hash": "b082168eca01e3fb4673d5daafff1326",
+    "semantic_hash": ""
+  },
+  "frontend/src/reports/ReportView.tsx": {
+    "mtime": 1782157781.208603,
+    "ast_hash": "22b90a44a29d0086d8984fa9f6e8ebe5",
+    "semantic_hash": ""
+  },
+  "frontend/src/reports/ShareReportButton.tsx": {
+    "mtime": 1782157064.4245603,
+    "ast_hash": "0f68fc469d64bcdaf8cbaed649787fcc",
     "semantic_hash": ""
   }
 }

@@ -1,16 +1,16 @@
 # Graph Report - ai-based_booking-engine  (2026-06-22)
 
 ## Corpus Check
-- 411 files · ~279,210 words
+- 413 files · ~279,632 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4749 nodes · 10603 edges · 332 communities (260 shown, 72 thin omitted)
+- 4754 nodes · 10607 edges · 319 communities (246 shown, 73 thin omitted)
 - Extraction: 73% EXTRACTED · 27% INFERRED · 0% AMBIGUOUS · INFERRED: 2819 edges (avg confidence: 0.56)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `892bf4ee`
+- Built from commit: `5aad3150`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -224,9 +224,7 @@
 - [[_COMMUNITY_Community 206|Community 206]]
 - [[_COMMUNITY_Community 207|Community 207]]
 - [[_COMMUNITY_Community 208|Community 208]]
-- [[_COMMUNITY_Community 209|Community 209]]
 - [[_COMMUNITY_Community 210|Community 210]]
-- [[_COMMUNITY_Community 211|Community 211]]
 - [[_COMMUNITY_Community 212|Community 212]]
 - [[_COMMUNITY_Community 213|Community 213]]
 - [[_COMMUNITY_Community 214|Community 214]]
@@ -236,7 +234,6 @@
 - [[_COMMUNITY_Community 219|Community 219]]
 - [[_COMMUNITY_Community 220|Community 220]]
 - [[_COMMUNITY_Community 221|Community 221]]
-- [[_COMMUNITY_Community 222|Community 222]]
 - [[_COMMUNITY_Community 223|Community 223]]
 - [[_COMMUNITY_Community 224|Community 224]]
 - [[_COMMUNITY_Community 225|Community 225]]
@@ -312,27 +309,27 @@
 - 1-file cycle: `backend/main.py -> backend/main.py`
 - 1-file cycle: `backend/app/core/utils/time.py -> backend/app/core/utils/time.py`
 
-## Communities (332 total, 72 thin omitted)
+## Communities (319 total, 73 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.02
-Nodes (81): __(), _0, a0, aA(), ad(), Ah(), ax(), Ba (+73 more)
+Nodes (133): __(), _0, a0, ad(), Ah(), ax(), Ba, bd (+125 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.03
-Nodes (105): AIUsageDaily, AIUsageParticipant, Durable AI-usage accounting (AI-10).  Redis remains the fast path for quota enfo, create_agent_executor(), Creates an Agent Graph instance with tools bound to the current user and databas, CurrentUser, DbSession, DbSession (+97 more)
+Cohesion: 0.04
+Nodes (24): Login request schema - matches frontend LoginRequest, UserLogin, KycDocument, KycProfile, KYC (Know Your Customer) Models Hotelier identity/document verification by Super, KYC document submitted by a hotelier for verification., Aggregate KYC status for a hotel - one row per hotel., GuestLoyalty (+16 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.10
-Nodes (110): AsyncSession, User, AsyncSession, Any, date, Any, date, CurrentUser (+102 more)
+Cohesion: 0.11
+Nodes (105): AsyncSession, User, AsyncSession, Any, date, Any, date, Any (+97 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.05
-Nodes (94): BackgroundTasks, DbSession, Request, Booking, CurrentUser, DbSession, RoomType, AddOn (+86 more)
+Nodes (93): BackgroundTasks, DbSession, Request, Booking, CurrentUser, DbSession, RoomType, AddOn (+85 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.06
-Nodes (15): ab(), Bo(), br(), bv, Ho(), iT(), jb(), lb() (+7 more)
+Cohesion: 0.04
+Nodes (21): av(), Bo(), bs(), bv, CA(), cr, Di(), Fa (+13 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.11
@@ -343,76 +340,76 @@ Cohesion: 0.03
 Nodes (63): $, Ai(), Ar, bi, ca, Ce(), Ci(), Cr (+55 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.06
-Nodes (17): _2(), b0, eS, ev, fE(), Gt(), hc(), hE() (+9 more)
+Cohesion: 0.15
+Nodes (23): AIUsageDaily, AIUsageParticipant, AsyncClient, Hotel, RoomType, User, RatePlan, SystemBroadcast (+15 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.13
-Nodes (8): fr(), Go(), jS(), lS, Th(), wb(), Xd, xn()
+Nodes (4): lS, nT, Th(), xn()
 
 ### Community 9 - "Community 9"
-Cohesion: 0.07
-Nodes (73): BackgroundTasks, CurrentUser, DbSession, Request, BackgroundTasks, CurrentUser, DbSession, Hotel (+65 more)
+Cohesion: 0.09
+Nodes (54): BackgroundTasks, CurrentUser, DbSession, Request, BackgroundTasks, Hotel, RoomType, BookingCreate (+46 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.04
-Nodes (26): AdminDashboard(), CalendarDay, RoomSearchHeaderProps, Client, ImageUploadProps, AVAILABLE_ROUTES, FEATURE_FLAGS, HotelWorkspaceProps (+18 more)
+Cohesion: 0.05
+Nodes (15): AdminDashboard(), CalendarDay, RoomSearchHeaderProps, Client, ImageUploadProps, BookingDetailsDialog(), BookingDetailsDialogProps, statusConfig (+7 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.04
-Nodes (51): a2(), ar(), at(), cE(), ft, g_(), gS(), hT() (+43 more)
+Nodes (57): a2(), ar(), at(), b2(), c2(), cE(), f0, ft (+49 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.06
-Nodes (49): af(), ef(), ff(), hf, Ja(), lf(), mt(), nf() (+41 more)
+Nodes (47): af(), ef(), ff(), hf, Ja(), lf(), mt(), nf() (+39 more)
 
 ### Community 14 - "Community 14"
 Cohesion: 0.04
 Nodes (56): dependencies, class-variance-authority, clsx, cmdk, date-fns, embla-carousel-react, framer-motion, @hookform/resolvers (+48 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.08
-Nodes (39): al(), av(), ct(), cv(), dr(), dv(), Eb(), ei() (+31 more)
+Cohesion: 0.19
+Nodes (23): DbSession, Request, User, create_hotel_user(), _create_or_recover_supabase_user(), create_staybooker_employee(), delete_user(), _find_supabase_user_by_email() (+15 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.17
-Nodes (24): _cache_get(), _cache_set(), invalidate_guest_agent_cache(), Call whenever hotel, room, rate, or amenity data changes., AsyncClient, Guest AI chat endpoint tests.  Coverage: - Cache get / set / invalidate - _fetch, Calling pre-warm twice must not error., seeded_hotel does not have feature_guest_bot=True → must 403. (+16 more)
+Cohesion: 0.07
+Nodes (56): _build_formatted_prompt(), _cache_get(), _cache_set(), create_guest_agent_graph(), _fetch_chain_guest_history(), _fetch_hotel_data(), get_guest_system_prompt_content(), invalidate_guest_agent_cache() (+48 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.16
-Nodes (23): date, CurrentUser, DbSession, _assert_room_type_owned(), clear_availability_cache(), Shared helpers for availability: ownership guard, cache invalidation, and single, Set the blocked count for a single day, splitting any overlapping multi-day bloc, TEN-05: ensure a room_type_id belongs to the caller's hotel before     writing b (+15 more)
+Cohesion: 0.25
+Nodes (5): fr(), Go(), jS(), wb(), Xd
 
 ### Community 18 - "Community 18"
-Cohesion: 0.10
-Nodes (46): complete_onboarding(), generate_slug(), Authentication Router Login, Signup, Refresh token endpoints. Frontend ke auth.t, Hotel name se URL-friendly slug banata hai, Naya hotel aur profile setup karne ke liye schema, Onboarding: Pehle se logged-in user ke liye hotel initialize karta hai., RegisterRequest, AsyncSession (+38 more)
+Cohesion: 0.09
+Nodes (48): complete_onboarding(), generate_slug(), Authentication Router Login, Signup, Refresh token endpoints. Frontend ke auth.t, Hotel name se URL-friendly slug banata hai, Naya hotel aur profile setup karne ke liye schema, Onboarding: Pehle se logged-in user ke liye hotel initialize karta hai., RegisterRequest, AsyncSession (+40 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.04
-Nodes (46): AddonsPage, AdminDashboard, AgentPage, AnalyticsDashboard, AvailabilityPage, BookingCancel, BookingCheckout, BookingConfirmation (+38 more)
+Nodes (47): AddonsPage, AdminDashboard, AgentPage, AnalyticsDashboard, AvailabilityPage, BookingCancel, BookingCheckout, BookingConfirmation (+39 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.08
-Nodes (23): AIAgentTab(), AIAgentTabProps, BrandingTab(), DEFAULT_BADGE_ICONS, SocialProofBadge, SocialProofEditor(), SocialProofSettings, EmailTab() (+15 more)
+Cohesion: 0.13
+Nodes (12): AIAgentTab(), AIAgentTabProps, EmailTab(), GeneralTab(), GoogleHotelAdsTab(), GoogleHotelAdsTabProps, PoliciesTab(), PromoCode (+4 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.14
-Nodes (12): bc(), cb(), gC(), jc(), kd(), Nb(), pb, pc() (+4 more)
+Cohesion: 0.10
+Nodes (18): aA(), ac(), bc(), cb(), dT(), jc(), kd(), Nb() (+10 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.08
-Nodes (21): BackgroundTasks, CurrentUser, HotelUpdate, Hotel, HotelUpdate, Partial update schema, get_super_admin(), Only Staybooker employees with SUPER_ADMIN role can access these endpoints. (+13 more)
+Cohesion: 0.06
+Nodes (25): Durable AI-usage accounting (AI-10).  Redis remains the fast path for quota enfo, create_global_concierge_graph(), Creates the Tier 1 Global Concierge Agent., Public, no-login analytics report — the read side of a ReportShareLink.  A hotel, AsyncSession, datetime, CustomDomain, EmailTemplate (+17 more)
 
 ### Community 23 - "Community 23"
 Cohesion: 0.08
 Nodes (24): Exception, _connection_kwargs(), Utility to delete a specific key, Return a per-key asyncio.Lock for serializing SET-NX in the in-memory fallback., # NOTE: get_instance_of_event_loop matters — locks are tied to a running loop., Atomic SET NX EX. Returns True if the key was set, False if it already existed., Shared resilient-connection settings for both REDIS_URL and host/port., Back-off window (env-driven). Short by default so a deploy-time DNS         blip (+16 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.14
-Nodes (9): ac(), bb(), d_, f_, h_, mc(), r0(), u_ (+1 more)
+Cohesion: 0.15
+Nodes (9): bb(), d_, f_, h_, kS(), mc(), r0(), u_ (+1 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.05
-Nodes (20): dc(), ds(), Er, Fa, Ga, hb, hv(), ii() (+12 more)
+Cohesion: 0.04
+Nodes (28): _2(), al(), dc(), ds(), Er, eS, Ga, hb (+20 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.09
@@ -423,48 +420,44 @@ Cohesion: 0.05
 Nodes (39): AddOn, Address, Amenity, ApiError, ApiResponse, AuthResponse, AuthTokens, AvailabilityUpdate (+31 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.11
-Nodes (8): a_(), el(), Gh(), iS(), isShowing(), nl(), tl(), xA
+Cohesion: 0.14
+Nodes (5): Gh(), iS(), isShowing(), nl(), xA
 
 ### Community 29 - "Community 29"
-Cohesion: 0.08
-Nodes (32): Bt(), bx(), g0(), gx(), Ix(), jd, Jh(), kE() (+24 more)
+Cohesion: 0.05
+Nodes (36): b0, Bt(), bx(), Ec(), g0(), gx(), id, Ix() (+28 more)
 
 ### Community 30 - "Community 30"
 Cohesion: 0.10
 Nodes (15): Any, date, AsyncClient, _apply_one(), apply_pricing_rules(), Pure, deterministic dynamic-pricing engine.  `apply_pricing_rules` takes a resol, Return True if the rule's condition is satisfied for this date/context., Apply a single rule's adjustment + its own guard rails to the price. (+7 more)
-
-### Community 31 - "Community 31"
-Cohesion: 0.21
-Nodes (13): _coerce_number(), extract_total_tokens(), Agno metrics fields can be a scalar or a per-message list; normalise., Pull total token count out of an Agno RunResponse (best-effort)., _Metrics, Unit tests for per-hotel LLM token accounting (cost visibility).  These guard th, Stand-in for an Agno RunResponse.metrics object., _Result (+5 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.06
 Nodes (65): AddOnCreate, AddOnUpdate, AmenityCreate, APIKeyCreate, CurrentUser, DbSession, Request, CurrentUser (+57 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.05
-Nodes (29): AgentPage(), OnboardingFormData, OnboardingPage(), onboardingSchema, SignupFormData, SignupPage(), signupSchema, BOOKING_SOURCES (+21 more)
+Cohesion: 0.04
+Nodes (35): AgentPage(), LoginFormData, LoginPage(), loginSchema, OnboardingFormData, OnboardingPage(), onboardingSchema, SignupFormData (+27 more)
 
 ### Community 34 - "Community 34"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (6): close(), Dh(), mb(), moveTo(), show(), Yy()
 
 ### Community 35 - "Community 35"
-Cohesion: 0.09
-Nodes (25): Bi(), c_(), cr, Eh(), fv(), gd, hl(), Ia (+17 more)
+Cohesion: 0.26
+Nodes (14): CurrentUser, DbSession, PaymentCreate, Payment, PaymentBase, PaymentCreate, PaymentRead, strip_html_tags() (+6 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.17
-Nodes (21): mask_hotel_for_hotelier(), Return a dict representation of a Hotel with all sensitive fields     removed or, DbSession, Request, get_chain_recommendations(), get_hotel_recommendations(), get_public_chain(), get_public_hotel() (+13 more)
+Cohesion: 0.24
+Nodes (5): EmailService, _get_brevo(), get_email_service(), Email Service — transactional emails via Brevo or hotel-custom SMTP. Brevo is im, Lazy import of brevo SDK — avoids hard boot failure if package is absent.
 
 ### Community 37 - "Community 37"
 Cohesion: 0.15
 Nodes (13): AsyncClient, RoomType, _d(), Availability & Room Blocks Tests Covers:   - GET /availability (grid calculation, TEN-05: cannot create a block for a room that belongs to another hotel., After setting a rate, GET /availability should show that price on those days., room_type(), TestAnonBlocked (+5 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.09
-Nodes (53): DbSession, Request, User, DbSession, Request, User, create_hotel_user(), _create_or_recover_supabase_user() (+45 more)
+Cohesion: 0.10
+Nodes (39): BackgroundTasks, CurrentUser, DbSession, HotelUpdate, Request, User, HotelUpdate, Partial update schema (+31 more)
 
 ### Community 39 - "Community 39"
 Cohesion: 0.11
@@ -487,16 +480,16 @@ Cohesion: 0.15
 Nodes (27): CurrentUser, DbSession, create_mapping(), get_logs(), get_mappings(), get_settings(), ChannelLog, ChannelLogRead (+19 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.13
-Nodes (20): _build_formatted_prompt(), create_guest_agent_graph(), _fetch_chain_guest_history(), _fetch_hotel_data(), get_guest_system_prompt_content(), Return hotel static data from cache; on miss, fetch from DB and cache it., check_hotel_feature(), Helper function to enforce feature lock on public/unauthenticated routes. (+12 more)
+Cohesion: 0.29
+Nodes (3): a_(), el(), tl()
 
 ### Community 45 - "Community 45"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (27): get_current_active_user(), get_current_user(), Authentication Dependencies Protected routes ke liye current user retrieve karta, Shortcut dependency for active user, Dependency factory enforcing intra-tenant role tiers (OWNER/MANAGER/STAFF)., Token verify karke current user return karta hai.     Supabase Native Auth suppo, Dependency factory enforcing that the current user's hotel has a specific featur, require_feature() (+19 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.30
-Nodes (22): AnalyticsEvent, AnalyticsSession, EventTrackRequest, Analytics Models Tracks widget visits, page views, time spent, and booking conve, Represents a single user session on a hotel's widget or booking page.     A sess, Represents a specific action taken during an AnalyticsSession.     Examples: pag, A public, no-login share link for a hotel's analytics report (PowerBI-style, ReportShareLink (+14 more)
+Cohesion: 0.24
+Nodes (27): AnalyticsEvent, AnalyticsSession, EventTrackRequest, Analytics Models Tracks widget visits, page views, time spent, and booking conve, Represents a single user session on a hotel's widget or booking page.     A sess, Represents a specific action taken during an AnalyticsSession.     Examples: pag, A public, no-login share link for a hotel's analytics report (PowerBI-style, ReportShareLink (+19 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.11
@@ -507,12 +500,12 @@ Cohesion: 0.15
 Nodes (10): AsyncClient, Hotel, Super Admin — Hotel Management Tests Covers: list hotels, update hotel, delete h, A second hotel created fresh for delete/isolation tests., second_hotel(), TestAccessCheck, TestImpersonation, TestListHotels (+2 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.11
-Nodes (6): aS(), ps(), Rr(), Tr, wt, Wv()
+Cohesion: 0.09
+Nodes (7): aS(), ps(), Rr(), Tr, Ui, wt, Wv()
 
 ### Community 50 - "Community 50"
-Cohesion: 0.10
-Nodes (35): CurrentUser, DbSession, User, broadcast_chain_upsell(), create_chain_promo(), delete_chain_promo(), delete_chain_upsell_broadcast(), get_chain_admin() (+27 more)
+Cohesion: 0.09
+Nodes (44): Any, CurrentUser, date, DbSession, User, Chain, Chain, Brand or Chain group containing multiple hotel properties. (+36 more)
 
 ### Community 51 - "Community 51"
 Cohesion: 0.09
@@ -527,12 +520,12 @@ Cohesion: 0.08
 Nodes (25): Sidebar, SidebarContent, SidebarContext, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupContent, SidebarGroupLabel (+17 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.10
-Nodes (38): BackgroundTasks, CurrentUser, DbSession, Request, RoomRate, bump_rate_version(), Signal the SSE stream that prices changed.     - room_type_id: specific room tha, RoomBlockCreate (+30 more)
+Cohesion: 0.06
+Nodes (61): date, CurrentUser, DbSession, CurrentUser, DbSession, Request, Hotel, _assert_room_type_owned() (+53 more)
 
 ### Community 55 - "Community 55"
-Cohesion: 0.19
-Nodes (21): get_hotel_ai_key(), _is_vault_available(), Supabase Vault integration — AES-256-GCM encrypted secrets storage.  All functio, Return a copy of hotel.settings with Vault references resolved.     For each <ke, Store/update a hotel.settings secret in Vault.     Writes the vault_id into sett, Store/update a direct model column secret in Vault.     Sets obj.<vault_id_colum, Read a model column secret, preferring Vault when a vault_id exists.     Falls b, Resolve the effective AI API key for a hotel, checking Vault first.     Priority (+13 more)
+Cohesion: 0.05
+Nodes (60): chat_with_agent(), ChatRequest, ChatResponse, get_ai_usage(), Return this hotel's AI usage breakdown for the last N days (max 30).      Reads, # NOTE: create_agent_executor is imported lazily inside the handler (INF-01) —, _coerce_number(), _enforce_inprocess_fallback() (+52 more)
 
 ### Community 56 - "Community 56"
 Cohesion: 0.10
@@ -551,32 +544,32 @@ Cohesion: 0.12
 Nodes (13): _FakePipeline, _FakeRedis, _FakeResult, Tests for the in-process AI quota fallback (AI-08).  When Redis is unavailable t, Raw PII (phone/email) must never be stored — only its hash., Minimal Redis pipeline that applies ops on execute()., _reset_fallback(), test_inprocess_fallback_enforces_cap() (+5 more)
 
 ### Community 60 - "Community 60"
-Cohesion: 0.06
-Nodes (18): d0(), e_(), e2(), i2(), id, N0, p2(), r_() (+10 more)
+Cohesion: 0.05
+Nodes (28): cx(), d0(), e_(), e2(), eE(), fx, i2(), Jh() (+20 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.11
-Nodes (8): _FakeStorage, Storage lifecycle cleanup (orphaned-media prevention).  Covers app/core/storage., Regression: single-string image columns (add-on image_url, hotel logo_url)     m, test_sweep_deletes_only_old_unreferenced(), test_sweep_keeps_addon_images_and_hotel_logo(), TestCollectObjectPaths, TestDeleteMediaObjects, TestExtractObjectPath
+Cohesion: 0.10
+Nodes (9): _FakeBucket, _FakeStorage, Storage lifecycle cleanup (orphaned-media prevention).  Covers app/core/storage., Regression: single-string image columns (add-on image_url, hotel logo_url)     m, test_sweep_deletes_only_old_unreferenced(), test_sweep_keeps_addon_images_and_hotel_logo(), TestCollectObjectPaths, TestDeleteMediaObjects (+1 more)
 
 ### Community 62 - "Community 62"
 Cohesion: 0.09
 Nodes (12): AgentUsageInfo, AIUsageData, AnalyticsDashboard(), AnalyticsData, CHART_COLORS, FUNNEL_COLORS, LiveEvent, useVisibilityInterval() (+4 more)
 
 ### Community 64 - "Community 64"
-Cohesion: 0.16
-Nodes (22): CurrentUser, DbSession, Request, generate_ai_reply(), get_google_reviews(), google_connection_status(), google_disconnect(), google_oauth_callback() (+14 more)
+Cohesion: 0.15
+Nodes (10): Address, ContactInfo, HotelBase, HotelCreate, HotelSettings, Hotel Model Multi-tenant core - har hotel ek tenant hai. Frontend ke Hotel inter, Hotel creation (usually during signup), Embedded address object - Frontend Address interface se match (+2 more)
 
 ### Community 65 - "Community 65"
-Cohesion: 0.11
-Nodes (13): b2(), c2(), Dx(), fx, jx(), kh(), kx(), lx() (+5 more)
+Cohesion: 0.17
+Nodes (11): ChannelLog, ChannelLogRead, ChannelManagerSettings, ChannelRoomMapping, ChannelSettingsRead, ChannelSettingsUpdate, MappingCreate, MappingRead (+3 more)
 
 ### Community 66 - "Community 66"
 Cohesion: 0.16
 Nodes (22): CurrentUser, DbSession, get_my_social_proof(), _get_or_create_settings(), get_public_social_proof(), HotelSocialProofSettings, HotelSocialProofSettingsRead, HotelSocialProofSettingsUpdate (+14 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.11
-Nodes (21): DbSession, generate_booking_number(), Unique booking number generate karta hai, generate_booking_number(), Unique booking number generate karta hai, generate_booking_number(), Unique booking number generate karta hai, generate_booking_number() (+13 more)
+Cohesion: 0.07
+Nodes (31): enforce_ai_token_quota(), Block the request if today's token spend has hit the per-agent subscription limi, Return today's recorded tokens from the durable table, or None on error., _read_today_tokens_db(), check_hotel_feature(), Helper function to enforce feature lock on public/unauthenticated routes., Request, DbSession (+23 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.09
@@ -590,9 +583,13 @@ Nodes (21): compilerOptions, allowImportingTsExtensions, baseUrl, isolatedModule
 Cohesion: 0.13
 Nodes (8): bo(), Js(), mo, pr, wr(), Wt(), xo(), zs()
 
+### Community 71 - "Community 71"
+Cohesion: 0.27
+Nodes (10): CurrentUser, DbSession, HotelUpdate, get_my_hotel(), Hotels Router Hotel profile aur settings management. Multi-tenant - har user apn, Current user ki hotel get karo.     Dashboard aur settings page ke liye.      Se, Current user ki hotel update karo.     Settings page se hotel details change kar, test_email_connection() (+2 more)
+
 ### Community 72 - "Community 72"
-Cohesion: 0.23
-Nodes (15): CurrentUser, DbSession, _clear_rate_caches(), create_rate_plan(), delete_rate_plan(), get_rate_plans(), RatePlanBase, RatePlanCreate (+7 more)
+Cohesion: 0.25
+Nodes (14): CurrentUser, DbSession, _clear_rate_caches(), create_rate_plan(), delete_rate_plan(), get_rate_plans(), RatePlanBase, RatePlanCreate (+6 more)
 
 ### Community 73 - "Community 73"
 Cohesion: 0.17
@@ -606,25 +603,25 @@ Nodes (17): DbSession, Hotel, generate_ari_xml(), generate_hotel_list_xml(), gen
 Cohesion: 0.22
 Nodes (17): BackgroundTasks, CurrentUser, DbSession, CompetitorCreate, Competitor, CompetitorBase, CompetitorCreate, CompetitorRead (+9 more)
 
+### Community 77 - "Community 77"
+Cohesion: 0.29
+Nodes (9): CurrentUser, DbSession, get_dashboard_stats(), get_rate_shopper_matrix(), get_recent_bookings(), Dashboard Router Dashboard stats aur reports ke liye. Optimized for performance:, Recent 5 bookings for dashboard — Redis cache (1 min TTL), Reads the competitor rate shopper matrix from the database and returns it as JSO (+1 more)
+
 ### Community 78 - "Community 78"
-Cohesion: 0.19
-Nodes (8): _get_booking(), _make_abandoned_booking(), _make_hotel(), Abandoned-booking recovery — sweep logic, dedup, opt-in gating, hotelier endpoin, Stub the real email/WhatsApp senders so tests never hit the network., _stub_senders(), TestRecoveryEndpoints, TestRecoverySweep
+Cohesion: 0.28
+Nodes (7): _get_booking(), _make_abandoned_booking(), _make_hotel(), Abandoned-booking recovery — sweep logic, dedup, opt-in gating, hotelier endpoin, Stub the real email/WhatsApp senders so tests never hit the network., _stub_senders(), TestRecoverySweep
 
 ### Community 79 - "Community 79"
-Cohesion: 0.18
-Nodes (17): Booking, Hotel, _booking_link(), _find_abandoned(), list_abandoned_bookings(), Abandoned-booking recovery.  A guest who picks dates and a room but never pays l, Abandoned = PENDING + unpaid + aged into the recovery window., Sweep abandoned bookings and send recovery nudges.      Honors per-hotel `settin (+9 more)
+Cohesion: 0.21
+Nodes (15): Booking, Hotel, _booking_link(), _find_abandoned(), Abandoned-booking recovery.  A guest who picks dates and a room but never pays l, Abandoned = PENDING + unpaid + aged into the recovery window., Sweep abandoned bookings and send recovery nudges.      Honors per-hotel `settin, Hotelier manually triggers a recovery sweep for their own hotel. (+7 more)
 
 ### Community 80 - "Community 80"
 Cohesion: 0.21
-Nodes (16): DbSession, User, check_admin_access(), create_or_renew_subscription(), get_admin_stats(), HotelAdminUpdate, list_all_hotels(), list_all_subscriptions() (+8 more)
+Nodes (18): CurrentUser, DbSession, User, Subscription, check_admin_access(), create_or_renew_subscription(), get_admin_stats(), HotelAdminUpdate (+10 more)
 
 ### Community 81 - "Community 81"
 Cohesion: 0.11
 Nodes (10): FILTER_OPTIONS, FilterOption, GoogleReviews(), GoogleStatus, RATING_BG, RATING_COLORS, RATING_LABELS, Review (+2 more)
-
-### Community 82 - "Community 82"
-Cohesion: 0.20
-Nodes (3): fe(), gt, pe()
 
 ### Community 83 - "Community 83"
 Cohesion: 0.27
@@ -659,12 +656,12 @@ Cohesion: 0.15
 Nodes (14): create_access_token(), create_refresh_token(), create_reset_token(), get_password_hash(), Security Utilities JWT Token generation aur verification yahan hoti hai. Passwor, Access token banata hai jo short-lived hota hai.     Subject usually user_id hot, Refresh token banata hai jo long-lived hota hai.     Isse new access token lene, Password reset token banata hai. (+6 more)
 
 ### Community 92 - "Community 92"
-Cohesion: 0.15
-Nodes (11): AppHeader(), Property, AppSidebar(), DEFAULT_ROLE_PERMISSIONS, mainNavItems, revenueNavItems, settingsNavItems, DashboardLayout() (+3 more)
+Cohesion: 0.08
+Nodes (20): Theme, ThemeContext, ThemeContextValue, useTheme(), AppHeader(), Property, AppSidebar(), DEFAULT_ROLE_PERMISSIONS (+12 more)
 
 ### Community 93 - "Community 93"
 Cohesion: 0.08
-Nodes (29): _is_sensitive_settings_key(), _mask_settings_for_hotelier(), Sensitive field filtering for multi-tenant security.  In a multi-tenant hotel bo, Remove sensitive fields from a hotelier-initiated update payload.      Returns t, # NOTE: `razorpay_key_id` is the *publishable* key (sent to the browser by, Replace sensitive values with boolean `has_*` flags so the hotelier     can tell, strip_sensitive_from_update(), CurrentUser (+21 more)
+Nodes (32): _is_sensitive_settings_key(), mask_hotel_for_hotelier(), _mask_settings_for_hotelier(), Sensitive field filtering for multi-tenant security.  In a multi-tenant hotel bo, Return a dict representation of a Hotel with all sensitive fields     removed or, Remove sensitive fields from a hotelier-initiated update payload.      Returns t, # NOTE: `razorpay_key_id` is the *publishable* key (sent to the browser by, Replace sensitive values with boolean `has_*` flags so the hotelier     can tell (+24 more)
 
 ### Community 94 - "Community 94"
 Cohesion: 0.12
@@ -699,8 +696,8 @@ Cohesion: 0.15
 Nodes (13): get_jwks(), Verifies a Supabase JWT locally.     Tries JWKS (ES256) first, then falls back t, # NOTE: There is intentionally NO "unverified claims" debug fallback., verify_supabase_token(), _authenticate_ws(), broadcast_to_hotel(), hotel_ws(), WebSocket — real-time push channel for authenticated hotel staff.  Architecture: (+5 more)
 
 ### Community 102 - "Community 102"
-Cohesion: 0.08
-Nodes (17): bs(), CA(), cs(), dd(), Di(), gn(), hd(), Ka() (+9 more)
+Cohesion: 0.07
+Nodes (20): ab(), br(), cs(), dd(), hd(), Ka(), Mh, mT() (+12 more)
 
 ### Community 103 - "Community 103"
 Cohesion: 0.16
@@ -731,8 +728,8 @@ Cohesion: 0.18
 Nodes (8): authApi, RegisterResponse, API_BASE_URL, apiClient, ApiClientError, handleResponse(), tokenStorage, tryRefreshToken()
 
 ### Community 111 - "Community 111"
-Cohesion: 0.15
-Nodes (9): Theme, ThemeContext, ThemeContextValue, useTheme(), NAV_ITEMS, NavSection, SuperAdminDashboard(), Toaster() (+1 more)
+Cohesion: 0.20
+Nodes (9): HotelSocialProofSettings, HotelSocialProofSettingsRead, HotelSocialProofSettingsUpdate, PublicSocialProofResponse, Hotel Social Proof Settings  The "social proof" widget on a hotel's public booki, Hotelier-facing write schema. Only the hotelier-owned fields are     accepted; c, Public-facing response — the only fields the booking page needs.      Designed f, Per-hotel configuration for the public-page social proof widget.      Hotelier-c (+1 more)
 
 ### Community 112 - "Community 112"
 Cohesion: 0.15
@@ -751,16 +748,16 @@ Cohesion: 0.22
 Nodes (12): collect_object_paths(), delete_media_objects(), extract_object_path(), _is_older_than(), Best-effort Supabase Storage object cleanup.  When a room or hotel is deleted we, Delete hotel-assets objects that no room/hotel record references AND that     ar, Return the object path within PUBLIC_BUCKET for a Supabase public URL.      Retu, Pull every hotel-assets object path out of a list of media entries.      Each en (+4 more)
 
 ### Community 117 - "Community 117"
-Cohesion: 0.09
-Nodes (24): enforce_ai_token_quota(), _enforce_inprocess_fallback(), _get(), _hash_id(), persist_ai_usage_db(), AI-03: per-hotel, per-agent LLM token-usage accounting and quota enforcement.  E, Block the request if today's token spend has hit the per-agent subscription limi, Return today's recorded tokens from the durable table, or None on error. (+16 more)
+Cohesion: 0.31
+Nodes (8): CurrentUser, date, DbSession, get_availability(), get_blocks(), Read-only availability endpoints: daily availability grid + block list., Get existing room blocks for a specific room type and date range., Calculate daily availability for all room types.     Returns a list of room type
 
 ### Community 118 - "Community 118"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (19): CurrentUser, DbSession, Request, PromoCodeCreate, PromoCodeCreate, Request schema for creating a promo code.      Why a dedicated (non-table) schem, strip_html_tags(), create_promo() (+11 more)
 
 ### Community 119 - "Community 119"
-Cohesion: 0.23
-Nodes (11): chat_with_agent(), ChatRequest, ChatResponse, get_ai_usage(), Return this hotel's AI usage breakdown for the last N days (max 30).      Reads, # NOTE: create_agent_executor is imported lazily inside the handler (INF-01) —, Read durable usage for the last `days` days, grouped by agent type.      Returns, read_ai_usage_db() (+3 more)
+Cohesion: 0.22
+Nodes (6): ApiKey, IntegrationPage(), IntegrationSettings, WidgetCode, ProfilePage(), SettingsPage()
 
 ### Community 120 - "Community 120"
 Cohesion: 0.27
@@ -783,8 +780,8 @@ Cohesion: 0.24
 Nodes (11): lifespan(), _job_abandoned_recovery(), Background scheduler (APScheduler) with a Redis lock.  Across multiple gunicorn, Run the job only if we win the per-tick Redis lock., _run_locked(), shutdown_scheduler(), start_scheduler(), _tick_abandoned_recovery() (+3 more)
 
 ### Community 125 - "Community 125"
-Cohesion: 0.17
-Nodes (9): ChainAnalytics, ChainDashboard(), ChainGuests, COLOR_MAP, HotelRevenueItem, KpiProps, PERIODS, RecentBookingItem (+1 more)
+Cohesion: 0.29
+Nodes (5): ChannelSlice, COLORS, inr(), ReportData, ReportView()
 
 ### Community 126 - "Community 126"
 Cohesion: 0.29
@@ -805,10 +802,6 @@ Nodes (7): ChartConfig, ChartContainer, ChartContext, ChartContextProps, ChartLe
 ### Community 131 - "Community 131"
 Cohesion: 0.18
 Nodes (8): Command, CommandDialogProps, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator
-
-### Community 132 - "Community 132"
-Cohesion: 0.25
-Nodes (6): ChannelSlice, COLORS, inr(), PublicReport(), ReportData, ReportEnvelope
 
 ### Community 133 - "Community 133"
 Cohesion: 0.22
@@ -831,20 +824,24 @@ Cohesion: 0.20
 Nodes (8): AdjType, BLANK, DynamicPricing(), PricingRule, RoomLite, RULE_META, RuleType, WEEKDAYS
 
 ### Community 138 - "Community 138"
-Cohesion: 0.36
-Nodes (9): classify_meal_plan(), extract_initial_state(), get_param_from_url(), Asynchronously runs the rate shopper scraper for a specific hotel,     loading i, Scrapes MakeMyTrip for a specific hotel and date.     Returns status and extract, run_rate_shopper(), run_rate_shopper_for_hotel(), scrape_single_hotel_date() (+1 more)
+Cohesion: 0.31
+Nodes (10): CompetitorRate, classify_meal_plan(), extract_initial_state(), get_param_from_url(), Asynchronously runs the rate shopper scraper for a specific hotel,     loading i, Scrapes MakeMyTrip for a specific hotel and date.     Returns status and extract, run_rate_shopper(), run_rate_shopper_for_hotel() (+2 more)
 
 ### Community 139 - "Community 139"
-Cohesion: 0.28
-Nodes (8): ping_session(), Public analytics tracking endpoints — called by the booking widget, no auth requ, Create a new analytics session. Public — no auth., Update time-spent for an existing session. Silently ignores unknown sessions., Record an analytics event for a session., start_session(), track_event(), DbSession
+Cohesion: 0.33
+Nodes (5): ping_session(), Public analytics tracking endpoints — called by the booking widget, no auth requ, Create a new analytics session. Public — no auth., Update time-spent for an existing session. Silently ignores unknown sessions., start_session()
 
 ### Community 140 - "Community 140"
 Cohesion: 0.42
 Nodes (8): _patch_trusted(), Tests for trusted-proxy aware client-IP extraction (RL-2).  X-Forwarded-For is ", _Req, test_falls_back_to_socket_when_no_header(), test_legacy_behavior_when_no_trusted_proxy(), test_one_trusted_proxy_returns_real_client(), test_spoofed_prefix_is_ignored_with_trusted_proxy(), test_two_trusted_proxies()
 
 ### Community 141 - "Community 141"
-Cohesion: 0.20
+Cohesion: 0.17
 Nodes (3): be(), Ee(), tt
+
+### Community 142 - "Community 142"
+Cohesion: 0.39
+Nodes (3): Per-entity video persistence + per-entity caps.  - RoomType / Hotel expose a `vi, TestVideoCaps, _vid()
 
 ### Community 143 - "Community 143"
 Cohesion: 0.20
@@ -855,8 +852,8 @@ Cohesion: 0.20
 Nodes (9): Toast, ToastAction, ToastActionElement, ToastClose, ToastDescription, ToastProps, ToastTitle, toastVariants (+1 more)
 
 ### Community 145 - "Community 145"
-Cohesion: 0.50
-Nodes (3): AddonDialog(), AddonDialogProps, addonSchema
+Cohesion: 0.05
+Nodes (32): AddonDialog(), AddonDialogProps, addonSchema, ForgotPasswordFormData, ForgotPasswordPage(), forgotPasswordSchema, ResetPasswordFormData, ResetPasswordPage() (+24 more)
 
 ### Community 146 - "Community 146"
 Cohesion: 0.25
@@ -867,8 +864,8 @@ Cohesion: 0.25
 Nodes (8): AsyncSession, get_session(), init_db(), _migrate_secrets_to_vault(), Database Configuration SQLModel + Async SQLAlchemy setup. Development mein SQLit, One-time best-effort migration: for each hotel that still has plaintext     secr, Dependency injection ke liye session provide karta hai.     FastAPI routes mein, Database tables create karta hai agar exist nahi karte.     App startup par call
 
 ### Community 148 - "Community 148"
-Cohesion: 0.33
-Nodes (8): DbSession, User, get_notifications(), mark_all_read(), mark_notification_read(), Get user notifications, ordered by newest first., Mark a notification as read., Mark all unread notifications as read for current user.
+Cohesion: 0.27
+Nodes (9): DbSession, User, Notification, get_notifications(), mark_all_read(), mark_notification_read(), Get user notifications, ordered by newest first., Mark a notification as read. (+1 more)
 
 ### Community 149 - "Community 149"
 Cohesion: 0.28
@@ -891,8 +888,8 @@ Cohesion: 0.25
 Nodes (3): j0(), k0, sd
 
 ### Community 154 - "Community 154"
-Cohesion: 0.32
-Nodes (7): Any, logic_get_pending_bookings(), logic_get_todays_arrivals(), logic_get_todays_departures(), Logic to fetch guests checking out today., Logic to fetch bookings waiting for confirmation (Status = PENDING)., Logic to fetch guests arriving today.
+Cohesion: 0.29
+Nodes (6): logic_get_pending_bookings(), logic_get_todays_arrivals(), logic_get_todays_departures(), Logic to fetch guests checking out today., Logic to fetch bookings waiting for confirmation (Status = PENDING)., Logic to fetch guests arriving today.
 
 ### Community 155 - "Community 155"
 Cohesion: 0.22
@@ -935,12 +932,12 @@ Cohesion: 0.25
 Nodes (7): SelectContent, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectTrigger
 
 ### Community 166 - "Community 166"
-Cohesion: 0.40
-Nodes (6): CurrentUser, DbSession, get_recovery_settings(), Read the per-hotel recovery opt-in flag., Toggle abandoned-booking recovery on/off for the caller's hotel., update_recovery_settings()
+Cohesion: 0.32
+Nodes (8): CurrentUser, DbSession, get_recovery_settings(), list_abandoned_bookings(), Preview abandoned bookings for the caller's hotel (incl. already-nudged)., Read the per-hotel recovery opt-in flag., Toggle abandoned-booking recovery on/off for the caller's hotel., update_recovery_settings()
 
 ### Community 167 - "Community 167"
-Cohesion: 0.29
-Nodes (6): User, Regression guard for the hotelier AI assistant.  Background: `app/core/agent.py`, The module-level logger must exist (its absence broke every call)., A non-empty query exercises the smart tool selector (which logs). The original, test_agent_module_has_logger(), test_create_agent_executor_runs_tool_selector_without_nameerror()
+Cohesion: 0.20
+Nodes (8): create_agent_executor(), Creates an Agent Graph instance with tools bound to the current user and databas, User, Regression guard for the hotelier AI assistant.  Background: `app/core/agent.py`, The module-level logger must exist (its absence broke every call)., A non-empty query exercises the smart tool selector (which logs). The original, test_agent_module_has_logger(), test_create_agent_executor_runs_tool_selector_without_nameerror()
 
 ### Community 168 - "Community 168"
 Cohesion: 0.29
@@ -963,8 +960,8 @@ Cohesion: 0.29
 Nodes (4): DialogContent, DialogDescription, DialogOverlay, DialogTitle
 
 ### Community 174 - "Community 174"
-Cohesion: 0.27
-Nodes (9): Request, _detect_safe_content_type(), _looks_like_mp4(), _looks_like_webm(), MP4/ISO-BMFF: a 'ftyp' box near the start (bytes 4-8). Covers MP4/M4V., WebM/Matroska: starts with the EBML header magic 0x1A45DFA3., Validate the bytes match an allowed type and return a safe content-type.     Rai, upload_file() (+1 more)
+Cohesion: 0.08
+Nodes (22): Exception, Request, Request, Request, Request, FastAPI, rate_update_stream(), Server-Sent Events endpoint for real-time rate change notifications. When a hote (+14 more)
 
 ### Community 175 - "Community 175"
 Cohesion: 0.33
@@ -975,24 +972,24 @@ Cohesion: 0.33
 Nodes (5): get_weather_forecast(), _get_weather_forecast_sync(), # NOTE: openmeteo_requests, requests_cache, and retry_requests are all, Blocking body of get_weather_forecast. Always run via the executor., Get weather forecast for a specific city for the next 7 days.     Useful for pre
 
 ### Community 180 - "Community 180"
-Cohesion: 0.09
-Nodes (18): Public, no-login analytics report — the read side of a ReportShareLink.  A hotel, Exception, Request, Request, Read-only availability endpoints: daily availability grid + block list., FastAPI, rate_update_stream(), Server-Sent Events endpoint for real-time rate change notifications. When a hote (+10 more)
+Cohesion: 0.22
+Nodes (8): _job_subscription_expiry(), check_subscription_expiry(), log_timeline_task(), process_loyalty_checkout_task(), Background task helpers.  FastAPI's built-in `BackgroundTasks` runs tasks AFTER, Background task to log events to the booking timeline., Background task to calculate and award loyalty points on guest checkout., Check subscriptions expiring in the next 7 days and send email alerts.     Call
 
 ### Community 181 - "Community 181"
 Cohesion: 0.40
 Nodes (3): ACCEPTED, MediaVideo, VideoUploaderProps
 
 ### Community 182 - "Community 182"
-Cohesion: 0.40
-Nodes (3): CartItem, MotionDiv, MotionImg
+Cohesion: 0.33
+Nodes (5): RoomDialog(), RoomDialogProps, roomSchema, RoomImageUploader(), RoomImageUploaderProps
 
 ### Community 183 - "Community 183"
 Cohesion: 0.40
 Nodes (3): ApiKey, ApiKeysTabProps, CreatedKey
 
 ### Community 184 - "Community 184"
-Cohesion: 0.40
-Nodes (4): IntegrationSettings, SearchWidgetTab(), SearchWidgetTabProps, WidgetCode
+Cohesion: 0.33
+Nodes (3): c0(), Ex(), Tx()
 
 ### Community 185 - "Community 185"
 Cohesion: 0.40
@@ -1019,8 +1016,8 @@ Cohesion: 0.40
 Nodes (4): downgrade(), Creates a PostgreSQL trigger on auth.users so that whenever a user is     delete, Remove the auto-cleanup trigger and function., upgrade()
 
 ### Community 193 - "Community 193"
-Cohesion: 0.50
-Nodes (3): ForgotPasswordFormData, ForgotPasswordPage(), forgotPasswordSchema
+Cohesion: 0.33
+Nodes (4): CHAIN_WIDGET_STYLES, ChainWidgetSettings, ChainWidgetTabProps, DEFAULT_CHAIN_SETTINGS
 
 ### Community 194 - "Community 194"
 Cohesion: 0.50
@@ -1042,37 +1039,25 @@ Nodes (3): WeekendUpdateDialog(), WeekendUpdateDialogProps, weekendUpdateSchema
 Cohesion: 0.50
 Nodes (4): public_report(), Resolve a share token to its hotel's aggregate report. Public — no auth., DbSession, Request
 
+### Community 200 - "Community 200"
+Cohesion: 0.40
+Nodes (3): AVAILABLE_ROUTES, FEATURE_FLAGS, HotelWorkspaceProps
+
 ### Community 201 - "Community 201"
-Cohesion: 0.50
-Nodes (3): ResetPasswordFormData, ResetPasswordPage(), resetPasswordSchema
+Cohesion: 0.40
+Nodes (4): ChannelLog, ChannelSettings, LocalRoom, RoomMapping
 
 ### Community 203 - "Community 203"
-Cohesion: 0.50
-Nodes (3): BookingCancel(), BookingCancelDetails, LookupForm
+Cohesion: 0.40
+Nodes (4): PackageCard, RatePlanDialog, RoomDialog, RoomsPage()
 
 ### Community 204 - "Community 204"
 Cohesion: 0.40
 Nodes (3): BookingWidgetTabProps, WIDGET_STYLES, WidgetCode
 
-### Community 207 - "Community 207"
-Cohesion: 0.50
-Nodes (3): AddonsPage(), AMENITY_CATEGORIES, ICONS
-
-### Community 208 - "Community 208"
-Cohesion: 0.50
-Nodes (3): RatePlanDialog(), RatePlanDialogProps, ratePlanSchema
-
-### Community 209 - "Community 209"
-Cohesion: 0.50
-Nodes (3): BookingDetailsDialog(), BookingDetailsDialogProps, statusConfig
-
 ### Community 210 - "Community 210"
 Cohesion: 0.83
 Nodes (3): main(), _percentile(), _worker()
-
-### Community 211 - "Community 211"
-Cohesion: 0.50
-Nodes (3): EditBookingDialog(), EditBookingDialogProps, editBookingSchema
 
 ### Community 215 - "Community 215"
 Cohesion: 0.50
@@ -1094,29 +1079,25 @@ Nodes (3): PaymentsPage(), PaymentWithDetails, statusConfig
 Cohesion: 0.50
 Nodes (3): AccordionContent, AccordionItem, AccordionTrigger
 
-### Community 236 - "Community 236"
-Cohesion: 0.29
-Nodes (5): LoginFormData, LoginPage(), loginSchema, App(), isSuperAdminSubdomain()
-
 ## Knowledge Gaps
-- **692 isolated node(s):** `session-start.sh script`, `Exception`, `Lock`, `AsyncSession`, `Config` (+687 more)
+- **693 isolated node(s):** `session-start.sh script`, `Exception`, `Lock`, `AsyncSession`, `Config` (+688 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **72 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **73 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Client` connect `Community 10` to `Community 135`, `Community 137`, `Community 145`, `Community 20`, `Community 33`, `Community 38`, `Community 170`, `Community 299`, `Community 182`, `Community 56`, `Community 184`, `Community 186`, `Community 187`, `Community 62`, `Community 194`, `Community 195`, `Community 196`, `Community 197`, `Community 200`, `Community 203`, `Community 207`, `Community 208`, `Community 209`, `Community 81`, `Community 211`, `Community 92`, `Community 221`, `Community 95`, `Community 100`, `Community 111`, `Community 125`?**
+- **Why does `Client` connect `Community 10` to `Community 135`, `Community 137`, `Community 15`, `Community 145`, `Community 20`, `Community 33`, `Community 170`, `Community 299`, `Community 182`, `Community 56`, `Community 186`, `Community 187`, `Community 62`, `Community 193`, `Community 194`, `Community 195`, `Community 196`, `Community 197`, `Community 200`, `Community 201`, `Community 203`, `Community 207`, `Community 81`, `Community 92`, `Community 221`, `Community 95`, `Community 100`, `Community 119`?**
   _High betweenness centrality (0.354) - this node is a cross-community bridge._
-- **Why does `get_supabase()` connect `Community 38` to `Community 101`, `Community 10`, `Community 77`, `Community 174`, `Community 18`, `Community 116`?**
+- **Why does `get_supabase()` connect `Community 15` to `Community 101`, `Community 38`, `Community 10`, `Community 174`, `Community 18`, `Community 116`, `Community 22`?**
   _High betweenness centrality (0.328) - this node is a cross-community bridge._
-- **Why does `__()` connect `Community 0` to `Community 4`, `Community 7`, `Community 8`, `Community 11`, `Community 12`, `Community 13`, `Community 15`, `Community 21`, `Community 24`, `Community 25`, `Community 153`, `Community 28`, `Community 29`, `Community 34`, `Community 35`, `Community 49`, `Community 179`, `Community 60`, `Community 63`, `Community 192`, `Community 65`, `Community 71`, `Community 74`, `Community 84`, `Community 85`, `Community 102`, `Community 110`?**
+- **Why does `__()` connect `Community 0` to `Community 4`, `Community 8`, `Community 11`, `Community 12`, `Community 13`, `Community 17`, `Community 21`, `Community 24`, `Community 25`, `Community 153`, `Community 28`, `Community 29`, `Community 31`, `Community 34`, `Community 44`, `Community 49`, `Community 179`, `Community 184`, `Community 60`, `Community 63`, `Community 192`, `Community 74`, `Community 84`, `Community 85`, `Community 102`, `Community 110`?**
   _High betweenness centrality (0.314) - this node is a cross-community bridge._
 - **Are the 274 inferred relationships involving `Hotel` (e.g. with `APIKeyCreate` and `RegisterRequest`) actually correct?**
   _`Hotel` has 274 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 194 inferred relationships involving `RoomType` (e.g. with `AsyncSession` and `User`) actually correct?**
   _`RoomType` has 194 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `session-start.sh script`, `Return this hotel's AI usage breakdown for the last N days (max 30).      Reads`, `# NOTE: create_agent_executor is imported lazily inside the handler (INF-01) —` to the rest of the system?**
-  _1278 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1279 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.022931206380857428 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.021625810087348547 - nodes in this community are weakly interconnected._
