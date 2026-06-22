@@ -118,7 +118,11 @@ async def update_my_hotel(
             update_data["slug"] = new_slug
 
     for field, value in update_data.items():
-        setattr(hotel, field, value)
+        if field == "settings" and isinstance(getattr(hotel, "settings", {}), dict) and isinstance(value, dict):
+            # Shallow merge settings to preserve sensitive keys that were stripped
+            hotel.settings = {**hotel.settings, **value}
+        else:
+            setattr(hotel, field, value)
 
     from datetime import datetime
     hotel.updated_at = datetime.utcnow()
