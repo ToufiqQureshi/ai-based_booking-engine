@@ -111,32 +111,50 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
 
     const handleSaveIntegrations = () => {
         // Secret keys are never sent back to the client (redacted server-side), so
-        // a blank field means "keep what's stored". Send the KEEP sentinel so the
-        // backend leaves the Vault secret untouched; only overwrite when the admin
-        // types a new value (empty string when one was set = explicit clear).
+        // a blank field ALWAYS means "keep what's stored" — there is no "clear"
+        // control in this form. Send the KEEP sentinel for any blank secret so the
+        // backend leaves the stored Vault/secret untouched; only overwrite when the
+        // admin types a new value. This makes it impossible to accidentally blank a
+        // configured SMTP password / Brevo key by opening the tab and re-saving.
         const KEEP = '__KEEP__';
-        const secret = (val: string, isSet: boolean) => (val ? val : (isSet ? KEEP : null));
+        const secret = (val: string) => (val && val.trim() ? val.trim() : KEEP);
 
         const payload: any = {
             ai_provider: aiProvider,
-            ai_api_key: secret(aiApiKey, !!hotel.ai_api_key_set),
+            ai_api_key: secret(aiApiKey),
             ai_model: aiModel,
             ai_base_url: aiBaseUrl || null,
             ai_max_tokens: aiMaxTokens ? Number(aiMaxTokens) : null,
             settings: {
                 whatsapp_phone_number_id: whatsappPhoneNumberId || null,
                 whatsapp_business_account_id: whatsappBusinessAccountId || null,
-                whatsapp_api_key: secret(whatsappApiKey, !!hotel.whatsapp_api_key_set),
-                brevo_api_key: secret(brevoApiKey, !!hotel.brevo_api_key_set),
+                whatsapp_api_key: secret(whatsappApiKey),
+                brevo_api_key: secret(brevoApiKey),
                 smtp_host: smtpHost || null,
                 smtp_port: smtpPort ? Number(smtpPort) : null,
                 smtp_username: smtpUsername || null,
-                smtp_password: secret(smtpPassword, !!hotel.settings?.has_smtp_password),
+                smtp_password: secret(smtpPassword),
                 smtp_from_email: smtpFromEmail || null,
             }
         };
         updateIntegrationMutation.mutate(payload);
     };
+
+    // Small inline indicator so staff can SEE whether a secret is already stored
+    // (the raw value is never returned for security). When available it shows a
+    // masked preview (e.g. sk-b•••••8d6d) — industry-standard "last few chars"
+    // pattern so the admin RECOGNISES the stored key without re-entering it.
+    const SecretStatus = ({ isSet, hint }: { isSet: boolean; hint?: string | null }) => (
+        <span className={cn(
+            'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md',
+            isSet ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-slate-50 text-slate-500 border border-slate-200'
+        )}>
+            {isSet
+                ? <><CheckCircle2 className="w-3 h-3" /> Configured{hint ? <code className="font-mono tracking-tight">{hint}</code> : null}</>
+                : <>— Not set</>}
+        </span>
+    );
 
     // Permissions state
     const [permissions, setPermissions] = useState<Record<string, string[]>>(() => {
@@ -589,7 +607,10 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                             </div>
                             <div className="space-y-4">
                                 <div className="space-y-1">
-                                    <Label className="text-xs font-bold">Meta Temporary / Permanent Access Token</Label>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <Label className="text-xs font-bold">Meta Temporary / Permanent Access Token</Label>
+                                        <SecretStatus isSet={!!hotel.whatsapp_api_key_set} hint={hotel.settings?.whatsapp_api_key_hint} />
+                                    </div>
                                     <Input
                                         type="password"
                                         placeholder={hotel.whatsapp_api_key_set ? '•••••• Configured — leave blank to keep' : 'EAAGz...'}
@@ -651,7 +672,10 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <Label className="text-xs font-bold">AI API Key (Overrides platform key)</Label>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <Label className="text-xs font-bold">AI API Key (Overrides platform key)</Label>
+                                        <SecretStatus isSet={!!hotel.ai_api_key_set} hint={hotel.settings?.ai_api_key_hint} />
+                                    </div>
                                     <Input
                                         type="password"
                                         placeholder={hotel.ai_api_key_set ? '•••••• Configured — leave blank to keep' : 'Leave empty to use platform default key'}
@@ -691,7 +715,10 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                         </div>
                         <div className="space-y-4">
                             <div className="space-y-1">
-                                <Label className="text-xs font-bold">Brevo API Key (Overrides platform key)</Label>
+                                <div className="flex items-center justify-between gap-2">
+                                    <Label className="text-xs font-bold">Brevo API Key (Overrides platform key)</Label>
+                                    <SecretStatus isSet={!!hotel.brevo_api_key_set} hint={hotel.settings?.brevo_api_key_hint} />
+                                </div>
                                 <Input
                                     type="password"
                                     placeholder={hotel.brevo_api_key_set ? '•••••• Configured — leave blank to keep' : 'xkeysib-...'}
@@ -734,7 +761,10 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold">SMTP Password</Label>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <Label className="text-xs font-bold">SMTP Password</Label>
+                                        <SecretStatus isSet={!!hotel.settings?.has_smtp_password} hint={hotel.settings?.smtp_password_hint} />
+                                    </div>
                                     <Input
                                         type="password"
                                         placeholder={hotel.settings?.has_smtp_password ? '•••••• Configured — leave blank to keep' : 'Password'}

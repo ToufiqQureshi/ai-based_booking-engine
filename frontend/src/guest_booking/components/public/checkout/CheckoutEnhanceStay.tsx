@@ -40,11 +40,15 @@ export function CheckoutEnhanceStay() {
                                                 )}
                                             >
                                                 {/* Addon Image/Icon */}
-                                                <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-200/60 shrink-0 flex items-center justify-center text-slate-400">
-                                                    {addon.image_url ? (
-                                                        <img src={addon.image_url} alt={addon.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <Sparkles className="w-6 h-6 text-indigo-400" />
+                                                <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-200/60 shrink-0 flex items-center justify-center text-slate-400 relative">
+                                                    <Sparkles className="w-6 h-6 text-indigo-400" />
+                                                    {addon.image_url && (
+                                                        <img
+                                                            src={addon.image_url}
+                                                            alt={addon.name}
+                                                            className="absolute inset-0 w-full h-full object-cover"
+                                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                        />
                                                     )}
                                                 </div>
 

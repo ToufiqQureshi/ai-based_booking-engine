@@ -124,6 +124,7 @@ async def sweep_orphaned_media(grace_hours: int = 24) -> dict:
     from app.core.db.database import async_session
     from app.rooms.room import RoomType
     from app.brand_console.hotel import Hotel
+    from app.experiences.addon import AddOn
 
     try:
         # 1. Every object path still referenced by a room or hotel (photos+videos).
@@ -136,6 +137,18 @@ async def sweep_orphaned_media(grace_hours: int = 24) -> dict:
                         referenced.add(p)
                     for p in collect_object_paths(videos or []):
                         referenced.add(p)
+
+            # Single-string image columns also live in hotel-assets and MUST be
+            # treated as referenced — otherwise the sweep deletes them as
+            # "orphans" (this is what wiped every add-on image and hotel logo).
+            for (url,) in (await s.execute(select(AddOn.image_url))).all():
+                p = extract_object_path(url) if url else None
+                if p:
+                    referenced.add(p)
+            for (url,) in (await s.execute(select(Hotel.logo_url))).all():
+                p = extract_object_path(url) if url else None
+                if p:
+                    referenced.add(p)
 
         # 2. List every object in the public bucket (Supabase pages at 100).
         client = get_supabase()

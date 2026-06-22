@@ -88,7 +88,7 @@ export function SettingsPage() {
       check_out_time: hotel?.settings?.check_out_time || '11:00',
       currency: hotel?.settings?.currency || 'INR',
       timezone: hotel?.settings?.timezone || 'Asia/Kolkata',
-      primary_color: hotel?.primary_color || '#7C3AED',
+      primary_color: hotel?.primary_color || '#d11026',
       logo_url: hotel?.logo_url || '',
       notify_new_booking: hotel?.settings?.notify_new_booking !== false,
       notify_cancellation: hotel?.settings?.notify_cancellation !== false,
@@ -110,8 +110,14 @@ export function SettingsPage() {
       smtp_from_email: hotel?.settings?.smtp_from_email || '',
       email_sender_name: hotel?.settings?.email_sender_name || '',
       email_sender_address: hotel?.settings?.email_sender_address || '',
+      email_reply_to: hotel?.settings?.email_reply_to || '',
       email_cc_list: hotel?.settings?.email_cc_list || '',
       email_signature: hotel?.settings?.email_signature || '',
+      // Templates must be hydrated from the saved hotel settings, otherwise the
+      // editor shows blank on reload even though the values are persisted.
+      email_template: hotel?.settings?.email_template || '',
+      email_template_booking_confirmed: hotel?.settings?.email_template_booking_confirmed || '',
+      email_template_booking_cancelled: hotel?.settings?.email_template_booking_cancelled || '',
       whatsapp_api_key: hotel?.settings?.whatsapp_api_key || '',
       whatsapp_phone_number_id: hotel?.settings?.whatsapp_phone_number_id || '',
       whatsapp_business_account_id: hotel?.settings?.whatsapp_business_account_id || '',

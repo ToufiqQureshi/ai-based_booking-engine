@@ -151,3 +151,41 @@ async def test_sweep_deletes_only_old_unreferenced(monkeypatch, seeded_hotel):
     assert bucket.removed == ["orphan-old.jpg"]
     assert result["deleted"] == 1
     assert result["scanned"] == 3  # placeholder skipped
+
+
+@_pytest.mark.asyncio
+async def test_sweep_keeps_addon_images_and_hotel_logo(monkeypatch, seeded_hotel):
+    """Regression: single-string image columns (add-on image_url, hotel logo_url)
+    must count as referenced. Previously the sweep only scanned room/hotel
+    photos+videos, so it deleted every add-on image and hotel logo as 'orphans'."""
+    from tests.conftest import engine
+    from app.brand_console.hotel import Hotel
+    from app.experiences.addon import AddOn
+    from app.core import storage
+
+    base = "https://x/storage/v1/object/public/hotel-assets/"
+    async with _AS(engine) as s:
+        s.add(AddOn(
+            id=str(_uuid.uuid4()), hotel_id=seeded_hotel.id, name="Spa",
+            price=3000.0, image_url=base + "addon.jpg", category="wellness",
+        ))
+        h = await s.get(Hotel, seeded_hotel.id)
+        h.logo_url = base + "logo.png"
+        s.add(h)
+        await s.commit()
+
+    old = "2020-01-01T00:00:00+00:00"
+    objs = [
+        {"name": "addon.jpg",  "created_at": old},   # referenced by add-on -> keep
+        {"name": "logo.png",   "created_at": old},   # referenced by hotel logo -> keep
+        {"name": "orphan.jpg", "created_at": old},   # unreferenced + old -> DELETE
+    ]
+    bucket = _FakeBucket(objs)
+    monkeypatch.setattr(storage, "get_supabase", lambda: type("C", (), {"storage": _FakeStorage(bucket)})())
+
+    result = await storage.sweep_orphaned_media(grace_hours=24)
+
+    assert "addon.jpg" not in bucket.removed
+    assert "logo.png" not in bucket.removed
+    assert bucket.removed == ["orphan.jpg"]
+    assert result["deleted"] == 1

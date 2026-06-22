@@ -136,7 +136,19 @@ class EmailService:
 
         reply_to_email = hotel_settings.get("email_reply_to")
         sender_name = hotel_settings.get("email_sender_name")
-        sender = self._get_sender(custom_name=sender_name)
+        # When the hotel brings its *own* Brevo account, the platform default
+        # sender email isn't a verified sender on their account — Brevo would
+        # reject it (or send from the wrong identity). Use the hotel's own
+        # sender address in that case. On the shared platform Brevo we must keep
+        # the platform's verified sender, so only override for a custom client.
+        custom_sender_email = None
+        if custom_client:
+            custom_sender_email = (
+                hotel_settings.get("email_sender_address")
+                or hotel_settings.get("smtp_from_email")
+                or reply_to_email
+            )
+        sender = self._get_sender(custom_email=custom_sender_email, custom_name=sender_name)
         return await self._send_email(
             to_emails, subject, html_content, sender, cc_emails,
             reply_to=reply_to_email, custom_client=custom_client

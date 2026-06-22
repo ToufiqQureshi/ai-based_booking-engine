@@ -368,7 +368,7 @@ export default function BookingWidget() {
     const urlParams = new URLSearchParams(window.location.search);
 
     const getNormalizedColor = (col?: string | null) => {
-        return col || '#7c3aed';
+        return col || '#d11026';
     };
     const primaryHex = getNormalizedColor(urlParams.get('preview_primary_color') || config?.primary_color);
     const bgColor = urlParams.get('preview_bg_color') || config?.widget_background_color || '#ffffff';

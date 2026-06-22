@@ -1338,16 +1338,16 @@ export default function BookingSelection() {
                                         
                                         {/* Add-on Image if available, otherwise a premium placeholder */}
                                         <div className="relative w-full sm:w-28 h-32 sm:h-auto shrink-0 rounded-xl overflow-hidden bg-slate-100 shadow-sm z-10">
-                                            {addon.image_url ? (
-                                                <img 
-                                                    src={addon.image_url} 
+                                            <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 text-indigo-300">
+                                                <Sparkles className="w-8 h-8 opacity-50 mb-1" />
+                                            </div>
+                                            {addon.image_url && (
+                                                <img
+                                                    src={addon.image_url}
                                                     alt={addon.name}
-                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                                 />
-                                            ) : (
-                                                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 text-indigo-300 transition-transform duration-500 group-hover:scale-105">
-                                                    <Sparkles className="w-8 h-8 opacity-50 mb-1" />
-                                                </div>
                                             )}
                                             {/* Price Badge over Image */}
                                             <div className="absolute bottom-2 right-2 sm:hidden bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm">

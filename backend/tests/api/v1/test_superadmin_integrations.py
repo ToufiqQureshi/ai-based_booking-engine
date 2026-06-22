@@ -58,6 +58,12 @@ async def test_secrets_never_returned_but_set_flags_exposed(super_admin_client):
     assert row["ai_api_key_set"] is True
     assert row["whatsapp_api_key_set"] is True
     assert row["brevo_api_key_set"] is True
+    # A masked hint (never the raw secret) is exposed so staff can recognise the
+    # stored key without re-entering it. It must NOT contain the full secret.
+    wa_hint = row["settings"].get("whatsapp_api_key_hint")
+    assert wa_hint and "•" in wa_hint
+    assert "EAA_secret_wa_456" not in wa_hint
+    assert wa_hint.endswith("_456")  # last chars preserved for recognition
     # Non-secret config still surfaces.
     assert row["ai_model"] == "llama-3.1-8b-instant"
     assert row["settings"].get("whatsapp_phone_number_id") == "123456"
@@ -86,6 +92,52 @@ async def test_keep_sentinel_preserves_existing_secret(super_admin_client):
         # The secret survives (plaintext fallback on SQLite, or a vault ref).
         assert stored.get("whatsapp_api_key") or stored.get("whatsapp_api_key_vault_id")
         assert stored.get("whatsapp_phone_number_id") == "999"
+
+
+@pytest.mark.asyncio
+async def test_blank_secret_never_wipes_configured_value(super_admin_client):
+    """Regression: opening the Integrations tab and re-saving with blank secret
+    fields must NOT blank a stored SMTP password / Brevo key. A blank/None value
+    means "unchanged", not "delete" — only an explicit CLEAR sentinel removes it.
+    This is the bug that silently wiped credentials and forced booking emails to
+    fall back to the platform default sender."""
+    hotel = await _make_hotel()
+    # Configure SMTP password + Brevo key first.
+    await super_admin_client.patch(f"{PATCH}/{hotel.id}", json={
+        "settings": {"smtp_password": "smtp_secret_pw", "brevo_api_key": "xkeysib-real"},
+    })
+    # Re-save with blanks (None / "") for the secrets, like a no-op form submit.
+    r = await super_admin_client.patch(f"{PATCH}/{hotel.id}", json={
+        "ai_api_key": "",
+        "settings": {"smtp_password": None, "brevo_api_key": "", "smtp_host": "smtp.gmail.com"},
+    })
+    assert r.status_code == 200, r.text
+
+    async with AsyncSession(engine) as s:
+        h = await s.get(Hotel, hotel.id)
+        stored = (h.settings or {})
+        # Secrets survive the blank re-save.
+        assert stored.get("smtp_password") or stored.get("smtp_password_vault_id")
+        assert stored.get("brevo_api_key")
+        # Non-secret field still updates.
+        assert stored.get("smtp_host") == "smtp.gmail.com"
+    # And the list view still reports them configured.
+    assert r.json()["brevo_api_key_set"] is True
+    assert r.json()["settings"]["has_smtp_password"] is True
+
+
+@pytest.mark.asyncio
+async def test_clear_sentinel_removes_secret(super_admin_client):
+    """The explicit CLEAR sentinel is the only way to remove a stored secret."""
+    hotel = await _make_hotel()
+    await super_admin_client.patch(f"{PATCH}/{hotel.id}", json={
+        "settings": {"brevo_api_key": "xkeysib-real"},
+    })
+    r = await super_admin_client.patch(f"{PATCH}/{hotel.id}", json={
+        "settings": {"brevo_api_key": "__CLEAR__"},
+    })
+    assert r.status_code == 200, r.text
+    assert r.json()["brevo_api_key_set"] is False
 
 
 @pytest.mark.asyncio

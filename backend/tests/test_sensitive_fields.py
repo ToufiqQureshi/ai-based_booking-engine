@@ -56,6 +56,22 @@ def test_mask_never_leaks_secret_values():
     assert masked["currency"] == "INR"
 
 
+def test_mask_drops_secret_hints_for_hotelier():
+    """The masked `<secret>_hint` previews are a super-admin-only affordance —
+    they must never reach the hotelier view."""
+    masked = _mask_settings_for_hotelier({
+        "whatsapp_api_key_hint": "EAAB••••••_456",
+        "smtp_password_hint": "abcd••••••wxyz",
+        "brevo_api_key_hint": "xkey••••••sib9",
+        "ai_api_key_hint": "sk-b••••••8d6d",
+        "currency": "INR",
+    })
+    for k in ("whatsapp_api_key_hint", "smtp_password_hint", "brevo_api_key_hint", "ai_api_key_hint"):
+        assert k not in masked
+    assert "8d6d" not in str(masked)
+    assert masked["currency"] == "INR"
+
+
 def test_mask_handles_empty_and_none():
     assert _mask_settings_for_hotelier(None) == {}
     assert _mask_settings_for_hotelier({}).get("has_whatsapp_api_key") is None
