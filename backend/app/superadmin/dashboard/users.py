@@ -327,7 +327,8 @@ async def create_hotel_user(
         except Exception as cleanup_err:
             logger.warning("Supabase auth user %s could not be deleted during rollback: %s", supabase_id, cleanup_err)
         logger.error("DB save failed for new hotel user: %s", e)
-        raise HTTPException(status_code=500, detail="Failed to save user. Please try again.")
+        import traceback
+        raise HTTPException(status_code=500, detail=f"Failed to save user: {repr(e)}. Traceback: {traceback.format_exc()}")
 
     return {
         "id": new_user.id, "name": new_user.name, "email": new_user.email,

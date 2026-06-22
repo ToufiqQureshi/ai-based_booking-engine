@@ -66,6 +66,13 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
     const [whatsappBusinessAccountId, setWhatsappBusinessAccountId] = useState(hotel.settings?.whatsapp_business_account_id || '');
     const [brevoApiKey, setBrevoApiKey] = useState(hotel.settings?.brevo_api_key || '');
 
+    // SMTP State
+    const [smtpHost, setSmtpHost] = useState(hotel.settings?.smtp_host || '');
+    const [smtpPort, setSmtpPort] = useState(hotel.settings?.smtp_port || '');
+    const [smtpUsername, setSmtpUsername] = useState(hotel.settings?.smtp_username || '');
+    const [smtpPassword, setSmtpPassword] = useState(hotel.settings?.smtp_password || '');
+    const [smtpFromEmail, setSmtpFromEmail] = useState(hotel.settings?.smtp_from_email || '');
+
     const [aiProvider, setAiProvider] = useState(hotel.ai_provider || 'groq');
     const [aiApiKey, setAiApiKey] = useState(hotel.ai_api_key || '');
     const [aiModel, setAiModel] = useState(hotel.ai_model || 'llama-3.1-70b-versatile');
@@ -78,6 +85,11 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
         setWhatsappPhoneNumberId(hotel.settings?.whatsapp_phone_number_id || '');
         setWhatsappBusinessAccountId(hotel.settings?.whatsapp_business_account_id || '');
         setBrevoApiKey(hotel.settings?.brevo_api_key || '');
+        setSmtpHost(hotel.settings?.smtp_host || '');
+        setSmtpPort(hotel.settings?.smtp_port || '');
+        setSmtpUsername(hotel.settings?.smtp_username || '');
+        setSmtpPassword(hotel.settings?.smtp_password || '');
+        setSmtpFromEmail(hotel.settings?.smtp_from_email || '');
         setAiProvider(hotel.ai_provider || 'groq');
         setAiApiKey(hotel.ai_api_key || '');
         setAiModel(hotel.ai_model || 'llama-3.1-70b-versatile');
@@ -116,6 +128,11 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                 whatsapp_business_account_id: whatsappBusinessAccountId || null,
                 whatsapp_api_key: secret(whatsappApiKey, !!hotel.whatsapp_api_key_set),
                 brevo_api_key: secret(brevoApiKey, !!hotel.brevo_api_key_set),
+                smtp_host: smtpHost || null,
+                smtp_port: smtpPort ? Number(smtpPort) : null,
+                smtp_username: smtpUsername || null,
+                smtp_password: secret(smtpPassword, !!hotel.settings?.has_smtp_password),
+                smtp_from_email: smtpFromEmail || null,
             }
         };
         updateIntegrationMutation.mutate(payload);
@@ -683,6 +700,56 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     className="h-10 rounded-xl"
                                 />
                                 <p className="text-[10px] text-muted-foreground">Stored securely as `brevo_api_key` in hotel settings. Leave empty to use platform default key.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-4 border-t">
+                            <div>
+                                <h3 className="text-sm font-black text-foreground">Custom SMTP Configuration</h3>
+                                <p className="text-xs text-muted-foreground">Configure custom SMTP instead of Brevo. If both are set, SMTP takes precedence.</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">SMTP Host</Label>
+                                    <Input
+                                        placeholder="e.g. smtp.gmail.com"
+                                        value={smtpHost}
+                                        onChange={(e) => setSmtpHost(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">SMTP Port</Label>
+                                    <Input
+                                        placeholder="e.g. 587"
+                                        value={smtpPort}
+                                        onChange={(e) => setSmtpPort(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">SMTP Username</Label>
+                                    <Input
+                                        placeholder="Username"
+                                        value={smtpUsername}
+                                        onChange={(e) => setSmtpUsername(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">SMTP Password</Label>
+                                    <Input
+                                        type="password"
+                                        placeholder={hotel.settings?.has_smtp_password ? '•••••• Configured — leave blank to keep' : 'Password'}
+                                        value={smtpPassword}
+                                        onChange={(e) => setSmtpPassword(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2 col-span-2">
+                                    <Label className="text-xs font-bold">SMTP From Email</Label>
+                                    <Input
+                                        placeholder="e.g. reservations@hotel.com"
+                                        value={smtpFromEmail}
+                                        onChange={(e) => setSmtpFromEmail(e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

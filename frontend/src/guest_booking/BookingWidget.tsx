@@ -720,6 +720,9 @@ export default function BookingWidget() {
                     layoutStyle={layoutStyle}
                     minNights={config?.min_nights ?? 1}
                     advancePurchaseDays={config?.advance_purchase_days ?? 0}
+                    showPromoCode={config?.widget_show_promo !== false}
+                    showPackages={config?.widget_show_packages !== false}
+                    showFlexibleDates={config?.widget_show_flexible_dates !== false}
                 />
             )}
         </div>

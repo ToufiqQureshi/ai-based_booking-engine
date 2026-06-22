@@ -983,6 +983,9 @@ export default function BookingSelection() {
                     calendarRefreshTrigger={calendarRefreshTrigger}
                     minNights={hotel?.settings?.min_nights ?? 1}
                     advancePurchaseDays={hotel?.settings?.advance_purchase_days ?? 0}
+                    showPromoCode={hotel?.settings?.widget_show_promo !== false}
+                    showPackages={hotel?.settings?.widget_show_packages !== false}
+                    showFlexibleDates={hotel?.settings?.widget_show_flexible_dates !== false}
                 />
 
                 {/* Loyalty Program Member Verification Banner */}

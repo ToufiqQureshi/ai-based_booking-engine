@@ -24,6 +24,9 @@ interface IntegrationSettings {
     widget_theme?: string;
     widget_min_nights?: number;
     widget_advance_purchase_days?: number;
+    widget_show_promo?: boolean;
+    widget_show_packages?: boolean;
+    widget_show_flexible_dates?: boolean;
 }
 
 interface WidgetCode {
@@ -94,6 +97,7 @@ export const SearchWidgetTab = ({
         { id: 'floating', name: 'Floating', desc: 'Sticks to the bottom of the screen' },
         { id: 'far', name: 'Compact', desc: 'Ultra-slim rate badge' },
         { id: 'ota', name: 'OTA Style', desc: 'Like MakeMyTrip & Agoda' },
+        { id: 'glassmorphism', name: 'Glassmorphism', desc: 'Sleek frosted glass effect' },
     ];
 
     return (
@@ -265,6 +269,43 @@ export const SearchWidgetTab = ({
                                         <span className="text-xs text-muted-foreground mt-1">{style.desc}</span>
                                     </label>
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* WIDGET FEATURES */}
+                        <div className="pt-4 border-t space-y-4">
+                            <Label className="text-sm font-semibold block">Widget Features</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="flex items-center justify-between p-4 border rounded-xl bg-white dark:bg-slate-950">
+                                    <div>
+                                        <Label className="text-sm font-semibold">Promo Code</Label>
+                                        <p className="text-xs text-slate-500">Allow guests to enter promo codes</p>
+                                    </div>
+                                    <Switch
+                                        checked={settings.widget_show_promo !== false}
+                                        onCheckedChange={(checked) => onUpdateSettings({ widget_show_promo: checked })}
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between p-4 border rounded-xl bg-white dark:bg-slate-950">
+                                    <div>
+                                        <Label className="text-sm font-semibold">Packages Tab</Label>
+                                        <p className="text-xs text-slate-500">Show Rooms / Packages selection</p>
+                                    </div>
+                                    <Switch
+                                        checked={settings.widget_show_packages !== false}
+                                        onCheckedChange={(checked) => onUpdateSettings({ widget_show_packages: checked })}
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between p-4 border rounded-xl bg-white dark:bg-slate-950">
+                                    <div>
+                                        <Label className="text-sm font-semibold">Flexible Dates</Label>
+                                        <p className="text-xs text-slate-500">Show flexible dates checkbox</p>
+                                    </div>
+                                    <Switch
+                                        checked={settings.widget_show_flexible_dates !== false}
+                                        onCheckedChange={(checked) => onUpdateSettings({ widget_show_flexible_dates: checked })}
+                                    />
+                                </div>
                             </div>
                         </div>
 

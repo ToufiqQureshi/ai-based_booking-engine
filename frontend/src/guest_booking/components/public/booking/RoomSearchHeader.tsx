@@ -42,6 +42,9 @@ interface RoomSearchHeaderProps {
     layoutStyle?: string;
     minNights?: number;
     advancePurchaseDays?: number;
+    showPromoCode?: boolean;
+    showPackages?: boolean;
+    showFlexibleDates?: boolean;
 }
 
 export function RoomSearchHeader({
@@ -75,7 +78,10 @@ export function RoomSearchHeader({
     hideAdvancedOptions = false,
     layoutStyle = 'modern',
     minNights = 1,
-    advancePurchaseDays = 0
+    advancePurchaseDays = 0,
+    showPromoCode = true,
+    showPackages = true,
+    showFlexibleDates = true
 }: RoomSearchHeaderProps) {
     const [calendarData, setCalendarData] = useState<Record<string, CalendarDay>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
@@ -279,6 +285,8 @@ export function RoomSearchHeader({
     } else if (layoutStyle === 'ota') {
         containerClasses += "p-4 sm:p-6 lg:p-8 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] max-w-5xl mx-auto";
         containerStyle = { backgroundColor: themeColor, backgroundImage: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)` };
+    } else if (layoutStyle === 'glassmorphism') {
+        containerClasses += "bg-white/40 backdrop-blur-md border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] p-4 sm:p-6 rounded-[32px] max-w-5xl mx-auto";
     } else {
         // modern
         containerClasses += "bg-white/70 backdrop-blur-3xl p-4 sm:p-6 rounded-[32px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] border border-white max-w-5xl mx-auto ring-1 ring-white/50";
@@ -288,7 +296,7 @@ export function RoomSearchHeader({
 
     return (
         <div id="hotelier-search-widget" className={containerClasses} style={containerStyle}>
-            {!hideAdvancedOptions && !isOta && (
+            {!hideAdvancedOptions && !isOta && showPackages && (
                 <div className="flex justify-center mb-4">
                     <div className="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/50 backdrop-blur-sm">
                         <button
@@ -324,7 +332,7 @@ export function RoomSearchHeader({
                         <button 
                             className={isOta 
                                 ? "flex-[2] flex flex-row items-center p-3 sm:p-4 bg-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.05)] text-left hover:bg-slate-50 transition-all min-h-[80px]"
-                                : "flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5"
+                                : "flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 h-[68px]"
                             }
                             style={isOta ? {} : { 
                                 borderColor: isCalendarOpen ? themeColor : 'rgba(226, 232, 240, 0.6)', 
@@ -444,7 +452,7 @@ export function RoomSearchHeader({
                         <button
                             className={isOta
                                 ? "flex-1 flex flex-col justify-center p-3 sm:p-4 bg-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.05)] text-left hover:bg-slate-50 transition-all relative min-h-[80px]"
-                                : "flex-1 flex items-center gap-3 p-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5"
+                                : "flex-1 flex items-center gap-3 px-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 h-[68px]"
                             }
                             style={isOta ? {} : { 
                                 borderColor: isGuestOpen ? themeColor : 'rgba(226, 232, 240, 0.6)', 
@@ -540,8 +548,8 @@ export function RoomSearchHeader({
                 </Popover>
 
                 {/* Promo Input */}
-                {!isOta && (
-                    <div className="hidden md:flex w-40 flex-col justify-center p-4 rounded-[20px] border border-[rgba(226,232,240,0.6)] bg-[rgba(255,255,255,0.95)] transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 focus-within:border-slate-300 focus-within:shadow-[0_8px_20px_rgba(0,0,0,0.06)] focus-within:-translate-y-0.5">
+                {!isOta && showPromoCode && (
+                    <div className="hidden md:flex w-40 flex-col justify-center px-4 rounded-[20px] border border-[rgba(226,232,240,0.6)] bg-[rgba(255,255,255,0.95)] transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 focus-within:border-slate-300 focus-within:shadow-[0_8px_20px_rgba(0,0,0,0.06)] focus-within:-translate-y-0.5 h-[68px]">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Promo Code</span>
                         <input 
                             value={promoCode}
@@ -556,7 +564,7 @@ export function RoomSearchHeader({
                 <button
                     className={isOta
                         ? "h-[76px] sm:h-auto px-8 py-4 rounded-xl font-black text-xl flex items-center justify-center gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.2)] transition-all duration-300 active:scale-[0.98] shrink-0 uppercase tracking-wide hover:shadow-[0_15px_35px_rgba(0,0,0,0.3)] hover:-translate-y-0.5"
-                        : "h-[76px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_12px_30px_-5px_rgba(0,0,0,0.3)] hover:shadow-[0_18px_40px_-5px_rgba(0,0,0,0.4)] hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] transition-all duration-300 shrink-0 border border-white/20 backdrop-blur-md"
+                        : "h-[68px] px-10 rounded-[20px] text-white font-black text-[15px] flex items-center justify-center gap-2 shadow-[0_12px_30px_-5px_rgba(0,0,0,0.3)] hover:shadow-[0_18px_40px_-5px_rgba(0,0,0,0.4)] hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] transition-all duration-300 shrink-0 border border-white/20 backdrop-blur-md"
                     }
                     style={isOta
                         ? { backgroundColor: '#fff', color: themeColor }
@@ -569,7 +577,7 @@ export function RoomSearchHeader({
                 </button>
             </div>
 
-            {!hideAdvancedOptions && (
+            {!hideAdvancedOptions && showFlexibleDates && (
                 <div className="mt-4 px-4 flex items-center justify-center gap-2.5">
                     <input 
                         type="checkbox" 

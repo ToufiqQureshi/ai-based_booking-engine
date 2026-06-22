@@ -154,7 +154,7 @@ class EmailService:
             })
         else:
             sig = hotel_settings.get("email_signature", "")
-            sig_html = f"<br><br>{sig}" if sig else "<br><br><p>We look forward to hosting you!</p>"
+            sig_html = f"<br><br>{sig}" if sig else "<br><br><p>We look forward to welcoming you!</p>"
             html_content = f"""<html><body>
                 <h2>Hi {guest_name},</h2>
                 <p>Thank you for booking with us!</p>

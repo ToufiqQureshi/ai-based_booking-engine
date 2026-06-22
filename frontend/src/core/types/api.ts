@@ -112,6 +112,9 @@ export interface HotelSettings {
   cancellation_mode?: 'instant' | 'request';
   min_nights?: number;
   advance_purchase_days?: number;
+  widget_show_promo?: boolean;
+  widget_show_packages?: boolean;
+  widget_show_flexible_dates?: boolean;
   smtp_host?: string;
   smtp_port?: string | number;
   smtp_username?: string;
