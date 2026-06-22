@@ -1,14 +1,43 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# Staybooker — https://staybooker.ai
+# Public marketing + per-hotel booking pages are crawlable.
+# The authenticated dashboard/admin and transactional booking steps are not.
 
 User-agent: *
 Allow: /
+
+# Authenticated hotelier dashboard (also served on app.staybooker.ai) — no SEO value
+Disallow: /dashboard
+Disallow: /rooms
+Disallow: /rates
+Disallow: /rate-shopper
+Disallow: /availability
+Disallow: /analytics
+Disallow: /bookings
+Disallow: /guests
+Disallow: /payments
+Disallow: /addons
+Disallow: /taxes
+Disallow: /channel-settings
+Disallow: /settings
+Disallow: /integration
+Disallow: /admin
+Disallow: /reviews
+Disallow: /loyalty
+Disallow: /revenue
+Disallow: /agent
+Disallow: /chain
+Disallow: /overview
+
+# Auth flows — nothing to index
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Transactional / embed-only booking steps (per-guest, may carry tokens)
+Disallow: /book/*/checkout
+Disallow: /book/*/confirmation
+Disallow: /book/*/cancel
+Disallow: /book/*/widget
+Disallow: /book/*/chat
+Disallow: /book/chain/*/widget
+
+Sitemap: https://staybooker.ai/sitemap.xml
