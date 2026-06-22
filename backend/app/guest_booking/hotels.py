@@ -256,6 +256,12 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         "advance_purchase_days": getattr(settings, 'widget_advance_purchase_days', 0) if settings else 0,
         "room_type_filter": getattr(settings, 'widget_room_type_filter', None) if settings else None,
         "featured_room_type_id": hotel.settings.get("featured_room_type_id") if hotel.settings else None,
+        # Functional feature toggles (not premium-gated) — control which inputs
+        # the public widget renders. Default ON so existing hotels are unchanged.
+        "widget_show_promo": getattr(settings, 'widget_show_promo', True) if settings else True,
+        "widget_show_packages": getattr(settings, 'widget_show_packages', True) if settings else True,
+        "widget_show_flexible_dates": getattr(settings, 'widget_show_flexible_dates', True) if settings else True,
+        "multi_room_cart": (hotel.settings.get("multi_room_cart", True) if hotel.settings else True),
     }
 
     return res_dict
@@ -403,6 +409,9 @@ async def get_public_chain(request: Request, chain_slug: str, session: DbSession
         for h in hotels
     ]
 
+    # City count for the "X properties across Y cities" social-proof badge.
+    cities = {p["city"] for p in properties if p.get("city")}
+
     response = {
         "id": chain.id,
         "name": chain.name,
@@ -410,6 +419,14 @@ async def get_public_chain(request: Request, chain_slug: str, session: DbSession
         "logo_url": chain.logo_url,
         "primary_color": getattr(chain, "primary_color", None) or "#4f46e5",
         "properties": properties,
+        "city_count": len(cities),
+        # Chain widget appearance + feature toggles (parity with single-hotel widget)
+        "widget_layout": getattr(chain, "widget_layout", "modern"),
+        "widget_bg_color": getattr(chain, "widget_bg_color", "#FFFFFF"),
+        "widget_theme": getattr(chain, "widget_theme", "light"),
+        "widget_show_price": getattr(chain, "widget_show_price", True),
+        "widget_show_loyalty": getattr(chain, "widget_show_loyalty", True),
+        "widget_show_property_count": getattr(chain, "widget_show_property_count", True),
     }
 
     try:

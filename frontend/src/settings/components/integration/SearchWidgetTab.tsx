@@ -436,7 +436,7 @@ export const SearchWidgetTab = ({
                             <Label className="text-sm font-semibold mb-4 block">Live Preview</Label>
                             <div className="p-4 bg-slate-900 rounded-xl flex items-center justify-center overflow-hidden min-h-[200px]">
                                 <iframe
-                                    src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget?preview_layout=${settings.widget_layout || ''}&preview_primary_color=${encodeURIComponent(settings.widget_primary_color || '')}&preview_bg_color=${encodeURIComponent(settings.widget_background_color || '')}&preview_theme=${settings.widget_theme || 'light'}`}
+                                    src={`${window.location.origin}/book/${activeHotelSlug || 'demo'}/widget?preview_layout=${settings.widget_layout || ''}&preview_primary_color=${encodeURIComponent(settings.widget_primary_color || '')}&preview_bg_color=${encodeURIComponent(settings.widget_background_color || '')}&preview_theme=${settings.widget_theme || 'light'}&preview_show_promo=${settings.widget_show_promo !== false}&preview_show_packages=${settings.widget_show_packages !== false}&preview_show_flexible=${settings.widget_show_flexible_dates !== false}`}
                                     className="w-full max-w-4xl border-0"
                                     style={{ height: `${previewHeight}px` }}
                                     title="Widget Preview"

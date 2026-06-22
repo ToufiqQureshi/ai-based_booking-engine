@@ -106,6 +106,11 @@ class IntegrationSettings(SQLModel, table=True):
     widget_advance_purchase_days: Optional[int] = Field(default=0, ge=0, le=365)
     widget_room_type_filter: Optional[str] = Field(default=None)
 
+    # Widget feature toggles — control which controls render in the public widget
+    widget_show_promo: bool = Field(default=True)
+    widget_show_packages: bool = Field(default=True)
+    widget_show_flexible_dates: bool = Field(default=True)
+
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -188,6 +193,9 @@ class IntegrationSettingsRead(BaseModel):
     widget_min_nights: Optional[int] = 1
     widget_advance_purchase_days: Optional[int] = 0
     widget_room_type_filter: Optional[str] = None
+    widget_show_promo: Optional[bool] = True
+    widget_show_packages: Optional[bool] = True
+    widget_show_flexible_dates: Optional[bool] = True
 
 
 class IntegrationSettingsUpdate(BaseModel):
@@ -224,6 +232,9 @@ class IntegrationSettingsUpdate(BaseModel):
     widget_min_nights: Optional[int] = None
     widget_advance_purchase_days: Optional[int] = None
     widget_room_type_filter: Optional[str] = None
+    widget_show_promo: Optional[bool] = None
+    widget_show_packages: Optional[bool] = None
+    widget_show_flexible_dates: Optional[bool] = None
 
     @field_validator("webhook_url", mode="before")
     @classmethod

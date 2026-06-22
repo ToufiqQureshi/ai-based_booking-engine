@@ -19,6 +19,17 @@ class Chain(SQLModel, table=True):
     logo_url: Optional[str] = None
     primary_color: Optional[str] = Field(default="#4f46e5")
     is_active: bool = Field(default=True)
+
+    # ── Chain Widget appearance & features ────────────────────────────────────
+    # The multi-property "chain widget" gets the same style system as the single
+    # hotel booking widget, plus brand-level features that matter to large groups.
+    widget_layout: str = Field(default="modern")          # modern, minimal, classic, floating, far, ota, glassmorphism
+    widget_bg_color: str = Field(default="#FFFFFF")
+    widget_theme: str = Field(default="light")            # light, dark, theme
+    widget_show_price: bool = Field(default=True)          # show "from" price in the picker
+    widget_show_loyalty: bool = Field(default=True)        # "Members save more" brand badge
+    widget_show_property_count: bool = Field(default=True) # "X properties across Y cities" social proof
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     

@@ -27,6 +27,13 @@ interface ChainInfo {
     logo_url?: string | null;
     primary_color?: string | null;
     properties: ChainProperty[];
+    city_count?: number;
+    widget_layout?: string;
+    widget_bg_color?: string;
+    widget_theme?: string;
+    widget_show_price?: boolean;
+    widget_show_loyalty?: boolean;
+    widget_show_property_count?: boolean;
 }
 
 // ── Resolve API base same way as single hotel widget ─────────────────────────
@@ -75,6 +82,21 @@ export default function ChainBookingWidget() {
         typeof window !== 'undefined' ? window.location.search : ''
     );
     const previewColor = urlParams.get('preview_primary_color');
+
+    // Appearance + features. Integration "Live Preview" passes preview_* params so
+    // the brand admin sees changes instantly; the embedded widget falls back to the
+    // saved chain config (defaults ON / modern / white).
+    const previewBool = (key: string, cfgVal?: boolean): boolean => {
+        const p = urlParams.get(key);
+        if (p !== null) return p !== 'false' && p !== '0';
+        return cfgVal !== false;
+    };
+    const layout = urlParams.get('preview_layout') || chain?.widget_layout || 'modern';
+    const bgColor = urlParams.get('preview_bg_color') || chain?.widget_bg_color || '#FFFFFF';
+    const showPrice = previewBool('preview_show_price', chain?.widget_show_price);
+    const showLoyalty = previewBool('preview_show_loyalty', chain?.widget_show_loyalty);
+    const showCount = previewBool('preview_show_count', chain?.widget_show_property_count);
+    const hasCustomBg = !!bgColor && !['#ffffff', '#fff', ''].includes(bgColor.toLowerCase());
 
     // ── Fetch chain info ────────────────────────────────────────────────────
     useEffect(() => {
@@ -203,6 +225,34 @@ export default function ChainBookingWidget() {
     const chainName = chain?.name || 'Your Hotel Chain';
     const displayProperties = filteredProperties.length > 0 || chain ? filteredProperties : demoProperties;
 
+    // ── Layout style → card classes (same vocabulary as the single-hotel widget) ──
+    let cardClass = 'overflow-visible ';
+    let cardStyle: React.CSSProperties = {};
+    if (layout === 'minimal') {
+        cardClass += 'bg-transparent';
+    } else if (layout === 'classic') {
+        cardClass += 'bg-white rounded-2xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.08)]';
+    } else if (layout === 'floating') {
+        cardClass += 'bg-white/90 backdrop-blur-2xl rounded-[28px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] border border-white ring-1 ring-slate-900/5';
+    } else if (layout === 'ota') {
+        cardClass += 'rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] p-1.5';
+        cardStyle = { backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)` };
+    } else if (layout === 'glassmorphism') {
+        cardClass += 'bg-white/50 backdrop-blur-md border border-white/40 rounded-[28px] shadow-[0_8px_32px_0_rgba(31,38,135,0.10)]';
+    } else if (layout === 'far') {
+        cardClass += 'bg-white rounded-xl border border-slate-100 shadow-md';
+    } else {
+        // modern
+        cardClass += 'bg-white rounded-2xl shadow-lg border border-slate-100';
+    }
+    // Custom background colour overrides the white card (minimal stays transparent,
+    // ota keeps its brand gradient) — the inner input row stays white, so we add a
+    // little padding to let the brand colour frame it (same trick as the OTA style).
+    if (hasCustomBg && layout !== 'ota' && layout !== 'minimal') {
+        cardStyle = { ...cardStyle, backgroundColor: bgColor };
+        cardClass += ' p-1.5';
+    }
+
     return (
         <div ref={widgetRef} className="light w-full font-sans p-2 lg:p-4">
             <style>{`
@@ -270,12 +320,29 @@ export default function ChainBookingWidget() {
                 <span className="text-xs font-black text-slate-500 uppercase tracking-widest">
                     {chainName}
                 </span>
+
+                <div className="flex items-center gap-1.5 ml-auto">
+                    {showLoyalty && (
+                        <span
+                            className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full"
+                            style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}
+                        >
+                            ★ Members save more
+                        </span>
+                    )}
+                    {showCount && (chain?.properties?.length ?? 0) > 0 && (
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-500">
+                            {chain!.properties.length} {chain!.properties.length === 1 ? 'property' : 'properties'}
+                            {(chain?.city_count ?? 0) > 0 && ` · ${chain!.city_count} ${chain!.city_count === 1 ? 'city' : 'cities'}`}
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* ── Main widget card ─────────────────────────────────────── */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-visible">
+            <div className={cardClass} style={cardStyle}>
                 <div className={cn(
-                    'flex flex-col sm:flex-row',
+                    'flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden',
                     !isMobile && 'divide-x divide-slate-100'
                 )}>
 
@@ -474,11 +541,11 @@ export default function ChainBookingWidget() {
                                                 // known. No fabricated weekend surcharge and no fake per-day
                                                 // "Sold Out": real price & availability are confirmed on the
                                                 // next step against live inventory.
-                                                const showPrice = !isPast && startingPrice > 0;
+                                                const showCellPrice = showPrice && !isPast && startingPrice > 0;
                                                 return (
                                                     <div className="flex flex-col items-center justify-center h-full w-full p-0.5">
                                                         <span className="text-xs font-bold leading-none">{date.getDate()}</span>
-                                                        {showPrice && (
+                                                        {showCellPrice && (
                                                             <span className="text-[9px] font-extrabold leading-none mt-1 text-emerald-600 group-aria-selected:text-white group-hover:text-emerald-700 font-bold">
                                                                 ₹{startingPrice}
                                                             </span>
