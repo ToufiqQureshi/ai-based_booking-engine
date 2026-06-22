@@ -277,11 +277,11 @@ export function BrandingTab({ formData, handleUpdate, handleSave, isSaving, setI
                         id="primaryColor"
                         type="color"
                         className="w-12 h-10 p-1 cursor-pointer"
-                        value={formData.settings.primary_color || '#7C3AED'}
+                        value={formData.settings.primary_color || '#d11026'}
                         onChange={(e) => handleUpdate('settings', 'primary_color', e.target.value)}
                       />
                       <Input
-                        value={formData.settings.primary_color || '#7C3AED'}
+                        value={formData.settings.primary_color || '#d11026'}
                         onChange={(e) => handleUpdate('settings', 'primary_color', e.target.value)}
                         placeholder="#7C3AED"
                       />

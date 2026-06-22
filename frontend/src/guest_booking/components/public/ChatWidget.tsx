@@ -111,7 +111,7 @@ const getApiUrl = () => {
     return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
 };
 
-export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c3aed', bottomOffset = 'bottom-4', isStaticPreview = false }: ChatWidgetProps) {
+export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#d11026', bottomOffset = 'bottom-4', isStaticPreview = false }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [hotelInfo, setHotelInfo] = useState<{ name: string, primary_color: string, logo_url?: string } | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -121,7 +121,7 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const getNormalizedColor = (col?: string | null) => {
-        return col || '#7c3aed';
+        return col || '#d11026';
     };
     const primaryColor = getNormalizedColor(hotelInfo?.primary_color || initialPrimaryColor);
 
@@ -611,7 +611,15 @@ export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#7c
                             <>
                                 <div className="relative w-10 h-10 flex items-center justify-center">
                                     <div className="absolute inset-0 rounded-full animate-ping scale-150 opacity-10" style={{ backgroundColor: primaryColor }} />
-                                    <img src="/webmerito-icon.png" alt="Chat" className="w-full h-full object-contain relative z-10 drop-shadow-md group-hover:rotate-12 transition-transform" />
+                                    {/* Use the hotelier's uploaded logo (Settings → Branding). Falls back
+                                        to the Staybooker mark if none is set or the image fails to load —
+                                        never show a broken image (the old /webmerito-icon.png didn't exist). */}
+                                    <img
+                                        src={hotelInfo?.logo_url || '/logo.png'}
+                                        alt="Chat"
+                                        className="w-full h-full object-contain relative z-10 drop-shadow-md group-hover:rotate-12 transition-transform"
+                                        onError={(e) => { if (!e.currentTarget.src.endsWith('/logo.png')) e.currentTarget.src = '/logo.png'; }}
+                                    />
                                 </div>
                                 <div className="hidden md:flex flex-col items-start pr-2 ml-1">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Live Concierge</span>

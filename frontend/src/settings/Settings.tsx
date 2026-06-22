@@ -88,7 +88,7 @@ export function SettingsPage() {
       check_out_time: hotel?.settings?.check_out_time || '11:00',
       currency: hotel?.settings?.currency || 'INR',
       timezone: hotel?.settings?.timezone || 'Asia/Kolkata',
-      primary_color: hotel?.primary_color || '#7C3AED',
+      primary_color: hotel?.primary_color || '#d11026',
       logo_url: hotel?.logo_url || '',
       notify_new_booking: hotel?.settings?.notify_new_booking !== false,
       notify_cancellation: hotel?.settings?.notify_cancellation !== false,
