@@ -92,22 +92,30 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
             qc.invalidateQueries({ queryKey: ['superadmin-hotels'] });
         },
         onError: (err: any) => {
-            toast.error(err?.response?.data?.detail || err?.message || 'Failed to update integration settings');
+            // apiClient throws ApiClientError with a formatted `.message`.
+            toast.error(err?.message || 'Failed to update integration settings');
         }
     });
 
     const handleSaveIntegrations = () => {
+        // Secret keys are never sent back to the client (redacted server-side), so
+        // a blank field means "keep what's stored". Send the KEEP sentinel so the
+        // backend leaves the Vault secret untouched; only overwrite when the admin
+        // types a new value (empty string when one was set = explicit clear).
+        const KEEP = '__KEEP__';
+        const secret = (val: string, isSet: boolean) => (val ? val : (isSet ? KEEP : null));
+
         const payload: any = {
             ai_provider: aiProvider,
-            ai_api_key: aiApiKey || null,
+            ai_api_key: secret(aiApiKey, !!hotel.ai_api_key_set),
             ai_model: aiModel,
             ai_base_url: aiBaseUrl || null,
             ai_max_tokens: aiMaxTokens ? Number(aiMaxTokens) : null,
             settings: {
-                whatsapp_api_key: whatsappApiKey || null,
                 whatsapp_phone_number_id: whatsappPhoneNumberId || null,
                 whatsapp_business_account_id: whatsappBusinessAccountId || null,
-                brevo_api_key: brevoApiKey || null,
+                whatsapp_api_key: secret(whatsappApiKey, !!hotel.whatsapp_api_key_set),
+                brevo_api_key: secret(brevoApiKey, !!hotel.brevo_api_key_set),
             }
         };
         updateIntegrationMutation.mutate(payload);
@@ -567,7 +575,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     <Label className="text-xs font-bold">Meta Temporary / Permanent Access Token</Label>
                                     <Input
                                         type="password"
-                                        placeholder="EAAGz..."
+                                        placeholder={hotel.whatsapp_api_key_set ? '•••••• Configured — leave blank to keep' : 'EAAGz...'}
                                         value={whatsappApiKey}
                                         onChange={(e) => setWhatsappApiKey(e.target.value)}
                                         className="h-10 rounded-xl"
@@ -629,7 +637,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     <Label className="text-xs font-bold">AI API Key (Overrides platform key)</Label>
                                     <Input
                                         type="password"
-                                        placeholder="Leave empty to use platform default key"
+                                        placeholder={hotel.ai_api_key_set ? '•••••• Configured — leave blank to keep' : 'Leave empty to use platform default key'}
                                         value={aiApiKey}
                                         onChange={(e) => setAiApiKey(e.target.value)}
                                         className="h-10 rounded-xl"
@@ -669,7 +677,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                 <Label className="text-xs font-bold">Brevo API Key (Overrides platform key)</Label>
                                 <Input
                                     type="password"
-                                    placeholder="xkeysib-..."
+                                    placeholder={hotel.brevo_api_key_set ? '•••••• Configured — leave blank to keep' : 'xkeysib-...'}
                                     value={brevoApiKey}
                                     onChange={(e) => setBrevoApiKey(e.target.value)}
                                     className="h-10 rounded-xl"
