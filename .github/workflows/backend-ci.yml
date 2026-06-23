@@ -4,11 +4,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Runs on PRs (any target) and on pushes to main/develop/feature branches,
-# so regressions are caught before merge rather than after deploy.
+# PR branches are covered by `pull_request`; `push` only fires for the trunk
+# branches (post-merge). This stops the whole suite running TWICE for every
+# commit on a PR branch (once for push to the branch, once for the PR), which
+# was doubling CI time and minutes.
 on:
   push:
-    branches: [ "main", "develop", "claude/**" ]
+    branches: [ "main", "develop" ]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'

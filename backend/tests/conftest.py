@@ -149,9 +149,25 @@ async def super_admin_client(seeded_hotel: Hotel) -> AsyncClient:
     app.dependency_overrides.pop(get_current_active_user, None)
 
 
-# ---------------------------------------------------------------------------
-# Reusable resource fixtures (function-scoped — fresh per test)
-# ---------------------------------------------------------------------------
+@pytest_asyncio.fixture
+async def staff_client(seeded_hotel: Hotel) -> AsyncClient:
+    """Authenticated client with STAFF role — must be blocked from owner/manager
+    actions like minting or revoking report share links."""
+    staff = User(
+        id=str(uuid.uuid4()),
+        supabase_id=str(uuid.uuid4()),
+        email=f"pytest-staff-{uuid.uuid4().hex[:6]}@staybooker.ai",
+        name="Pytest Staff",
+        role=UserRole.STAFF,
+        hotel_id=seeded_hotel.id,
+        hashed_password="PYTEST_NO_AUTH",
+        is_active=True,
+    )
+    from app.core.auth.deps import get_current_active_user
+    app.dependency_overrides[get_current_active_user] = lambda: staff
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.pop(get_current_active_user, None)
 
 @pytest_asyncio.fixture
 async def seeded_room(seeded_hotel: Hotel) -> RoomType:
