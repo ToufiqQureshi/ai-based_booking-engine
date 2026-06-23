@@ -195,7 +195,11 @@ async def create_public_booking(
             plan_modifier = 0.0
             if room_req.rate_plan_id and not room_req.rate_plan_id.startswith("virtual-"):
                 rp = await session.get(RatePlan, room_req.rate_plan_id)
-                if rp:
+                # Rate plans are hotel-scoped. Without this check a guest could submit
+                # a rate_plan_id belonging to a DIFFERENT hotel and have that other
+                # hotel's price_adjustment (e.g. a negative "discount package")
+                # applied to this booking — a cross-tenant price-tampering path.
+                if rp and rp.hotel_id == hotel_id:
                     plan_modifier = float(rp.price_adjustment or 0.0)
 
             recalculated_total = 0.0
@@ -537,7 +541,9 @@ async def create_public_booking(
                 plan_override = overrides.get(room.rate_plan_id) or {} if isinstance(overrides, dict) else {}
             if room.rate_plan_id:
                 rp = await session.get(RatePlan, room.rate_plan_id)
-                if rp:
+                # Same hotel-scoping guard as the pricing lookup above — don't let a
+                # cross-tenant rate_plan_id spoof this booking's cancellation terms.
+                if rp and rp.hotel_id == hotel_id:
                     is_refundable = plan_override.get("is_refundable", rp.is_refundable)
                     cancellation_hours = plan_override.get("cancellation_hours", rp.cancellation_hours)
             if not cancellation_policy:

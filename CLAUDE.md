@@ -48,6 +48,27 @@ We use a multi-layered caching system to protect the database and ensure lightni
 - **Webhooks**: Razorpay and WhatsApp webhook payloads are verified via HMAC SHA-256 signatures before processing.
 - **Payments**: Amounts are always server-computed. We never trust the client's `total_amount`.
 
+### Codebase Map
+- **`backend/app/<domain>/`** — one folder per business domain: `auth`, `bookings`, `rooms`, `payments`, `guests`, `guest_booking`, `rate_plans`, `rate_shopper`, `revenue`, `channel_manager`, `loyalty`, `marketing`, `analytics`, `dashboard`, `brand_console`, `superadmin`, `integration` (WhatsApp/email/Google), `ai_assistant` / `ai_engine`, `calendar`, `experiences`, `system`. Each domain folder owns its own routes, models, and schemas.
+- **`backend/app/core/`** — cross-cutting: `deps.py` (auth/RBAC dependencies), `redis_client.py`, `limiter.py`, `config.py`, `sensitive_fields.py`, `ai_usage.py`, `vault.py`.
+- **`frontend/src/<domain>/`** — mirrors the backend: `bookings`, `rooms`, `guest_booking`, `auth`, `dashboard`, `revenue`, `finance`, `analytics`, `marketing`, `chain`, `admin`, `superadmin`, `settings`, `agent`.
+- **`frontend/src/components/ui/`** — shadcn/ui primitives, don't hand-roll new ones. `components/common/` and `components/layout/` for shared app components.
+- **`frontend/src/core/`** — shared API client, hooks, React Query setup.
+
+### Common Commands
+```bash
+# Backend
+cd backend && uvicorn main:app --reload     # run dev server
+cd backend && pytest                        # run tests
+cd backend && python -m compileall -q app main.py   # compile check
+
+# Frontend
+cd frontend && npm run dev                  # run dev server
+cd frontend && npm run lint                 # eslint
+cd frontend && npm run test                 # vitest
+cd frontend && npm run build                # production build / typecheck
+```
+
 ---
 
 ## 🛑 2. Golden Engineering Rules
@@ -77,7 +98,17 @@ We use a multi-layered caching system to protect the database and ensure lightni
 
 ---
 
-## 🔄 5. Workflow & Repo Conventions
+## 🏭 5. Production Discipline (How Big Tech Avoids Outages)
+- **Design for failure.** Every call to an external dependency (Supabase, Redis, Groq/OpenAI, Razorpay, WhatsApp) must have a timeout and a fallback path. A third-party outage must degrade the feature, never crash the request (see `RedisClient`'s in-memory fallback as the reference pattern).
+- **Expand-contract schema migrations.** Never add a column, make it required, and drop the old one in the same migration. Step 1: add the new column nullable. Step 2 (separate PR, after backend is deployed): backfill + start writing to it. Step 3 (separate PR, later): drop the old column. This keeps old and new code deployable at the same time.
+- **Idempotent webhooks.** Razorpay/WhatsApp can and will retry a webhook delivery. Every handler must check a `processed_event_id`-style record before acting, or a retry causes a double-charge or double-booking.
+- **Canary your own changes.** Every PR gets a Cloudflare Pages preview URL — click through the actual feature there before merging. A green build is not the same as a working feature.
+- **Write the regression test first, then fix the bug** (ties into §8 Bug Fix Protocol) — a fix without a test that would have caught it isn't verified, it's hoped.
+- **Feature-flag risky changes.** Anything touching payments, pricing, or multi-tenant data should be guardable behind a simple on/off toggle (env var or a `hotel.settings` flag) so it can be killed instantly without a redeploy.
+
+---
+
+## 🔄 6. Workflow & Repo Conventions
 - Run backend tests from `backend/` with `pytest`.
 - Match existing style; comment **why**, not what.
 - Don't leave dead/scratch code.
@@ -86,25 +117,26 @@ We use a multi-layered caching system to protect the database and ensure lightni
 
 ---
 
-## ✅ 6. Definition of Done
+## ✅ 7. Definition of Done
 - [ ] Tenant-scoped & authz-gated (role/permission/feature as applicable)
 - [ ] Inputs validated; amounts/roles/ids verified server-side
 - [ ] Paginated + indexed; no N+1; caches invalidated
 - [ ] LLM calls bounded & usage-tracked (if AI)
 - [ ] No PII/secret in logs
-- [ ] `cd backend && pytest` green; frontend builds if touched
+- [ ] `cd backend && pytest` green
+- [ ] `cd frontend && npm run lint` and `npm run test` green if frontend touched; `npm run build` succeeds
 - [ ] Updated `work_log_tracker.csv` at the project root.
 
 ---
 
-## 📋 7. Work Log Tracker Maintenance
+## 📋 8. Work Log Tracker Maintenance
 - If you add, modify, or delete features or endpoints, you **must** document it in `work_log_tracker.csv`.
 - Maintain fields: `"Timestamp","Task Name","File Path","Category","API Calls Count","Caching & Database Details","Security Controls / IDOR Prevention"`.
 - Always wrap each field in double quotes (`"`) to ensure clean parsing.
 
 ---
 
-## 🛡️ 8. Bug Fix Protocol (Regression Prevention)
+## 🛡️ 9. Bug Fix Protocol (Regression Prevention)
 
 Every bug fix must follow this checklist before committing:
 

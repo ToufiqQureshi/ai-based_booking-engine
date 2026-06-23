@@ -89,16 +89,25 @@ export function RoomCard({
                         )}
                     </div>
 
-                    {/* Stay-offer badge (compact corner tag) */}
+                    {/* Stay-offer badge (compact corner tag). When the offer requires a
+                        manual claim, the badge itself is the only affordance in this
+                        display style — without onClick here a "badge" style offer with
+                        apply_mode=manual_claim could never actually be claimed. */}
                     {stayOffer && stayOffer.display_style === 'badge' && !isSoldOut && (
                         <div className="absolute top-6 right-6 z-10 group/badge" title={stayOffer.unlocked_message}>
                             <div
-                                className="px-3 py-2 rounded-2xl shadow-lg flex items-center gap-1.5 text-white"
+                                role={showClaimCta ? 'button' : undefined}
+                                onClick={showClaimCta ? onClaimOffer : undefined}
+                                className={`px-3 py-2 rounded-2xl shadow-lg flex items-center gap-1.5 text-white ${showClaimCta ? 'cursor-pointer animate-pulse' : ''}`}
                                 style={{ backgroundColor: themeColor }}
                             >
                                 <BadgePercent className="w-3.5 h-3.5" />
                                 <span className="text-[10px] font-black uppercase tracking-wider">
-                                    {stayOffer.unlocked ? stayOffer.reward_label : `${stayOffer.min_nights}+ nights`}
+                                    {showClaimCta
+                                        ? `Tap to Claim ${stayOffer.reward_label}`
+                                        : stayOffer.unlocked
+                                            ? (offerActive ? `${stayOffer.reward_label} Applied` : stayOffer.reward_label)
+                                            : `${stayOffer.min_nights}+ nights`}
                                 </span>
                             </div>
                             <div className="absolute right-0 mt-1 w-52 opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none z-20">

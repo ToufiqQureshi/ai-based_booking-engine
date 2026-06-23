@@ -35,6 +35,7 @@ interface BookingCartSheetProps {
     adults: number;
     children: number;
     hotel?: Hotel | null;
+    claimedOffers?: Set<string>;
 }
 
 export function BookingCartSheet({
@@ -51,6 +52,7 @@ export function BookingCartSheet({
     adults,
     children,
     hotel,
+    claimedOffers,
 }: BookingCartSheetProps) {
     const handleCheckout = () => {
         setIsCartSheetOpen(false);
@@ -67,7 +69,11 @@ export function BookingCartSheet({
                     rate_plan_name: item.ratePlan.name
                 })),
                 addons: cart.flatMap(item => item.addons),
-                totalRoomPrice: cart.reduce((sum, item) => sum + item.ratePlan.total_price, 0)
+                totalRoomPrice: cart.reduce((sum, item) => sum + item.ratePlan.total_price, 0),
+                // Without this, an offer claimed on the rooms page never reaches the
+                // booking-creation request when checking out via the cart drawer, so
+                // the guest never actually receives a discount they were promised.
+                claimedOffers: claimedOffers ? Array.from(claimedOffers) : []
             }
         });
     };

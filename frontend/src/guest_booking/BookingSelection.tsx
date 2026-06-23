@@ -1449,6 +1449,7 @@ export default function BookingSelection() {
                 adults={adults}
                 children={children}
                 hotel={hotel}
+                claimedOffers={claimedOffers}
             />
 
             <RateSelectDialog
