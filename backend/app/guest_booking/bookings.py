@@ -459,11 +459,16 @@ async def create_public_booking(
             for o in candidate_offers:
                 # Room-specific offers discount only their room's portion; a
                 # hotel-wide offer (room_type_id NULL) discounts the whole stay.
+                # Use SERVER-recalculated room totals (not client-submitted total_price)
+                # for the discount base, consistent with the room-charge invariant above.
                 if o.room_type_id:
-                    base = sum(rm.total_price for rm in booking_data.rooms
-                               if rm.room_type_id == o.room_type_id)
+                    base = sum(
+                        charge["total"]
+                        for rm, charge in zip(booking_data.rooms, server_room_charges)
+                        if rm.room_type_id == o.room_type_id
+                    )
                 else:
-                    base = sum(rm.total_price for rm in booking_data.rooms)
+                    base = sum(charge["total"] for charge in server_room_charges)
                 if o.reward_type == "percentage":
                     d = base * o.reward_value / 100
                 elif o.reward_type == "fixed_amount":
