@@ -246,13 +246,6 @@ export function RoomSearchHeader({
                         // Disable past dates and advance purchase
                         if (date < today) return true;
                         
-                        // If they are picking check-out, disable dates before check-in + minNights
-                        if (activeDateType === 'checkOut' && checkInDate) {
-                            const minCheckOut = new Date(checkInDate);
-                            minCheckOut.setDate(minCheckOut.getDate() + minNights - 1); // -1 because date < minCheckOut
-                            if (date <= minCheckOut) return true;
-                        }
-                        
                         return false;
                     }}
                     className="p-0"
