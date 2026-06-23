@@ -996,8 +996,8 @@ export default function BookingSelection() {
                         <div>
                             <h3 className="font-black text-slate-800 tracking-tight text-base">Staybooker Loyalty Program</h3>
                             <p className="text-xs text-slate-500 font-medium">
-                                {isLoyaltyChecked 
-                                    ? `Welcome back! You have active points available for your stay.` 
+                                {isLoyaltyChecked
+                                    ? (loyaltyMessage || "You're checked in to the loyalty program for this stay.")
                                     : "Enter your email to unlock exclusive member rates & redeem your points."}
                             </p>
                         </div>
@@ -1009,10 +1009,7 @@ export default function BookingSelection() {
                                 <Badge className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-extrabold px-3 py-1.5 border-0 rounded-full text-xs">
                                     {loyaltyBalance} Points Available
                                 </Badge>
-                                {loyaltyMessage && (
-                                    <span className="text-xs font-bold text-slate-600">{loyaltyMessage}</span>
-                                )}
-                                <Button 
+                                <Button
                                     variant="ghost" 
                                     size="sm" 
                                     className="text-slate-400 hover:text-slate-600 font-bold text-xs" 
