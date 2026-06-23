@@ -2,7 +2,7 @@ import { format, addMonths, startOfMonth } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, Search, User, ChevronDown, Plus, Minus, X, ArrowRight, Hotel as HotelIcon, Sparkles } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/core/lib/utils';
@@ -219,10 +219,6 @@ export function RoomSearchHeader({
                                 setActiveDateType('checkOut');
                             } else {
                                 setCheckOutDate(selectedDay);
-                                // If mobile, they usually want to see their selection first, but desktop users like it closing
-                                if (!isMobile) {
-                                    setIsCalendarOpen(false);
-                                }
                             }
                         }
                     }}
@@ -366,7 +362,7 @@ export function RoomSearchHeader({
             <div className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4">
                 {/* Date Selector Popover (Check-In & Check-Out) */}
                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                    <PopoverTrigger asChild>
+                    <PopoverAnchor asChild>
                         {/* BUG FIX (Split Trigger): 
                             Previously this was a single button, meaning we didn't know if the user clicked the Check-In side or Check-Out side.
                             We split the hit areas into two buttons inside the PopoverTrigger so we can set activeDateType on click, 
@@ -475,7 +471,7 @@ export function RoomSearchHeader({
                                 )}
                             </button>
                         </div>
-                    </PopoverTrigger>
+                    </PopoverAnchor>
 
                     {/* Desktop: anchored popover. Mobile: full-screen bottom sheet (below). */}
                     {!isMobile && (
