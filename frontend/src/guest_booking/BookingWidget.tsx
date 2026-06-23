@@ -174,15 +174,19 @@ export default function BookingWidget() {
     const [roomTypes, setRoomTypes] = useState<Array<{ id: string; name: string }>>([]);
     const [selectedRoomTypeId, setSelectedRoomTypeId] = useState<string>('');
 
-    // Apply advance_purchase_days and min_nights from config once loaded
+    // Apply advance_purchase_days from config once loaded. Default selection is
+    // always 1 night — min_nights is a minimum-stay rule enforced when the guest
+    // actually picks dates (see RoomSearchHeader's onSelect and handleSearch
+    // below), not a default range to pre-select on load. Pre-selecting the full
+    // min_nights span made the calendar look like it had auto-extended the
+    // guest's stay (e.g. a 5-night min showed 23→28 instead of 23→24).
     useEffect(() => {
         if (!config) return;
         const advanceDays = config.advance_purchase_days ?? 0;
-        const minNights = config.min_nights ?? 1;
         const newCheckIn = addDays(new Date(), advanceDays);
         setCheckInDate(newCheckIn);
-        setCheckOutDate(addDays(newCheckIn, Math.max(minNights, 1)));
-    }, [config?.advance_purchase_days, config?.min_nights]); // eslint-disable-line react-hooks/exhaustive-deps
+        setCheckOutDate(addDays(newCheckIn, 1));
+    }, [config?.advance_purchase_days]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calendar UI State
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -332,15 +336,14 @@ export default function BookingWidget() {
     // their booking widgets — custom theming is limited to sanitized CSS only.
 
     const handleSearch = () => {
-        const minNights = config?.min_nights ?? 1;
-        // Require a valid date range before navigating
+        // Require a valid date range before navigating. The guest's chosen dates
+        // are sent as-is — we never silently lengthen the stay to satisfy a
+        // hotelier "minimum nights" setting; that must be a visible, opt-in
+        // offer, not a forced override of what the guest picked.
         if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
             setIsCalendarOpen(true);
             return;
         }
-        // Enforce minimum stay — bump checkout if guest selected fewer nights
-        const nights = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / 86400000);
-        const effectiveCheckOut = nights < minNights ? addDays(checkInDate, minNights) : checkOutDate;
 
         const targetUrl = `${window.location.origin}/book/${hotelSlug}/rooms`;
 
@@ -348,7 +351,7 @@ export default function BookingWidget() {
 
         const params = new URLSearchParams();
         if (checkInDate) params.append('check_in', format(checkInDate, 'yyyy-MM-dd'));
-        params.append('check_out', format(effectiveCheckOut, 'yyyy-MM-dd'));
+        params.append('check_out', format(checkOutDate, 'yyyy-MM-dd'));
 
         params.append('guests', totalGuests.toString());
         params.append('adults', adults.toString());

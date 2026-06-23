@@ -198,14 +198,16 @@ export function RoomSearchHeader({
                         // BUG FIX (react-day-picker Range UX):
                         // DayPicker's native "range" mode behaves weirdly (e.g., clicking inside a range resets it).
                         // Instead of relying blindly on `range`, we use `selectedDay` + `activeDateType` to manually enforce user intent.
+                        //
+                        // The guest's clicked date is always respected as-is — we never silently lengthen
+                        // their stay to satisfy a hotelier "minimum nights" setting. A min-nights upsell must
+                        // be surfaced as a visible, opt-in offer (see the loyalty stay-offer nudge), never a
+                        // forced date change the guest didn't ask for.
                         if (activeDateType === 'checkIn' || !checkInDate) {
                             setCheckInDate(selectedDay);
-                            // If they pick a check-in that makes the current check-out invalid (too early), clear it
-                            if (checkOutDate) {
-                                const nights = Math.round((checkOutDate.getTime() - selectedDay.getTime()) / 86400000);
-                                if (nights < minNights) {
-                                    setCheckOutDate(undefined);
-                                }
+                            // If the existing check-out is no longer after the new check-in, clear it
+                            if (checkOutDate && checkOutDate <= selectedDay) {
+                                setCheckOutDate(undefined);
                             }
                             setActiveDateType('checkOut');
                         } else {
@@ -216,15 +218,7 @@ export function RoomSearchHeader({
                                 setCheckOutDate(undefined);
                                 setActiveDateType('checkOut');
                             } else {
-                                const nights = Math.round((selectedDay.getTime() - checkInDate.getTime()) / 86400000);
-                                if (nights < minNights) {
-                                    // Fallback just in case `min` fails to disable the date: enforce minNights silently
-                                    const forcedOut = new Date(checkInDate);
-                                    forcedOut.setDate(forcedOut.getDate() + minNights);
-                                    setCheckOutDate(forcedOut);
-                                } else {
-                                    setCheckOutDate(selectedDay);
-                                }
+                                setCheckOutDate(selectedDay);
                                 // If mobile, they usually want to see their selection first, but desktop users like it closing
                                 if (!isMobile) {
                                     setIsCalendarOpen(false);
