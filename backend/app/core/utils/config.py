@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     # worker/replica runs each tick. Disable with ENABLE_SCHEDULER=false.
     ENABLE_SCHEDULER: bool = True
     
+    # Optional MaxMind GeoLite2-City DB for visitor city resolution. Only used
+    # as a fallback when Cloudflare visitor-location headers are absent. Leave
+    # empty in environments fronted by Cloudflare (the primary, free source).
+    GEOIP_DB_PATH: str = ""
+
     # Supabase Config
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""

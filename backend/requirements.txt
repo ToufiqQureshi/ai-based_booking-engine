@@ -43,3 +43,7 @@ uvicorn
 scrapingbee>=1.0.1
 
 
+
+# Optional: city-level GeoIP fallback when Cloudflare visitor-location
+# headers are unavailable. Reader is lazy-loaded; no-op unless GEOIP_DB_PATH set.
+geoip2>=4.7.0

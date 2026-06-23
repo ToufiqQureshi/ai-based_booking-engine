@@ -283,6 +283,11 @@ async def init_db():
         # existing rows with the default ([]), so reads stay safe.
         f"ALTER TABLE room_types ADD COLUMN videos JSON DEFAULT {json_default}",
         f"ALTER TABLE hotels ADD COLUMN videos JSON DEFAULT {json_default}",
+        # DB-13: city-level visitor geo on analytics_sessions (added 2026-06-22).
+        # The table predates these columns; create_all won't add them to an
+        # existing table, so every geo-enriched track/start would otherwise fail.
+        "ALTER TABLE analytics_sessions ADD COLUMN city VARCHAR(255)",
+        "ALTER TABLE analytics_sessions ADD COLUMN region VARCHAR(255)",
     ]:
         try:
             async with engine.begin() as conn:
@@ -307,6 +312,11 @@ async def init_db():
         # but create_all won't retroactively add the index to an existing table.
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email)",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_supabase_id ON users (supabase_id) WHERE supabase_id IS NOT NULL",
+        # Visitor city breakdown groups analytics_sessions by city.
+        "CREATE INDEX IF NOT EXISTS idx_analytics_sessions_city ON analytics_sessions (city)",
+        # Public report lookups hit report_share_links by token on every view.
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_report_share_links_token ON report_share_links (token)",
+        "CREATE INDEX IF NOT EXISTS idx_report_share_links_hotel ON report_share_links (hotel_id)",
     ]:
         try:
             async with engine.begin() as conn:

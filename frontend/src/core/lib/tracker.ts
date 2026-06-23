@@ -55,8 +55,9 @@ const getOrCreateSession = async (hotelId: string) => {
   
   export const startTimeTracking = (hotelId: string) => {
     if (pingInterval) clearInterval(pingInterval);
-    
+
     getOrCreateSession(hotelId);
+    wireSessionEnd();
     
     pingInterval = setInterval(async () => {
       const sessionId = sessionStorage.getItem('analytics_session_id');
@@ -83,6 +84,30 @@ const getOrCreateSession = async (hotelId: string) => {
       clearInterval(pingInterval);
       pingInterval = null;
     }
+  };
+
+  // Close the session the instant the visitor leaves so time-on-site and the
+  // live-visitor count settle. `pagehide`/`visibilitychange` fire reliably on
+  // mobile (unlike `beforeunload`), and sendBeacon survives the page teardown.
+  let unloadWired = false;
+  export const wireSessionEnd = () => {
+    if (unloadWired) return;
+    unloadWired = true;
+    const endSession = () => {
+      const sessionId = sessionStorage.getItem('analytics_session_id');
+      if (!sessionId) return;
+      try {
+        const url = `${import.meta.env.VITE_API_URL}/analytics/track/event`;
+        const payload = JSON.stringify({ session_id: sessionId, event_type: 'session_end' });
+        navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+      } catch (e) {
+        // Fail silently — losing one end-beacon only nudges time-on-site.
+      }
+    };
+    window.addEventListener('pagehide', endSession);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') endSession();
+    });
   };
   export const trackRoomView = (hotelId: string, roomTypeId: string) => {
     trackEvent(hotelId, 'room_view', null, roomTypeId);

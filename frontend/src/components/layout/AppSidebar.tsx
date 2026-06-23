@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Bed, IndianRupee, Calendar, BookOpen,
   Users, CreditCard, Settings, LogOut, Building2, Plug,
   Sparkles, Link2, Coffee, TrendingUp, Bot, LineChart, Percent, Star, Gift,
-  Zap, Send,
+  Zap, Send, FileBarChart2,
 } from 'lucide-react';
 import { NavLink } from '@/components/layout/NavLink';
 import { useAuth } from '@/core/contexts/AuthContext';
@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 const mainNavItems = [
   { title: 'Dashboard',       url: '/dashboard',        icon: LayoutDashboard },
   { title: 'Analytics',       url: '/analytics',        icon: LineChart },
+  { title: 'BI Report',       url: '/reports',          icon: FileBarChart2 },
   { title: 'AI Assistant',    url: '/agent',            icon: Bot },
   { title: 'Rooms',           url: '/rooms',            icon: Bed },
   { title: 'Rate Plans',      url: '/rates',            icon: IndianRupee },
@@ -49,13 +50,13 @@ const settingsNavItems = [
 
 const DEFAULT_ROLE_PERMISSIONS = {
   OWNER: [
-    "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper",
+    "/dashboard", "/analytics", "/reports", "/agent", "/rooms", "/rates", "/rate-shopper",
     "/availability", "/bookings", "/taxes", "/guests", "/payments",
     "/loyalty", "/addons", "/revenue/pricing", "/revenue/recovery",
     "/reviews", "/channel-settings", "/integration", "/settings"
   ],
   MANAGER: [
-    "/dashboard", "/analytics", "/rooms", "/rates", "/taxes",
+    "/dashboard", "/analytics", "/reports", "/rooms", "/rates", "/taxes",
     "/availability", "/bookings", "/guests", "/payments",
     "/loyalty", "/addons", "/revenue/pricing", "/revenue/recovery", "/settings"
   ],

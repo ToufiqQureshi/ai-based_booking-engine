@@ -19,11 +19,12 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlmodel import and_, func, or_, select
 
-from app.core.auth.deps import CurrentUser, DbSession
+from app.core.auth.deps import CurrentUser, DbSession, require_hotel_role
 from app.core.cache.cache import cache_response
+from app.core.utils.geo import resolve_geo
 from app.core.utils.limiter import limiter
 from app.core.utils.time import utcnow
 from app.bookings.booking import Booking, BookingStatus, BookingSource
@@ -33,9 +34,11 @@ from app.brand_console.lead import Lead
 from app.analytics.models import (
     AnalyticsSession,
     AnalyticsEvent,
+    ReportShareLink,
     SessionStartRequest,
     SessionPingRequest,
     EventTrackRequest,
+    ShareLinkCreate,
 )
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
@@ -52,6 +55,32 @@ _ACTIVE_STATUSES = [
 ]
 # A visitor is "live" if their session started within this window and hasn't ended.
 _LIVE_WINDOW = timedelta(minutes=5)
+
+# Acquisition-channel grouping for the report's channel mix. Staybooker has no
+# automated OTA (channel-manager) sync yet, but a hotelier can already TAG a
+# manually-entered booking with an OTA source, so those bucket under "OTA"
+# today. When real OTA integration ships, per-channel commission rates plug in
+# below and NRevPAR (= RevPAR − commission) drops into the report unchanged.
+_OTA_SOURCES = {
+    BookingSource.BOOKING_COM, BookingSource.AGODA, BookingSource.AIRBNB,
+    BookingSource.GOIBIBO, BookingSource.MAKEMYTRIP,
+}
+# TODO(OTA): when channel-manager sync is added, populate commission rates here
+# (e.g. {BookingSource.BOOKING_COM: 0.15, BookingSource.MAKEMYTRIP: 0.18}) and
+# compute net revenue / NRevPAR per channel from them.
+_OTA_COMMISSION_RATES: dict = {}  # intentionally empty until OTA integration ships
+
+
+def _channel_category(source) -> str:
+    """Bucket a BookingSource into a report channel. Direct is the default so an
+    unset/unknown source never disappears from the mix."""
+    if source == BookingSource.AI_AGENT:
+        return "AI Agent"
+    if source in _OTA_SOURCES:
+        return "OTA"
+    if source in (BookingSource.TRAVEL_AGENT, BookingSource.CORPORATE):
+        return "Offline / Agent"
+    return "Direct"
 
 
 def _parse_device(user_agent: Optional[str]) -> tuple[str, str]:
@@ -108,11 +137,15 @@ async def track_start(
         raise HTTPException(status_code=404, detail="Hotel not found")
 
     device, browser = _parse_device(data.user_agent)
+    geo = resolve_geo(request)
     obj = AnalyticsSession(
         hotel_id=hotel_id,
         user_agent=data.user_agent,
         device_type=device,
         browser=browser,
+        city=geo["city"],
+        region=geo["region"],
+        country=geo["country"],
         referrer=data.referrer,
     )
     session.add(obj)
@@ -140,6 +173,9 @@ async def track_ping(
         return {"status": "ignored"}
     inc = max(0, min(int(data.time_spent_seconds or 0), 3600))  # clamp per-ping
     obj.time_spent_seconds = (obj.time_spent_seconds or 0) + inc
+    # Every ping is a sign of life — advance ended_at so the live-visitor query
+    # (started recently AND ended_at IS NULL) and time-on-site stay accurate.
+    obj.ended_at = datetime.utcnow()
     session.add(obj)
     await session.commit()
     return {"status": "ok"}
@@ -169,6 +205,11 @@ async def track_event(
     if data.event_type == "booking_complete":
         obj.has_booked = True
         session.add(obj)
+    # A page-unload beacon closes the session so time-on-site and the live count
+    # settle the moment the visitor actually leaves.
+    elif data.event_type == "session_end":
+        obj.ended_at = datetime.utcnow()
+        session.add(obj)
     await session.commit()
     return {"status": "ok"}
 
@@ -195,9 +236,13 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
 
     device_counts: dict[str, int] = defaultdict(int)
     geo_counts: dict[str, int] = defaultdict(int)
+    city_counts: dict[str, int] = defaultdict(int)
     for s in sessions:
         device_counts[s.device_type or "unknown"] += 1
         geo_counts[s.country or "Unknown"] += 1
+        # City is the actionable unit for local marketing; fall back to country
+        # then "Unknown" so the breakdown always sums to total visitors.
+        city_counts[s.city or s.country or "Unknown"] += 1
 
     # --- Funnel events ---
     if sessions:
@@ -244,6 +289,26 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
     occupied_map = _build_occupied_per_date(bookings, start_date, end_date)
     total_room_nights = sum(occupied_map.values())
     avg_daily_rate = round(revenue_total / total_room_nights, 2) if total_room_nights else 0.0
+
+    # --- Report headline counts + RevPAR + channel mix ---
+    total_bookings = len(bookings)
+    rooms_booked = sum((len(b.rooms) if b.rooms else 1) for b in bookings)
+
+    # RevPAR = room revenue / total *available* room-nights (ADR × occupancy as a
+    # single capacity figure). Available, not just sold, nights — so it reflects
+    # how well the whole property is monetised. This is GROSS RevPAR; NRevPAR
+    # (net of OTA commission) arrives with OTA integration — see _OTA_* above.
+    available_room_nights = inventory * (days + 1)
+    rev_par = round(revenue_total / available_room_nights, 2) if available_room_nights else 0.0
+
+    # Channel mix — where bookings & revenue come from (Direct / AI / OTA / ...).
+    channel_acc: dict[str, dict] = {}
+    for b in bookings:
+        cat = _channel_category(b.source)
+        slot = channel_acc.setdefault(cat, {"channel": cat, "bookings": 0, "revenue": 0.0})
+        slot["bookings"] += 1
+        slot["revenue"] += float(b.total_amount)
+    channel_mix = sorted(channel_acc.values(), key=lambda x: x["revenue"], reverse=True)
 
     chart_data = []
     occ_forecast = []
@@ -292,6 +357,10 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         "total_visitors": total_visitors,
         "conversion_rate": conversion_rate,
         "revenue_total": revenue_total,
+        "total_bookings": total_bookings,
+        "rooms_booked": rooms_booked,
+        "rev_par": rev_par,
+        "channel_mix": channel_mix,
         "chart_data": chart_data,
         "funnel_data": funnel_data,
         "device_stats": [{"type": k, "count": v} for k, v in device_counts.items()],
@@ -301,6 +370,10 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         "ai_revenue": ai_revenue,
         "occupancy_forecast": occ_forecast,
         "geo_stats": [{"country": k, "code": k[:2].lower(), "visitors": v, "percentage": round((v/max(total_visitors, 1))*100)} for k, v in geo_counts.items()],
+        "city_stats": sorted(
+            ({"city": k, "visitors": v, "percentage": round((v / max(total_visitors, 1)) * 100)} for k, v in city_counts.items()),
+            key=lambda x: x["visitors"], reverse=True,
+        )[:20],
         "traffic_heatmap": traffic_heatmap,
         "ai_resolution_rate": ai_resolution_rate,
         "total_leads": total_leads,
@@ -348,6 +421,10 @@ async def analytics_revenue(
     return {
         "revenue_total": d["revenue_total"],
         "avg_daily_rate": d["avg_daily_rate"],
+        "rev_par": d["rev_par"],
+        "total_bookings": d["total_bookings"],
+        "rooms_booked": d["rooms_booked"],
+        "channel_mix": d["channel_mix"],
         "occupancy_forecast": d["occupancy_forecast"],
         "chart_data": d["chart_data"],
         "ai_revenue": d["ai_revenue"],
@@ -364,6 +441,7 @@ async def analytics_traffic(
     d = await _compute_dashboard(session, current_user.hotel_id, days)
     return {
         "geo_stats": d["geo_stats"],
+        "city_stats": d["city_stats"],
         "traffic_heatmap": d["traffic_heatmap"],
         "device_stats": d["device_stats"],
     }
@@ -424,13 +502,18 @@ async def analytics_kpis(
 async def live_active_visitors(
     request: Request, current_user: CurrentUser, session: DbSession,
 ):
-    """Count of sessions started within the live window that haven't ended."""
+    """Count of visitors seen within the live window (last activity, GA-style).
+
+    ``ended_at`` is refreshed on every ping, so COALESCE(ended_at, started_at)
+    is the visitor's last-seen time. A long session that keeps pinging stays
+    "live"; one that went quiet >5 min ago drops off — both of which the old
+    ``ended_at IS NULL`` check got wrong."""
     cutoff = datetime.utcnow() - _LIVE_WINDOW
+    last_seen = func.coalesce(AnalyticsSession.ended_at, AnalyticsSession.started_at)
     count = (await session.execute(
         select(func.count()).select_from(AnalyticsSession).where(
             AnalyticsSession.hotel_id == current_user.hotel_id,
-            AnalyticsSession.started_at >= cutoff,
-            AnalyticsSession.ended_at.is_(None),
+            last_seen >= cutoff,
         )
     )).scalar() or 0
     return {"active_visitors": int(count)}
@@ -455,6 +538,7 @@ async def live_feed(
             "device_type": s.device_type,
             "browser": s.browser,
             "country": s.country,
+            "city": s.city,
             "referrer": s.referrer,
             "has_booked": s.has_booked,
             "started_at": s.started_at.isoformat() if s.started_at else None,
@@ -462,3 +546,90 @@ async def live_feed(
         }
         for s in rows
     ]
+
+
+# ──────────────────────── Shareable report links ────────────────────────────
+# Hotelier mints a public, no-login link to the analytics report (PowerBI-style
+# "publish to web"). Management is OWNER/MANAGER only; the public read side lives
+# in app/analytics/public_report.py and is the only place these tokens resolve.
+
+
+def _serialize_link(link: ReportShareLink) -> dict:
+    return {
+        "id": link.id,
+        "token": link.token,
+        "label": link.label,
+        "days": link.days,
+        "created_at": link.created_at.isoformat() if link.created_at else None,
+        "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+        "is_revoked": link.is_revoked,
+        "is_active": (not link.is_revoked) and (link.expires_at is None or link.expires_at > datetime.utcnow()),
+        "view_count": link.view_count,
+        "last_viewed_at": link.last_viewed_at.isoformat() if link.last_viewed_at else None,
+    }
+
+
+@router.post("/share", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
+@limiter.limit("20/minute")
+async def create_share_link(
+    request: Request,
+    data: ShareLinkCreate,
+    current_user: CurrentUser,
+    session: DbSession,
+):
+    """Mint a public share link for this hotel's report. OWNER/MANAGER only."""
+    days = max(1, min(int(data.days or 30), 365))
+    expires_at = None
+    if data.expires_in_days is not None:
+        ttl = max(1, min(int(data.expires_in_days), 365))
+        expires_at = datetime.utcnow() + timedelta(days=ttl)
+
+    link = ReportShareLink(
+        hotel_id=current_user.hotel_id,
+        label=(data.label or None),
+        days=days,
+        created_by=current_user.id,
+        expires_at=expires_at,
+    )
+    session.add(link)
+    await session.commit()
+    await session.refresh(link)
+    return _serialize_link(link)
+
+
+@router.get("/share")
+@limiter.limit("60/minute")
+async def list_share_links(
+    request: Request,
+    current_user: CurrentUser,
+    session: DbSession,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    """List this hotel's share links (newest first). Tenant-scoped."""
+    rows = (await session.execute(
+        select(ReportShareLink)
+        .where(ReportShareLink.hotel_id == current_user.hotel_id)
+        .order_by(ReportShareLink.created_at.desc())
+        .limit(limit).offset(offset)
+    )).scalars().all()
+    return [_serialize_link(r) for r in rows]
+
+
+@router.delete("/share/{link_id}", dependencies=[Depends(require_hotel_role("OWNER", "MANAGER"))])
+@limiter.limit("30/minute")
+async def revoke_share_link(
+    request: Request,
+    link_id: str,
+    current_user: CurrentUser,
+    session: DbSession,
+):
+    """Revoke a share link. Idempotent. Tenant-scoped — a hotel can only revoke
+    its own links (IDOR guard)."""
+    link = await session.get(ReportShareLink, link_id)
+    if not link or link.hotel_id != current_user.hotel_id:
+        raise HTTPException(status_code=404, detail="Share link not found")
+    link.is_revoked = True
+    session.add(link)
+    await session.commit()
+    return {"status": "revoked", "id": link.id}

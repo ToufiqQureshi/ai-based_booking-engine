@@ -4,9 +4,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# PR branches are covered by `pull_request`; `push` only fires for the trunk
+# branches (post-merge), so a PR-branch commit runs CI once, not twice.
 on:
   push:
-    branches: [ "main", "develop", "claude/**" ]
+    branches: [ "main", "develop" ]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
@@ -39,6 +41,9 @@ jobs:
 
     - name: TypeScript type check
       run: npx tsc --noEmit
+
+    - name: Unit tests (vitest)
+      run: npm run test
 
     - name: Build
       env:
