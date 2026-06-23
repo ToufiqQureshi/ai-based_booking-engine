@@ -138,7 +138,7 @@ export default function BookingConfirmation() {
 
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text("Total Paid:", 140, yOffset + 2);
+        doc.text(booking.payment_method === 'pay_at_property' ? "Amount Due at Property:" : "Total Paid:", 140, yOffset + 2);
         doc.text(
             new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount),
             196, yOffset + 2,
@@ -287,7 +287,9 @@ export default function BookingConfirmation() {
                                 </div>
                             )}
                             <div className="flex justify-between items-center pt-4 border-t border-slate-200 border-dashed">
-                                <p className="text-slate-900 font-bold text-base">Total Paid</p>
+                                <p className="text-slate-900 font-bold text-base">
+                                    {booking.payment_method === 'pay_at_property' ? 'Amount Due at Property' : 'Total Paid'}
+                                </p>
                                 <p className="text-3xl font-black tracking-tight" style={{ color: themeColor }}>
                                     {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(booking.total_amount)}
                                 </p>

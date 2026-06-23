@@ -661,6 +661,7 @@ async def create_public_booking(
                 "email": guest.email, "phone": guest.phone,
             },
             rooms=booking.rooms, addons=booking.addons or [],
+            payment_method=booking_data.payment_method,
         )
 
     except HTTPException:

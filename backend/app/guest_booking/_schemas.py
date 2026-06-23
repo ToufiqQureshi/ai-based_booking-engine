@@ -108,6 +108,7 @@ class PublicBookingResponse(BaseModel):
     guest: dict
     rooms: List[dict]
     addons: List[dict] = []
+    payment_method: Optional[str] = None
 
 
 class LoyaltyCheckRequest(BaseModel):
