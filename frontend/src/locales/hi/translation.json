@@ -1,0 +1,39 @@
+{
+    "check_in": "चेक-इन",
+    "check_out": "चेक-आउट",
+    "adults": "वयस्क",
+    "children": "बच्चे",
+    "rooms": "कमरे",
+    "search": "खोजें",
+    "book_now": "अभी बुक करें",
+    "select_room": "कमरा चुनें",
+    "price_per_night": "प्रति रात",
+    "taxes_and_fees": "टैक्स और शुल्क",
+    "total": "कुल",
+    "continue": "आगे बढ़ें",
+    "guests": "मेहमान",
+    "packages": "पैकेज",
+    "promo_code": "प्रोमो कोड",
+    "apply": "लागू करें",
+    "summary": "बुकिंग सारांश",
+    "personal_details": "व्यक्तिगत जानकारी",
+    "payment": "भुगतान",
+    "first_name": "पहला नाम",
+    "last_name": "अंतिम नाम",
+    "email": "ईमेल पता",
+    "phone": "फ़ोन नंबर",
+    "special_requests": "विशेष अनुरोध",
+    "pay_now": "अभी भुगतान करें",
+    "pay_at_hotel": "होटल में भुगतान करें",
+    "confirm_booking": "बुकिंग पक्की करें",
+    "booking_confirmed": "बुकिंग पक्की हो गई!",
+    "thank_you": "हमारे साथ बुकिंग करने के लिए धन्यवाद।",
+    "booking_id": "बुकिंग आईडी",
+    "booking": {
+        "search": {
+            "dates": "तिथियां",
+            "guests": "मेहमान और कमरे",
+            "button": "कमरे खोजें"
+        }
+    }
+}

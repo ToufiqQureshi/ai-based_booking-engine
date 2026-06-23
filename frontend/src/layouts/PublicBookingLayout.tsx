@@ -4,6 +4,7 @@ import { startTimeTracking, stopTimeTracking, trackEvent } from '@/core/lib/trac
 import { Shield, FileText } from 'lucide-react';
 import { apiClient } from '@/core/api/client';
 import { PropertyDetailsFooter } from '@/guest_booking/components/public/PropertyDetailsFooter';
+import { LanguageCurrencyHeader } from '@/guest_booking/components/public/booking/LanguageCurrencyHeader';
 
 export function PublicBookingLayout() {
     const { hotelSlug } = useParams();
@@ -63,6 +64,9 @@ export function PublicBookingLayout() {
                         <span className="hidden sm:inline">256-bit SSL Secured</span>
                         <span className="sm:hidden">Secured</span>
                     </div>
+                    
+                    {/* Add Language and Currency Selector here */}
+                    <LanguageCurrencyHeader />
                 </div>
             </header>
 

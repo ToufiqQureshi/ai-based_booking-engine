@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowRight, User, Mail, Phone, Calendar, ShieldCheck, CreditCard, Sparkles, MapPin, Zap, Info, Plus, Check } from 'lucide-react';
+import { useCurrencyConverter } from '@/core/contexts/GuestPreferencesContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,9 +70,10 @@ interface CheckoutFormData {
 }
 
 function BookingCheckoutInner() {
-    const { hotelSlug } = useParams();
+    const { hotelSlug } = useParams<{ hotelSlug: string }>();
     const navigate = useNavigate();
     const location = useLocation();
+    const { formatBaseCurrency: formatCurrency } = useCurrencyConverter();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'online' | 'property'>('online');
@@ -632,10 +634,8 @@ function BookingCheckoutInner() {
         }
     };
 
-    const formatCurrency = (amount: number | undefined | null) => {
-        if (amount === undefined || amount === null || isNaN(amount)) return '₹0';
-        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
-    };
+    // formatCurrency is now imported from useCurrencyConverter hook
+
 
     const settings = hotel?.settings;
     const taxName = settings?.tax_name || 'GST';

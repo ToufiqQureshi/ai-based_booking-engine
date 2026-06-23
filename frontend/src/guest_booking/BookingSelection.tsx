@@ -27,6 +27,7 @@ import { format, addDays, differenceInDays } from 'date-fns';
 import { getImageUrl } from '@/core/lib/utils';
 import { ICONS } from '@/core/lib/amenityIcons';
 import { LoyaltyRewardPopup, LoyaltyMilestonePopup, StayOfferPopup } from '@/guest_booking/components/public/LoyaltyRewardPopup';
+import { useCurrencyConverter, useGuestPreferences } from '@/core/contexts/GuestPreferencesContext';
 
 // Extracted Booking Sub-Components
 import { RoomSearchHeader } from '@/guest_booking/components/public/booking/RoomSearchHeader';
@@ -49,6 +50,9 @@ export default function BookingSelection() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const location = useLocation();
+    
+    const { format: formatCurrency } = useCurrencyConverter();
+    const { setBaseCurrency } = useGuestPreferences();
 
     const [rooms, setRooms] = useState<PublicRoomSearchResult[]>([]);
     const [addons, setAddons] = useState<AddOn[]>([]);
@@ -496,16 +500,8 @@ export default function BookingSelection() {
     const today = new Date();
     const tomorrow = addDays(today, 1);
 
-    const formatCurrency = (amount: number | undefined | null) => {
-        if (amount === undefined || amount === null || isNaN(amount)) return '₹0';
-        const currencyCode = hotel?.settings?.currency || 'INR';
-        const locale = currencyCode === 'INR' ? 'en-IN' : 'en-US';
-        return new Intl.NumberFormat(locale, {
-            style: 'currency',
-            currency: currencyCode,
-            maximumFractionDigits: 0
-        }).format(amount);
-    };
+    // formatCurrency is now provided by useCurrencyConverter
+
 
     // Extract params and init state
     // Support both standard and Google Hotel Ads parameters
@@ -591,6 +587,9 @@ export default function BookingSelection() {
 
                 setRooms(roomsData);
                 setHotel(hotelData);
+                if (hotelData?.settings?.currency) {
+                    setBaseCurrency(hotelData.settings.currency as any);
+                }
 
                 // Add-ons must never blank the page if their endpoint fails.
                 try {
@@ -1494,7 +1493,18 @@ export default function BookingSelection() {
                 minNights={stayOffer.minNights}
                 onExtend={() => {
                     setStayOffer(prev => ({ ...prev, isOpen: false }));
-                    setIsCalendarOpen(true);
+                    
+                    // BUG FIX (Upsell Calendar Bug):
+                    // Previously, this just opened the calendar (setIsCalendarOpen(true)) and forced the user
+                    // to manually select the new checkout date, which triggered the "jumping dates" bug in the calendar.
+                    // Now, we automatically calculate and apply the required checkOutDate for them.
+                    if (checkInDate && stayOffer.minNights > 0) {
+                        const newCheckOut = addDays(checkInDate, stayOffer.minNights);
+                        setCheckOutDate(newCheckOut);
+                        userPickedDatesRef.current = true;
+                    } else {
+                        setIsCalendarOpen(true);
+                    }
                 }}
             />
 

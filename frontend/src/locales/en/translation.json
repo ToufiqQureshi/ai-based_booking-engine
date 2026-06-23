@@ -1,0 +1,39 @@
+{
+    "check_in": "Check-In",
+    "check_out": "Check-Out",
+    "adults": "Adults",
+    "children": "Children",
+    "rooms": "Rooms",
+    "search": "Search",
+    "book_now": "Book Now",
+    "select_room": "Select Room",
+    "price_per_night": "per night",
+    "taxes_and_fees": "Taxes & Fees",
+    "total": "Total",
+    "continue": "Continue",
+    "guests": "Guests",
+    "packages": "Packages",
+    "promo_code": "Promo Code",
+    "apply": "Apply",
+    "summary": "Booking Summary",
+    "personal_details": "Personal Details",
+    "payment": "Payment",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "email": "Email Address",
+    "phone": "Phone Number",
+    "special_requests": "Special Requests",
+    "pay_now": "Pay Now",
+    "pay_at_hotel": "Pay at Hotel",
+    "confirm_booking": "Confirm Booking",
+    "booking_confirmed": "Booking Confirmed!",
+    "thank_you": "Thank you for booking with us.",
+    "booking_id": "Booking ID",
+    "booking": {
+        "search": {
+            "dates": "Dates",
+            "guests": "Guests & Rooms",
+            "button": "Search Rooms"
+        }
+    }
+}

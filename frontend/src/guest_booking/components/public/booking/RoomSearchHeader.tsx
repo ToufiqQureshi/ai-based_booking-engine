@@ -6,7 +6,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/core/lib/utils';
+import { useCurrencyConverter } from '@/core/contexts/GuestPreferencesContext';
 import { apiClient } from '@/core/api/client';
+import { useTranslation } from 'react-i18next';
 
 interface CalendarDay { min_price: number | null; available: boolean; }
 
@@ -89,26 +91,34 @@ export function RoomSearchHeader({
 }: RoomSearchHeaderProps) {
     const [calendarData, setCalendarData] = useState<Record<string, CalendarDay>>({});
     const [displayMonth, setDisplayMonth] = useState<Date>(startOfMonth(new Date()));
+    
+    // BUG FIX (Calendar Field Tracking):
+    // Previously, the widget didn't know if the user was trying to pick Check-In or Check-Out.
+    // This state tracks exactly which field is currently active, allowing us to interpret their calendar clicks accurately.
+    const [activeDateType, setActiveDateType] = useState<'checkIn' | 'checkOut'>('checkIn');
     const fetchedMonths = useRef<Set<string>>(new Set());
     // Months whose prices are still in flight — drives the per-cell skeleton
     // shimmer so the calendar reads as "loading" instead of "no prices".
     const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
+    const { format: formatPrice, convert, guestCurrency } = useCurrencyConverter();
+    const { t } = useTranslation();
 
-    const formatPrice = (price: number) => {
-        if (currency === 'INR') return `₹${Math.round(price).toLocaleString('en-IN')}`;
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(price);
-    };
-    // Compact form for tight calendar cells (e.g. ₹2.5k, $1.2k) so the
-    // price-per-night line never overflows a day cell on narrow screens.
-    const _symbol = currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '';
     const formatPriceCompact = (price: number) => {
-        const p = Math.round(price);
+        const converted = convert(price);
+        const p = Math.round(converted);
+        
+        let _symbol = '';
+        if (guestCurrency === 'INR') _symbol = '₹';
+        else if (guestCurrency === 'USD') _symbol = '$';
+        else if (guestCurrency === 'EUR') _symbol = '€';
+        else if (guestCurrency === 'GBP') _symbol = '£';
+
         const body = p >= 100000
             ? `${(p / 100000).toFixed(p % 100000 === 0 ? 0 : 1)}L`
             : p >= 1000
                 ? `${(p / 1000).toFixed(p % 1000 === 0 ? 0 : 1)}k`
                 : `${p}`;
-        return _symbol ? `${_symbol}${body}` : formatPrice(price);
+        return _symbol ? `${_symbol}${body}` : `${p}`;
     };
 
     // Fetch calendar data for a month string "YYYY-MM"
@@ -184,21 +194,47 @@ export function RoomSearchHeader({
                     mode="range"
                     numberOfMonths={isMobile ? 1 : 2}
                     selected={{ from: checkInDate, to: checkOutDate }}
-                    onSelect={(range: any) => {
-                        let from = range?.from;
-                        let to = range?.to;
-                        
-                        // If they selected a check-in but the check-out is too soon or undefined, we can leave it undefined 
-                        // so they have to click a valid check-out. But if they just completed a range that is too short, force it.
-                        if (from && to) {
-                            const nights = Math.round((to.getTime() - from.getTime()) / 86400000);
-                            if (nights < minNights) {
-                                to = new Date(from);
-                                to.setDate(to.getDate() + minNights);
+                    // BUG FIX (Visual minNights Enforcement):
+                    // Passing min to DayPicker visually disables end dates that are too close to the start date.
+                    // This prevents the user from clicking invalid dates and removes the confusing "silent jump" behavior.
+                    min={minNights + 1}
+                    onSelect={(range: any, selectedDay: Date) => {
+                        // BUG FIX (react-day-picker Range UX):
+                        // DayPicker's native "range" mode behaves weirdly (e.g., clicking inside a range resets it).
+                        // Instead of relying blindly on `range`, we use `selectedDay` + `activeDateType` to manually enforce user intent.
+                        if (activeDateType === 'checkIn' || !checkInDate) {
+                            setCheckInDate(selectedDay);
+                            // If they pick a check-in that makes the current check-out invalid (too early), clear it
+                            if (checkOutDate) {
+                                const nights = Math.round((checkOutDate.getTime() - selectedDay.getTime()) / 86400000);
+                                if (nights < minNights) {
+                                    setCheckOutDate(undefined);
+                                }
+                            }
+                            setActiveDateType('checkOut');
+                        } else {
+                            // User is picking check-out
+                            if (selectedDay <= checkInDate) {
+                                // If they click a date before check-in, they probably meant to change check-in!
+                                setCheckInDate(selectedDay);
+                                setCheckOutDate(undefined);
+                                setActiveDateType('checkOut');
+                            } else {
+                                const nights = Math.round((selectedDay.getTime() - checkInDate.getTime()) / 86400000);
+                                if (nights < minNights) {
+                                    // Fallback just in case `min` fails to disable the date: enforce minNights silently
+                                    const forcedOut = new Date(checkInDate);
+                                    forcedOut.setDate(forcedOut.getDate() + minNights);
+                                    setCheckOutDate(forcedOut);
+                                } else {
+                                    setCheckOutDate(selectedDay);
+                                }
+                                // If mobile, they usually want to see their selection first, but desktop users like it closing
+                                if (!isMobile) {
+                                    setIsCalendarOpen(false);
+                                }
                             }
                         }
-                        setCheckInDate(from);
-                        setCheckOutDate(to);
                     }}
                     disabled={(date) => {
                         const today = new Date();
@@ -206,8 +242,18 @@ export function RoomSearchHeader({
                         if (advancePurchaseDays > 0) {
                             today.setDate(today.getDate() + advancePurchaseDays);
                         }
-                        // Also disable dates before checkInDate if it's selected and we are picking checkOut
-                        return date < today;
+                        
+                        // Disable past dates and advance purchase
+                        if (date < today) return true;
+                        
+                        // If they are picking check-out, disable dates before check-in + minNights
+                        if (activeDateType === 'checkOut' && checkInDate) {
+                            const minCheckOut = new Date(checkInDate);
+                            minCheckOut.setDate(minCheckOut.getDate() + minNights - 1); // -1 because date < minCheckOut
+                            if (date <= minCheckOut) return true;
+                        }
+                        
+                        return false;
                     }}
                     className="p-0"
                     classNames={{
@@ -296,10 +342,6 @@ export function RoomSearchHeader({
         containerClasses += "bg-white/70 backdrop-blur-3xl p-4 sm:p-6 rounded-[32px] shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] border border-white max-w-5xl mx-auto ring-1 ring-white/50";
     }
 
-    // Apply the hotelier's chosen background colour. Inner date/guest/promo inputs
-    // keep their own white surfaces (so they stay readable), only the outer card
-    // takes the brand colour — same approach OTAs use. 'minimal' stays transparent
-    // by design and 'ota' already paints itself with the primary colour.
     const hasCustomBg = !!bgColor && !['#ffffff', '#fff', ''].includes(bgColor.toLowerCase());
     if (hasCustomBg && layoutStyle !== 'ota' && layoutStyle !== 'minimal') {
         containerStyle = { ...containerStyle, backgroundColor: bgColor };
@@ -342,45 +384,46 @@ export function RoomSearchHeader({
                 {/* Date Selector Popover (Check-In & Check-Out) */}
                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
-                        <button 
-                            className={isOta 
-                                ? "flex-[2] flex flex-row items-center p-3 sm:p-4 bg-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.05)] text-left hover:bg-slate-50 transition-all min-h-[80px]"
-                                : "flex-[2] flex flex-row items-center gap-3 p-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 h-[68px]"
-                            }
-                            style={isOta ? {} : { 
-                                borderColor: isCalendarOpen ? themeColor : 'rgba(226, 232, 240, 0.6)', 
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                boxShadow: isCalendarOpen ? `0 0 0 4px ${themeColor}15` : undefined
-                            }}
-                            onClick={() => { setIsCalendarOpen(!isCalendarOpen); setIsGuestOpen(false); }}
-                        >
-                            {isOta ? (
-                                <>
-                                    <div className="flex-1 min-w-0 px-1 sm:px-2">
-                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Check-In</span>
-                                        <span className="text-2xl sm:text-3xl font-black text-slate-900 block leading-none flex items-baseline gap-1">
+                        {/* BUG FIX (Split Trigger): 
+                            Previously this was a single button, meaning we didn't know if the user clicked the Check-In side or Check-Out side.
+                            We split the hit areas into two buttons inside the PopoverTrigger so we can set activeDateType on click, 
+                            using e.stopPropagation() so Radix doesn't accidentally auto-close it when we manually open it.
+                        */}
+                        <div className="flex-[2] flex flex-row items-stretch gap-3">
+                            <button 
+                                className={isOta 
+                                    ? "flex-1 flex flex-col justify-center p-3 sm:p-4 bg-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.05)] text-left hover:bg-slate-50 transition-all relative min-h-[80px]"
+                                    : "flex-1 flex items-center gap-3 p-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 h-[68px]"
+                                }
+                                style={isOta ? {} : { 
+                                    borderColor: (isCalendarOpen && activeDateType === 'checkIn') ? themeColor : 'rgba(226, 232, 240, 0.6)', 
+                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                    boxShadow: (isCalendarOpen && activeDateType === 'checkIn') ? `0 0 0 4px ${themeColor}15` : undefined
+                                }}
+                                onClick={(e) => { 
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsGuestOpen(false); 
+                                    setActiveDateType('checkIn'); 
+                                    setIsCalendarOpen(true); 
+                                }}
+                            >
+                                {isOta ? (
+                                    <div className="px-1 sm:px-2 w-full pr-6 border-r border-slate-100">
+                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Check In</span>
+                                        <span className="text-2xl sm:text-3xl font-black text-slate-900 block leading-none">
                                             {checkInDate ? format(checkInDate, 'dd') : '--'}
-                                            <span className="text-base sm:text-lg font-bold">{checkInDate ? format(checkInDate, 'MMM') : ''}</span>
+                                            <span className="text-base sm:text-lg font-bold ml-1 text-slate-600">
+                                                {checkInDate ? format(checkInDate, 'MMM') : 'Select'}
+                                            </span>
                                         </span>
-                                        <span className="text-xs font-semibold text-slate-500 block mt-1 truncate">
-                                            {checkInDate ? format(checkInDate, 'EEEE, yy') : 'Select Date'}
+                                        <span className="text-xs font-semibold text-slate-500 block mt-1">
+                                            {checkInDate ? format(checkInDate, 'EEEE') : 'Select Date'}
                                         </span>
+                                        <ChevronDown className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
                                     </div>
-                                    <div className="w-px bg-slate-200 self-stretch my-2 mx-2 shrink-0"></div>
-                                    <div className="flex-1 min-w-0 px-1 sm:px-2">
-                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Check-Out</span>
-                                        <span className="text-2xl sm:text-3xl font-black text-slate-900 block leading-none flex items-baseline gap-1">
-                                            {checkOutDate ? format(checkOutDate, 'dd') : '--'}
-                                            <span className="text-base sm:text-lg font-bold">{checkOutDate ? format(checkOutDate, 'MMM') : ''}</span>
-                                        </span>
-                                        <span className="text-xs font-semibold text-slate-500 block mt-1 truncate">
-                                            {checkOutDate ? format(checkOutDate, 'EEEE, yy') : 'Select Date'}
-                                        </span>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="flex-1 flex items-center gap-3 min-w-0">
+                                ) : (
+                                    <>
                                         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                                              style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
                                             <CalendarIcon className="w-5 h-5" />
@@ -394,9 +437,44 @@ export function RoomSearchHeader({
                                                 {checkInDate ? format(checkInDate, 'EEEE') : 'Add date'}
                                             </span>
                                         </div>
+                                    </>
+                                )}
+                            </button>
+                            
+                            <button
+                                className={isOta
+                                    ? "flex-1 flex flex-col justify-center p-3 sm:p-4 bg-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.05)] text-left hover:bg-slate-50 transition-all relative min-h-[80px]"
+                                    : "flex-1 flex items-center gap-3 p-4 rounded-[20px] border transition-all duration-300 text-left cursor-pointer hover:shadow-[0_8px_20px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 h-[68px]"
+                                }
+                                style={isOta ? {} : { 
+                                    borderColor: (isCalendarOpen && activeDateType === 'checkOut') ? themeColor : 'rgba(226, 232, 240, 0.6)', 
+                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                    boxShadow: (isCalendarOpen && activeDateType === 'checkOut') ? `0 0 0 4px ${themeColor}15` : undefined
+                                }}
+                                onClick={(e) => { 
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsGuestOpen(false); 
+                                    setActiveDateType('checkOut'); 
+                                    setIsCalendarOpen(true); 
+                                    if (checkInDate) setDisplayMonth(startOfMonth(checkInDate));
+                                }}
+                            >
+                                {isOta ? (
+                                    <div className="px-1 sm:px-2 w-full pr-6">
+                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Check Out</span>
+                                        <span className="text-2xl sm:text-3xl font-black text-slate-900 block leading-none">
+                                            {checkOutDate ? format(checkOutDate, 'dd') : '--'}
+                                            <span className="text-base sm:text-lg font-bold ml-1 text-slate-600">
+                                                {checkOutDate ? format(checkOutDate, 'MMM') : 'Select'}
+                                            </span>
+                                        </span>
+                                        <span className="text-xs font-semibold text-slate-500 block mt-1">
+                                            {checkOutDate ? format(checkOutDate, 'EEEE') : 'Select Date'}
+                                        </span>
                                     </div>
-                                    <ArrowRight className="w-5 h-5 text-slate-300 shrink-0" />
-                                    <div className="flex-1 flex items-center gap-3 pl-3 border-l border-slate-100 min-w-0">
+                                ) : (
+                                    <>
                                         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                                              style={{ backgroundColor: `${themeColor}15`, color: themeColor }}>
                                             <CalendarIcon className="w-5 h-5" />
@@ -410,10 +488,10 @@ export function RoomSearchHeader({
                                                 {checkOutDate ? format(checkOutDate, 'EEEE') : 'Add date'}
                                             </span>
                                         </div>
-                                    </div>
-                                </>
-                            )}
-                        </button>
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </PopoverTrigger>
 
                     {/* Desktop: anchored popover. Mobile: full-screen bottom sheet (below). */}
@@ -493,7 +571,7 @@ export function RoomSearchHeader({
                                         <User className="w-5 h-5" />
                                     </div>
                                     <div className="min-w-0">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Guests &amp; Rooms</span>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{t('booking.search.guests')}</span>
                                         <span className="text-sm font-extrabold text-slate-800 block">
                                             {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}
                                         </span>

@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/core/contexts/AuthContext";
 import { ThemeProvider } from "@/core/contexts/ThemeContext";
 import { Suspense, lazy } from "react";
+import "./i18n";
+import { GuestPreferencesProvider } from "@/core/contexts/GuestPreferencesContext";
 
 // Auth Pages
 const LoginPage = lazy(() => import("@/auth/Login"));
@@ -87,6 +89,7 @@ const App = () => {
   return (
     <ErrorBoundary>
     <ThemeProvider>
+    <GuestPreferencesProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
@@ -195,6 +198,7 @@ const App = () => {
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
+    </GuestPreferencesProvider>
     </ThemeProvider>
     </ErrorBoundary>
   );
