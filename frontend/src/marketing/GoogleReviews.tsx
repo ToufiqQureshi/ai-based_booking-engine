@@ -12,9 +12,10 @@ import {
   Star, Sparkles, Send, RefreshCw, ChevronDown, ChevronUp,
   MessageSquare, Search, Filter, AlertCircle, CheckCircle2,
   ThumbsUp, Loader2, ExternalLink, Unplug, Link2,
-  Building2, ShieldCheck, Info
+  Building2, ShieldCheck, Info, MapPin
 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface GoogleStatus {
@@ -22,6 +23,14 @@ interface GoogleStatus {
   email: string | null;
   account_id: string | null;
   location_id: string | null;
+}
+
+interface GoogleLocation {
+  account_id: string;
+  account_name: string;
+  location_id: string;
+  title: string;
+  address: string;
 }
 
 interface ReviewReply {
@@ -177,6 +186,7 @@ const ConnectedHeader = ({
   onRefresh,
   refreshing,
   reviewCount,
+  onChangeLocation,
 }: {
   status: GoogleStatus;
   onDisconnect: () => void;
@@ -184,6 +194,7 @@ const ConnectedHeader = ({
   onRefresh: () => void;
   refreshing: boolean;
   reviewCount: number;
+  onChangeLocation: () => void;
 }) => (
   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
     <div>
@@ -208,6 +219,15 @@ const ConnectedHeader = ({
     </div>
 
     <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onChangeLocation}
+        className="gap-2 h-8 text-xs"
+      >
+        <MapPin className="w-3.5 h-3.5" />
+        Location
+      </Button>
       <Button
         variant="outline"
         size="sm"
@@ -503,6 +523,96 @@ const SkeletonCard = () => (
   </div>
 );
 
+// ─── Location Selector Modal ──────────────────────────────────────────────────
+const LocationSelectorModal = ({
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: () => void;
+}) => {
+  const { toast } = useToast();
+  const [locations, setLocations] = useState<GoogleLocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selecting, setSelecting] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setLoading(true);
+      apiClient.get<{ locations: GoogleLocation[] }>('/integration/google/locations')
+        .then(res => setLocations(res.locations || []))
+        .catch(err => toast({ title: 'Failed to load locations', description: err.message, variant: 'destructive' }))
+        .finally(() => setLoading(false));
+    }
+  }, [open]);
+
+  const handleSelect = async (loc: GoogleLocation) => {
+    setSelecting(loc.location_id);
+    try {
+      await apiClient.post('/integration/google/locations/select', {
+        account_id: loc.account_id,
+        location_id: loc.location_id,
+      });
+      toast({ title: 'Location selected!', description: `Now managing ${loc.title}.` });
+      onOpenChange(false);
+      onSelect();
+    } catch (err: any) {
+      toast({ title: 'Failed to select location', description: err.message, variant: 'destructive' });
+    } finally {
+      setSelecting(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Select your Business Profile</DialogTitle>
+          <DialogDescription>
+            We found multiple locations in your Google account. Please select the one that corresponds to this hotel.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto space-y-3 mt-4">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-10 space-y-3">
+              <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+              <span className="text-sm text-slate-500">Fetching your business profiles...</span>
+            </div>
+          ) : locations.length === 0 ? (
+            <div className="text-center py-6 text-sm text-slate-500">
+              No active locations found in your Google account.
+            </div>
+          ) : (
+            locations.map(loc => (
+              <button
+                key={loc.location_id}
+                onClick={() => handleSelect(loc)}
+                disabled={selecting !== null}
+                className="w-full flex items-start gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-100 transition-colors">
+                  <Building2 className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-slate-900 dark:text-white truncate">{loc.title}</p>
+                  <p className="text-xs text-slate-500 truncate mt-0.5">{loc.address || 'No address provided'}</p>
+                  <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{loc.account_name}</p>
+                </div>
+                {selecting === loc.location_id && (
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-500 self-center" />
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function GoogleReviews() {
   const { toast } = useToast();
@@ -518,6 +628,7 @@ export default function GoogleReviews() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
+  const [showLocationSelector, setShowLocationSelector] = useState(false);
 
   // ── Handle OAuth callback params from Google ──────────────────────────────
   useEffect(() => {
@@ -555,11 +666,15 @@ export default function GoogleReviews() {
       const data = await apiClient.get<{ reviews: Review[] }>('/integration/google/reviews');
       setReviews(data.reviews || []);
     } catch (err: any) {
-      toast({
-        title: 'Failed to fetch reviews',
-        description: err?.message || 'Please try again.',
-        variant: 'destructive',
-      });
+      if (err?.message === 'LOCATION_NOT_SELECTED') {
+        setShowLocationSelector(true);
+      } else {
+        toast({
+          title: 'Failed to fetch reviews',
+          description: err?.message || 'Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setReviewsLoading(false);
       setRefreshing(false);
@@ -674,6 +789,12 @@ export default function GoogleReviews() {
   // ── Connected view ────────────────────────────────────────────────────────
   return (
     <div className="p-6 space-y-0">
+      <LocationSelectorModal 
+        open={showLocationSelector} 
+        onOpenChange={setShowLocationSelector} 
+        onSelect={() => { fetchStatus(); fetchReviews(false); }} 
+      />
+
       <ConnectedHeader
         status={googleStatus}
         onDisconnect={handleDisconnect}
@@ -681,6 +802,7 @@ export default function GoogleReviews() {
         onRefresh={() => fetchReviews(true)}
         refreshing={refreshing}
         reviewCount={reviews.length}
+        onChangeLocation={() => setShowLocationSelector(true)}
       />
 
       {/* Stats */}

@@ -208,6 +208,103 @@ async def google_disconnect(current_user: CurrentUser, session: DbSession):
 # Reviews
 # ---------------------------------------------------------------------------
 
+@router.get("/google/locations")
+async def get_google_locations(current_user: CurrentUser, session: DbSession):
+    """Fetch all available Google Business locations across all accounts."""
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    settings = result.scalar_one_or_none()
+
+    if not settings or not settings.google_business_access_token:
+        raise HTTPException(status_code=400, detail="Google Business Profile not connected.")
+
+    headers = {"Authorization": f"Bearer {settings.google_business_access_token}"}
+    all_locations = []
+
+    async with httpx.AsyncClient() as client:
+        # Fetch all accounts
+        accounts_resp = await client.get(
+            "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+            headers=headers,
+        )
+        if accounts_resp.status_code == 401:
+            new_token = await _refresh_google_token(settings)
+            if not new_token:
+                raise HTTPException(status_code=401, detail="Google token expired. Please reconnect.")
+            settings.google_business_access_token = new_token
+            session.add(settings)
+            await session.commit()
+            headers = {"Authorization": f"Bearer {new_token}"}
+            accounts_resp = await client.get(
+                "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+                headers=headers,
+            )
+
+        if accounts_resp.status_code != 200:
+            raise HTTPException(status_code=accounts_resp.status_code, detail=f"Failed to fetch accounts: {accounts_resp.text}")
+
+        accounts = accounts_resp.json().get("accounts", [])
+        
+        # Fetch locations for each account
+        for account in accounts:
+            account_id = account.get("name", "").split("/")[-1]
+            account_name = account.get("accountName", "Unknown Account")
+            
+            locations_resp = await client.get(
+                f"https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{account_id}/locations",
+                headers=headers,
+                params={"readMask": "name,title,storefrontAddress"},
+            )
+            if locations_resp.status_code == 200:
+                locations = locations_resp.json().get("locations", [])
+                for loc in locations:
+                    loc_id = loc.get("name", "").split("/")[-1]
+                    title = loc.get("title", "Unnamed Location")
+                    address = ""
+                    if "storefrontAddress" in loc:
+                        addr = loc["storefrontAddress"]
+                        address = ", ".join(filter(None, [
+                            addr.get("addressLines", [""])[0] if addr.get("addressLines") else "",
+                            addr.get("locality", ""),
+                            addr.get("administrativeArea", ""),
+                        ]))
+                    
+                    all_locations.append({
+                        "account_id": account_id,
+                        "account_name": account_name,
+                        "location_id": loc_id,
+                        "title": title,
+                        "address": address
+                    })
+
+    return {"locations": all_locations}
+
+
+@router.post("/google/locations/select")
+async def select_google_location(request: Request, current_user: CurrentUser, session: DbSession):
+    """Save the selected Google Business location."""
+    body = await request.json()
+    account_id = body.get("account_id")
+    location_id = body.get("location_id")
+    
+    if not account_id or not location_id:
+        raise HTTPException(status_code=400, detail="account_id and location_id are required.")
+
+    query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
+    result = await session.execute(query)
+    settings = result.scalar_one_or_none()
+
+    if not settings:
+        raise HTTPException(status_code=400, detail="Integration settings not found.")
+
+    settings.google_business_account_id = account_id
+    settings.google_business_location_id = location_id
+    session.add(settings)
+    await session.commit()
+
+    return {"status": "success", "message": "Location selected successfully."}
+
+
 @router.get("/google/reviews")
 @limiter.limit("10/minute")
 async def get_google_reviews(request: Request, current_user: CurrentUser, session: DbSession):
@@ -225,96 +322,37 @@ async def get_google_reviews(request: Request, current_user: CurrentUser, sessio
     access_token = settings.google_business_access_token
     account_id = settings.google_business_account_id
     location_id = settings.google_business_location_id
+
+    if not account_id or not location_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="LOCATION_NOT_SELECTED",
+        )
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     async with httpx.AsyncClient() as client:
-        if account_id and location_id:
-            # Cached ids from a previous run — verify they still resolve to a
-            # location before trusting them, since an older buggy discovery
-            # could have stored an account with no locations.
-            check_resp = await client.get(
-                f"https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{account_id}/locations",
-                headers=headers,
-                params={"readMask": "name,title,storefrontAddress"},
-            )
-            if check_resp.status_code != 200 or not check_resp.json().get("locations"):
-                account_id = None
-                location_id = None
-
-        if not account_id or not location_id:
-            accounts_resp = await client.get(
-                "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
-                headers=headers,
-            )
-            if accounts_resp.status_code == 401:
-                new_token = await _refresh_google_token(settings)
-                if not new_token:
-                    raise HTTPException(status_code=401, detail="Google token expired. Please reconnect.")
-                settings.google_business_access_token = new_token
-                session.add(settings)
-                await session.commit()
-                access_token = new_token
-                headers = {"Authorization": f"Bearer {access_token}"}
-                accounts_resp = await client.get(
-                    "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
-                    headers=headers,
-                )
-
-            if accounts_resp.status_code != 200:
-                logger.error("Google API error fetching accounts: %s", accounts_resp.text)
-                raise HTTPException(status_code=accounts_resp.status_code, detail=f"Google API error: {accounts_resp.text}")
-
-            accounts_data = accounts_resp.json()
-            if "error" in accounts_data:
-                raise HTTPException(status_code=accounts_resp.status_code, detail=f"Google API error: {accounts_data['error']}")
-
-            accounts = accounts_data.get("accounts", [])
-            if not accounts:
-                logger.warning("No Google Business accounts found for hotel_id %s", current_user.hotel_id)
-                raise HTTPException(status_code=404, detail="No Google Business accounts found. Ensure you have a Business Profile set up.")
-
-            # A Google login can have several "accounts" (PERSONAL, LOCATION_GROUP,
-            # ORGANIZATION, ...). The hotel's listing isn't necessarily under the
-            # first one, so probe each until we find one that actually owns a
-            # location instead of blindly trusting accounts[0].
-            checked_types = []
-            for account in accounts:
-                candidate_id = account.get("name", "").split("/")[-1]
-                checked_types.append(account.get("type", "UNKNOWN"))
-                locations_resp = await client.get(
-                    f"https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{candidate_id}/locations",
-                    headers=headers,
-                    params={"readMask": "name,title,storefrontAddress"},
-                )
-                if locations_resp.status_code != 200:
-                    continue
-                locations = locations_resp.json().get("locations", [])
-                if locations:
-                    account_id = candidate_id
-                    location_id = locations[0].get("name", "").split("/")[-1]
-                    break
-
-            if not account_id or not location_id:
-                raise HTTPException(
-                    status_code=404,
-                    detail=(
-                        "No Google Business locations found under any linked account "
-                        f"(checked account types: {', '.join(checked_types) or 'none'}). "
-                        "Make sure the Google account you signed in with is an owner or "
-                        "manager of the hotel's Business Profile."
-                    ),
-                )
-
-            settings.google_business_account_id = account_id
-            settings.google_business_location_id = location_id
-            session.add(settings)
-            await session.commit()
-
+        # Check if token is valid, if not refresh
         reviews_resp = await client.get(
             f"https://mybusinessreviews.googleapis.com/v1/accounts/{account_id}/locations/{location_id}/reviews",
             headers=headers,
             params={"pageSize": 50, "orderBy": "updateTime desc"},
         )
+        
+        if reviews_resp.status_code == 401:
+            new_token = await _refresh_google_token(settings)
+            if not new_token:
+                raise HTTPException(status_code=401, detail="Google token expired. Please reconnect.")
+            settings.google_business_access_token = new_token
+            session.add(settings)
+            await session.commit()
+            headers = {"Authorization": f"Bearer {new_token}"}
+            reviews_resp = await client.get(
+                f"https://mybusinessreviews.googleapis.com/v1/accounts/{account_id}/locations/{location_id}/reviews",
+                headers=headers,
+                params={"pageSize": 50, "orderBy": "updateTime desc"},
+            )
+
         if reviews_resp.status_code != 200:
             raise HTTPException(status_code=reviews_resp.status_code, detail=f"Failed to fetch reviews: {reviews_resp.text}")
 
