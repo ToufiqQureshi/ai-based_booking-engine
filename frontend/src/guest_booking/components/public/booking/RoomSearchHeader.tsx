@@ -194,10 +194,6 @@ export function RoomSearchHeader({
                     mode="range"
                     numberOfMonths={isMobile ? 1 : 2}
                     selected={{ from: checkInDate, to: checkOutDate }}
-                    // BUG FIX (Visual minNights Enforcement):
-                    // Passing min to DayPicker visually disables end dates that are too close to the start date.
-                    // This prevents the user from clicking invalid dates and removes the confusing "silent jump" behavior.
-                    min={minNights + 1}
                     onSelect={(range: any, selectedDay: Date) => {
                         // BUG FIX (react-day-picker Range UX):
                         // DayPicker's native "range" mode behaves weirdly (e.g., clicking inside a range resets it).
