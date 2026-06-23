@@ -580,7 +580,7 @@ export function RoomSearchHeader({
                                         <Minus className="h-3 w-3" />
                                     </Button>
                                     <span className="w-4 text-center text-sm font-black text-slate-900">{roomsCount}</span>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setRoomsCount(Math.min(5, roomsCount + 1))}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setRoomsCount(Math.min(5, roomsCount + 1))} disabled={roomsCount >= 5}>
                                         <Plus className="h-3 w-3" />
                                     </Button>
                                 </div>
@@ -596,7 +596,7 @@ export function RoomSearchHeader({
                                         <Minus className="h-3 w-3" />
                                     </Button>
                                     <span className="w-4 text-center text-sm font-black text-slate-900">{adults}</span>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setAdults(Math.min(10, adults + 1))}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setAdults(Math.min(10, adults + 1))} disabled={adults >= 10}>
                                         <Plus className="h-3 w-3" />
                                     </Button>
                                 </div>
@@ -612,7 +612,7 @@ export function RoomSearchHeader({
                                         <Minus className="h-3 w-3" />
                                     </Button>
                                     <span className="w-4 text-center text-sm font-black text-slate-900">{children}</span>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setChildren(Math.min(6, children + 1))}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white hover:shadow-sm transition-all" onClick={() => setChildren(Math.min(6, children + 1))} disabled={children >= 6}>
                                         <Plus className="h-3 w-3" />
                                     </Button>
                                 </div>
