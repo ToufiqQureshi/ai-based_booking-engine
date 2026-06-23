@@ -179,7 +179,7 @@ def mask_hotel_for_hotelier(hotel: Any) -> Dict[str, Any]:
         base.pop(col, None)
 
     # Surface presence flags for AI integration without exposing the key.
-    base["has_ai_key"] = bool(getattr(hotel, "ai_api_key", None))
+    base["has_ai_key"] = bool(getattr(hotel, "ai_api_key", None) or getattr(hotel, "ai_api_key_vault_id", None))
     base["ai_provider"] = getattr(hotel, "ai_provider", None)
     base["ai_model"] = getattr(hotel, "ai_model", None)
 

@@ -268,7 +268,7 @@ async def get_google_locations(current_user: CurrentUser, session: DbSession):
                             addr.get("locality", ""),
                             addr.get("administrativeArea", ""),
                         ]))
-                    
+
                     all_locations.append({
                         "account_id": account_id,
                         "account_name": account_name,
@@ -276,6 +276,11 @@ async def get_google_locations(current_user: CurrentUser, session: DbSession):
                         "title": title,
                         "address": address
                     })
+            else:
+                logger.warning(
+                    "google_locations_fetch_failed hotel_id=%s account_id=%s status=%s body=%s",
+                    current_user.hotel_id, account_id, locations_resp.status_code, locations_resp.text,
+                )
 
     return {"locations": all_locations}
 
@@ -393,10 +398,11 @@ Reply:"""
 
     try:
         from app.ai_engine.guest_agent import create_guest_agent_graph
+        from app.core.auth.vault import get_hotel_ai_key
         from agno.agent import Message
 
         effective_provider = (getattr(settings, "ai_provider", None) or getattr(hotel, "ai_provider", None))
-        effective_api_key = (getattr(settings, "ai_api_key", None) or getattr(hotel, "ai_api_key", None))
+        effective_api_key = await get_hotel_ai_key(session, settings, hotel)
         effective_model = (getattr(settings, "ai_model", None) or getattr(hotel, "ai_model", None))
         effective_base_url = (getattr(settings, "ai_base_url", None) or getattr(hotel, "ai_base_url", None))
 

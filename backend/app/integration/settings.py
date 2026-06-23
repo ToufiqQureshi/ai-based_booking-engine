@@ -268,6 +268,7 @@ Place this just before the closing </body> tag.
 async def test_ai_connection(current_user: CurrentUser, session: DbSession):
     """Test AI credentials by sending a simple prompt."""
     from app.ai_engine.guest_agent import create_guest_agent_graph
+    from app.core.auth.vault import get_hotel_ai_key
 
     query = select(IntegrationSettings).where(IntegrationSettings.hotel_id == current_user.hotel_id)
     res = await session.execute(query)
@@ -276,7 +277,7 @@ async def test_ai_connection(current_user: CurrentUser, session: DbSession):
     hotel = await session.get(Hotel, current_user.hotel_id)
 
     effective_provider = (getattr(settings, "ai_provider", None) or getattr(hotel, "ai_provider", None))
-    effective_api_key = (getattr(settings, "ai_api_key", None) or getattr(hotel, "ai_api_key", None))
+    effective_api_key = await get_hotel_ai_key(session, settings, hotel)
     effective_model = (getattr(settings, "ai_model", None) or getattr(hotel, "ai_model", None))
     effective_base_url = (getattr(settings, "ai_base_url", None) or getattr(hotel, "ai_base_url", None))
 
