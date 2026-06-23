@@ -68,6 +68,18 @@ async def get_integration_settings(current_user: CurrentUser, session: DbSession
 
 _AI_ONLY_FIELDS = frozenset({"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_max_tokens"})
 
+# These are only ever written by server-side flows (OAuth callback, Hotel Ads
+# sync job) — never accept them from a client-supplied settings update, or a
+# hotelier could forge/overwrite live OAuth tokens or fake a sync status.
+_SERVER_MANAGED_FIELDS = frozenset({
+    "google_business_access_token",
+    "google_business_refresh_token",
+    "google_business_location_id",
+    "google_business_account_id",
+    "google_ads_status",
+    "google_ads_last_ari_sync",
+})
+
 
 @router.put("/settings", response_model=IntegrationSettingsRead, dependencies=[Depends(require_hotel_role("OWNER"))])
 async def update_integration_settings(
@@ -86,6 +98,11 @@ async def update_integration_settings(
     if current_user.role != UserRole.SUPER_ADMIN:
         for field in _AI_ONLY_FIELDS:
             update_data.pop(field, None)
+
+    # Server-managed fields (OAuth tokens, sync status) are never client-writable,
+    # regardless of role — they're only set by the OAuth callback / sync jobs.
+    for field in _SERVER_MANAGED_FIELDS:
+        update_data.pop(field, None)
 
     if not settings:
         settings = IntegrationSettings(hotel_id=current_user.hotel_id, **update_data)

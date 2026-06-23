@@ -228,7 +228,20 @@ async def get_google_reviews(request: Request, current_user: CurrentUser, sessio
     headers = {"Authorization": f"Bearer {access_token}"}
 
     async with httpx.AsyncClient() as client:
-        if not account_id:
+        if account_id and location_id:
+            # Cached ids from a previous run — verify they still resolve to a
+            # location before trusting them, since an older buggy discovery
+            # could have stored an account with no locations.
+            check_resp = await client.get(
+                f"https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{account_id}/locations",
+                headers=headers,
+                params={"readMask": "name,title,storefrontAddress"},
+            )
+            if check_resp.status_code != 200 or not check_resp.json().get("locations"):
+                account_id = None
+                location_id = None
+
+        if not account_id or not location_id:
             accounts_resp = await client.get(
                 "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
                 headers=headers,
@@ -260,21 +273,39 @@ async def get_google_reviews(request: Request, current_user: CurrentUser, sessio
                 logger.warning("No Google Business accounts found for hotel_id %s", current_user.hotel_id)
                 raise HTTPException(status_code=404, detail="No Google Business accounts found. Ensure you have a Business Profile set up.")
 
-            account_id = accounts[0].get("name", "").split("/")[-1]
+            # A Google login can have several "accounts" (PERSONAL, LOCATION_GROUP,
+            # ORGANIZATION, ...). The hotel's listing isn't necessarily under the
+            # first one, so probe each until we find one that actually owns a
+            # location instead of blindly trusting accounts[0].
+            checked_types = []
+            for account in accounts:
+                candidate_id = account.get("name", "").split("/")[-1]
+                checked_types.append(account.get("type", "UNKNOWN"))
+                locations_resp = await client.get(
+                    f"https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{candidate_id}/locations",
+                    headers=headers,
+                    params={"readMask": "name,title,storefrontAddress"},
+                )
+                if locations_resp.status_code != 200:
+                    continue
+                locations = locations_resp.json().get("locations", [])
+                if locations:
+                    account_id = candidate_id
+                    location_id = locations[0].get("name", "").split("/")[-1]
+                    break
+
+            if not account_id or not location_id:
+                raise HTTPException(
+                    status_code=404,
+                    detail=(
+                        "No Google Business locations found under any linked account "
+                        f"(checked account types: {', '.join(checked_types) or 'none'}). "
+                        "Make sure the Google account you signed in with is an owner or "
+                        "manager of the hotel's Business Profile."
+                    ),
+                )
+
             settings.google_business_account_id = account_id
-            session.add(settings)
-            await session.commit()
-
-        if not location_id:
-            locations_resp = await client.get(
-                f"https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{account_id}/locations",
-                headers=headers,
-            )
-            locations = locations_resp.json().get("locations", [])
-            if not locations:
-                raise HTTPException(status_code=404, detail="No Google Business locations found.")
-
-            location_id = locations[0].get("name", "").split("/")[-1]
             settings.google_business_location_id = location_id
             session.add(settings)
             await session.commit()
