@@ -30,12 +30,13 @@ class TestGetSocialProof:
         for key in _SOCIAL_PROOF_KEYS:
             assert key in data, f"Social proof response missing key: '{key}'"
 
-    async def test_hotel_id_matches_authenticated_hotel(self, auth_client: AsyncClient):
-        """hotel_id in response must match the authenticated user's hotel."""
+    async def test_hotel_id_matches_authenticated_hotel(
+        self, auth_client: AsyncClient, seeded_hotel
+    ):
+        """hotel_id in response must equal the authenticated user's hotel id."""
         r = await auth_client.get(_SOCIAL_PROOF_URL)
         assert r.status_code == 200
-        # hotel_id must be a non-empty string — never null
-        assert r.json()["hotel_id"]
+        assert r.json()["hotel_id"] == seeded_hotel.id
 
 
 class TestUpdateSocialProof:
@@ -44,9 +45,14 @@ class TestUpdateSocialProof:
             "is_enabled": True,
         })
         # Social proof PUT is not STAFF-restricted in the current implementation
-        assert r.status_code not in (401,)
+        assert r.status_code == 200
 
     async def test_owner_can_toggle_enabled(self, auth_client: AsyncClient):
         r = await auth_client.put(_SOCIAL_PROOF_URL, json={"is_enabled": False})
         assert r.status_code == 200
         assert r.json()["is_enabled"] is False
+
+    async def test_invalid_payload_422(self, auth_client: AsyncClient):
+        """PUT with is_enabled as a non-boolean object returns 422."""
+        r = await auth_client.put(_SOCIAL_PROOF_URL, json={"is_enabled": {"nested": "object"}})
+        assert r.status_code == 422

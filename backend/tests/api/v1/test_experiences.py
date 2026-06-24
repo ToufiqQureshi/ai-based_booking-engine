@@ -2,7 +2,7 @@
 Experiences / Add-ons Tests
 Covers:
   - GET /addons     — auth guard, returns list, tenant-scoped
-  - POST /addons    — OWNER/MANAGER can create; STAFF blocked
+  - POST /addons    — OWNER/MANAGER can create; STAFF blocked; tampered hotel_id ignored
   - PATCH /addons/:id — IDOR guard (cannot modify another hotel's add-on)
   - DELETE /addons/:id — IDOR guard
 """
@@ -10,6 +10,10 @@ import uuid
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.brand_console.hotel import Hotel
+from app.experiences.addon import AddOn
 
 pytestmark = pytest.mark.asyncio
 
@@ -25,9 +29,10 @@ class TestGetAddons:
         assert isinstance(r.json(), list)
 
     async def test_empty_hotel_returns_empty_list(self, auth_client: AsyncClient):
+        """Fresh hotel with no addons returns [] not 500."""
         r = await auth_client.get("/api/v1/addons")
         assert r.status_code == 200
-        assert isinstance(r.json(), list)
+        assert r.json() == []
 
 
 class TestCreateAddon:
@@ -52,12 +57,56 @@ class TestCreateAddon:
         r = await auth_client.post("/api/v1/addons", json={})
         assert r.status_code == 422
 
+    async def test_tampered_hotel_id_ignored(
+        self, auth_client: AsyncClient, seeded_hotel: Hotel
+    ):
+        """Client cannot forge a hotel_id — backend always uses the authenticated hotel."""
+        other_hotel_id = str(uuid.uuid4())
+        r = await auth_client.post("/api/v1/addons", json={
+            "name": f"Tamper Addon {uuid.uuid4().hex[:6]}",
+            "price": 100.0,
+            "hotel_id": other_hotel_id,  # attempted forge
+        })
+        assert r.status_code in (200, 201)
+        data = r.json()
+        assert data["hotel_id"] == seeded_hotel.id, (
+            "Backend must use authenticated hotel_id, not the client-supplied one"
+        )
+
 
 class TestAddonIsolation:
+    async def test_idor_cannot_delete_other_hotel_addon(
+        self, auth_client: AsyncClient
+    ):
+        """auth_client (hotel A) cannot delete an addon belonging to hotel B."""
+        from tests.conftest import engine
+
+        other_hotel_id = str(uuid.uuid4())
+        other_addon_id = str(uuid.uuid4())
+
+        other_hotel = Hotel(
+            id=other_hotel_id,
+            name="Other Addon Hotel",
+            slug=f"other-addon-{uuid.uuid4().hex[:6]}",
+        )
+        other_addon = AddOn(
+            id=other_addon_id,
+            hotel_id=other_hotel_id,
+            name="Other Hotel Addon",
+            price=99.0,
+        )
+        async with AsyncSession(engine) as session:
+            session.add(other_hotel)
+            session.add(other_addon)
+            await session.commit()
+
+        r = await auth_client.delete(f"/api/v1/addons/{other_addon_id}")
+        assert r.status_code == 404
+
     async def test_cannot_delete_nonexistent_addon(self, auth_client: AsyncClient):
         fake_id = str(uuid.uuid4())
         r = await auth_client.delete(f"/api/v1/addons/{fake_id}")
-        assert r.status_code in (403, 404)
+        assert r.status_code == 404
 
     async def test_staff_cannot_delete_addon(self, staff_client: AsyncClient):
         fake_id = str(uuid.uuid4())

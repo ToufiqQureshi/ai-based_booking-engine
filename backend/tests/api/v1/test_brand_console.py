@@ -23,6 +23,15 @@ class TestHotelSettings:
         assert "name" in data
         assert "slug" in data
 
+    async def test_owner_can_update_hotel(self, auth_client: AsyncClient):
+        """Owner PATCH /hotels/me returns 200 with updated hotel fields."""
+        r = await auth_client.patch("/api/v1/hotels/me", json={"description": "Updated by test"})
+        assert r.status_code == 200
+        data = r.json()
+        assert "id" in data
+        assert "name" in data
+        assert "slug" in data
+
     async def test_staff_cannot_update_settings(self, staff_client: AsyncClient):
         r = await staff_client.patch("/api/v1/hotels/me", json={"name": "Hacked"})
         assert r.status_code == 403

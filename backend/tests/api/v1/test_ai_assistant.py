@@ -26,10 +26,16 @@ class TestAIAgentAccess:
     async def test_owner_can_access_usage(self, auth_client: AsyncClient):
         """Authenticated owner should be able to fetch agent usage stats."""
         r = await auth_client.get("/api/v1/agent/usage")
-        # 200 or feature-gated 403 — but never 401
-        assert r.status_code not in (401,)
+        assert r.status_code == 200
+        data = r.json()
+        assert "hotel_id" in data
+        assert "period_days" in data
+        assert "agents" in data
 
     async def test_staff_can_access_usage(self, staff_client: AsyncClient):
         """STAFF role should also be able to check agent usage."""
         r = await staff_client.get("/api/v1/agent/usage")
-        assert r.status_code not in (401,)
+        assert r.status_code == 200
+        data = r.json()
+        assert "hotel_id" in data
+        assert "agents" in data

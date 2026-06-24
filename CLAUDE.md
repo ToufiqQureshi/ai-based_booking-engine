@@ -342,7 +342,7 @@ If the frontend grep returns nothing → the frontend ignores a field the backen
 
 | Trigger | Required test action |
 |---|---|
-| **New endpoint** | Create tests in `backend/tests/api/v1/test_<domain>.py` covering auth guard, happy path, IDOR, empty state, and 422 for bad input |
+| **New endpoint** | Create tests in `backend/tests/api/v1/test_<domain>.py` covering auth guard, happy path, IDOR, empty state, 422 for bad input, and tampered client values ignored (for POST/PUT: assert server uses authenticated `hotel_id`, not a client-supplied one) |
 | **Bug fix** | Write the regression test first (it must fail), then fix the code (it must pass) — commit both together |
 | **Modified endpoint** | Update the existing test to cover the changed behaviour; if the test already covers it, verify the assertion still holds |
 
@@ -379,7 +379,7 @@ cd backend && python -m compileall -q app main.py
 
 ### 12.4 — File naming convention
 
-```
+```text
 backend/tests/api/v1/test_<domain>.py
 ```
 

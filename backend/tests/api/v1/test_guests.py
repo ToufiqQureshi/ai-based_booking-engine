@@ -3,7 +3,7 @@ Guest Tests
 Covers:
   - GET /bookings/guests — auth guard, paginated list, response shape,
                            tenant isolation (only own hotel's guests returned)
-  - GET /bookings/guest-stats — auth guard, numeric fields, empty state
+  - GET /bookings/guests/stats — auth guard, numeric fields, empty state
 """
 import uuid
 
@@ -17,16 +17,18 @@ from app.brand_console.hotel import Hotel
 pytestmark = pytest.mark.asyncio
 
 
-async def _seed_guest_and_booking(hotel_id: str) -> Guest:
-    """Seed a confirmed booking + guest for a given hotel."""
+async def _seed_guest_and_booking(hotel_id: str) -> str:
+    """Seed a confirmed booking + guest for a given hotel. Returns the guest email."""
     from tests.conftest import engine
 
+    guest_id = str(uuid.uuid4())
+    guest_email = f"guest-{uuid.uuid4().hex[:6]}@hotel.com"
     guest = Guest(
-        id=str(uuid.uuid4()),
+        id=guest_id,
         hotel_id=hotel_id,
         first_name="Test",
         last_name="Guest",
-        email=f"guest-{uuid.uuid4().hex[:6]}@hotel.com",
+        email=guest_email,
         phone="9000000000",
     )
     from datetime import date
@@ -34,7 +36,7 @@ async def _seed_guest_and_booking(hotel_id: str) -> Guest:
         id=str(uuid.uuid4()),
         hotel_id=hotel_id,
         booking_number=f"BK{uuid.uuid4().hex[:8].upper()}",
-        guest_id=guest.id,
+        guest_id=guest_id,
         check_in=date(2030, 3, 1),
         check_out=date(2030, 3, 3),
         status=BookingStatus.CONFIRMED,
@@ -45,8 +47,7 @@ async def _seed_guest_and_booking(hotel_id: str) -> Guest:
         session.add(guest)
         session.add(booking)
         await session.commit()
-        await session.refresh(guest)
-    return guest
+    return guest_email
 
 
 class TestGetGuests:
@@ -55,9 +56,13 @@ class TestGetGuests:
         assert r.status_code == 401
 
     async def test_returns_list(self, auth_client: AsyncClient, seeded_hotel: Hotel):
+        seeded_email = await _seed_guest_and_booking(seeded_hotel.id)
         r = await auth_client.get("/api/v1/bookings/guests")
         assert r.status_code == 200
-        assert isinstance(r.json(), list)
+        data = r.json()
+        assert isinstance(data, list)
+        emails = [g["email"] for g in data]
+        assert seeded_email in emails, "Seeded guest's email must appear in the guests list"
 
     async def test_empty_hotel_no_crash(self, auth_client: AsyncClient):
         r = await auth_client.get("/api/v1/bookings/guests")
@@ -82,11 +87,11 @@ class TestGetGuests:
             session.add(other_hotel)
             await session.commit()
 
-        other_guest = await _seed_guest_and_booking(other_hotel_id)
+        other_guest_email = await _seed_guest_and_booking(other_hotel_id)
         r = await auth_client.get("/api/v1/bookings/guests")
         assert r.status_code == 200
         guest_emails = [g["email"] for g in r.json()]
-        assert other_guest.email not in guest_emails, (
+        assert other_guest_email not in guest_emails, (
             "Guest from another hotel leaked into response"
         )
 

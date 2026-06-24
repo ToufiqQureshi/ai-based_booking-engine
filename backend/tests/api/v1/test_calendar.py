@@ -121,7 +121,7 @@ class TestCreateBlock:
             "blocked_count": 1,
         })
         # STAFF has access to availability writes in the current implementation
-        assert r.status_code not in (401,)
+        assert r.status_code == 200
 
     async def test_invalid_payload_returns_422(self, auth_client: AsyncClient):
         r = await auth_client.post("/api/v1/availability/blocks", json={})
@@ -201,7 +201,7 @@ class TestUpdateDailyRates:
             "price": 100.0,
         })
         # STAFF has access to rate writes in the current implementation
-        assert r.status_code not in (401,)
+        assert r.status_code == 200
 
     async def test_invalid_payload_returns_422(self, auth_client: AsyncClient):
         r = await auth_client.post("/api/v1/availability/rates", json={})
@@ -253,6 +253,10 @@ class TestWeekendUpdate:
             "price": 999.0,
         })
         assert r.status_code in (403, 404)
+
+    async def test_invalid_payload_returns_422(self, auth_client: AsyncClient):
+        r = await auth_client.post("/api/v1/availability/weekend-update", json={})
+        assert r.status_code == 422
 
 
 # ─── POST /availability/copy ──────────────────────────────────────────────────
