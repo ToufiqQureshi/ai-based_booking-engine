@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useVisibilityInterval } from '@/core/hooks/useVisibilityInterval';
@@ -294,7 +294,6 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { fetchLiveStats(); }, []);
   useVisibilityInterval(fetchLiveStats, 30000);
 
   const handleExport = () => {

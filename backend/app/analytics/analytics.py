@@ -70,6 +70,29 @@ _OTA_SOURCES = {
 # compute net revenue / NRevPAR per channel from them.
 _OTA_COMMISSION_RATES: dict = {}  # intentionally empty until OTA integration ships
 
+# ISO-3166-1 alpha-2 lookup for countries whose first two letters don't match
+# (e.g. "United States" → "us", not "un"). Falls back to k[:2].lower() for any
+# country not listed here — covers the long tail without a third-party dep.
+_COUNTRY_ISO2 = {
+    "Afghanistan": "af", "Albania": "al", "Algeria": "dz", "Argentina": "ar",
+    "Australia": "au", "Austria": "at", "Bangladesh": "bd", "Belgium": "be",
+    "Brazil": "br", "Canada": "ca", "Chile": "cl", "China": "cn",
+    "Colombia": "co", "Czech Republic": "cz", "Denmark": "dk", "Egypt": "eg",
+    "Finland": "fi", "France": "fr", "Germany": "de", "Greece": "gr",
+    "Hong Kong": "hk", "Hungary": "hu", "India": "in", "Indonesia": "id",
+    "Iran": "ir", "Iraq": "iq", "Ireland": "ie", "Israel": "il",
+    "Italy": "it", "Japan": "jp", "Jordan": "jo", "Kenya": "ke",
+    "Malaysia": "my", "Mexico": "mx", "Morocco": "ma", "Myanmar": "mm",
+    "Nepal": "np", "Netherlands": "nl", "New Zealand": "nz", "Nigeria": "ng",
+    "Norway": "no", "Pakistan": "pk", "Peru": "pe", "Philippines": "ph",
+    "Poland": "pl", "Portugal": "pt", "Romania": "ro", "Russia": "ru",
+    "Saudi Arabia": "sa", "Singapore": "sg", "South Africa": "za",
+    "South Korea": "kr", "Spain": "es", "Sri Lanka": "lk", "Sweden": "se",
+    "Switzerland": "ch", "Taiwan": "tw", "Thailand": "th", "Turkey": "tr",
+    "Ukraine": "ua", "United Arab Emirates": "ae", "United Kingdom": "gb",
+    "United States": "us", "Vietnam": "vn",
+}
+
 
 def _channel_category(source) -> str:
     """Bucket a BookingSource into a report channel. Direct is the default so an
@@ -237,12 +260,12 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
     device_counts: dict[str, int] = defaultdict(int)
     geo_counts: dict[str, int] = defaultdict(int)
     city_counts: dict[str, int] = defaultdict(int)
+    sessions_by_date: dict[date, int] = defaultdict(int)
     for s in sessions:
         device_counts[s.device_type or "unknown"] += 1
         geo_counts[s.country or "Unknown"] += 1
-        # City is the actionable unit for local marketing; fall back to country
-        # then "Unknown" so the breakdown always sums to total visitors.
         city_counts[s.city or s.country or "Unknown"] += 1
+        sessions_by_date[s.started_at.date()] += 1
 
     # --- Funnel events ---
     if sessions:
@@ -261,6 +284,21 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         {"stage": "Checkout", "count": event_counts.get("checkout_started", 0)},
         {"stage": "Booked", "count": event_counts.get("booking_complete", converted_sessions)},
     ]
+
+    # --- Cancellations (fetched before chart loop so we can include per-day counts) ---
+    cancelled = (await session.execute(
+        select(Booking).where(
+            Booking.hotel_id == hotel_id,
+            Booking.status == BookingStatus.CANCELLED,
+            Booking.created_at >= start_dt,
+        )
+    )).scalars().all()
+    cancellations_count = len(cancelled)
+    lost_revenue = float(sum(b.total_amount for b in cancelled))
+    cancellation_fees_collected = float(sum(b.cancellation_fee for b in cancelled))
+    cancellations_by_date: dict[date, int] = defaultdict(int)
+    for b in cancelled:
+        cancellations_by_date[b.check_in] += 1
 
     # --- Bookings (revenue / occupancy / AI attribution) ---
     # Count a booking if its stay overlaps the window (past occupancy) OR it was
@@ -301,6 +339,10 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
     available_room_nights = inventory * (days + 1)
     rev_par = round(revenue_total / available_room_nights, 2) if available_room_nights else 0.0
 
+    # Cancellation rate: cancelled / (active + cancelled) for the period.
+    total_for_rate = total_bookings + cancellations_count
+    cancellation_rate = round(cancellations_count / total_for_rate * 100, 1) if total_for_rate else 0.0
+
     # Channel mix — where bookings & revenue come from (Direct / AI / OTA / ...).
     channel_acc: dict[str, dict] = {}
     for b in bookings:
@@ -310,38 +352,106 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         slot["revenue"] += float(b.total_amount)
     channel_mix = sorted(channel_acc.values(), key=lambda x: x["revenue"], reverse=True)
 
+    # --- Per-room-type stats from booking JSON rooms array ---
+    room_revenue: dict[str, float] = defaultdict(float)
+    room_booking_counts: dict[str, dict] = {}
+    promo_counts: dict[str, int] = defaultdict(int)
+    booking_window_buckets: dict[str, int] = {
+        "Same day": 0, "1-3 days": 0, "4-7 days": 0,
+        "1-2 weeks": 0, "2-4 weeks": 0, "1-3 months": 0, "3+ months": 0,
+    }
+    for b in bookings:
+        if b.promo_code:
+            promo_counts[b.promo_code] += 1
+        lead_days = (b.check_in - b.created_at.date()).days
+        if lead_days <= 0:
+            booking_window_buckets["Same day"] += 1
+        elif lead_days <= 3:
+            booking_window_buckets["1-3 days"] += 1
+        elif lead_days <= 7:
+            booking_window_buckets["4-7 days"] += 1
+        elif lead_days <= 14:
+            booking_window_buckets["1-2 weeks"] += 1
+        elif lead_days <= 30:
+            booking_window_buckets["2-4 weeks"] += 1
+        elif lead_days <= 90:
+            booking_window_buckets["1-3 months"] += 1
+        else:
+            booking_window_buckets["3+ months"] += 1
+        for room in (b.rooms or []):
+            rt_id = room.get("room_type_id", "unknown")
+            rt_name = room.get("room_type_name", "Unknown Room")
+            room_revenue[rt_id] += float(room.get("total_price", 0.0))
+            if rt_id not in room_booking_counts:
+                room_booking_counts[rt_id] = {"id": rt_id, "name": rt_name, "count": 0}
+            room_booking_counts[rt_id]["count"] += 1
+
+    revenue_by_room_type = sorted(
+        [{"name": room_booking_counts[rt]["name"], "value": round(rev, 2)} for rt, rev in room_revenue.items()],
+        key=lambda x: x["value"], reverse=True,
+    )
+    most_booked_rooms = sorted(room_booking_counts.values(), key=lambda x: x["count"], reverse=True)[:10]
+    promo_stats = sorted(
+        [{"code": k, "bookings": v} for k, v in promo_counts.items()],
+        key=lambda x: x["bookings"], reverse=True,
+    )
+    booking_window_data = [{"window": k, "count": v} for k, v in booking_window_buckets.items()]
+
+    # --- Chart data: per-day revenue, occupancy, visitors, cancellations ---
     chart_data = []
-    occ_forecast = []
     occ_sum = 0
     for i in range(days + 1):
         d = start_date + timedelta(days=i)
         occ_rooms = occupied_map.get(d, 0)
-        # Clamp occupancy to a valid 0–100% range even if oversold.
         occ_pct = min(100, int((occ_rooms / inventory) * 100)) if inventory else 0
         day_revenue = float(sum(b.total_amount for b in bookings if b.check_in == d))
-        chart_data.append({"date": d.isoformat(), "revenue": day_revenue, "occupancy": occ_pct})
-        occ_forecast.append({"date": d.isoformat(), "occupancy": occ_pct})
+        chart_data.append({
+            "date": d.isoformat(),
+            "revenue": day_revenue,
+            "occupancy": occ_pct,
+            "visitors": sessions_by_date.get(d, 0),
+            "cancellations": cancellations_by_date.get(d, 0),
+        })
         occ_sum += occ_pct
     occupancy_rate = int(occ_sum / len(chart_data)) if chart_data else 0
 
-    # --- Leads / AI resolution ---
+    # --- 7-day occupancy forecast: upcoming booked nights ---
+    today = end_date
+    forecast_rows = (await session.execute(
+        select(Booking).where(
+            Booking.hotel_id == hotel_id,
+            Booking.status.in_(_ACTIVE_STATUSES),
+            Booking.check_out > today,
+            Booking.check_in <= today + timedelta(days=7),
+        )
+    )).scalars().all()
+    forecast_occupied = _build_occupied_per_date(forecast_rows, today, today + timedelta(days=7))
+    occ_forecast = [
+        {
+            "date": (today + timedelta(days=i)).isoformat(),
+            "occupancy": min(100, int((forecast_occupied.get(today + timedelta(days=i), 0) / inventory) * 100)) if inventory else 0,
+        }
+        for i in range(8)
+    ]
+
+    # --- Leads / AI resolution (date-filtered) ---
     leads = (await session.execute(
-        select(Lead).where(Lead.hotel_id == hotel_id)
+        select(Lead).where(
+            Lead.hotel_id == hotel_id,
+            Lead.created_at >= start_dt,
+        )
     )).scalars().all()
     total_leads = len(leads)
     converted_leads = sum(1 for l in leads if l.status == "converted")
     ai_resolution_rate = round((converted_leads / total_leads) * 100, 2) if total_leads else 0.0
-
-    # --- Cancellations ---
-    cancelled = (await session.execute(
-        select(Booking).where(
-            Booking.hotel_id == hotel_id,
-            Booking.status == BookingStatus.CANCELLED,
-            Booking.check_in > start_date,
-        )
-    )).scalars().all()
-    cancellations_count = len(cancelled)
-    lost_revenue = float(sum(b.total_amount for b in cancelled))
+    room_pref_counts: dict[str, int] = defaultdict(int)
+    for l in leads:
+        if l.room_type_preference:
+            room_pref_counts[l.room_type_preference] += 1
+    popular_questions = sorted(
+        [{"text": k, "value": v} for k, v in room_pref_counts.items()],
+        key=lambda x: x["value"], reverse=True,
+    )[:10]
 
     # --- Traffic heatmap: always exactly 7 days × 24 hours = 168 cells ---
     heat_counts: dict[tuple[int, int], int] = defaultdict(int)
@@ -369,7 +479,15 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         "ai_assisted_bookings": ai_assisted_bookings,
         "ai_revenue": ai_revenue,
         "occupancy_forecast": occ_forecast,
-        "geo_stats": [{"country": k, "code": k[:2].lower(), "visitors": v, "percentage": round((v/max(total_visitors, 1))*100)} for k, v in geo_counts.items()],
+        "geo_stats": [
+            {
+                "country": k,
+                "code": _COUNTRY_ISO2.get(k, k[:2].lower()),
+                "visitors": v,
+                "percentage": round((v / max(total_visitors, 1)) * 100),
+            }
+            for k, v in geo_counts.items()
+        ],
         "city_stats": sorted(
             ({"city": k, "visitors": v, "percentage": round((v / max(total_visitors, 1)) * 100)} for k, v in city_counts.items()),
             key=lambda x: x["visitors"], reverse=True,
@@ -378,8 +496,15 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         "ai_resolution_rate": ai_resolution_rate,
         "total_leads": total_leads,
         "cancellations_count": cancellations_count,
+        "cancellation_rate": cancellation_rate,
         "lost_revenue": lost_revenue,
+        "cancellation_fees_collected": cancellation_fees_collected,
         "commission_saved": round(revenue_total * 0.15, 2),
+        "revenue_by_room_type": revenue_by_room_type,
+        "most_booked_rooms": most_booked_rooms,
+        "promo_stats": promo_stats,
+        "booking_window_data": booking_window_data,
+        "popular_questions": popular_questions,
     }
 
 
