@@ -30,11 +30,10 @@ describe('HotelReport', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('fetches the dashboard and renders the report KPIs', async () => {
-    (apiClient.get as any).mockResolvedValue({ data: sample });
     (apiClient.get as any).mockImplementation((url: string) =>
       url.startsWith('/analytics/dashboard')
-        ? Promise.resolve({ data: sample })
-        : Promise.resolve({ data: [] }), // ShareReportButton's list call
+        ? Promise.resolve(sample)
+        : Promise.resolve([]), // ShareReportButton's list call
     );
     renderPage();
     expect(screen.getByText('BI Report')).toBeInTheDocument();
@@ -47,7 +46,7 @@ describe('HotelReport', () => {
     (apiClient.get as any).mockImplementation((url: string) =>
       url.startsWith('/analytics/dashboard')
         ? Promise.reject(new Error('boom'))
-        : Promise.resolve({ data: [] }),
+        : Promise.resolve([]),
     );
     renderPage();
     await waitFor(() =>
