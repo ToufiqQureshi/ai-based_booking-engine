@@ -2,7 +2,6 @@ import asyncio
 import concurrent.futures
 import openmeteo_requests
 import requests_cache
-import pandas as pd
 from retry_requests import retry
 from datetime import date
 

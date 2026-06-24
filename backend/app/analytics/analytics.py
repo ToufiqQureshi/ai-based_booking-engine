@@ -285,6 +285,17 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         {"stage": "Booked", "count": event_counts.get("booking_complete", converted_sessions)},
     ]
 
+    funnel_dropoffs = []
+    for i in range(1, len(funnel_data)):
+        prev = funnel_data[i-1]["count"]
+        curr = funnel_data[i]["count"]
+        drop = prev - curr
+        drop_pct = round((drop / prev) * 100, 1) if prev else 0.0
+        funnel_dropoffs.append({
+            "stage": f"{funnel_data[i-1]['stage']} to {funnel_data[i]['stage']}",
+            "drop_percentage": drop_pct
+        })
+
     # --- Cancellations (fetched before chart loop so we can include per-day counts) ---
     cancelled = (await session.execute(
         select(Booking).where(
@@ -458,10 +469,19 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
     for s in sessions:
         heat_counts[(s.started_at.weekday(), s.started_at.hour)] += 1
     traffic_heatmap = [
-        {"day": dow, "hour": hour, "count": heat_counts.get((dow, hour), 0)}
+        {"weekday": dow, "hour": hour, "visitors": heat_counts.get((dow, hour), 0)}
         for dow in range(7)
         for hour in range(24)
     ]
+
+    # --- Pickup Stats ---
+    today_bookings = len([b for b in bookings if b.created_at.date() == end_date])
+    yesterday_bookings = len([b for b in bookings if b.created_at.date() == (end_date - timedelta(days=1))])
+    pickup_stats = {
+        "today": today_bookings,
+        "yesterday": yesterday_bookings,
+        "trend": "up" if today_bookings >= yesterday_bookings else "down"
+    }
 
     return {
         "total_visitors": total_visitors,
@@ -505,6 +525,8 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         "promo_stats": promo_stats,
         "booking_window_data": booking_window_data,
         "popular_questions": popular_questions,
+        "funnel_dropoffs": funnel_dropoffs,
+        "pickup_stats": pickup_stats,
     }
 
 

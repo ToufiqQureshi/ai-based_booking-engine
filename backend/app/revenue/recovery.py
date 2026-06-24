@@ -156,6 +156,14 @@ async def run_abandoned_recovery(
         abandoned = await _find_abandoned(session, hotel_id=hotel_id)
         # Cache hotel lookups so we don't refetch per booking.
         hotel_cache: dict = {}
+        
+        # Batch fetch guests to eliminate N+1 queries
+        guest_ids = [b.guest_id for b in abandoned if b.guest_id]
+        if guest_ids:
+            guests_res = await session.execute(select(Guest).where(Guest.id.in_(guest_ids)))
+            guest_cache = {g.id: g for g in guests_res.scalars().all()}
+        else:
+            guest_cache = {}
 
         for booking in abandoned:
             try:
@@ -171,7 +179,7 @@ async def run_abandoned_recovery(
                     skipped_disabled += 1
                     continue
 
-                guest = await session.get(Guest, booking.guest_id)
+                guest = guest_cache.get(booking.guest_id)
                 if not guest:
                     continue
 

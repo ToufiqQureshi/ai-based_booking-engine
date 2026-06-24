@@ -23,15 +23,23 @@ from app.core.storage import delete_media_objects
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
 
 
+from fastapi import Request, Query
+
 @router.get("", response_model=List[RoomTypeRead])
 @cache_response(expire=300, key_prefix="rooms")
-async def get_rooms(request: Request, current_user: CurrentUser, session: DbSession):
+async def get_rooms(
+    request: Request, 
+    current_user: CurrentUser, 
+    session: DbSession,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
     """
     Hotel ke saare room types get karo.
     Rooms page mein list display ke liye.
     """
     result = await session.execute(
-        select(RoomType).where(RoomType.hotel_id == current_user.hotel_id)
+        select(RoomType).where(RoomType.hotel_id == current_user.hotel_id).limit(limit).offset(offset)
     )
     rooms = result.scalars().all()
     return rooms

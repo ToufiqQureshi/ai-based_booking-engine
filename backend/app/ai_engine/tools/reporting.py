@@ -2,9 +2,6 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.utils import ImageReader
-import matplotlib
-matplotlib.use('Agg') # Non-interactive backend
-import matplotlib.pyplot as plt
 import io
 from datetime import date
 
@@ -16,6 +13,10 @@ def generate_pdf_report(revenue: int, occupancy: int, period: str) -> str:
     try:
         filename = f"report_{date.today().isoformat()}.pdf"
         
+        import matplotlib
+        matplotlib.use('Agg') # Non-interactive backend
+        import matplotlib.pyplot as plt
+
         # 1. Generate Chart (Matplotlib)
         plt.figure(figsize=(6, 4))
         categories = ['Room Revenue', 'F&B Revenue', 'Other']
