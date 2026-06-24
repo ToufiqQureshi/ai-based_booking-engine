@@ -163,6 +163,175 @@ Every bug fix must follow this checklist before committing:
 - **Auth on read endpoints** — GET endpoints need the same role/permission guards as write endpoints.
 - **Silent failures** — broad `except` blocks that return generic responses hide real bugs. Check for them near any code you touch.
 
+---
+
+## 🧪 10. Test Requirements — Every Endpoint, Every Feature
+
+**The rule: no endpoint ships without a test. No bug is fixed without a regression test.**
+
+### 10.1 — Test template for every new backend endpoint
+
+Every new route (`GET`, `POST`, `PUT`, `DELETE`) needs **at minimum** these four tests in `backend/tests/api/v1/test_<domain>.py`:
+
+```python
+# 1. Auth guard — unauthenticated request must be rejected
+async def test_<endpoint>_requires_auth(client):
+    res = await client.get("/api/v1/<endpoint>")
+    assert res.status_code == 401
+
+# 2. Happy path — authenticated request returns the right shape
+async def test_<endpoint>_returns_expected_keys(auth_client):
+    res = await auth_client.get("/api/v1/<endpoint>")
+    assert res.status_code == 200
+    data = res.json()
+    # Assert EVERY key the frontend reads. If frontend reads data.foo, test assert "foo" in data
+    assert "field_one" in data
+    assert "field_two" in data
+
+# 3. Tenant isolation — hotel A cannot see hotel B's data (IDOR guard)
+async def test_<endpoint>_tenant_isolated(auth_client, other_hotel_resource):
+    res = await auth_client.get(f"/api/v1/<endpoint>/{other_hotel_resource.id}")
+    assert res.status_code in (403, 404)
+
+# 4. Edge case / empty state — endpoint never crashes on empty DB
+async def test_<endpoint>_empty_state_no_crash(auth_client):
+    res = await auth_client.get("/api/v1/<endpoint>")
+    assert res.status_code == 200
+    # should return empty list/dict, not 500
+```
+
+For `POST`/`PUT` endpoints, additionally test:
+```python
+# 5. Input validation — malformed input returns 422, not 500
+async def test_<endpoint>_rejects_invalid_input(auth_client):
+    res = await auth_client.post("/api/v1/<endpoint>", json={"bad": "data"})
+    assert res.status_code == 422
+
+# 6. Server-side enforcement — client cannot override server-computed values
+async def test_<endpoint>_ignores_tampered_amount(auth_client):
+    # e.g. for bookings, send a tampered total_amount and assert server ignores it
+    ...
+```
+
+### 10.2 — Regression test for every bug fix
+
+**Before touching the code**, write a test that reproduces the bug (it must fail). Then fix the code. Then the test must pass. This proves the fix works AND prevents the bug from coming back.
+
+```python
+# PATTERN: name it test_regression_<what_was_broken>
+async def test_regression_cancellation_rate_not_zero_when_cancellations_exist(auth_client):
+    # Reproduce the exact condition that caused the bug
+    # Assert the correct behaviour
+    res = await auth_client.get("/analytics/dashboard/cancellations?days=30")
+    data = res.json()
+    # This test would have caught the bug where cancellation_rate was always 0
+    assert "cancellation_rate" in data
+    assert isinstance(data["cancellation_rate"], (int, float))
+```
+
+### 10.3 — CI checklist before every push
+
+Run these in order. If any fails, **do not push**:
+
+```bash
+# 1. Syntax check (catches import errors instantly)
+cd backend && python -m compileall -q app main.py
+
+# 2. Full test suite
+cd backend && pytest tests/ -x -q --tb=short
+
+# 3. Frontend build (catches TypeScript type errors)
+cd frontend && npm run build
+```
+
+The `npm run lint` has pre-existing `any` type warnings that are not blocking, but `npm run build` must succeed — it catches missing imports, undefined variables, and type errors that lint misses.
+
+---
+
+## 🔗 11. Frontend ↔ Backend Contract — Keeping Both in Sync
+
+**The #1 source of silent bugs in this codebase:** backend adds/removes a field, frontend silently gets `undefined`, UI shows empty state or wrong data. No error is thrown. No one notices until a real user sees it.
+
+### 11.1 — The contract rule
+
+**Every field that the frontend reads from an API response must exist in:**
+1. The backend's return dict / Pydantic response model
+2. The frontend TypeScript interface
+
+Both must agree. If they diverge, something is broken.
+
+### 11.2 — How to audit frontend → backend (does backend return what frontend expects?)
+
+For each frontend TypeScript interface (e.g. `AnalyticsData` in `AnalyticsDashboard.tsx`), every field the frontend accesses must be in the backend's return dict:
+
+```bash
+# Step 1: Find what keys the frontend reads from a specific API
+# Search for all accesses like data.some_field or overviewData.some_field
+grep -n "overviewData\." frontend/src/analytics/AnalyticsDashboard.tsx | grep -v '//'
+
+# Step 2: Find what the backend actually returns
+# Look at the return dict in the backend endpoint function
+grep -n '"' backend/app/analytics/analytics.py | grep -A1 "return {"
+
+# Step 3: Compare the two lists. Any key in Step 1 not in Step 2 is a bug.
+```
+
+**Practical rule:** When adding a new section to a frontend component that reads `data.xyz`, immediately check that the backend's return dict contains `"xyz"`. If it doesn't, add it to the backend first.
+
+### 11.3 — How to audit backend → frontend (does frontend handle what backend returns?)
+
+When the backend adds a new field to a response, check that the frontend TypeScript interface is updated:
+
+```bash
+# Find the TypeScript interface for this endpoint's data
+grep -n "interface.*Data" frontend/src/analytics/AnalyticsDashboard.tsx
+
+# Check if the new backend field is in the interface
+# If it's missing, add it — TypeScript will then show errors anywhere it's used wrong
+```
+
+**Practical rule:** When adding a new key to a backend return dict, immediately add it to the corresponding TypeScript `interface` in the frontend. Use `field?: Type` (optional) if the frontend should gracefully handle absence.
+
+### 11.4 — The checklist for adding a new field (both directions)
+
+When you add a new field anywhere in the API contract, check all 4 items:
+
+```
+[ ] 1. Backend return dict / response model includes the new field
+[ ] 2. Frontend TypeScript interface includes the new field (with correct type)
+[ ] 3. Backend test asserts the field is present in the response JSON
+[ ] 4. Frontend renders it correctly (not just reads it — actually shows it in UI)
+```
+
+If all 4 are not checked, the feature is incomplete.
+
+### 11.5 — Known high-risk divergence points in this codebase
+
+These patterns have caused silent bugs before. Check them on every change:
+
+| Pattern | Risk | How to catch |
+|---|---|---|
+| Backend adds field to return dict | Frontend shows old data / empty | Add field to TS interface + test `assert "field" in data` |
+| Frontend reads `data.field?.subfield` | Crashes silently if backend structure changes | Add optional chaining `?.` everywhere + test the shape |
+| Backend renames a field | Frontend gets `undefined` everywhere | Grep frontend for the old name before renaming |
+| Backend moves field to nested object | Frontend `data.field` returns `undefined` | Grep all frontend consumers before restructuring |
+| `booking.rooms` is JSON array of dicts | `.rooms.room_type_name` crashes, use `.get()` | Always use `.get()` on JSON dict fields in Python |
+| Analytics `chart_data` fields | Frontend chart dataKey must match exact key in each dict | Test that each chart `dataKey` prop exists in the returned data |
+
+### 11.6 — Fast contract audit command (run before pushing any API change)
+
+```bash
+# Check if a backend field name exists anywhere in the frontend
+# Replace 'cancellation_rate' with the field you added/changed
+grep -r "cancellation_rate" frontend/src/
+
+# Check if a frontend-read field exists in the backend response
+grep -r "cancellation_rate" backend/app/analytics/analytics.py
+```
+
+If the backend grep returns nothing → the field is missing from the backend.
+If the frontend grep returns nothing → the frontend ignores a field the backend computes (wasted DB work).
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
