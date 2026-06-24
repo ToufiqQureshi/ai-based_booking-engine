@@ -367,16 +367,33 @@ async def create_hotel_user(
         logger.error("Supabase Auth registration failed for hotel user: %s", e)
         raise HTTPException(status_code=500, detail="Account registration failed. Please try again.")
 
-    new_user = User(
-        email=email,
-        name=data.name,
-        role=UserRole(data.role),
-        supabase_id=supabase_id,
-        hashed_password=security.get_password_hash(data.password),
-        hotel_id=hotel_id,
-        is_active=True,
-    )
-    session.add(new_user)
+    # The on_auth_user_created trigger already inserted a stub row into public.users
+    # the moment Supabase created the auth user. Find it and update it rather than
+    # attempting a second INSERT (which would hit the supabase_id unique constraint).
+    trigger_user = (await session.execute(
+        select(User).where(User.supabase_id == supabase_id)
+    )).scalars().first()
+
+    if trigger_user:
+        trigger_user.name = data.name
+        trigger_user.email = email
+        trigger_user.role = UserRole(data.role)
+        trigger_user.hotel_id = hotel_id
+        trigger_user.hashed_password = security.get_password_hash(data.password)
+        trigger_user.is_active = True
+        new_user = trigger_user
+    else:
+        new_user = User(
+            email=email,
+            name=data.name,
+            role=UserRole(data.role),
+            supabase_id=supabase_id,
+            hashed_password=security.get_password_hash(data.password),
+            hotel_id=hotel_id,
+            is_active=True,
+        )
+        session.add(new_user)
+
     session.add(AuditLog(
         user_id=super_admin.id, user_email=super_admin.email, hotel_id=hotel_id,
         action="CREATE_USER",
@@ -392,12 +409,7 @@ async def create_hotel_user(
             supabase_client.auth.admin.delete_user(supabase_id)
         except Exception as cleanup_err:
             logger.warning("Supabase auth user %s could not be deleted during rollback: %s", supabase_id, cleanup_err)
-        
-        error_str = str(e)
-        if "ix_users_email" in error_str or "UniqueViolationError" in error_str:
-            raise HTTPException(status_code=400, detail="A user with this email address already exists")
-            
-        # Log full detail server-side; never leak internals/traceback to the client.
+
         logger.exception("DB save failed for new hotel user %s", email)
         raise HTTPException(status_code=500, detail="Failed to save user. Please try again.")
 

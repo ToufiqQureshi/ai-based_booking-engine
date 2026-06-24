@@ -126,19 +126,34 @@ async def create_team_member(
             )
         raise HTTPException(status_code=403, detail="Managers cannot create owners")
         
-    new_user = User(
-        id=supabase_id,
-        email=data.email.lower().strip(),
-        hashed_password="",
-        name=data.name,
-        role=UserRole(data.role),
-        hotel_id=current_user.hotel_id
-    )
-    
-    session.add(new_user)
+    # The on_auth_user_created trigger already inserted a stub row. Update it instead
+    # of inserting a new row (which would collide on supabase_id / email unique indexes).
+    trigger_user = (await session.execute(
+        select(User).where(User.supabase_id == str(supabase_id))
+    )).scalars().first()
+
+    if trigger_user:
+        trigger_user.name = data.name
+        trigger_user.email = data.email.lower().strip()
+        trigger_user.role = UserRole(data.role)
+        trigger_user.hotel_id = current_user.hotel_id
+        trigger_user.hashed_password = ""
+        trigger_user.is_active = True
+        new_user = trigger_user
+    else:
+        new_user = User(
+            id=supabase_id,
+            email=data.email.lower().strip(),
+            hashed_password="",
+            name=data.name,
+            role=UserRole(data.role),
+            hotel_id=current_user.hotel_id,
+        )
+        session.add(new_user)
+
     await session.commit()
     await session.refresh(new_user)
-    
+
     return new_user
 
 class UserUpdateProfile(BaseModel):

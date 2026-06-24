@@ -16,7 +16,9 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel
 
-# Set env vars BEFORE importing any app modules
+# Set env vars BEFORE importing any app modules.
+# Force DEBUG=False so /docs is disabled in all tests, regardless of local .env.
+os.environ["DEBUG"] = "False"
 os.environ.setdefault("SECRET_KEY", "TEST_SECRET_KEY_32_CHARS_MINIMUM_!")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("REDIS_URL", "")
