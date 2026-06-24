@@ -256,10 +256,10 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                                             {hotel.is_paused && (
                                                 <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-amber-200 text-amber-700 bg-amber-50">Paused</Badge>
                                             )}
-                                            {hotel.is_active && plan === 'free' && (
+                                            {hotel.is_active && (plan === 'free' || plan === 'none') && (
                                                 <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-indigo-200 text-indigo-700 bg-indigo-50">Upsell opportunity</Badge>
                                             )}
-                                            {hotel.is_active && !hotel.is_paused && plan !== 'free' && (
+                                            {hotel.is_active && !hotel.is_paused && plan !== 'free' && plan !== 'none' && (
                                                 <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/> Healthy
                                                 </span>
@@ -293,7 +293,23 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
                     Showing {sorted.length} of {hotels.length} properties
                 </span>
                 <button
-                    onClick={() => apiClient.download('/superadmin/export/all-hotels', 'all-hotels.csv').catch(() => toast.error('Export failed'))}
+                    onClick={() => {
+                        const headers = ['Name', 'Owner Email', 'Slug', 'Status', 'Plan', 'Users'];
+                        const rows = hotels.map(h => [
+                            h.name,
+                            h.owner_email,
+                            h.slug || '',
+                            h.is_paused ? 'Paused' : h.is_active ? 'Active' : 'Locked',
+                            h.subscription?.plan ?? 'None',
+                            users.filter((u: any) => u.hotel_id === h.id).length,
+                        ]);
+                        const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = 'all-hotels.csv'; a.click();
+                        URL.revokeObjectURL(url);
+                    }}
                     className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-indigo-600 transition-colors"
                 >
                     <Download className="w-3 h-3" /> Export CSV

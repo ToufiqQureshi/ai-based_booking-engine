@@ -35,6 +35,11 @@ export default function SuperAdminDashboard() {
     const activeSection = section as NavSection;
     const navigate = useNavigate();
 
+    // /overview has no content — redirect to /hotels immediately
+    if (activeSection === 'overview' as any) {
+        navigate('/hotels', { replace: true });
+    }
+
     const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -137,7 +142,7 @@ export default function SuperAdminDashboard() {
         h.owner_email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const activeHotels = hotels.filter((h: any) => h.subscription?.status === 'active').length;
+    const activeHotels = hotels.filter((h: any) => h.is_active && !h.is_paused).length;
 
     return (
         <div className="flex h-screen bg-background overflow-hidden">

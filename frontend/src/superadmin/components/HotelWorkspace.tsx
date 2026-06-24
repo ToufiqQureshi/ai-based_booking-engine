@@ -486,7 +486,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                             <td className="py-3 px-3 text-xs text-muted-foreground">{u.email}</td>
                                             <td className="py-3 px-3">
                                                 <Badge className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground border-border">
-                                                    {u.role}
+                                                    {u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'OWNER' ? 'Owner' : u.role === 'MANAGER' ? 'Manager' : u.role === 'STAFF' ? 'Staff' : u.role}
                                                 </Badge>
                                             </td>
                                             <td className="py-3 pr-4">
@@ -659,6 +659,8 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                             <SelectItem value="openai">OpenAI</SelectItem>
                                             <SelectItem value="openrouter">OpenRouter</SelectItem>
                                             <SelectItem value="ollama">Ollama</SelectItem>
+                                            <SelectItem value="deepseek">DeepSeek</SelectItem>
+                                            <SelectItem value="anthropic">Anthropic</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
