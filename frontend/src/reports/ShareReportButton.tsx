@@ -33,8 +33,8 @@ const ShareReportButton: React.FC<{ days: number }> = ({ days }) => {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/analytics/share');
-      setLinks(res.data || []);
+      const res = await api.get<ShareLink[]>('/analytics/share');
+      setLinks(res || []);
     } catch {
       toast.error('Could not load share links');
     } finally {
@@ -49,9 +49,9 @@ const ShareReportButton: React.FC<{ days: number }> = ({ days }) => {
     try {
       // Share the same window the hotelier is currently viewing; default 30-day
       // link validity (revocable any time).
-      const res = await api.post('/analytics/share', { days, expires_in_days: 30 });
-      setLinks((prev) => [res.data, ...prev]);
-      await navigator.clipboard?.writeText(publicUrl(res.data.token)).catch(() => {});
+      const res = await api.post<ShareLink>('/analytics/share', { days, expires_in_days: 30 });
+      setLinks((prev) => [res, ...prev]);
+      await navigator.clipboard?.writeText(publicUrl(res.token)).catch(() => {});
       toast.success('Share link created & copied to clipboard');
     } catch {
       toast.error('Could not create link (OWNER/MANAGER only)');

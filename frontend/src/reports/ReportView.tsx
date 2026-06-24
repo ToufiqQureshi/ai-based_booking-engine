@@ -30,7 +30,24 @@ export interface ReportData {
   city_stats: { city: string; visitors: number; percentage: number }[];
 }
 
-const COLORS = ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444'];
+export interface DashboardConfig {
+  visibleKpis: string[]; // 'visitors', 'rooms', 'revenue', 'revpar'
+  colorTheme: 'default' | 'ocean' | 'sunset' | 'forest';
+  trendChartType: 'area' | 'bar';
+}
+
+export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
+  visibleKpis: ['visitors', 'rooms', 'revenue', 'revpar'],
+  colorTheme: 'default',
+  trendChartType: 'area',
+};
+
+const THEMES = {
+  default: ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444'],
+  ocean:   ['#0ea5e9', '#06b6d4', '#0284c7', '#38bdf8', '#0369a1', '#7dd3fc'],
+  sunset:  ['#f97316', '#f43f5e', '#fb923c', '#fbbf24', '#ea580c', '#e11d48'],
+  forest:  ['#10b981', '#84cc16', '#22c55e', '#a3e635', '#059669', '#4ade80'],
+};
 
 export const inr = (n: number) =>
   '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
@@ -90,44 +107,68 @@ const Panel: React.FC<{ title: string; children: React.ReactNode }> = ({ title, 
   </div>
 );
 
-const ReportView: React.FC<{ data: ReportData }> = ({ data: d }) => {
+const ReportView: React.FC<{ data: ReportData, config?: DashboardConfig }> = ({ data: d, config = DEFAULT_DASHBOARD_CONFIG }) => {
   const cityChart = useMemo(
     () => (d.city_stats || []).slice(0, 8).map((c) => ({ name: c.city, visitors: c.visitors })),
     [d],
   );
 
+  const colors = THEMES[config.colorTheme] || THEMES.default;
+  const primaryColor = colors[0];
+  const secondaryColor = colors[1];
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* KPI row */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-5">
-        <KpiCard icon={<Users className="w-5 h-5" />} label="Visitors" value={(d.total_visitors || 0).toLocaleString('en-IN')} sub={`${d.conversion_rate}% converted`} colorClass="text-blue-600 bg-blue-50" />
-        <KpiCard icon={<BedDouble className="w-5 h-5" />} label="Rooms Booked" value={(d.rooms_booked || 0).toLocaleString('en-IN')} sub={`${d.total_bookings} bookings`} colorClass="text-emerald-600 bg-emerald-50" />
-        <KpiCard icon={<IndianRupee className="w-5 h-5" />} label="Revenue" value={inr(d.revenue_total)} sub={`ADR ${inr(d.avg_daily_rate)}`} colorClass="text-amber-600 bg-amber-50" />
-        <KpiCard icon={<TrendingUp className="w-5 h-5" />} label="RevPAR" value={inr(d.rev_par)} sub={`${d.occupancy_rate}% occupancy`} colorClass="text-purple-600 bg-purple-50" />
+        {config.visibleKpis.includes('visitors') && (
+          <KpiCard icon={<Users className="w-5 h-5" />} label="Visitors" value={(d.total_visitors || 0).toLocaleString('en-IN')} sub={`${d.conversion_rate}% converted`} colorClass="text-blue-600 bg-blue-50" />
+        )}
+        {config.visibleKpis.includes('rooms') && (
+          <KpiCard icon={<BedDouble className="w-5 h-5" />} label="Rooms Booked" value={(d.rooms_booked || 0).toLocaleString('en-IN')} sub={`${d.total_bookings} bookings`} colorClass="text-emerald-600 bg-emerald-50" />
+        )}
+        {config.visibleKpis.includes('revenue') && (
+          <KpiCard icon={<IndianRupee className="w-5 h-5" />} label="Revenue" value={inr(d.revenue_total)} sub={`ADR ${inr(d.avg_daily_rate)}`} colorClass="text-amber-600 bg-amber-50" />
+        )}
+        {config.visibleKpis.includes('revpar') && (
+          <KpiCard icon={<TrendingUp className="w-5 h-5" />} label="RevPAR" value={inr(d.rev_par)} sub={`${d.occupancy_rate}% occupancy`} colorClass="text-purple-600 bg-purple-50" />
+        )}
       </section>
 
       {/* Revenue + occupancy trend */}
       <Panel title="Revenue & Occupancy Trend">
         <ResponsiveContainer width="100%" height={320}>
-          <AreaChart data={d.chart_data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
-              </linearGradient>
-              <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-            <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} minTickGap={30} dy={10} />
-            <YAxis yAxisId="left" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} unit="%" />
-            <Tooltip content={<PremiumTooltip />} />
-            <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} fill="url(#colorRev)" name="Revenue" activeDot={{ r: 6, strokeWidth: 0, fill: '#6366f1' }} />
-            <Area yAxisId="right" type="monotone" dataKey="occupancy" stroke="#14b8a6" strokeWidth={3} fill="url(#colorOcc)" name="Occupancy %" activeDot={{ r: 6, strokeWidth: 0, fill: '#14b8a6' }} />
-          </AreaChart>
+          {config.trendChartType === 'area' ? (
+            <AreaChart data={d.chart_data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={primaryColor} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={primaryColor} stopOpacity={0.0} />
+                </linearGradient>
+                <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={secondaryColor} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={secondaryColor} stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} minTickGap={30} dy={10} />
+              <YAxis yAxisId="left" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} unit="%" />
+              <Tooltip content={<PremiumTooltip />} />
+              <Area yAxisId="left" type="monotone" dataKey="revenue" stroke={primaryColor} strokeWidth={3} fill="url(#colorRev)" name="Revenue" activeDot={{ r: 6, strokeWidth: 0, fill: primaryColor }} />
+              <Area yAxisId="right" type="monotone" dataKey="occupancy" stroke={secondaryColor} strokeWidth={3} fill="url(#colorOcc)" name="Occupancy %" activeDot={{ r: 6, strokeWidth: 0, fill: secondaryColor }} />
+            </AreaChart>
+          ) : (
+            <BarChart data={d.chart_data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} minTickGap={30} dy={10} />
+              <YAxis yAxisId="left" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} unit="%" />
+              <Tooltip content={<PremiumTooltip />} />
+              <Bar yAxisId="left" dataKey="revenue" fill={primaryColor} name="Revenue" radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="right" dataKey="occupancy" fill={secondaryColor} name="Occupancy %" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          )}
         </ResponsiveContainer>
       </Panel>
 
@@ -139,8 +180,8 @@ const ReportView: React.FC<{ data: ReportData }> = ({ data: d }) => {
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="stage" tick={{ fontSize: 12, fill: '#475569', fontWeight: 500 }} axisLine={false} tickLine={false} width={100} />
               <Tooltip cursor={{ fill: '#f8fafc' }} content={<PremiumTooltip />} />
-              <Bar dataKey="count" fill="#6366f1" radius={[0, 8, 8, 0]} barSize={32}>
-                {d.funnel_data?.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              <Bar dataKey="count" fill={primaryColor} radius={[0, 8, 8, 0]} barSize={32}>
+                {d.funnel_data?.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -156,7 +197,7 @@ const ReportView: React.FC<{ data: ReportData }> = ({ data: d }) => {
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie data={d.channel_mix} dataKey="revenue" nameKey="channel" cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={4} stroke="none" label={(e: any) => e.channel}>
-                  {d.channel_mix.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  {d.channel_mix.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
                 </Pie>
                 <Tooltip content={<PremiumTooltip />} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
@@ -179,8 +220,8 @@ const ReportView: React.FC<{ data: ReportData }> = ({ data: d }) => {
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#475569', fontWeight: 500 }} axisLine={false} tickLine={false} width={100} />
                 <Tooltip cursor={{ fill: '#f8fafc' }} content={<PremiumTooltip />} />
-                <Bar dataKey="visitors" fill="#0ea5e9" radius={[0, 8, 8, 0]} barSize={24}>
-                  {cityChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                <Bar dataKey="visitors" fill={secondaryColor} radius={[0, 8, 8, 0]} barSize={24}>
+                  {cityChart.map((_, i) => <Cell key={i} fill={colors[(i + 1) % colors.length]} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -197,7 +238,7 @@ const ReportView: React.FC<{ data: ReportData }> = ({ data: d }) => {
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie data={d.device_stats} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={4} stroke="none" label={(e: any) => e.type}>
-                  {d.device_stats.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  {d.device_stats.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
                 </Pie>
                 <Tooltip content={<PremiumTooltip />} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
