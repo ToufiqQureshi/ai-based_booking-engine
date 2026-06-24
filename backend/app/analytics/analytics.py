@@ -379,6 +379,7 @@ async def _compute_dashboard(session, hotel_id: str, days: int) -> dict:
         "total_leads": total_leads,
         "cancellations_count": cancellations_count,
         "lost_revenue": lost_revenue,
+        "commission_saved": round(revenue_total * 0.15, 2),
     }
 
 
@@ -401,13 +402,7 @@ async def analytics_overview(
     request: Request, current_user: CurrentUser, session: DbSession,
     days: int = Query(default=30, ge=1, le=365),
 ):
-    d = await _compute_dashboard(session, current_user.hotel_id, days)
-    return {
-        "total_visitors": d["total_visitors"],
-        "conversion_rate": d["conversion_rate"],
-        "funnel_data": d["funnel_data"],
-        "device_stats": d["device_stats"],
-    }
+    return await _compute_dashboard(session, current_user.hotel_id, days)
 
 
 @router.get("/dashboard/revenue")
@@ -417,18 +412,7 @@ async def analytics_revenue(
     request: Request, current_user: CurrentUser, session: DbSession,
     days: int = Query(default=30, ge=1, le=365),
 ):
-    d = await _compute_dashboard(session, current_user.hotel_id, days)
-    return {
-        "revenue_total": d["revenue_total"],
-        "avg_daily_rate": d["avg_daily_rate"],
-        "rev_par": d["rev_par"],
-        "total_bookings": d["total_bookings"],
-        "rooms_booked": d["rooms_booked"],
-        "channel_mix": d["channel_mix"],
-        "occupancy_forecast": d["occupancy_forecast"],
-        "chart_data": d["chart_data"],
-        "ai_revenue": d["ai_revenue"],
-    }
+    return await _compute_dashboard(session, current_user.hotel_id, days)
 
 
 @router.get("/dashboard/traffic")
@@ -438,13 +422,7 @@ async def analytics_traffic(
     request: Request, current_user: CurrentUser, session: DbSession,
     days: int = Query(default=30, ge=1, le=365),
 ):
-    d = await _compute_dashboard(session, current_user.hotel_id, days)
-    return {
-        "geo_stats": d["geo_stats"],
-        "city_stats": d["city_stats"],
-        "traffic_heatmap": d["traffic_heatmap"],
-        "device_stats": d["device_stats"],
-    }
+    return await _compute_dashboard(session, current_user.hotel_id, days)
 
 
 @router.get("/dashboard/ai")
@@ -454,13 +432,7 @@ async def analytics_ai(
     request: Request, current_user: CurrentUser, session: DbSession,
     days: int = Query(default=30, ge=1, le=365),
 ):
-    d = await _compute_dashboard(session, current_user.hotel_id, days)
-    return {
-        "ai_resolution_rate": d["ai_resolution_rate"],
-        "total_leads": d["total_leads"],
-        "ai_assisted_bookings": d["ai_assisted_bookings"],
-        "ai_revenue": d["ai_revenue"],
-    }
+    return await _compute_dashboard(session, current_user.hotel_id, days)
 
 
 @router.get("/dashboard/cancellations")
@@ -470,11 +442,7 @@ async def analytics_cancellations(
     request: Request, current_user: CurrentUser, session: DbSession,
     days: int = Query(default=30, ge=1, le=365),
 ):
-    d = await _compute_dashboard(session, current_user.hotel_id, days)
-    return {
-        "cancellations_count": d["cancellations_count"],
-        "lost_revenue": d["lost_revenue"],
-    }
+    return await _compute_dashboard(session, current_user.hotel_id, days)
 
 
 @router.get("/dashboard/kpis")
