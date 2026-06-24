@@ -143,6 +143,12 @@ async def init_db():
     # Chain-wide features migrations
     for table_alter in [
         "ALTER TABLE chains ADD COLUMN primary_color VARCHAR(50) DEFAULT '#4f46e5'",
+        "ALTER TABLE chains ADD COLUMN widget_layout VARCHAR(50) DEFAULT 'modern'",
+        "ALTER TABLE chains ADD COLUMN widget_bg_color VARCHAR(50) DEFAULT '#FFFFFF'",
+        "ALTER TABLE chains ADD COLUMN widget_theme VARCHAR(50) DEFAULT 'light'",
+        "ALTER TABLE chains ADD COLUMN widget_show_price BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE chains ADD COLUMN widget_show_loyalty BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE chains ADD COLUMN widget_show_property_count BOOLEAN DEFAULT TRUE",
         "ALTER TABLE loyalty_programs ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
         "ALTER TABLE loyalty_programs ALTER COLUMN hotel_id DROP NOT NULL",
         "ALTER TABLE guest_loyalty ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL",
