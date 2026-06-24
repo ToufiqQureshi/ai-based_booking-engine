@@ -241,7 +241,12 @@ async def get_google_locations(current_user: CurrentUser, session: DbSession):
             )
 
         if accounts_resp.status_code != 200:
-            raise HTTPException(status_code=accounts_resp.status_code, detail=f"Failed to fetch accounts: {accounts_resp.text}")
+            try:
+                error_json = accounts_resp.json()
+                error_detail = error_json.get("error", {}).get("message") or str(error_json)
+            except Exception:
+                error_detail = "Failed to fetch Google accounts. Please reconnect your account."
+            raise HTTPException(status_code=accounts_resp.status_code, detail=error_detail)
 
         accounts = accounts_resp.json().get("accounts", [])
         
@@ -354,7 +359,12 @@ async def get_google_reviews(request: Request, current_user: CurrentUser, sessio
             )
 
         if reviews_resp.status_code != 200:
-            raise HTTPException(status_code=reviews_resp.status_code, detail=f"Failed to fetch reviews: {reviews_resp.text}")
+            try:
+                error_json = reviews_resp.json()
+                error_detail = error_json.get("error", {}).get("message") or str(error_json)
+            except Exception:
+                error_detail = "Google API returned an unexpected response. Please reconnect your account."
+            raise HTTPException(status_code=reviews_resp.status_code, detail=error_detail)
 
         return reviews_resp.json()
 
@@ -472,7 +482,12 @@ async def post_google_review_reply(
                 resp = await client.put(reply_url, headers=headers, json={"comment": reply_text})
 
         if resp.status_code not in (200, 201):
-            raise HTTPException(status_code=resp.status_code, detail=f"Failed to post reply: {resp.text}")
+            try:
+                error_json = resp.json()
+                error_detail = error_json.get("error", {}).get("message") or str(error_json)
+            except Exception:
+                error_detail = "Failed to post reply. Please try again."
+            raise HTTPException(status_code=resp.status_code, detail=error_detail)
 
         return {"status": "success", "message": "Reply posted successfully to Google!", "data": resp.json()}
 

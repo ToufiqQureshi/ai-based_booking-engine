@@ -224,7 +224,7 @@ export function PaymentsPage() {
                     <TableCell className="font-medium text-primary">{payment.booking_number}</TableCell>
                     <TableCell>{payment.guest_name}</TableCell>
                     <TableCell className="capitalize">{payment.payment_method || 'N/A'}</TableCell>
-                    <TableCell>{new Date(payment.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(payment.created_at).toLocaleDateString('en-GB')}</TableCell>
                     <TableCell>
                       <Badge
                         variant={statusConfig[payment.status]?.variant || 'default'}

@@ -79,7 +79,9 @@ export function TeamList() {
               <p className="text-sm text-muted-foreground">{u.email}</p>
             </div>
           </div>
-          <div className="text-sm font-medium text-primary">{u.role}</div>
+          <div className="text-sm font-medium text-primary">
+            {u.role === 'SUPER_ADMIN' ? 'Super Admin' : u.role === 'OWNER' ? 'Owner' : u.role === 'MANAGER' ? 'Manager' : u.role === 'STAFF' ? 'Staff' : u.role}
+          </div>
         </div>
       ))}
       

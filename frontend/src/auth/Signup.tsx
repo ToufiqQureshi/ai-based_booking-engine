@@ -30,6 +30,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 
 export function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { signup, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -160,25 +161,41 @@ export function SignupPage() {
                     )}
                   </Button>
                 </div>
-                {errors.password && (
+                {errors.password ? (
                   <p className="text-xs text-destructive">{errors.password.message}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    At least 8 characters with uppercase and number
+                  </p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  At least 8 characters with uppercase and number
-                </p>
               </div>
 
               {/* Confirm Password */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  {...register('confirmPassword')}
-                  className={errors.confirmPassword ? 'border-destructive' : ''}
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    {...register('confirmPassword')}
+                    className={errors.confirmPassword ? 'border-destructive pr-10' : 'pr-10'}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
                 {errors.confirmPassword && (
                   <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
                 )}

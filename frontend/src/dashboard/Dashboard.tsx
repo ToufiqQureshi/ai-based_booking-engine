@@ -238,11 +238,14 @@ export function DashboardPage() {
                       <div className="text-right">
                         <Badge variant="outline" className={cn(
                           "text-[10px] uppercase px-2 py-0 h-5",
-                          booking.status === 'confirmed' ? 'text-green-600 bg-green-50 border-green-100' : 
-                          booking.status === 'checked_in' ? 'text-blue-600 bg-blue-50 border-blue-100' : 
+                          booking.status === 'confirmed' ? 'text-green-600 bg-green-50 border-green-100' :
+                          booking.status === 'checked_in' ? 'text-blue-600 bg-blue-50 border-blue-100' :
+                          booking.status === 'cancelled' ? 'text-red-600 bg-red-50 border-red-100' :
+                          booking.status === 'cancel_requested' ? 'text-orange-600 bg-orange-50 border-orange-100' :
+                          booking.status === 'checked_out' ? 'text-gray-600 bg-gray-50 border-gray-100' :
                           'text-muted-foreground bg-muted/30 border-border'
                         )}>
-                          {booking.status}
+                          {booking.status === 'cancel_requested' ? 'Cancel Req.' : booking.status?.replace(/_/g, ' ')}
                         </Badge>
                         <p className="text-[10px] text-muted-foreground mt-1">
                           {booking.check_in}

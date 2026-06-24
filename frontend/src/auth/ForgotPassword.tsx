@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Building2, Loader2, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,10 +60,10 @@ export function ForgotPasswordPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Logo & Branding */}
         <div className="flex flex-col items-center space-y-2 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg">
-            <Building2 className="h-8 w-8" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl overflow-hidden shadow-md">
+            <img src="/logo.png" alt="Staybooker Logo" className="h-full w-full object-cover" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Hotel Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Staybooker</h1>
         </div>
 
         <Card className="border-0 shadow-lg">

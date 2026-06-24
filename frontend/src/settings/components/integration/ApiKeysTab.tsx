@@ -135,7 +135,7 @@ export const ApiKeysTab = ({ apiKeys, onCreateKey, onDeleteKey, copyToClipboard 
                                         {key.key_prefix}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        Created: {new Date(key.created_at).toLocaleDateString()} •
+                                        Created: {new Date(key.created_at).toLocaleDateString('en-GB')} •
                                         Used: {key.request_count} times
                                     </p>
                                 </div>

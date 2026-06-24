@@ -205,7 +205,7 @@ export function GuestsPage() {
                     </TableCell>
                     <TableCell>{guest.nationality}</TableCell>
                     <TableCell>{guest.id_number || '-'}</TableCell>
-                    <TableCell>{new Date(guest.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(guest.created_at).toLocaleDateString('en-GB')}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -270,7 +270,7 @@ export function GuestsPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase font-bold">Member Since</p>
-                  <p className="text-sm">{new Date(selectedGuest.created_at).toLocaleDateString()}</p>
+                  <p className="text-sm">{new Date(selectedGuest.created_at).toLocaleDateString('en-GB')}</p>
                 </div>
               </div>
             </div>

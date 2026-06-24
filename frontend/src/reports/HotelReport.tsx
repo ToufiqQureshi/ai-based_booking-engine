@@ -18,7 +18,7 @@ const HotelReport: React.FC = () => {
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['bi-report', days],
-    queryFn: async () => (await api.get(`/analytics/dashboard?days=${days}`)).data as ReportData,
+    queryFn: () => api.get<ReportData>(`/analytics/dashboard?days=${days}`),
     staleTime: 2 * 60 * 1000,
   });
 
