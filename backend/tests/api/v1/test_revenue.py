@@ -1,34 +1,37 @@
+"""
+Revenue / Dynamic Pricing Tests
+Covers:
+  - GET /revenue/pricing-rules — auth guard, returns list
+  - GET /revenue/recovery/abandoned — auth guard, returns list
+  - GET /revenue/recovery/settings — auth guard
+"""
 import pytest
 from httpx import AsyncClient
 
-# --- AUTH TESTS ---
+pytestmark = pytest.mark.asyncio
 
-async def test_revenue_requires_auth(client: AsyncClient):
-    """Unauthenticated requests must be rejected."""
-    res = await client.get("/api/v1/revenue")
-    assert res.status_code == 401
 
-# --- SHAPE TESTS ---
+class TestDynamicPricing:
+    async def test_pricing_rules_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/revenue/pricing-rules")
+        assert r.status_code == 401
 
-async def test_revenue_returns_expected_keys(auth_client: AsyncClient):
-    """Response must include every field the frontend reads."""
-    res = await auth_client.get("/api/v1/revenue")
-    if res.status_code == 200:
-        data = res.json()
-        if isinstance(data, dict) and "id" in data:
-            assert "id" in data
+    async def test_pricing_rules_returns_list(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/revenue/pricing-rules")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
 
-# --- TENANT ISOLATION (IDOR) ---
 
-async def test_revenue_cannot_access_other_hotel_data(auth_client: AsyncClient):
-    """Hotel A must never see Hotel B's data."""
-    fake_hotel_id = "00000000-0000-0000-0000-000000000000"
-    res = await auth_client.get(f"/api/v1/revenue?hotel_id={fake_hotel_id}")
-    assert res.status_code in (200, 401, 403, 404)
+class TestRevenueRecovery:
+    async def test_abandoned_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/revenue/recovery/abandoned")
+        assert r.status_code == 401
 
-# --- EMPTY STATE ---
+    async def test_abandoned_returns_list(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/revenue/recovery/abandoned")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
 
-async def test_revenue_empty_db_no_crash(auth_client: AsyncClient):
-    """Must return 200 with empty data, never 500, when DB has no records."""
-    res = await auth_client.get("/api/v1/revenue")
-    assert res.status_code in (200, 401, 403, 404, 405)
+    async def test_settings_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/revenue/recovery/settings")
+        assert r.status_code == 401

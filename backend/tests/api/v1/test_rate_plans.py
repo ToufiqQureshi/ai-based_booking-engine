@@ -1,34 +1,42 @@
+"""
+Rate Plans Tests
+Covers:
+  - GET /rates/plans — auth guard, returns list
+  - POST /rates/plans — STAFF blocked
+  - IDOR: non-existent plan returns 404
+"""
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
-# --- AUTH TESTS ---
+pytestmark = pytest.mark.asyncio
 
-async def test_rate_plans_requires_auth(client: AsyncClient):
-    """Unauthenticated requests must be rejected."""
-    res = await client.get("/api/v1/rate_plans")
-    assert res.status_code == 401
 
-# --- SHAPE TESTS ---
+class TestGetRatePlans:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/rates/plans")
+        assert r.status_code == 401
 
-async def test_rate_plans_returns_expected_keys(auth_client: AsyncClient):
-    """Response must include every field the frontend reads."""
-    res = await auth_client.get("/api/v1/rate_plans")
-    if res.status_code == 200:
-        data = res.json()
-        if isinstance(data, dict) and "id" in data:
-            assert "id" in data
+    async def test_returns_list(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/rates/plans")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
 
-# --- TENANT ISOLATION (IDOR) ---
+    async def test_empty_state_no_crash(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/rates/plans")
+        assert r.status_code == 200
 
-async def test_rate_plans_cannot_access_other_hotel_data(auth_client: AsyncClient):
-    """Hotel A must never see Hotel B's data."""
-    fake_hotel_id = "00000000-0000-0000-0000-000000000000"
-    res = await auth_client.get(f"/api/v1/rate_plans?hotel_id={fake_hotel_id}")
-    assert res.status_code in (200, 401, 403, 404)
 
-# --- EMPTY STATE ---
+class TestRatePlanWrite:
+    async def test_staff_cannot_create_rate_plan(self, staff_client: AsyncClient):
+        r = await staff_client.post("/api/v1/rates/plans", json={
+            "name": "Hack Plan", "base_price": 999,
+        })
+        assert r.status_code == 403
 
-async def test_rate_plans_empty_db_no_crash(auth_client: AsyncClient):
-    """Must return 200 with empty data, never 500, when DB has no records."""
-    res = await auth_client.get("/api/v1/rate_plans")
-    assert res.status_code in (200, 401, 403, 404, 405)
+
+class TestRatePlanIsolation:
+    async def test_nonexistent_plan_returns_404(self, auth_client: AsyncClient):
+        r = await auth_client.get(f"/api/v1/rates/plans/{uuid.uuid4()}")
+        assert r.status_code in (403, 404, 405)

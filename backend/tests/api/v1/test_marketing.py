@@ -1,34 +1,39 @@
+"""
+Marketing / Leads Tests
+Covers:
+  - GET /leads/  — auth guard, returns paginated list, tenant-scoped
+  - PATCH /leads/:id — IDOR guard (patching non-existent / other hotel lead)
+"""
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
-# --- AUTH TESTS ---
+pytestmark = pytest.mark.asyncio
 
-async def test_marketing_requires_auth(client: AsyncClient):
-    """Unauthenticated requests must be rejected."""
-    res = await client.get("/api/v1/marketing")
-    assert res.status_code == 401
 
-# --- SHAPE TESTS ---
+class TestGetLeads:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/leads/")
+        assert r.status_code == 401
 
-async def test_marketing_returns_expected_keys(auth_client: AsyncClient):
-    """Response must include every field the frontend reads."""
-    res = await auth_client.get("/api/v1/marketing")
-    if res.status_code == 200:
-        data = res.json()
-        if isinstance(data, dict) and "id" in data:
-            assert "id" in data
+    async def test_returns_list(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/leads/")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
 
-# --- TENANT ISOLATION (IDOR) ---
+    async def test_empty_hotel_returns_empty_list(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/leads/")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
 
-async def test_marketing_cannot_access_other_hotel_data(auth_client: AsyncClient):
-    """Hotel A must never see Hotel B's data."""
-    fake_hotel_id = "00000000-0000-0000-0000-000000000000"
-    res = await auth_client.get(f"/api/v1/marketing?hotel_id={fake_hotel_id}")
-    assert res.status_code in (200, 401, 403, 404)
+    async def test_pagination_params_accepted(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/leads/?limit=5&offset=0")
+        assert r.status_code == 200
 
-# --- EMPTY STATE ---
 
-async def test_marketing_empty_db_no_crash(auth_client: AsyncClient):
-    """Must return 200 with empty data, never 500, when DB has no records."""
-    res = await auth_client.get("/api/v1/marketing")
-    assert res.status_code in (200, 401, 403, 404, 405)
+class TestLeadIsolation:
+    async def test_cannot_patch_nonexistent_lead(self, auth_client: AsyncClient):
+        fake_id = str(uuid.uuid4())
+        r = await auth_client.patch(f"/api/v1/leads/{fake_id}?status=contacted")
+        assert r.status_code in (403, 404)

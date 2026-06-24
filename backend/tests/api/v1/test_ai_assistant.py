@@ -1,34 +1,35 @@
+"""
+AI Agent Endpoint Tests
+Covers:
+  - GET  /agent/usage — auth guard
+  - POST /agent/chat  — auth guard (unauthenticated rejected)
+"""
 import pytest
 from httpx import AsyncClient
 
-# --- AUTH TESTS ---
+pytestmark = pytest.mark.asyncio
 
-async def test_ai_assistant_requires_auth(client: AsyncClient):
-    """Unauthenticated requests must be rejected."""
-    res = await client.get("/api/v1/ai_assistant")
-    assert res.status_code == 401
 
-# --- SHAPE TESTS ---
+class TestAIAgentAuth:
+    async def test_chat_requires_auth(self, client: AsyncClient):
+        """Unauthenticated request to /agent/chat must be rejected."""
+        r = await client.post("/api/v1/agent/chat", json={"message": "hello"})
+        assert r.status_code == 401
 
-async def test_ai_assistant_returns_expected_keys(auth_client: AsyncClient):
-    """Response must include every field the frontend reads."""
-    res = await auth_client.get("/api/v1/ai_assistant")
-    if res.status_code == 200:
-        data = res.json()
-        if isinstance(data, dict) and "id" in data:
-            assert "id" in data
+    async def test_usage_requires_auth(self, client: AsyncClient):
+        """Unauthenticated request to /agent/usage must be rejected."""
+        r = await client.get("/api/v1/agent/usage")
+        assert r.status_code == 401
 
-# --- TENANT ISOLATION (IDOR) ---
 
-async def test_ai_assistant_cannot_access_other_hotel_data(auth_client: AsyncClient):
-    """Hotel A must never see Hotel B's data."""
-    fake_hotel_id = "00000000-0000-0000-0000-000000000000"
-    res = await auth_client.get(f"/api/v1/ai_assistant?hotel_id={fake_hotel_id}")
-    assert res.status_code in (200, 401, 403, 404)
+class TestAIAgentAccess:
+    async def test_owner_can_access_usage(self, auth_client: AsyncClient):
+        """Authenticated owner should be able to fetch agent usage stats."""
+        r = await auth_client.get("/api/v1/agent/usage")
+        # 200 or feature-gated 403 — but never 401
+        assert r.status_code not in (401,)
 
-# --- EMPTY STATE ---
-
-async def test_ai_assistant_empty_db_no_crash(auth_client: AsyncClient):
-    """Must return 200 with empty data, never 500, when DB has no records."""
-    res = await auth_client.get("/api/v1/ai_assistant")
-    assert res.status_code in (200, 401, 403, 404, 405)
+    async def test_staff_can_access_usage(self, staff_client: AsyncClient):
+        """STAFF role should also be able to check agent usage."""
+        r = await staff_client.get("/api/v1/agent/usage")
+        assert r.status_code not in (401,)

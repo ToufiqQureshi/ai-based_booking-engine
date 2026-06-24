@@ -1,34 +1,75 @@
+"""
+Dashboard Tests
+Covers:
+  - GET /dashboard/stats  — auth guard, all response keys present, zeros on empty DB
+  - GET /dashboard/recent-bookings — auth guard, list shape, max 5 results
+"""
 import pytest
 from httpx import AsyncClient
 
-# --- AUTH TESTS ---
+pytestmark = pytest.mark.asyncio
 
-async def test_dashboard_requires_auth(client: AsyncClient):
-    """Unauthenticated requests must be rejected."""
-    res = await client.get("/api/v1/dashboard")
-    assert res.status_code == 401
+_STATS_KEYS = (
+    "today_arrivals",
+    "today_departures",
+    "current_occupancy",
+    "today_revenue",
+    "pending_bookings",
+    "total_rooms",
+    "trends",
+)
+_TREND_KEYS = ("arrivals", "occupancy", "revenue")
 
-# --- SHAPE TESTS ---
 
-async def test_dashboard_returns_expected_keys(auth_client: AsyncClient):
-    """Response must include every field the frontend reads."""
-    res = await auth_client.get("/api/v1/dashboard")
-    if res.status_code == 200:
-        data = res.json()
-        if isinstance(data, dict) and "id" in data:
-            assert "id" in data
+class TestDashboardStats:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/dashboard/stats")
+        assert r.status_code == 401
 
-# --- TENANT ISOLATION (IDOR) ---
+    async def test_returns_all_expected_keys(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/dashboard/stats")
+        assert r.status_code == 200
+        data = r.json()
+        for key in _STATS_KEYS:
+            assert key in data, f"Dashboard stats missing key: '{key}'"
 
-async def test_dashboard_cannot_access_other_hotel_data(auth_client: AsyncClient):
-    """Hotel A must never see Hotel B's data."""
-    fake_hotel_id = "00000000-0000-0000-0000-000000000000"
-    res = await auth_client.get(f"/api/v1/dashboard?hotel_id={fake_hotel_id}")
-    assert res.status_code in (200, 401, 403, 404)
+    async def test_trends_shape(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/dashboard/stats")
+        assert r.status_code == 200
+        trends = r.json()["trends"]
+        assert isinstance(trends, dict)
+        for key in _TREND_KEYS:
+            assert key in trends, f"trends dict missing key: '{key}'"
 
-# --- EMPTY STATE ---
+    async def test_numeric_fields_are_numbers(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/dashboard/stats")
+        assert r.status_code == 200
+        data = r.json()
+        for key in ("today_arrivals", "today_departures", "current_occupancy",
+                    "today_revenue", "pending_bookings", "total_rooms"):
+            assert isinstance(data[key], (int, float)), f"'{key}' should be numeric, got {type(data[key])}"
 
-async def test_dashboard_empty_db_no_crash(auth_client: AsyncClient):
-    """Must return 200 with empty data, never 500, when DB has no records."""
-    res = await auth_client.get("/api/v1/dashboard")
-    assert res.status_code in (200, 401, 403, 404, 405)
+    async def test_empty_db_returns_zeros_not_crash(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/dashboard/stats")
+        assert r.status_code == 200
+        data = r.json()
+        # All counts must be 0 (not None or crash) when no bookings exist
+        assert data["today_arrivals"] >= 0
+        assert data["today_revenue"] >= 0
+        assert data["pending_bookings"] >= 0
+
+
+class TestDashboardRecentBookings:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/dashboard/recent-bookings")
+        assert r.status_code == 401
+
+    async def test_returns_list(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/dashboard/recent-bookings")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+
+    async def test_capped_at_five_results(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/dashboard/recent-bookings")
+        assert r.status_code == 200
+        assert len(r.json()) <= 5

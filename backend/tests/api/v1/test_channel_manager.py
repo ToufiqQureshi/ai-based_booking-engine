@@ -1,34 +1,68 @@
+"""
+Channel Manager Tests
+Covers:
+  - GET /channel-manager/settings  — auth guard, response shape
+  - GET /channel-manager/mappings  — auth guard, returns list
+  - GET /channel-manager/logs      — auth guard, returns list
+  - PUT /channel-manager/settings  — only OWNER can update
+  - POST /channel-manager/test-connection — only OWNER can trigger
+"""
 import pytest
 from httpx import AsyncClient
 
-# --- AUTH TESTS ---
+pytestmark = pytest.mark.asyncio
 
-async def test_channel_manager_requires_auth(client: AsyncClient):
-    """Unauthenticated requests must be rejected."""
-    res = await client.get("/api/v1/channel_manager")
-    assert res.status_code == 401
 
-# --- SHAPE TESTS ---
+class TestChannelSettings:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/channel-manager/settings")
+        assert r.status_code == 401
 
-async def test_channel_manager_returns_expected_keys(auth_client: AsyncClient):
-    """Response must include every field the frontend reads."""
-    res = await auth_client.get("/api/v1/channel_manager")
-    if res.status_code == 200:
-        data = res.json()
-        if isinstance(data, dict) and "id" in data:
-            assert "id" in data
+    async def test_returns_settings_shape(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/channel-manager/settings")
+        assert r.status_code == 200
+        data = r.json()
+        assert isinstance(data, dict)
+        # Core fields the frontend reads from channel settings
+        for key in ("provider", "is_connected"):
+            assert key in data, f"Channel settings missing key: '{key}'"
 
-# --- TENANT ISOLATION (IDOR) ---
+    async def test_staff_cannot_update_settings(self, staff_client: AsyncClient):
+        r = await staff_client.put("/api/v1/channel-manager/settings", json={
+            "is_enabled": True,
+        })
+        assert r.status_code == 403
 
-async def test_channel_manager_cannot_access_other_hotel_data(auth_client: AsyncClient):
-    """Hotel A must never see Hotel B's data."""
-    fake_hotel_id = "00000000-0000-0000-0000-000000000000"
-    res = await auth_client.get(f"/api/v1/channel_manager?hotel_id={fake_hotel_id}")
-    assert res.status_code in (200, 401, 403, 404)
+    async def test_staff_cannot_test_connection(self, staff_client: AsyncClient):
+        r = await staff_client.post("/api/v1/channel-manager/test-connection")
+        assert r.status_code == 403
 
-# --- EMPTY STATE ---
 
-async def test_channel_manager_empty_db_no_crash(auth_client: AsyncClient):
-    """Must return 200 with empty data, never 500, when DB has no records."""
-    res = await auth_client.get("/api/v1/channel_manager")
-    assert res.status_code in (200, 401, 403, 404, 405)
+class TestChannelMappings:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/channel-manager/mappings")
+        assert r.status_code == 401
+
+    async def test_returns_list(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/channel-manager/mappings")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+
+    async def test_staff_cannot_create_mapping(self, staff_client: AsyncClient):
+        r = await staff_client.post("/api/v1/channel-manager/mappings", json={
+            "room_type_id": "fake-id",
+            "channel_room_id": "ota-room-123",
+            "channel_name": "booking.com",
+        })
+        assert r.status_code == 403
+
+
+class TestChannelLogs:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/channel-manager/logs")
+        assert r.status_code == 401
+
+    async def test_returns_list(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/channel-manager/logs")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
