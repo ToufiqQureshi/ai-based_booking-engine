@@ -16,9 +16,9 @@ beforeEach(() => {
 
 describe('ShareReportButton', () => {
   it('opens the modal and lists existing links', async () => {
-    (apiClient.get as any).mockResolvedValue({
-      data: [{ id: 'share_1', token: 'tok123', days: 30, is_active: true, expires_at: null, view_count: 4 }],
-    });
+    (apiClient.get as any).mockResolvedValue([
+      { id: 'share_1', token: 'tok123', days: 30, is_active: true, expires_at: null, view_count: 4 }
+    ]);
     render(<ShareReportButton days={30} />);
     fireEvent.click(screen.getByText('Share Report'));
     await waitFor(() => expect(screen.getByText(/\/r\/tok123/)).toBeInTheDocument());
@@ -26,10 +26,10 @@ describe('ShareReportButton', () => {
   });
 
   it('creates a new link when "New link" is clicked', async () => {
-    (apiClient.get as any).mockResolvedValue({ data: [] });
-    (apiClient.post as any).mockResolvedValue({
-      data: { id: 'share_2', token: 'newtok', days: 30, is_active: true, expires_at: null, view_count: 0 },
-    });
+    (apiClient.get as any).mockResolvedValue([]);
+    (apiClient.post as any).mockResolvedValue(
+      { id: 'share_2', token: 'newtok', days: 30, is_active: true, expires_at: null, view_count: 0 }
+    );
     render(<ShareReportButton days={30} />);
     fireEvent.click(screen.getByText('Share Report'));
     await waitFor(() => expect(screen.getByText(/no share links yet/i)).toBeInTheDocument());
