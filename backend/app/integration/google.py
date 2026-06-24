@@ -339,7 +339,7 @@ async def get_google_reviews(request: Request, current_user: CurrentUser, sessio
     async with httpx.AsyncClient() as client:
         # Check if token is valid, if not refresh
         reviews_resp = await client.get(
-            f"https://mybusinessreviews.googleapis.com/v1/accounts/{account_id}/locations/{location_id}/reviews",
+            f"https://mybusiness.googleapis.com/v4/accounts/{account_id}/locations/{location_id}/reviews",
             headers=headers,
             params={"pageSize": 50, "orderBy": "updateTime desc"},
         )
@@ -353,7 +353,7 @@ async def get_google_reviews(request: Request, current_user: CurrentUser, sessio
             await session.commit()
             headers = {"Authorization": f"Bearer {new_token}"}
             reviews_resp = await client.get(
-                f"https://mybusinessreviews.googleapis.com/v1/accounts/{account_id}/locations/{location_id}/reviews",
+                f"https://mybusiness.googleapis.com/v4/accounts/{account_id}/locations/{location_id}/reviews",
                 headers=headers,
                 params={"pageSize": 50, "orderBy": "updateTime desc"},
             )
@@ -468,7 +468,7 @@ async def post_google_review_reply(
         "Authorization": f"Bearer {settings.google_business_access_token}",
         "Content-Type": "application/json",
     }
-    reply_url = f"https://mybusinessreviews.googleapis.com/v1/accounts/{account_id}/locations/{location_id}/reviews/{review_id}/reply"
+    reply_url = f"https://mybusiness.googleapis.com/v4/accounts/{account_id}/locations/{location_id}/reviews/{review_id}/reply"
 
     async with httpx.AsyncClient() as client:
         resp = await client.put(reply_url, headers=headers, json={"comment": reply_text})
