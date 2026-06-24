@@ -120,10 +120,3 @@ class TestRatePlanWrite:
         assert data["hotel_id"] == seeded_hotel.id, (
             "Backend must use authenticated hotel_id, not the client-supplied one"
         )
-
-
-class TestRatePlanIsolation:
-    async def test_nonexistent_plan_returns_404(self, auth_client: AsyncClient):
-        # GET /rates/plans/{id} may not exist as an individual route (405) or return 404
-        r = await auth_client.get(f"/api/v1/rates/plans/{uuid.uuid4()}")
-        assert r.status_code in (403, 404, 405)

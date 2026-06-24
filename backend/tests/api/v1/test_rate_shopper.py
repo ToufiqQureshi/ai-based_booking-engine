@@ -120,7 +120,7 @@ class TestDeleteCompetitor:
     async def test_cannot_delete_nonexistent_competitor(self, auth_client: AsyncClient):
         fake_id = str(uuid.uuid4())
         r = await auth_client.delete(f"/api/v1/competitors/{fake_id}")
-        assert r.status_code in (403, 404)
+        assert r.status_code == 404
 
     async def test_staff_cannot_delete_competitor(self, staff_client: AsyncClient):
         fake_id = str(uuid.uuid4())

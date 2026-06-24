@@ -66,6 +66,21 @@ class TestLoyaltyProgram:
         for key in _PROGRAM_KEYS:
             assert key in data, f"PUT response missing key: '{key}'"
 
+    async def test_tampered_hotel_id_ignored(
+        self, auth_client: AsyncClient, seeded_hotel: Hotel
+    ):
+        """Client cannot forge hotel_id in the PUT body — backend always uses authenticated hotel."""
+        forged_hotel_id = str(uuid.uuid4())
+        r = await auth_client.put("/api/v1/loyalty/program", json={
+            "is_active": True,
+            "hotel_id": forged_hotel_id,  # attempted forge
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert data["hotel_id"] == seeded_hotel.id, (
+            "Backend must use authenticated hotel_id, not the client-supplied one"
+        )
+
     async def test_put_invalid_payload_422(self, auth_client: AsyncClient):
         """PUT with a badly typed field must return 422."""
         r = await auth_client.put("/api/v1/loyalty/program", json={"milestone_bookings": "not_a_number"})
@@ -190,3 +205,64 @@ class TestLoyaltyOffers:
             "required_bookings": 5,
         })
         assert r.status_code == 403
+
+    async def test_post_requires_auth(self, client: AsyncClient):
+        r = await client.post("/api/v1/loyalty/offers", json={
+            "title": "No Auth Offer",
+            "offer_type": "discount",
+            "required_bookings": 3,
+        })
+        assert r.status_code == 401
+
+    async def test_owner_can_create_offer(
+        self, auth_client: AsyncClient, seeded_hotel: Hotel
+    ):
+        """Owner POST creates an offer and returns the expected shape."""
+        r = await auth_client.post("/api/v1/loyalty/offers", json={
+            "title": f"Test Offer {uuid.uuid4().hex[:6]}",
+            "min_nights": 3,
+            "reward_type": "percentage",
+            "reward_value": 15.0,
+        })
+        assert r.status_code in (200, 201)
+        data = r.json()
+        assert "id" in data
+        assert "title" in data
+
+    async def test_invalid_payload_returns_422(self, auth_client: AsyncClient):
+        """Sending a badly-typed field must return 422."""
+        r = await auth_client.post("/api/v1/loyalty/offers", json={"min_nights": "not_a_number"})
+        assert r.status_code == 422
+
+    async def test_tenant_isolation(
+        self, auth_client: AsyncClient, seeded_hotel: Hotel
+    ):
+        """Offers from another hotel must not appear in our GET /loyalty/offers list."""
+        from tests.conftest import engine
+        from app.loyalty.loyalty_model import LoyaltyOffer
+
+        other_hotel_id = str(uuid.uuid4())
+        other_offer_id = str(uuid.uuid4())
+
+        other_hotel = Hotel(
+            id=other_hotel_id,
+            name="Other Offers Hotel",
+            slug=f"other-offers-{uuid.uuid4().hex[:6]}",
+        )
+        other_offer = LoyaltyOffer(
+            id=other_offer_id,
+            hotel_id=other_hotel_id,
+            title="Foreign Offer",
+            min_nights=3,
+            reward_type="percentage",
+            reward_value=10.0,
+        )
+        async with AsyncSession(engine) as session:
+            session.add(other_hotel)
+            session.add(other_offer)
+            await session.commit()
+
+        r = await auth_client.get("/api/v1/loyalty/offers")
+        assert r.status_code == 200
+        offer_ids = [o["id"] for o in r.json()]
+        assert other_offer_id not in offer_ids, "Offer from another hotel leaked"

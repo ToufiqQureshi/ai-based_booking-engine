@@ -2,15 +2,17 @@
 Revenue / Dynamic Pricing Tests
 Covers:
   - GET /revenue/pricing-rules — auth guard, returns list, tenant isolation, empty state
-  - GET /revenue/recovery/abandoned — auth guard, returns list
+  - GET /revenue/recovery/abandoned — auth guard, empty state, tenant isolation
   - GET /revenue/recovery/settings — auth guard, shape check
 """
 import uuid
+from datetime import date
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bookings.booking import Booking, BookingStatus, Guest
 from app.brand_console.hotel import Hotel
 from app.revenue.pricing_model import PricingRule
 
@@ -75,6 +77,59 @@ class TestRevenueRecovery:
         r = await auth_client.get("/api/v1/revenue/recovery/abandoned")
         assert r.status_code == 200
         assert isinstance(r.json(), list)
+
+    async def test_abandoned_empty_state(self, auth_client: AsyncClient):
+        """Fresh hotel with no abandoned bookings returns [] not crash."""
+        r = await auth_client.get("/api/v1/revenue/recovery/abandoned")
+        assert r.status_code == 200
+        assert r.json() == []
+
+    async def test_abandoned_tenant_isolation(
+        self, auth_client: AsyncClient, seeded_hotel: Hotel
+    ):
+        """Abandoned bookings from another hotel must not appear in our list."""
+        from tests.conftest import engine
+
+        other_hotel_id = str(uuid.uuid4())
+        other_guest_id = str(uuid.uuid4())
+        other_booking_id = str(uuid.uuid4())
+
+        other_hotel = Hotel(
+            id=other_hotel_id,
+            name="Other Abandoned Hotel",
+            slug=f"other-abandoned-{uuid.uuid4().hex[:6]}",
+        )
+        other_guest = Guest(
+            id=other_guest_id,
+            hotel_id=other_hotel_id,
+            first_name="Abandoned",
+            last_name="Guest",
+            email=f"abandoned-{uuid.uuid4().hex[:6]}@test.com",
+            phone="9000000020",
+        )
+        other_booking = Booking(
+            id=other_booking_id,
+            hotel_id=other_hotel_id,
+            booking_number=f"BK{uuid.uuid4().hex[:8].upper()}",
+            guest_id=other_guest_id,
+            check_in=date(2031, 3, 1),
+            check_out=date(2031, 3, 3),
+            status=BookingStatus.PENDING,
+            total_amount=2000.0,
+            rooms=[],
+        )
+        async with AsyncSession(engine) as session:
+            session.add(other_hotel)
+            session.add(other_guest)
+            session.add(other_booking)
+            await session.commit()
+
+        r = await auth_client.get("/api/v1/revenue/recovery/abandoned")
+        assert r.status_code == 200
+        booking_ids = [b["id"] for b in r.json()]
+        assert other_booking_id not in booking_ids, (
+            "Abandoned booking from another hotel leaked into response"
+        )
 
     async def test_settings_requires_auth(self, client: AsyncClient):
         r = await client.get("/api/v1/revenue/recovery/settings")

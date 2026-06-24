@@ -38,4 +38,14 @@ class TestAIAgentAccess:
         assert r.status_code == 200
         data = r.json()
         assert "hotel_id" in data
+        assert "period_days" in data
+        assert "agents" in data
+
+    async def test_empty_state_returns_shape(self, auth_client: AsyncClient):
+        """Fresh hotel with no AI usage returns the expected shape — not a crash."""
+        r = await auth_client.get("/api/v1/agent/usage")
+        assert r.status_code == 200
+        data = r.json()
+        assert "hotel_id" in data
+        assert "period_days" in data
         assert "agents" in data

@@ -1,9 +1,8 @@
 """
 Experiences / Add-ons Tests
 Covers:
-  - GET /addons     — auth guard, returns list, tenant-scoped
+  - GET /addons     — auth guard, returns list, item shape, tenant-scoped
   - POST /addons    — OWNER/MANAGER can create; STAFF blocked; tampered hotel_id ignored
-  - PATCH /addons/:id — IDOR guard (cannot modify another hotel's add-on)
   - DELETE /addons/:id — IDOR guard
 """
 import uuid
@@ -33,6 +32,52 @@ class TestGetAddons:
         r = await auth_client.get("/api/v1/addons")
         assert r.status_code == 200
         assert r.json() == []
+
+    async def test_tenant_isolation_and_shape(
+        self, auth_client: AsyncClient, seeded_hotel: Hotel
+    ):
+        """Own add-on appears with correct fields; another hotel's add-on is excluded."""
+        from tests.conftest import engine
+
+        other_hotel_id = str(uuid.uuid4())
+        other_addon_id = str(uuid.uuid4())
+
+        other_hotel = Hotel(
+            id=other_hotel_id,
+            name="Other Addon Isolation Hotel",
+            slug=f"other-addon-iso-{uuid.uuid4().hex[:6]}",
+        )
+        other_addon = AddOn(
+            id=other_addon_id,
+            hotel_id=other_hotel_id,
+            name="Foreign Addon",
+            price=50.0,
+        )
+        async with AsyncSession(engine) as session:
+            session.add(other_hotel)
+            session.add(other_addon)
+            await session.commit()
+
+        # Create one addon for the authenticated hotel
+        create_r = await auth_client.post("/api/v1/addons", json={
+            "name": f"Own Addon {uuid.uuid4().hex[:6]}",
+            "price": 100.0,
+        })
+        assert create_r.status_code in (200, 201)
+        own_addon_id = create_r.json()["id"]
+
+        r = await auth_client.get("/api/v1/addons")
+        assert r.status_code == 200
+        items = r.json()
+        addon_ids = [a["id"] for a in items]
+        assert own_addon_id in addon_ids, "Own hotel's addon must appear"
+        assert other_addon_id not in addon_ids, "Other hotel's addon must not appear"
+        # Verify item shape
+        own_item = next(a for a in items if a["id"] == own_addon_id)
+        assert "id" in own_item
+        assert "name" in own_item
+        assert "price" in own_item
+        assert "hotel_id" in own_item
 
 
 class TestCreateAddon:
