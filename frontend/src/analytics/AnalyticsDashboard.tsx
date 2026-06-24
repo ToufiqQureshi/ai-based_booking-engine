@@ -20,7 +20,7 @@ import { motion } from 'framer-motion';
 
 interface AnalyticsData {
   total_visitors: number;
-  total_conversions: number;
+  total_bookings: number;
   conversion_rate: number;
   device_stats: { type: string; count: number }[];
   chart_data: { date: string; visitors: number; revenue?: number; occupancy?: number; cancellations?: number }[];
@@ -303,7 +303,7 @@ export const AnalyticsDashboard: React.FC = () => {
         const rows = [
           ['Metric', 'Value'],
           ['Total Visitors', fullData.total_visitors],
-          ['Total Bookings (Conversions)', fullData.total_conversions],
+          ['Total Bookings', fullData.total_bookings],
           ['Conversion Rate (%)', fullData.conversion_rate],
           ['Total Revenue (INR)', fullData.revenue_total],
           ['Avg Daily Rate (ADR)', fullData.avg_daily_rate],
@@ -446,7 +446,7 @@ export const AnalyticsDashboard: React.FC = () => {
             />
             <KPICard
               label="Total Bookings"
-              value={`${kpis?.total_conversions || 0}`}
+              value={`${kpis?.total_bookings || 0}`}
               sub={`From ${kpis?.total_visitors || 0} visitors`}
               icon={<Calendar className="w-4 h-4" />}
               accent="text-foreground"

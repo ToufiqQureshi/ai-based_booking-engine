@@ -491,6 +491,9 @@ async def analytics_kpis(
         "occupancy_rate": d["occupancy_rate"],
         "conversion_rate": d["conversion_rate"],
         "ai_assisted_bookings": d["ai_assisted_bookings"],
+        "avg_daily_rate": d["avg_daily_rate"],
+        "rev_par": d["rev_par"],
+        "total_bookings": d["total_bookings"],
     }
 
 
