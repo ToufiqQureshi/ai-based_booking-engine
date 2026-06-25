@@ -16,8 +16,8 @@ def strip_html_tags(value: str) -> str:
     return re.sub(r'<[^>]*>', '', value).strip()
 
 if TYPE_CHECKING:
-    from app.models.hotel import Hotel
-    from app.models.room import RoomType
+    from app.brand_console.hotel import Hotel
+    from app.rooms.room import RoomType
 
 class RatePlanBase(SQLModel):
     name: str = Field(max_length=150)

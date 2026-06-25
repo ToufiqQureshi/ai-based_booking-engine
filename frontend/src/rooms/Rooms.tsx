@@ -1,5 +1,5 @@
 // Rooms Page - Management with Clean & Professional UI
-import { Plus, Search, Grid, List, Bed, Package, Loader2 } from 'lucide-react';
+import { Plus, Search, Grid, List, Bed, Loader2 } from 'lucide-react';
 import { useState, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

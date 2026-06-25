@@ -3,12 +3,28 @@ Database Configuration
 SQLModel + Async SQLAlchemy setup.
 Development mein SQLite, Production mein PostgreSQL use karo.
 """
+import logging
+
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from app.core.utils.config import get_settings
+
+_migration_logger = logging.getLogger(__name__)
+
+
+def _is_idempotent_migration_error(err: Exception) -> bool:
+    """Return True only for 'already exists' / duplicate-column DB errors."""
+    orig = getattr(err, "orig", None)
+    # PostgreSQL: duplicate_column=42701, duplicate_table/index=42P07
+    if getattr(orig, "pgcode", None) in {"42701", "42P07"}:
+        return True
+    # SQLite and generic fallback
+    msg = str(err).lower()
+    return "duplicate column" in msg or "already exists" in msg
 
 settings = get_settings()
 
@@ -78,32 +94,47 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE hotels ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
     
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE room_types ADD COLUMN cancellation_policy TEXT"))
-    except Exception:
-        pass
+    except DBAPIError as _e:
+        if _is_idempotent_migration_error(_e):
+            _migration_logger.debug("Migration already applied: %s", _e)
+        else:
+            raise
 
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE room_types ADD COLUMN rate_plan_overrides JSON"))
-    except Exception:
-        pass
+    except DBAPIError as _e:
+        if _is_idempotent_migration_error(_e):
+            _migration_logger.debug("Migration already applied: %s", _e)
+        else:
+            raise
 
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE hotels ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL"))
-    except Exception:
-        pass
+    except DBAPIError as _e:
+        if _is_idempotent_migration_error(_e):
+            _migration_logger.debug("Migration already applied: %s", _e)
+        else:
+            raise
 
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE users ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL"))
-    except Exception:
-        pass
+    except DBAPIError as _e:
+        if _is_idempotent_migration_error(_e):
+            _migration_logger.debug("Migration already applied: %s", _e)
+        else:
+            raise
 
     for col, col_type in [
         ("cancellation_fee", "NUMERIC DEFAULT 0.00"),
@@ -113,8 +144,11 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
     for col, col_type in [
         ("subtotal_amount", "NUMERIC DEFAULT 0.00"),
@@ -125,8 +159,11 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
     for col, col_type in [
         ("transaction_id", "VARCHAR(255)"),
@@ -135,8 +172,11 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE payments ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
 
 
@@ -162,11 +202,17 @@ async def init_db():
         "ALTER TABLE loyalty_programs ADD COLUMN points_per_currency NUMERIC DEFAULT 0.00",
         "ALTER TABLE loyalty_programs ADD COLUMN point_value NUMERIC DEFAULT 0.00",
     ]:
+        if is_sqlite and "ALTER COLUMN" in table_alter.upper():
+            _migration_logger.debug("Skipping PostgreSQL-only migration on SQLite: %s", table_alter)
+            continue
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(table_alter))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
     for col, col_type in [
         ("loyalty_points_earned", "NUMERIC DEFAULT 0.00"),
@@ -175,8 +221,11 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
     # SystemBroadcast scheduling + targeting columns
     # JSON DEFAULT must be cast for Postgres ('[]'::json), but SQLite tolerates plain '[]'.
@@ -192,8 +241,11 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE system_broadcasts ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
     # Backfill any NULL values left over from a partial earlier ALTER attempt.
     for sql in [
@@ -204,8 +256,11 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(sql))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
     # DB-02: columns added after initial table creation — create_all won't add
     # them to existing tables, so we do it explicitly here (idempotent; the
@@ -295,11 +350,17 @@ async def init_db():
         "ALTER TABLE analytics_sessions ADD COLUMN city VARCHAR(255)",
         "ALTER TABLE analytics_sessions ADD COLUMN region VARCHAR(255)",
     ]:
+        if is_sqlite and "ALTER COLUMN" in col_sql.upper():
+            _migration_logger.debug("Skipping PostgreSQL-only migration on SQLite: %s", col_sql)
+            continue
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(col_sql))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
     # DB-01: composite performance indexes + unique constraints. These live in
     # Alembic migration 08_performance_indexes.py, but deploys run create_all
@@ -327,8 +388,11 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(idx_sql))
-        except Exception:
-            pass
+        except DBAPIError as _e:
+            if _is_idempotent_migration_error(_e):
+                _migration_logger.debug("Migration already applied: %s", _e)
+            else:
+                raise
 
     # Auto-heal: Sync AI fields from hotels table to integration_settings table if missing or not set
     try:

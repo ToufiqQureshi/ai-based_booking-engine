@@ -115,6 +115,7 @@ export interface HotelSettings {
   widget_show_promo?: boolean;
   widget_show_packages?: boolean;
   widget_show_flexible_dates?: boolean;
+  widget_custom_css?: string;
   smtp_host?: string;
   smtp_port?: string | number;
   smtp_username?: string;

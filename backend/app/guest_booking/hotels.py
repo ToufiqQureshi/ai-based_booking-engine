@@ -172,8 +172,8 @@ async def get_public_hotel_by_slug(request: Request, hotel_slug: str, session: D
         cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Redis cache get failed for '%s': %s", cache_key, e)
 
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
@@ -199,11 +199,19 @@ async def get_public_hotel_by_slug(request: Request, hotel_slug: str, session: D
             masked["settings"] = {}
         masked["settings"]["min_nights"] = getattr(int_settings, 'widget_min_nights', 1) or 1
         masked["settings"]["advance_purchase_days"] = getattr(int_settings, 'widget_advance_purchase_days', 0) or 0
+        
+        # Include feature toggles and styling overrides for the public booking page
+        masked["settings"]["widget_show_promo"] = getattr(int_settings, 'widget_show_promo', True)
+        masked["settings"]["widget_show_packages"] = getattr(int_settings, 'widget_show_packages', True)
+        masked["settings"]["widget_show_flexible_dates"] = getattr(int_settings, 'widget_show_flexible_dates', True)
+        
+        # Custom CSS is functionally available to all since there is no premium lock in the UI
+        masked["settings"]["widget_custom_css"] = _sanitize_widget_css(getattr(int_settings, 'widget_custom_css', ''))
 
     try:
         redis_client.set_value(cache_key, json.dumps(masked, default=str), expire=300)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis cache set failed for '%s': %s", cache_key, e)
 
     return masked
 
@@ -249,7 +257,7 @@ async def get_widget_config(hotel_slug: str, session: DbSession):
         # custom CSS is sanitized before it ever reaches a guest browser;
         # custom JS is deliberately NOT exposed on this public endpoint (it would
         # be a remote-code-execution sink in every guest's widget).
-        "widget_custom_css": _sanitize_widget_css(getattr(settings, 'widget_custom_css', '') if settings else '') if has_custom else '',
+        "widget_custom_css": _sanitize_widget_css(getattr(settings, 'widget_custom_css', '') if settings else ''),
         "allowed_domains": allowed_domains,
         "widget_enabled": widget_enabled,
         "min_nights": getattr(settings, 'widget_min_nights', 1) if settings else 1,
@@ -284,8 +292,8 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
         cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Redis cache get failed for '%s': %s", cache_key, e)
 
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
@@ -306,11 +314,19 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
             masked["settings"] = {}
         masked["settings"]["min_nights"] = getattr(int_settings, 'widget_min_nights', 1) or 1
         masked["settings"]["advance_purchase_days"] = getattr(int_settings, 'widget_advance_purchase_days', 0) or 0
+        
+        # Include feature toggles and styling overrides for the public booking page
+        masked["settings"]["widget_show_promo"] = getattr(int_settings, 'widget_show_promo', True)
+        masked["settings"]["widget_show_packages"] = getattr(int_settings, 'widget_show_packages', True)
+        masked["settings"]["widget_show_flexible_dates"] = getattr(int_settings, 'widget_show_flexible_dates', True)
+        
+        # Custom CSS is functionally available to all since there is no premium lock in the UI
+        masked["settings"]["widget_custom_css"] = _sanitize_widget_css(getattr(int_settings, 'widget_custom_css', ''))
 
     try:
         redis_client.set_value(cache_key, json.dumps(masked, default=str), expire=300)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis cache set failed for '%s': %s", cache_key, e)
 
     return masked
 
@@ -376,8 +392,8 @@ async def get_public_chain(request: Request, chain_slug: str, session: DbSession
         cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Redis cache get failed for '%s': %s", cache_key, e)
 
     # Fetch chain by slug
     chain_result = await session.execute(
@@ -431,8 +447,8 @@ async def get_public_chain(request: Request, chain_slug: str, session: DbSession
 
     try:
         redis_client.set_value(cache_key, json.dumps(response, default=str), expire=300)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis cache set failed for '%s': %s", cache_key, e)
 
     return response
 
@@ -464,8 +480,8 @@ async def get_chain_recommendations(
         cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Redis cache get failed for '%s': %s", cache_key, e)
 
     # 2. Get active hotels in the chain, excluding exclude_hotel_id
     stmt = select(Hotel).where(
@@ -545,8 +561,8 @@ async def get_chain_recommendations(
             
     try:
         redis_client.set_value(cache_key, json.dumps(recommendations), expire=60)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis cache set failed for '%s': %s", cache_key, e)
         
     return recommendations
 
@@ -575,8 +591,8 @@ async def get_hotel_recommendations(
         cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Redis cache get failed for '%s': %s", cache_key, e)
 
     # 2. Get active hotels in the chain, excluding this hotel
     stmt = select(Hotel).where(
@@ -655,8 +671,8 @@ async def get_hotel_recommendations(
             
     try:
         redis_client.set_value(cache_key, json.dumps(recommendations), expire=60)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis cache set failed for '%s': %s", cache_key, e)
         
     return recommendations
 

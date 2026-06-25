@@ -126,6 +126,7 @@ async def update_integration_settings(
     invalidate_cache(f"integration:{current_user.hotel_id}:*")
     try:
         redis_client.delete_key(f"public:widget-config:{current_user.hotel_id}")
+        redis_client.delete_key(f"public:hotel-details:{current_user.hotel_id}")
     except Exception as e:
         logger.error("Failed to clear widget-config cache: %s", e)
         

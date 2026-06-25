@@ -26,9 +26,25 @@ from sqlmodel import select
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["WebSocket"])
 
-# hotel_id → set of active WebSocket connections
-# NOTE: this is per-process. For multi-instance Railway deployments, replace with
-# Redis pub/sub (PUBLISH/SUBSCRIBE) so all workers share the event bus.
+# hotel_id → set of active WebSocket connections.
+# LIMITATION: this registry is in-process only. On a multi-worker/multi-replica
+# Railway deployment, only clients connected to THIS worker receive broadcasts.
+# Clients on other workers are silently skipped. Fix: replace with Redis
+# PUBLISH/SUBSCRIBE so all workers share one event bus.
+import os as _os
+try:
+    _web_concurrency = int(_os.environ.get("WEB_CONCURRENCY", "1"))
+except (TypeError, ValueError):
+    _web_concurrency = 1
+
+if _web_concurrency > 1:
+    _log = logging.getLogger(__name__)
+    _log.warning(
+        "WS registry is in-process only (WEB_CONCURRENCY=%s). "
+        "Real-time events will NOT reach clients on other workers. "
+        "Replace _connections with Redis pub/sub to fix.",
+        _web_concurrency,
+    )
 _connections: dict[str, set[WebSocket]] = {}
 
 

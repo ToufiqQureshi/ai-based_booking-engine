@@ -855,14 +855,14 @@ export default function BookingSelection() {
                 checkInDate,
                 checkOutDate,
                 guests: (adults + children).toString() || '1',
-                rooms: [{
+                rooms: Array.from({ length: Math.max(1, roomsCount) }).map(() => ({
                     ...pendingRoom,
                     price_per_night: selectedRatePlan.price_per_night,
                     total_price: selectedRatePlan.total_price,
                     rate_plan_id: selectedRatePlan.id,
                     rate_plan_name: selectedRatePlan.name
-                }],
-                totalRoomPrice: selectedRatePlan.total_price,
+                })),
+                totalRoomPrice: selectedRatePlan.total_price * Math.max(1, roomsCount),
                 addons: selectedAddons,
                 guest_prefill: isLoyaltyChecked ? {
                     email: loyaltyEmail
@@ -934,6 +934,9 @@ export default function BookingSelection() {
 
     return (
         <div className="min-h-screen bg-slate-50/50 pb-20 font-sans">
+            {hotel?.settings?.widget_custom_css && (
+                <style>{hotel.settings.widget_custom_css}</style>
+            )}
             <BookingStepper currentStep={2} primaryColor={themeColor} />
 
             {/* Hero Section */}

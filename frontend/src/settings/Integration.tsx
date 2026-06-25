@@ -35,6 +35,9 @@ interface IntegrationSettings {
     widget_theme?: string;
     widget_min_nights?: number;
     widget_advance_purchase_days?: number;
+    widget_show_promo?: boolean;
+    widget_show_packages?: boolean;
+    widget_show_flexible_dates?: boolean;
 }
 
 interface WidgetCode {

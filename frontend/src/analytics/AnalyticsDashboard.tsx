@@ -31,7 +31,6 @@ interface AnalyticsData {
   occupancy_rate: number;
   geo_stats?: { country: string; code: string; visitors: number; percentage: number; trend?: string }[];
   most_booked_rooms?: { id: string; name: string; count: number }[];
-  least_booked_rooms?: { id: string; name: string; count: number }[];
   funnel_dropoffs?: { stage: string; drop_percentage: number }[];
   promo_stats?: { code: string; bookings: number }[];
   traffic_heatmap?: { weekday: number; hour: number; visitors: number }[];

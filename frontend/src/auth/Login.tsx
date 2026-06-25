@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { useToast } from '@/core/hooks/use-toast';
 import { isSuperAdminSubdomain } from '@/core/utils/subdomain';
 
@@ -38,6 +39,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Hook 1: Auth Context se 'login' function udhar liya
   const { login, isLoading } = useAuth();
@@ -57,8 +59,17 @@ export function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    if (!captchaToken && import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please complete the CAPTCHA',
+      });
+      return;
+    }
+
     try {
-      await login({ email: data.email, password: data.password });
+      await login({ email: data.email, password: data.password, captchaToken: captchaToken || undefined });
 
       toast({
         title: isSuperAdmin ? 'Master Dashboard Access' : 'Welcome back!',
@@ -168,8 +179,19 @@ export function LoginPage() {
                 {errors.password && (
                   <p className="text-xs text-destructive">{errors.password.message}</p>
                 )}
-              </div>
-            </CardContent>
+                </div>
+
+                {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                  <div className="flex justify-center my-4">
+                    <Turnstile
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => setCaptchaToken(token)}
+                      onError={() => setCaptchaToken(null)}
+                      onExpire={() => setCaptchaToken(null)}
+                    />
+                  </div>
+                )}
+              </CardContent>
             <CardFooter className="flex flex-col space-y-4">
               <Button type="submit" className={`w-full ${isSuperAdmin ? 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100' : ''}`} disabled={isLoading}>
                 {isLoading ? (

@@ -11,8 +11,8 @@ interface AuthContextType {
   hotel: Hotel | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
-  signup: (data: SignupRequest) => Promise<void>;
+  login: (credentials: LoginRequest & { captchaToken?: string }) => Promise<void>;
+  signup: (data: SignupRequest & { captchaToken?: string }) => Promise<void>;
   logout: () => Promise<void>;
   setHotel: (hotel: Hotel) => void;
   setUser: (user: User | null) => void;
@@ -175,12 +175,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = useCallback(async (credentials: LoginRequest) => {
+  const login = useCallback(async (credentials: LoginRequest & { captchaToken?: string }) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
+        options: credentials.captchaToken ? {
+          captchaToken: credentials.captchaToken,
+        } : undefined,
       });
 
       if (error) throw error;
@@ -229,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
 
-  const signup = useCallback(async (data: SignupRequest) => {
+  const signup = useCallback(async (data: SignupRequest & { captchaToken?: string }) => {
     setIsLoading(true);
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -240,6 +243,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: data.name,
             hotel_name: data.hotel_name,
           },
+          ...(data.captchaToken && { captchaToken: data.captchaToken }),
         },
       });
 

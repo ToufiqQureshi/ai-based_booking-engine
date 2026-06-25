@@ -6,10 +6,8 @@ import logging
 from app.core.auth.deps import CurrentUser, DbSession
 from app.core.utils.time import utcnow
 from app.core.utils.feature_flags import require_feature
-# NOTE: create_agent_executor is imported lazily inside the handler (INF-01) —
-# importing app.ai_engine.agent at module load pulls in pandas + matplotlib (~150MB
-# RSS) into every worker at boot even when the agent is never used.
-from app.ai_engine.agent import create_agent_executor
+# create_agent_executor is imported lazily inside the handler to avoid pulling in
+# pandas + matplotlib (~150MB RSS) at worker boot when the agent is never called.
 from app.core.utils.limiter import limiter
 from app.ai_engine.ai_usage import enforce_ai_token_quota, record_ai_usage, persist_ai_usage_db
 

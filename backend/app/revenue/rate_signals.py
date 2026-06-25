@@ -21,8 +21,8 @@ def bump_rate_version(hotel_id: str, room_type_id: str | None = None) -> None:
         # Store which room changed with a short TTL so SSE can pick it up within 2s.
         value = room_type_id if room_type_id else "ALL"
         redis_client.set_value(f"rate_changed_room:{hotel_id}", value, expire=10)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis rate-version signal failed for hotel %s: %s — SSE live pricing may lag", hotel_id, e)
 
 
 def bump_hotel_version(hotel_id: str) -> None:
@@ -32,5 +32,5 @@ def bump_hotel_version(hotel_id: str) -> None:
     """
     try:
         redis_client.set_value(f"hotel_version:{hotel_id}", str(int(time.time())), expire=86400)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis hotel-version signal failed for hotel %s: %s — SSE config refresh may lag", hotel_id, e)

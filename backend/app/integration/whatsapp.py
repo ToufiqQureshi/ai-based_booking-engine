@@ -117,19 +117,20 @@ async def whatsapp_webhook_receive(
 
             if not is_central_number:
                 # Specific hotel number — match by stored phone_number_id.
-                # Load only active hotels. On PostgreSQL this could use a JSON index.
-                # For now, fetch active hotels and filter in Python.
+                # Use SQLAlchemy JSON path accessor: generates ->> on Postgres, JSON_EXTRACT on SQLite.
                 hotel_res = await session.execute(
-                    select(Hotel).where(Hotel.is_active == True)
+                    select(Hotel).where(
+                        Hotel.is_active,
+                        Hotel.settings["whatsapp_phone_number_id"].as_string() == phone_number_id,
+                    )
                 )
-                for h in hotel_res.scalars().all():
+                h = hotel_res.scalars().first()
+                if h:
+                    target_hotel = h
                     h_settings = h.settings or {}
-                    if str(h_settings.get("whatsapp_phone_number_id") or "") == phone_number_id:
-                        target_hotel = h
-                        from app.core.auth.vault import resolve_settings_secrets
-                        resolved_settings = await resolve_settings_secrets(session, h_settings)
-                        whatsapp_token_to_use = resolved_settings.get("whatsapp_api_key")
-                        break
+                    from app.core.auth.vault import resolve_settings_secrets
+                    resolved_settings = await resolve_settings_secrets(session, h_settings)
+                    whatsapp_token_to_use = resolved_settings.get("whatsapp_api_key")
 
                 if not target_hotel:
                     debug_log.append(f"SKIP: No hotel found for phone_number_id '{phone_number_id}'")
@@ -174,6 +175,22 @@ async def whatsapp_webhook_receive(
                 user_message = msg.get("text", {}).get("body", "").strip()
                 if not user_message:
                     continue
+
+                # Idempotency guard: Meta retries webhook delivery on non-200 responses.
+                # Use the WhatsApp message ID (wamid) as a deduplication key so a
+                # retry does not trigger the AI agent twice or double-decrement credits.
+                # set_nx_ex atomically sets the key only if absent — avoids the
+                # check-then-set race of separate get/set calls.
+                wamid = msg.get("id")
+                if wamid:
+                    idempotency_key = f"whatsapp:processed:{wamid}"
+                    try:
+                        already_set = not await redis_client.set_nx_ex(idempotency_key, "1", expire=86400)
+                        if already_set:
+                            debug_log.append(f"SKIP: already processed wamid={wamid}")
+                            continue
+                    except Exception as e:
+                        logger.warning("Redis idempotency check failed for wamid=%s: %s", wamid, e)
 
                 _masked_phone = f"***{sender_phone[-4:]}" if sender_phone and len(sender_phone) >= 4 else "***"
                 debug_log.append(f"Processing message from {_masked_phone}: '{user_message[:30]}'")
@@ -312,8 +329,14 @@ async def whatsapp_webhook_receive(
                                         f"I have prepared your booking details for {resolved_hotel.name}. "
                                         f"Please click the link below to complete your booking:\n\n👉 {booking_url}"
                                     )
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    logger.warning(
+                                        "Failed to parse ACTION:BOOKING_LINK from AI reply "
+                                        "(hotel=%s phone=***%s): %s — guest will not receive booking link.",
+                                        resolved_hotel.id if resolved_hotel else "unknown",
+                                        sender_phone[-4:] if sender_phone and len(sender_phone) >= 4 else "?",
+                                        e,
+                                    )
 
                             history.append(["user", user_message])
                             history.append(["assistant", agent_reply])

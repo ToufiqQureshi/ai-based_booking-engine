@@ -246,7 +246,7 @@ async def get_current_active_user(
         if current_user.hotel_id:
             sentry_sdk.set_tag("hotel_id", str(current_user.hotel_id))
     except Exception:
-        pass
+        pass  # Sentry context is best-effort; never block auth on SDK failure
 
     return current_user
 

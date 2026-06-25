@@ -41,6 +41,9 @@ interface LoyaltyProgram {
     milestones: LoyaltyMilestone[];
     popup_title: string;
     popup_message: string;
+    points_enabled?: boolean;
+    points_per_currency?: number;
+    point_value?: number;
 }
 
 interface GuestLoyaltySummary {
@@ -176,9 +179,9 @@ export default function LoyaltyProgramPage() {
                 popup_message: data.popup_message,
             });
             setPointsForm({
-                points_enabled: (data as any).points_enabled ?? false,
-                points_per_currency: (data as any).points_per_currency ?? 0.1,
-                point_value: (data as any).point_value ?? 1,
+                points_enabled: data.points_enabled ?? false,
+                points_per_currency: data.points_per_currency ?? 0.1,
+                point_value: data.point_value ?? 1,
             });
         } catch {
             toast({ title: 'Failed to load loyalty program', variant: 'destructive' });

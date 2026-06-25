@@ -737,7 +737,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                                             {availableAmenities.filter(a => a.scope === 'room').length === 0 && (
                                                 <div className="text-center py-12 bg-muted/30 rounded-2xl border border-dashed border-border">
                                                     <p className="text-sm text-muted-foreground font-medium">No amenities available.</p>
-                                                    <Button variant="link" className="text-blue-600 font-bold" onClick={() => navigate('/amenities')}>Add Amenities</Button>
+                                                    <Button variant="link" className="text-blue-600 font-bold" onClick={() => navigate('/addons')}>Add Amenities</Button>
                                                 </div>
                                             )}
                                             <FormMessage />
