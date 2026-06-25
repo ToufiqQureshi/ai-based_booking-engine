@@ -202,6 +202,9 @@ async def init_db():
         "ALTER TABLE loyalty_programs ADD COLUMN points_per_currency NUMERIC DEFAULT 0.00",
         "ALTER TABLE loyalty_programs ADD COLUMN point_value NUMERIC DEFAULT 0.00",
     ]:
+        if is_sqlite and "ALTER COLUMN" in table_alter.upper():
+            _migration_logger.debug("Skipping PostgreSQL-only migration on SQLite: %s", table_alter)
+            continue
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(table_alter))
@@ -347,6 +350,9 @@ async def init_db():
         "ALTER TABLE analytics_sessions ADD COLUMN city VARCHAR(255)",
         "ALTER TABLE analytics_sessions ADD COLUMN region VARCHAR(255)",
     ]:
+        if is_sqlite and "ALTER COLUMN" in col_sql.upper():
+            _migration_logger.debug("Skipping PostgreSQL-only migration on SQLite: %s", col_sql)
+            continue
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(col_sql))
