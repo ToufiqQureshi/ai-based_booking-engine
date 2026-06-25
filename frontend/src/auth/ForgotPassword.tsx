@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { useToast } from '@/core/hooks/use-toast';
 import { authApi } from '@/core/api/auth';
 
@@ -22,6 +23,7 @@ export function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const { toast } = useToast();
 
   const {
@@ -33,9 +35,19 @@ export function ForgotPasswordPage() {
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
+    if (!captchaToken && import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please complete the CAPTCHA',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Real API call
+      // Currently, authApi.forgotPassword doesn't accept captcha token, but we require it on frontend to block bots.
       await authApi.forgotPassword(data.email);
 
       setSubmittedEmail(data.email);
@@ -91,6 +103,17 @@ export function ForgotPasswordPage() {
                       <p className="text-xs text-destructive">{errors.email.message}</p>
                     )}
                   </div>
+
+                  {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                    <div className="flex justify-center my-4">
+                      <Turnstile
+                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                        onSuccess={(token) => setCaptchaToken(token)}
+                        onError={() => setCaptchaToken(null)}
+                        onExpire={() => setCaptchaToken(null)}
+                      />
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4">
                   <Button type="submit" className="w-full" disabled={isLoading}>

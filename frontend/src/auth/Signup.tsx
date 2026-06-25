@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { useToast } from '@/core/hooks/use-toast';
 
 const signupSchema = z.object({
@@ -31,6 +32,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 export function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const { signup, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -44,12 +46,22 @@ export function SignupPage() {
   });
 
   const onSubmit = async (data: SignupFormData) => {
+    if (!captchaToken && import.meta.env.VITE_TURNSTILE_SITE_KEY) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please complete the CAPTCHA',
+      });
+      return;
+    }
+
     try {
       await signup({
         name: data.name,
         email: data.email,
         password: data.password,
         hotel_name: data.hotelName,
+        captchaToken: captchaToken || undefined,
       });
       toast({
         title: 'Account created!',
@@ -200,6 +212,17 @@ export function SignupPage() {
                   <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
                 )}
               </div>
+
+              {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                <div className="flex justify-center my-4">
+                  <Turnstile
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setCaptchaToken(null)}
+                    onExpire={() => setCaptchaToken(null)}
+                  />
+                </div>
+              )}
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
