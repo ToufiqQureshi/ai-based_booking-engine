@@ -121,7 +121,7 @@ async def whatsapp_webhook_receive(
                 from sqlalchemy import cast, String, func
                 hotel_res = await session.execute(
                     select(Hotel).where(
-                        Hotel.is_active == True,
+                        Hotel.is_active,
                         func.jsonb_extract_path_text(Hotel.settings, "whatsapp_phone_number_id") == phone_number_id,
                     )
                 )
@@ -180,14 +180,16 @@ async def whatsapp_webhook_receive(
                 # Idempotency guard: Meta retries webhook delivery on non-200 responses.
                 # Use the WhatsApp message ID (wamid) as a deduplication key so a
                 # retry does not trigger the AI agent twice or double-decrement credits.
+                # set_nx_ex atomically sets the key only if absent — avoids the
+                # check-then-set race of separate get/set calls.
                 wamid = msg.get("id")
                 if wamid:
                     idempotency_key = f"whatsapp:processed:{wamid}"
                     try:
-                        if redis_client.get_value(idempotency_key):
+                        already_set = not await redis_client.set_nx_ex(idempotency_key, "1", expire=86400)
+                        if already_set:
                             debug_log.append(f"SKIP: already processed wamid={wamid}")
                             continue
-                        redis_client.set_value(idempotency_key, "1", expire=86400)
                     except Exception as e:
                         logger.warning("Redis idempotency check failed for wamid=%s: %s", wamid, e)
 

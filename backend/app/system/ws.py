@@ -32,13 +32,18 @@ router = APIRouter(tags=["WebSocket"])
 # Clients on other workers are silently skipped. Fix: replace with Redis
 # PUBLISH/SUBSCRIBE so all workers share one event bus.
 import os as _os
-if int(_os.environ.get("WEB_CONCURRENCY", "1")) > 1:
+try:
+    _web_concurrency = int(_os.environ.get("WEB_CONCURRENCY", "1"))
+except (TypeError, ValueError):
+    _web_concurrency = 1
+
+if _web_concurrency > 1:
     _log = logging.getLogger(__name__)
     _log.warning(
         "WS registry is in-process only (WEB_CONCURRENCY=%s). "
         "Real-time events will NOT reach clients on other workers. "
         "Replace _connections with Redis pub/sub to fix.",
-        _os.environ.get("WEB_CONCURRENCY"),
+        _web_concurrency,
     )
 _connections: dict[str, set[WebSocket]] = {}
 
