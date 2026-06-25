@@ -117,12 +117,11 @@ async def whatsapp_webhook_receive(
 
             if not is_central_number:
                 # Specific hotel number — match by stored phone_number_id.
-                # Filter in SQL using Postgres JSON extraction to avoid a full-table scan.
-                from sqlalchemy import cast, String, func
+                # Use SQLAlchemy JSON path accessor: generates ->> on Postgres, JSON_EXTRACT on SQLite.
                 hotel_res = await session.execute(
                     select(Hotel).where(
                         Hotel.is_active,
-                        func.jsonb_extract_path_text(Hotel.settings, "whatsapp_phone_number_id") == phone_number_id,
+                        Hotel.settings["whatsapp_phone_number_id"].as_string() == phone_number_id,
                     )
                 )
                 h = hotel_res.scalars().first()
