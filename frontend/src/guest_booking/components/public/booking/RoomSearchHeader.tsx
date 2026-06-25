@@ -232,6 +232,14 @@ export function RoomSearchHeader({
                         // Disable past dates and advance purchase
                         if (date < today) return true;
                         
+                        // Enforce minNights when selecting checkOut
+                        if (activeDateType === 'checkOut' && checkInDate) {
+                            const minCheckOut = new Date(checkInDate);
+                            minCheckOut.setDate(minCheckOut.getDate() + minNights);
+                            minCheckOut.setHours(0, 0, 0, 0);
+                            if (date < minCheckOut) return true;
+                        }
+                        
                         return false;
                     }}
                     className="p-0"
