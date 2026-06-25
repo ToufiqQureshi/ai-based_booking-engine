@@ -49,3 +49,7 @@ class TestAIAgentAccess:
         assert "hotel_id" in data
         assert "period_days" in data
         assert "agents" in data
+        assert isinstance(data["agents"], dict)
+        # Every agent entry must have a non-negative call count
+        for agent_stats in data["agents"].values():
+            assert agent_stats.get("calls", 0) >= 0

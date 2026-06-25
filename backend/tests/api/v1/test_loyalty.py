@@ -200,17 +200,18 @@ class TestLoyaltyOffers:
     async def test_create_offer_requires_owner_or_manager(self, staff_client: AsyncClient):
         r = await staff_client.post("/api/v1/loyalty/offers", json={
             "title": "Free Night",
-            "description": "Stay 5 nights get 1 free",
-            "offer_type": "free_night",
-            "required_bookings": 5,
+            "min_nights": 5,
+            "reward_type": "percentage",
+            "reward_value": 10.0,
         })
         assert r.status_code == 403
 
     async def test_post_requires_auth(self, client: AsyncClient):
         r = await client.post("/api/v1/loyalty/offers", json={
             "title": "No Auth Offer",
-            "offer_type": "discount",
-            "required_bookings": 3,
+            "min_nights": 3,
+            "reward_type": "percentage",
+            "reward_value": 5.0,
         })
         assert r.status_code == 401
 
@@ -218,6 +219,9 @@ class TestLoyaltyOffers:
         self, auth_client: AsyncClient, seeded_hotel: Hotel
     ):
         """Owner POST creates an offer and returns the expected shape."""
+        from app.loyalty.loyalty_model import LoyaltyOffer
+        from tests.conftest import engine
+
         r = await auth_client.post("/api/v1/loyalty/offers", json={
             "title": f"Test Offer {uuid.uuid4().hex[:6]}",
             "min_nights": 3,
@@ -228,6 +232,12 @@ class TestLoyaltyOffers:
         data = r.json()
         assert "id" in data
         assert "title" in data
+        # Clean up immediately so this offer doesn't bleed into public-booking tests.
+        async with AsyncSession(engine) as session:
+            o = await session.get(LoyaltyOffer, data["id"])
+            if o:
+                await session.delete(o)
+            await session.commit()
 
     async def test_invalid_payload_returns_422(self, auth_client: AsyncClient):
         """Sending a badly-typed field must return 422."""

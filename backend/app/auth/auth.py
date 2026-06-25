@@ -63,9 +63,11 @@ async def complete_onboarding(
                 hotel.name = hotel_data.hotel_name
                 session.add(hotel)
                 await session.commit()
-                await session.refresh(current_user)
+                # Reload user within the current session to avoid DetachedInstanceError.
+                user_result = await session.execute(select(User).where(User.id == current_user.id))
+                current_user = user_result.scalar_one()
                 return {
-                    "message": "Onboarding updated successfully",
+                    "message": "Onboarding completed successfully",
                     "user": UserRead.model_validate(current_user).model_dump(),
                     "hotel": hotel
                 }

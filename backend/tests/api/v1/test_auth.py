@@ -174,5 +174,8 @@ class TestOnboardingReturningUser:
             "name": "Updated Owner",
             "hotel_name": f"Updated Hotel Name {uuid.uuid4().hex[:4]}",
         })
-        # Auth was accepted and update path was reached — not rejected as unauthenticated/forbidden
-        assert r.status_code not in (401, 403)
+        assert r.status_code == 200
+        body = r.json()
+        assert "message" in body
+        assert "user" in body
+        assert "hotel" in body
