@@ -39,7 +39,6 @@ from app.dashboard import dashboard, notifications
 from app.rate_plans import rates, promos
 from app.payments import payments
 from app.calendar import router as availability_router
-from app.analytics import reports
 from app.guest_booking import router as public_router
 from app.integration import router as integration_router
 from app.system import upload, admin
@@ -193,7 +192,6 @@ app.include_router(dashboard.router, prefix=API_V1_PREFIX)
 app.include_router(rates.router, prefix=API_V1_PREFIX)
 app.include_router(payments.router, prefix=API_V1_PREFIX)
 app.include_router(availability_router, prefix=API_V1_PREFIX)
-app.include_router(reports.router, prefix=API_V1_PREFIX)
 app.include_router(public_router, prefix=API_V1_PREFIX)
 app.include_router(superadmin_router, prefix=API_V1_PREFIX)
 app.include_router(integration_router, prefix=API_V1_PREFIX)

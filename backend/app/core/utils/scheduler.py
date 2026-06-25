@@ -11,8 +11,11 @@ Jobs:
   - subscription_expiry   every 24 h       — notify hotels of expiring plans
   - abandoned_recovery    hourly           — nudge guests who left a PENDING,
                                              unpaid booking (per-hotel opt-in)
-  - rate_shopper_auto_scrape  hourly (:10) — scrape competitor rates for hotels
-                                             whose configured local hour is now
+  - orphan_media          every 24 h       — delete uploaded media not attached to any record
+
+Not yet implemented:
+  - rate_shopper_auto_scrape: competitor scraping must be triggered manually
+    via POST /competitors/{id}/scrape until an async scraping job is added.
 
 Disable entirely with ENABLE_SCHEDULER=false.
 """

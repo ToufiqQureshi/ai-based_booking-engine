@@ -4,6 +4,12 @@ Super Admin — Active session tracking and force-logout.
 Sessions are tracked in Redis when users call authenticated endpoints.
 Key: session:{user_id}:{session_token_prefix}
 Value: JSON { user_id, email, role, hotel_id, ip, user_agent, last_seen, created_at }
+
+NOTE: The HTTP routes (GET /sessions, DELETE /sessions/{user_id}) defined at the
+bottom of this file are intentionally NOT mounted. The superadmin router was scope-
+trimmed on 2026-06-20 (see app/superadmin/__init__.py). Only the helper functions
+`record_session` and `is_token_revoked` are live — called from app/core/auth/deps.py
+on every authenticated request. Do not delete this file.
 """
 import json
 import logging

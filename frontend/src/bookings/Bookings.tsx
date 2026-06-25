@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useHotelWebSocket } from '@/core/hooks/useHotelWebSocket';
 import {
-  Plus, Search, Filter, Eye, Edit, X, MoreHorizontal, Loader2,
+  Plus, Search, Eye, Edit, X, MoreHorizontal, Loader2,
   CalendarDays, Download, MessageSquare, Phone, Globe, Building2,
   ChevronLeft, ChevronRight
 } from 'lucide-react';

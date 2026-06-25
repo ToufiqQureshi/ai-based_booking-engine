@@ -9,9 +9,6 @@ import {
   Users,
   Bed,
   TrendingUp,
-  ExternalLink,
-  MoreHorizontal,
-  Sparkles,
   AlertTriangle
 } from 'lucide-react';
 import { motion } from 'framer-motion';

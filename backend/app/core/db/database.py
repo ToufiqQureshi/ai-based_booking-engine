@@ -78,32 +78,32 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE hotels ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
     
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE room_types ADD COLUMN cancellation_policy TEXT"))
-    except Exception:
-        pass
+    except Exception as _e:
+        import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE room_types ADD COLUMN rate_plan_overrides JSON"))
-    except Exception:
-        pass
+    except Exception as _e:
+        import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE hotels ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL"))
-    except Exception:
-        pass
+    except Exception as _e:
+        import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     try:
         async with engine.begin() as conn:
             await conn.execute(text("ALTER TABLE users ADD COLUMN chain_id VARCHAR(255) REFERENCES chains(id) ON DELETE SET NULL"))
-    except Exception:
-        pass
+    except Exception as _e:
+        import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     for col, col_type in [
         ("cancellation_fee", "NUMERIC DEFAULT 0.00"),
@@ -113,8 +113,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     for col, col_type in [
         ("subtotal_amount", "NUMERIC DEFAULT 0.00"),
@@ -125,8 +125,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     for col, col_type in [
         ("transaction_id", "VARCHAR(255)"),
@@ -135,8 +135,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE payments ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
 
 
@@ -165,8 +165,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(table_alter))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     for col, col_type in [
         ("loyalty_points_earned", "NUMERIC DEFAULT 0.00"),
@@ -175,8 +175,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE bookings ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     # SystemBroadcast scheduling + targeting columns
     # JSON DEFAULT must be cast for Postgres ('[]'::json), but SQLite tolerates plain '[]'.
@@ -192,8 +192,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(f"ALTER TABLE system_broadcasts ADD COLUMN {col} {col_type}"))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     # Backfill any NULL values left over from a partial earlier ALTER attempt.
     for sql in [
@@ -204,8 +204,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(sql))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     # DB-02: columns added after initial table creation — create_all won't add
     # them to existing tables, so we do it explicitly here (idempotent; the
@@ -298,8 +298,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(col_sql))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     # DB-01: composite performance indexes + unique constraints. These live in
     # Alembic migration 08_performance_indexes.py, but deploys run create_all
@@ -327,8 +327,8 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.execute(text(idx_sql))
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging as _lg; _lg.getLogger(__name__).debug("Migration already applied (or error): %s", _e)
 
     # Auto-heal: Sync AI fields from hotels table to integration_settings table if missing or not set
     try:

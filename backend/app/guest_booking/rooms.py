@@ -532,8 +532,8 @@ async def get_calendar_availability(
         cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Redis cache get failed for '%s': %s", cache_key, e)
 
     year, mon = int(month[:4]), int(month[5:])
     start_date = date(year, mon, 1)
@@ -645,8 +645,8 @@ async def get_calendar_availability(
 
     try:
         redis_client.set_value(cache_key, json.dumps(result), expire=30)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis cache set failed for '%s': %s", cache_key, e)
     return result
 
 
@@ -662,8 +662,8 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
         cached = redis_client.get_value(cache_key)
         if cached:
             return json.loads(cached)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Redis cache get failed for '%s': %s", cache_key, e)
 
     # Validate hotel exists
     hotel = await session.get(Hotel, hotel_id)
@@ -676,8 +676,8 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
     
     try:
         redis_client.set_value(cache_key, json.dumps([a.model_dump(mode='json') for a in addons]), expire=3600)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Redis cache set failed for '%s': %s", cache_key, e)
         
     return addons
 
