@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
@@ -75,6 +76,62 @@ export const BookingWidgetTab = ({
                     </div>
                 </div>
 
+                {hotel?.feature_custom_widget && settings && onUpdateSettings && (
+                    <>
+                        <div className="border-t my-6" />
+                        
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-slate-900">Booking Engine Features</h3>
+                            
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <Label className="text-sm font-semibold">Promo Code</Label>
+                                    <p className="text-xs text-slate-500">Allow guests to enter promo codes</p>
+                                </div>
+                                <Switch
+                                    checked={settings.widget_show_promo !== false}
+                                    onCheckedChange={(checked) => onUpdateSettings({ widget_show_promo: checked })}
+                                />
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <Label className="text-sm font-semibold">Packages Tab</Label>
+                                    <p className="text-xs text-slate-500">Show Rooms / Packages selection</p>
+                                </div>
+                                <Switch
+                                    checked={settings.widget_show_packages !== false}
+                                    onCheckedChange={(checked) => onUpdateSettings({ widget_show_packages: checked })}
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <Label className="text-sm font-semibold">Flexible Dates</Label>
+                                    <p className="text-xs text-slate-500">Show flexible dates checkbox</p>
+                                </div>
+                                <Switch
+                                    checked={settings.widget_show_flexible_dates !== false}
+                                    onCheckedChange={(checked) => onUpdateSettings({ widget_show_flexible_dates: checked })}
+                                />
+                            </div>
+
+                            <div className="pt-4 space-y-2">
+                                <div>
+                                    <Label className="text-sm font-semibold">Advanced: Custom CSS</Label>
+                                    <p className="text-xs text-slate-500 mb-2">Inject your own CSS directly into the booking engine page</p>
+                                </div>
+                                <Textarea 
+                                    className="font-mono text-xs h-32" 
+                                    placeholder="/* Add your custom CSS here */&#10;.custom-button { background: #000; }"
+                                    value={(settings as any).widget_custom_css || ''}
+                                    onChange={(e) => onUpdateSettings({ widget_custom_css: e.target.value } as any)}
+                                />
+                            </div>
+                        </div>
+                    </>
+                )}
+
                 <div className="border-t my-4" />
 
                 {!hotel?.feature_custom_widget ? (
@@ -111,3 +168,4 @@ export const BookingWidgetTab = ({
         </Card>
     );
 };
+
