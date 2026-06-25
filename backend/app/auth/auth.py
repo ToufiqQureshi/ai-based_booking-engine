@@ -64,7 +64,12 @@ async def complete_onboarding(
                 session.add(hotel)
                 await session.commit()
                 # Reload user within the current session to avoid DetachedInstanceError.
-                user_result = await session.execute(select(User).where(User.id == current_user.id))
+                user_result = await session.execute(
+                    select(User).where(
+                        User.id == current_user.id,
+                        User.hotel_id == current_user.hotel_id,
+                    )
+                )
                 current_user = user_result.scalar_one()
                 return {
                     "message": "Onboarding completed successfully",
