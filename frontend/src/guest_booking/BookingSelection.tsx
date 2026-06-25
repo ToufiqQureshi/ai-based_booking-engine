@@ -934,6 +934,9 @@ export default function BookingSelection() {
 
     return (
         <div className="min-h-screen bg-slate-50/50 pb-20 font-sans">
+            {hotel?.settings?.widget_custom_css && (
+                <style dangerouslySetInnerHTML={{ __html: hotel.settings.widget_custom_css }} />
+            )}
             <BookingStepper currentStep={2} primaryColor={themeColor} />
 
             {/* Hero Section */}

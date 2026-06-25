@@ -199,6 +199,15 @@ async def get_public_hotel_by_slug(request: Request, hotel_slug: str, session: D
             masked["settings"] = {}
         masked["settings"]["min_nights"] = getattr(int_settings, 'widget_min_nights', 1) or 1
         masked["settings"]["advance_purchase_days"] = getattr(int_settings, 'widget_advance_purchase_days', 0) or 0
+        
+        # Include feature toggles and styling overrides for the public booking page
+        masked["settings"]["widget_show_promo"] = getattr(int_settings, 'widget_show_promo', True)
+        masked["settings"]["widget_show_packages"] = getattr(int_settings, 'widget_show_packages', True)
+        masked["settings"]["widget_show_flexible_dates"] = getattr(int_settings, 'widget_show_flexible_dates', True)
+        
+        # Custom CSS is only available for premium subscribers
+        if getattr(hotel, 'feature_custom_widget', False):
+            masked["settings"]["widget_custom_css"] = _sanitize_widget_css(getattr(int_settings, 'widget_custom_css', ''))
 
     try:
         redis_client.set_value(cache_key, json.dumps(masked, default=str), expire=300)
@@ -306,6 +315,15 @@ async def get_public_hotel(request: Request, hotel_identifier: str, session: DbS
             masked["settings"] = {}
         masked["settings"]["min_nights"] = getattr(int_settings, 'widget_min_nights', 1) or 1
         masked["settings"]["advance_purchase_days"] = getattr(int_settings, 'widget_advance_purchase_days', 0) or 0
+        
+        # Include feature toggles and styling overrides for the public booking page
+        masked["settings"]["widget_show_promo"] = getattr(int_settings, 'widget_show_promo', True)
+        masked["settings"]["widget_show_packages"] = getattr(int_settings, 'widget_show_packages', True)
+        masked["settings"]["widget_show_flexible_dates"] = getattr(int_settings, 'widget_show_flexible_dates', True)
+        
+        # Custom CSS is only available for premium subscribers
+        if getattr(hotel, 'feature_custom_widget', False):
+            masked["settings"]["widget_custom_css"] = _sanitize_widget_css(getattr(int_settings, 'widget_custom_css', ''))
 
     try:
         redis_client.set_value(cache_key, json.dumps(masked, default=str), expire=300)
