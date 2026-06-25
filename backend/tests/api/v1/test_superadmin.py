@@ -1,34 +1,29 @@
+"""
+Superadmin Endpoint Tests
+Covers:
+  - GET /superadmin/hotels — requires SUPER_ADMIN, OWNER blocked
+  - Non-superadmin roles must be rejected with 403
+"""
 import pytest
 from httpx import AsyncClient
 
-# --- AUTH TESTS ---
+pytestmark = pytest.mark.asyncio
 
-async def test_superadmin_requires_auth(client: AsyncClient):
-    """Unauthenticated requests must be rejected."""
-    res = await client.get("/api/v1/superadmin")
-    assert res.status_code == 401
 
-# --- SHAPE TESTS ---
+class TestSuperadminAccess:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/superadmin/hotels")
+        assert r.status_code == 401
 
-async def test_superadmin_returns_expected_keys(auth_client: AsyncClient):
-    """Response must include every field the frontend reads."""
-    res = await auth_client.get("/api/v1/superadmin")
-    if res.status_code == 200:
-        data = res.json()
-        if isinstance(data, dict) and "id" in data:
-            assert "id" in data
+    async def test_owner_blocked(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/superadmin/hotels")
+        assert r.status_code == 403
 
-# --- TENANT ISOLATION (IDOR) ---
+    async def test_staff_blocked(self, staff_client: AsyncClient):
+        r = await staff_client.get("/api/v1/superadmin/hotels")
+        assert r.status_code == 403
 
-async def test_superadmin_cannot_access_other_hotel_data(auth_client: AsyncClient):
-    """Hotel A must never see Hotel B's data."""
-    fake_hotel_id = "00000000-0000-0000-0000-000000000000"
-    res = await auth_client.get(f"/api/v1/superadmin?hotel_id={fake_hotel_id}")
-    assert res.status_code in (200, 401, 403, 404)
-
-# --- EMPTY STATE ---
-
-async def test_superadmin_empty_db_no_crash(auth_client: AsyncClient):
-    """Must return 200 with empty data, never 500, when DB has no records."""
-    res = await auth_client.get("/api/v1/superadmin")
-    assert res.status_code in (200, 401, 403, 404, 405)
+    async def test_super_admin_can_list_hotels(self, super_admin_client: AsyncClient):
+        r = await super_admin_client.get("/api/v1/superadmin/hotels")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
