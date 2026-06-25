@@ -237,7 +237,11 @@ export function RoomSearchHeader({
                             const minCheckOut = new Date(checkInDate);
                             minCheckOut.setDate(minCheckOut.getDate() + minNights);
                             minCheckOut.setHours(0, 0, 0, 0);
-                            if (date < minCheckOut) return true;
+                            
+                            const checkInDay = new Date(checkInDate);
+                            checkInDay.setHours(0, 0, 0, 0);
+                            
+                            if (date >= checkInDay && date < minCheckOut) return true;
                         }
                         
                         return false;

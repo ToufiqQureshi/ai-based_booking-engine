@@ -637,10 +637,36 @@ export default function BookingSelection() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        let newCheckIn = new Date(checkInDate);
+        // Safely extract the calendar day, avoiding timezone shift issues 
+        // if checkInDate was parsed from 'yyyy-MM-dd' (which parses as UTC midnight).
+        let newCheckIn = new Date(
+            checkInDate.getFullYear(), 
+            checkInDate.getMonth(), 
+            checkInDate.getDate()
+        );
+        // If it was parsed as UTC midnight, its local time might be previous day. 
+        // We can recover the intended day using UTC methods if its hours are shifted.
+        if (checkInDate.getHours() !== 0) {
+            newCheckIn = new Date(
+                checkInDate.getUTCFullYear(),
+                checkInDate.getUTCMonth(),
+                checkInDate.getUTCDate()
+            );
+        }
         newCheckIn.setHours(0, 0, 0, 0);
         
-        let newCheckOut = new Date(checkOutDate);
+        let newCheckOut = new Date(
+            checkOutDate.getFullYear(),
+            checkOutDate.getMonth(),
+            checkOutDate.getDate()
+        );
+        if (checkOutDate.getHours() !== 0) {
+            newCheckOut = new Date(
+                checkOutDate.getUTCFullYear(),
+                checkOutDate.getUTCMonth(),
+                checkOutDate.getUTCDate()
+            );
+        }
         newCheckOut.setHours(0, 0, 0, 0);
         
         let needsUpdate = false;
