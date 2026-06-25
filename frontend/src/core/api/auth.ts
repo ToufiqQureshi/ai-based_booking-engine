@@ -47,9 +47,10 @@ export const authApi = {
   /**
    * Request password reset email using Supabase.
    */
-  forgotPassword: async (email: string): Promise<void> => {
+  forgotPassword: async (email: string, captchaToken?: string): Promise<void> => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
+      ...(captchaToken ? { captchaToken } : {}),
     });
     if (error) throw error;
   },
