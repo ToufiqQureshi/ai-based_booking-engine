@@ -4,23 +4,28 @@ Super Admin — Hotel management: list, update, delete, impersonate, social proo
 import json
 import logging
 import os
-from datetime import datetime
+import re
+import uuid
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
+from pydantic import BaseModel, EmailStr
 from sqlmodel import select
 
 from app.core.auth.deps import CurrentUser, DbSession
 from app.core.auth.vault import store_settings_secret, store_column_secret
 from app.core.utils.config import get_settings
 from app.system.audit import AuditLog
-from app.brand_console.hotel import Hotel, HotelUpdate
+from app.brand_console.hotel import Hotel, HotelUpdate, HotelSettings
 from app.superadmin.subscriptions.subscription import Subscription
 from app.guests.user import User, UserRole
+from app.core.db.supabase import get_supabase
 import jwt
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
 
 
 def _get_client_ip(request: Request) -> str:
@@ -613,3 +618,159 @@ async def sweep_orphan_media(
     return {"status": "success", **result}
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Hotel Provisioning — Superadmin creates a hotel + invites the owner
+# ──────────────────────────────────────────────────────────────────────────────
+
+PLAN_DEFAULTS = {
+    "Basic":      {"days": 30,  "amount": 1999.0,  "whatsapp_credits": 500,  "ai_hotelier_daily_limit": 20000,  "ai_guest_chat_daily_limit": 50000,  "ai_whatsapp_daily_limit": 50000},
+    "Pro":        {"days": 30,  "amount": 4999.0,  "whatsapp_credits": 2000, "ai_hotelier_daily_limit": 50000,  "ai_guest_chat_daily_limit": 100000, "ai_whatsapp_daily_limit": 100000},
+    "Enterprise": {"days": 365, "amount": 49999.0, "whatsapp_credits": 10000,"ai_hotelier_daily_limit": 200000, "ai_guest_chat_daily_limit": 500000, "ai_whatsapp_daily_limit": 500000},
+}
+
+
+class ProvisionHotelRequest(BaseModel):
+    """Superadmin hotel provisioning schema."""
+    hotel_name: str
+    owner_name: str
+    owner_email: EmailStr
+    plan_name: str = "Basic"  # Basic | Pro | Enterprise
+    redirect_url: Optional[str] = None  # Where hotelier lands after setting password
+
+
+def _generate_slug(name: str) -> str:
+    slug = name.lower().strip()
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"[\s_-]+", "-", slug)
+    return slug.strip("-")
+
+
+@router.post("/hotels/provision", status_code=201)
+async def provision_hotel(
+    payload: ProvisionHotelRequest,
+    request: Request,
+    session: DbSession,
+    super_admin: User = Depends(require_permission("superadmin.hotels.write")),
+):
+    """
+    One-shot hotel provisioning:
+    1. Create Hotel row
+    2. Create User row (OWNER role, linked to hotel)
+    3. Create Subscription row
+    4. Supabase admin.invite_user_by_email() → hotelier gets "Set Password" email
+    5. Audit log
+
+    No migration needed — uses existing tables.
+    """
+    plan = payload.plan_name.strip().title()
+    if plan not in PLAN_DEFAULTS:
+        raise HTTPException(status_code=400, detail=f"Invalid plan. Choose from: {list(PLAN_DEFAULTS.keys())}")
+
+    # ── Duplicate email check ──────────────────────────────────────────────────
+    existing_user = (await session.execute(
+        select(User).where(User.email == str(payload.owner_email))
+    )).scalar_one_or_none()
+    if existing_user:
+        raise HTTPException(status_code=409, detail="A user with this email already exists")
+
+    # ── 1. Create Hotel ────────────────────────────────────────────────────────
+    base_slug = _generate_slug(payload.hotel_name)
+    slug = base_slug
+    suffix = 1
+    while (await session.execute(select(Hotel).where(Hotel.slug == slug))).scalar_one_or_none():
+        slug = f"{base_slug}-{suffix}"
+        suffix += 1
+
+    hotel = Hotel(
+        name=payload.hotel_name,
+        slug=slug,
+        settings=HotelSettings().model_dump(),
+        is_active=True,
+    )
+    session.add(hotel)
+    await session.flush()  # get hotel.id before linking user
+
+    # ── 2. Create User ─────────────────────────────────────────────────────────
+    user_row = User(
+        id=str(uuid.uuid4()),
+        email=str(payload.owner_email),
+        name=payload.owner_name,
+        role=UserRole.OWNER,
+        hotel_id=hotel.id,
+        hashed_password="__supabase_managed__",  # password fully managed by Supabase Auth
+        is_active=True,
+    )
+    session.add(user_row)
+
+    # ── 3. Create Subscription ────────────────────────────────────────────────
+    plan_cfg = PLAN_DEFAULTS[plan]
+    subscription = Subscription(
+        hotel_id=hotel.id,
+        plan_name=plan,
+        status="active",
+        payment_status="paid",
+        start_date=datetime.utcnow(),
+        end_date=datetime.utcnow() + timedelta(days=plan_cfg["days"]),
+        amount=plan_cfg["amount"],
+        currency="INR",
+        whatsapp_credits=plan_cfg["whatsapp_credits"],
+        ai_hotelier_daily_limit=plan_cfg["ai_hotelier_daily_limit"],
+        ai_guest_chat_daily_limit=plan_cfg["ai_guest_chat_daily_limit"],
+        ai_whatsapp_daily_limit=plan_cfg["ai_whatsapp_daily_limit"],
+    )
+    session.add(subscription)
+
+    # ── 4. Supabase invite ─────────────────────────────────────────────────────
+    # invite_user_by_email() creates the Supabase Auth user and sends a
+    # "You've been invited — set your password" email automatically.
+    supabase = get_supabase()
+    _settings = get_settings()
+    redirect_url = payload.redirect_url or f"{_settings.FRONTEND_URL.rstrip('/')}/reset-password"
+    try:
+        invite_resp = supabase.auth.admin.invite_user_by_email(
+            str(payload.owner_email),
+            options={
+                "data": {
+                    "name": payload.owner_name,
+                    "hotel_id": hotel.id,
+                },
+                "redirect_to": redirect_url,
+            },
+        )
+        # Link Supabase user id to our user row immediately if available
+        if invite_resp and invite_resp.user and invite_resp.user.id:
+            user_row.supabase_id = invite_resp.user.id
+    except Exception as exc:
+        # Roll back DB records if Supabase invite fails — we cannot have a hotel
+        # with no way for the owner to log in.
+        await session.rollback()
+        logger.error("Supabase invite failed for %s: %s", payload.owner_email, exc)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Supabase invite email failed: {exc}. Please check Supabase SMTP settings.",
+        )
+
+    # ── 5. Audit log ───────────────────────────────────────────────────────────
+    session.add(AuditLog(
+        user_id=super_admin.id,
+        user_email=super_admin.email,
+        hotel_id=hotel.id,
+        action="PROVISION_HOTEL",
+        description=(
+            f"Provisioned hotel '{hotel.name}' (slug={slug}, plan={plan}) "
+            f"for owner '{payload.owner_name}' <{payload.owner_email}>. "
+            f"Supabase invite sent."
+        ),
+        ip_address=_get_client_ip(request),
+    ))
+
+    await session.commit()
+
+    return {
+        "message": f"Hotel '{hotel.name}' provisioned. Invite email sent to {payload.owner_email}.",
+        "hotel_id": hotel.id,
+        "hotel_slug": slug,
+        "owner_email": str(payload.owner_email),
+        "plan": plan,
+        "subscription_end_date": subscription.end_date.isoformat(),
+    }

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, UserCheck, ChevronUp, ChevronDown, BrainCircuit, Zap, CheckSquare, Square, X, Download } from 'lucide-react';
+import { Building2, UserCheck, ChevronUp, ChevronDown, BrainCircuit, Zap, CheckSquare, Square, X, Download, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -8,6 +8,7 @@ import { apiClient } from '@/core/api/client';
 import { toast } from 'sonner';
 import { cn } from '@/core/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ProvisionHotelDialog } from './ProvisionHotelDialog';
 
 interface Hotel {
     id: string;
@@ -44,6 +45,7 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
     const [sortAsc, setSortAsc] = useState(true);
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [bulkAction, setBulkAction] = useState('');
+    const [showProvision, setShowProvision] = useState(false);
     const qc = useQueryClient();
 
     const bulkMutation = useMutation({
@@ -97,14 +99,32 @@ export const HotelsTab = ({ hotels, users, onSelectHotel, onImpersonate, isImper
     if (!hotels.length) return (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Building2 className="w-10 h-10 mb-3 opacity-30" />
-            <p className="font-semibold">No properties found</p>
+            <p className="font-semibold mb-4">No properties found</p>
+            <Button size="sm" className="gap-2" onClick={() => setShowProvision(true)}>
+                <Plus className="w-4 h-4" />
+                Add First Hotel
+            </Button>
+            <ProvisionHotelDialog open={showProvision} onOpenChange={setShowProvision} />
         </div>
     );
 
     return (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
 
-        {/* Bulk action bar */}
+        {/* Toolbar: Add Hotel button + Bulk actions */}
+        <div className="flex items-center justify-between gap-3">
+            <Button
+                size="sm"
+                className="gap-2 h-8 rounded-lg text-xs font-bold"
+                onClick={() => setShowProvision(true)}
+            >
+                <Plus className="w-3.5 h-3.5" />
+                Add Hotel
+            </Button>
+        </div>
+
+        <ProvisionHotelDialog open={showProvision} onOpenChange={setShowProvision} />
+
         <AnimatePresence>
             {selected.size > 0 && (
                 <motion.div
