@@ -626,6 +626,90 @@ export default function BookingSelection() {
         fetchData();
     }, [hotelSlug, checkIn, checkOut, paramGuests, paramAdults, paramChildren, urlPromo, location.state]);
 
+    // Enforce hotel constraints on initial load (advance purchase and min nights)
+    useEffect(() => {
+        if (!hotel || !checkInDate || !checkOutDate) return;
+        if (userPickedDatesRef.current) return;
+        
+        const advancePurchaseDays = hotel.settings?.advance_purchase_days || 0;
+        const minNights = hotel.settings?.min_nights || 1;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Safely extract the calendar day, avoiding timezone shift issues 
+        // if checkInDate was parsed from 'yyyy-MM-dd' (which parses as UTC midnight).
+        let newCheckIn = new Date(
+            checkInDate.getFullYear(), 
+            checkInDate.getMonth(), 
+            checkInDate.getDate()
+        );
+        // If it was parsed as UTC midnight, its local time might be previous day. 
+        // We can recover the intended day using UTC methods if its hours are shifted.
+        if (checkInDate.getHours() !== 0) {
+            newCheckIn = new Date(
+                checkInDate.getUTCFullYear(),
+                checkInDate.getUTCMonth(),
+                checkInDate.getUTCDate()
+            );
+        }
+        newCheckIn.setHours(0, 0, 0, 0);
+        
+        let newCheckOut = new Date(
+            checkOutDate.getFullYear(),
+            checkOutDate.getMonth(),
+            checkOutDate.getDate()
+        );
+        if (checkOutDate.getHours() !== 0) {
+            newCheckOut = new Date(
+                checkOutDate.getUTCFullYear(),
+                checkOutDate.getUTCMonth(),
+                checkOutDate.getUTCDate()
+            );
+        }
+        newCheckOut.setHours(0, 0, 0, 0);
+        
+        let needsUpdate = false;
+        
+        // Enforce Advance Purchase
+        if (advancePurchaseDays > 0) {
+            const earliestCheckIn = new Date(today);
+            earliestCheckIn.setDate(today.getDate() + advancePurchaseDays);
+            
+            if (newCheckIn < earliestCheckIn) {
+                newCheckIn = earliestCheckIn;
+                needsUpdate = true;
+            }
+        }
+        
+        // Enforce Min Nights
+        const minCheckOut = new Date(newCheckIn);
+        minCheckOut.setDate(minCheckOut.getDate() + minNights);
+        
+        if (newCheckOut < minCheckOut) {
+            newCheckOut = minCheckOut;
+            needsUpdate = true;
+        }
+        
+        if (needsUpdate) {
+            setCheckInDate(newCheckIn);
+            setCheckOutDate(newCheckOut);
+            
+            // Auto-update URL so the data re-fetches with new dates
+            const totalGuests = adults + children;
+            const params = new URLSearchParams({
+                check_in: format(newCheckIn, 'yyyy-MM-dd'),
+                check_out: format(newCheckOut, 'yyyy-MM-dd'),
+                guests: totalGuests.toString(),
+                adults: adults.toString(),
+                children: children.toString(),
+                rooms: roomsCount.toString(),
+                promo_code: promoCode
+            });
+            navigate(`/book/${hotelSlug}/rooms?${params.toString()}`, { replace: true });
+        }
+    }, [hotel?.id, hotel?.settings?.min_nights, hotel?.settings?.advance_purchase_days]);
+
     /**
      * Surgical rate refresh — called by SSE on price change.
      * Only re-fetches the rooms endpoint and merges price/availability fields.
