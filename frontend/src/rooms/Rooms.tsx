@@ -96,11 +96,12 @@ export function RoomsPage() {
         description: 'Room category has been successfully removed.',
       });
       invalidateRooms();
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || 'Failed to delete the room category.';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to delete the room category.',
+        description: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
       });
     } finally {
       setIsDeleting(false);
@@ -118,11 +119,12 @@ export function RoomsPage() {
         title: 'Settings Updated',
         description: 'Calendar baseline room updated successfully.',
       });
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || error?.message || 'Failed to update calendar baseline room.';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to update calendar baseline room.',
+        description: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
       });
     } finally {
       setIsUpdatingSettings(false);

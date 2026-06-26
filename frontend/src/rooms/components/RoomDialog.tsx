@@ -234,6 +234,18 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
         form.setValue('rate_plan_overrides', currentOverrides, { shouldDirty: true });
     };
 
+    const onFormError = (errors: any) => {
+        const errorMessages = Object.entries(errors)
+            .map(([field, err]: [string, any]) => `${field}: ${err.message}`)
+            .join(', ');
+        
+        toast({
+            variant: 'destructive',
+            title: 'Validation Error',
+            description: `Please check the form fields: ${errorMessages}`,
+        });
+    };
+
     const onSubmit = async (values: z.infer<typeof roomSchema>) => {
         try {
             if (isEditing && initialData) {
@@ -245,11 +257,13 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
             }
             onOpenChange(false);
             onSuccess();
-        } catch (error) {
+        } catch (error: any) {
+            console.error('API Error:', error);
+            const errorMsg = error?.response?.data?.detail || error?.message || 'Failed to save room details.';
             toast({
                 variant: 'destructive',
-                title: 'Error',
-                description: 'Failed to save room details.',
+                title: 'API Error',
+                description: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
             });
         }
     };
@@ -268,7 +282,7 @@ export function RoomDialog({ open, onOpenChange, onSuccess, initialData }: RoomD
                 </div>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+                    <form onSubmit={form.handleSubmit(onSubmit, onFormError)} className="flex flex-col flex-1 overflow-hidden">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
                             <div className="px-8 pt-4">
                                 <TabsList className="grid grid-cols-5 w-full h-11 bg-muted/60 p-1 rounded-xl">
