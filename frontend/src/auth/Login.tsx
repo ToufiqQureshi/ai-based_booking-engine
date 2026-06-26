@@ -208,8 +208,8 @@ export function LoginPage() {
                 <div className="space-y-4">
                   <p className="text-center text-sm text-muted-foreground">
                     Don&apos;t have an account?{' '}
-                    <Link to="/signup" className="font-medium text-primary hover:underline">
-                      Create account
+                    <Link to="/request-access" className="font-medium text-primary hover:underline">
+                      Book a Demo →
                     </Link>
                   </p>
                   <p className="text-center text-xs text-muted-foreground">

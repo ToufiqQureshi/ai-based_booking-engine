@@ -11,7 +11,7 @@ import { GuestPreferencesProvider } from "@/core/contexts/GuestPreferencesContex
 
 // Auth Pages
 const LoginPage = lazy(() => import("@/auth/Login"));
-const SignupPage = lazy(() => import("@/auth/Signup"));
+const RequestAccessPage = lazy(() => import("@/auth/RequestAccess"));
 const ForgotPasswordPage = lazy(() => import("@/auth/ForgotPassword"));
 const ResetPasswordPage = lazy(() => import("@/auth/ResetPassword"));
 
@@ -100,7 +100,9 @@ const App = () => {
               <Routes>
                 {/* Public Auth Routes */}
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/request-access" element={<RequestAccessPage />} />
+                {/* /signup redirects to /request-access — self-serve signup is not available */}
+                <Route path="/signup" element={<Navigate to="/request-access" replace />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
 

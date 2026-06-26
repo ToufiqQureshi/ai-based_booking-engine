@@ -38,10 +38,10 @@ export default function LandingPage() {
                   Sign In
                 </a>
                 <a 
-                  href="https://app.staybooker.ai/signup" 
+                  href="https://app.staybooker.ai/request-access" 
                   className="group relative inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-extrabold text-white shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
                 >
-                  Get Started
+                  Book a Demo
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </a>
               </>
@@ -54,10 +54,10 @@ export default function LandingPage() {
                   Sign In
                 </Link>
                 <Link 
-                  to="/signup" 
+                  to="/request-access" 
                   className="group relative inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-extrabold text-white shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
                 >
-                  Get Started
+                  Book a Demo
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </>
@@ -85,17 +85,17 @@ export default function LandingPage() {
         <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
           {window.location.hostname.includes('staybooker.ai') && !window.location.hostname.startsWith('app.') ? (
             <a 
-              href="https://app.staybooker.ai/signup" 
+              href="https://app.staybooker.ai/request-access" 
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
             >
-              Create Your Hotel Account
+              Request Access
             </a>
           ) : (
             <Link 
-              to="/signup" 
+              to="/request-access" 
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
             >
-              Create Your Hotel Account
+              Request Access
             </Link>
           )}
           <a 
@@ -276,22 +276,22 @@ export default function LandingPage() {
             Ready to Accelerate Your Hotel Direct Bookings?
           </h2>
           <p className="mt-4 text-slate-400 max-w-xl mx-auto">
-            Create an owner account in less than 2 minutes. Start using your test API keys instantly.
+            Tell us about your hotel and we'll set you up with a personalised demo and pricing.
           </p>
           <div className="mt-8 flex justify-center">
             {window.location.hostname.includes('staybooker.ai') && !window.location.hostname.startsWith('app.') ? (
               <a 
-                href="https://app.staybooker.ai/signup" 
+                href="https://app.staybooker.ai/request-access" 
                 className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
               >
-                Sign Up For Free Account
+                Book a Demo
               </a>
             ) : (
               <Link 
-                to="/signup" 
+                to="/request-access" 
                 className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-extrabold text-white shadow-xl shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
               >
-                Sign Up For Free Account
+                Book a Demo
               </Link>
             )}
           </div>

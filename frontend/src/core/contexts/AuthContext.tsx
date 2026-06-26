@@ -1,6 +1,6 @@
 // Auth Context - Real API Integration
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { User, Hotel, LoginRequest, SignupRequest } from '@/core/types/api';
+import { User, Hotel, LoginRequest } from '@/core/types/api';
 import { authApi } from '@/core/api/auth';
 import { apiClient, tokenStorage } from '@/core/api/client';
 import { supabase } from '@/core/lib/supabase';
@@ -12,7 +12,6 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginRequest & { captchaToken?: string }) => Promise<void>;
-  signup: (data: SignupRequest & { captchaToken?: string }) => Promise<void>;
   logout: () => Promise<void>;
   setHotel: (hotel: Hotel) => void;
   setUser: (user: User | null) => void;
@@ -232,46 +231,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
 
-  const signup = useCallback(async (data: SignupRequest & { captchaToken?: string }) => {
-    setIsLoading(true);
-    try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            name: data.name,
-            hotel_name: data.hotel_name,
-          },
-          ...(data.captchaToken && { captchaToken: data.captchaToken }),
-        },
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Signup failed');
-
-      // Do NOT log the user in automatically. 
-      // Force direct login step constraints.
-      
-      toast({
-        title: 'Welcome!',
-        description: 'Account created successfully.',
-      });
-      
-    } catch (error) {
-       const errorMessage = error instanceof Error ? error.message : 'Signup failed';
-       toast({
-         variant: 'destructive',
-         title: 'Signup failed',
-         description: errorMessage,
-       });
-       throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-
 
   const refreshHotel = useCallback(async () => {
     try {
@@ -306,7 +265,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isAuthenticated: !!user,
         login,
-        signup,
         logout,
         setHotel,
         setUser,
