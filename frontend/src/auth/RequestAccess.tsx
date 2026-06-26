@@ -52,11 +52,18 @@ export function RequestAccessPage() {
                   hello@staybooker.ai
                 </a>
               </div>
-              <div className="flex items-center justify-center gap-3 text-muted-foreground">
-                <Phone className="h-5 w-5" />
-                <a href="tel:+919876543210" className="font-medium hover:text-primary transition-colors">
-                  +91 98765 43210
-                </a>
+              <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5" />
+                  <a href="tel:+918530494653" className="font-medium hover:text-primary transition-colors">
+                    +91 85304 94653
+                  </a>
+                </div>
+                <div className="flex items-center gap-3 pl-8">
+                  <a href="tel:+917385552938" className="font-medium hover:text-primary transition-colors">
+                    +91 73855 52938
+                  </a>
+                </div>
               </div>
             </div>
 
