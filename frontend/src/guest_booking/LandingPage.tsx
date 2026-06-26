@@ -1,12 +1,10 @@
 // @ts-nocheck
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LandingHeader } from './components/LandingHeader';
-import { LandingFooter } from './components/LandingFooter';
 
 export default function LandingPage() {
     useEffect(() => {
-        
+
         // Register GSAP plugins
         gsap.registerPlugin(ScrollTrigger);
 
@@ -197,11 +195,11 @@ export default function LandingPage() {
         }
 
         // --- PAGE INITIALIZATION & LOAD ANIMATIONS ---
-        setTimeout(() => {
+        setTimeout( () => {
             const tl = gsap.timeline();
 
             // Dynamic header/footer load logic start
-            
+            loadHeaderAndFooter();
 
             init3D();
 
@@ -429,41 +427,43 @@ export default function LandingPage() {
             startInterval();
         });
     
-        return () => {
-            if (window.slideInterval) clearInterval(window.slideInterval);
-        };
+
     }, []);
 
     return (
-        <div className="font-sans antialiased bg-[#0A0505] text-white relative selection:bg-[#F43F5E]/30 overflow-x-hidden" style={{ backgroundImage: 'linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
-            <LandingHeader />
-            {/* Ambient background glows */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px]"></div>
-                <div className="absolute top-[800px] right-1/4 w-[600px] h-[600px] bg-rose-500/5 rounded-full blur-[150px]"></div>
-                <div className="absolute top-[2500px] left-1/3 w-[700px] h-[700px] bg-red-950/10 rounded-full blur-[160px]"></div>
-                <div className="absolute top-[4200px] right-1/3 w-[600px] h-[600px] bg-rose-950/20 rounded-full blur-[140px]"></div>
-            </div>
+        <div className="landing-page-container">
+            
 
-            {/* Hero Section */}
+    
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primaryBlue/10 rounded-full blur-[120px]"></div>
+        <div className="absolute top-[800px] right-1/4 w-[600px] h-[600px] bg-accentCyan/5 rounded-full blur-[150px]"></div>
+        <div className="absolute top-[2500px] left-1/3 w-[700px] h-[700px] bg-red-950/10 rounded-full blur-[160px]"></div>
+        <div className="absolute top-[4200px] right-1/3 w-[600px] h-[600px] bg-rose-950/20 rounded-full blur-[140px]"></div>
+    </div>
+
+    
+    <div id="header-placeholder"></div>
+
+    
     <section className="relative min-h-screen pt-24 lg:pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex flex-col justify-between overflow-hidden">
         
-        {/* Background Animation Deco */}
+        
         <div className="absolute top-[20%] right-[10%] w-72 h-72 bg-gradient-to-br from-red-500/20 to-rose-600/20 rounded-full animate-morph filter blur-3xl pointer-events-none"></div>
 
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center pt-8 relative">
             
-            {/* Right 3D Visual Column */}
+            
             <div className="lg:col-span-6 flex justify-center items-center perspective-lg relative mt-6 lg:mt-0 h-[380px] sm:h-[540px] lg:h-[650px] w-full order-1 lg:order-2 overflow-hidden">
                 
-                {/* Canvas container for Three.js 3D Globe */}
+                
                 <div id="threejs-container" className="absolute inset-0 w-full h-full pointer-events-none z-0"></div>
 
-                {/* Floating 3D Booking Dashboard Frame */}
+                
                 <div id="hero-dashboard" className="tilt-3d w-full max-w-[440px] glass-panel rounded-2xl p-4 sm:p-6 border border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.75)] relative overflow-hidden opacity-0 z-10">
                     <div className="absolute inset-0 bg-gradient-to-tr from-red-500/5 to-transparent pointer-events-none"></div>
                     
-                    {/* Windows buttons decoration */}
+                    
                     <div className="flex items-center gap-2 mb-6">
                         <span className="w-3 h-3 rounded-full bg-rose-500/60 block"></span>
                         <span className="w-3 h-3 rounded-full bg-amber-500/60 block"></span>
@@ -471,7 +471,7 @@ export default function LandingPage() {
                         <span className="text-[9px] sm:text-[10px] text-slate-500 font-mono ml-2 sm:ml-4 overflow-hidden text-ellipsis whitespace-nowrap">dashboard.staybooker.ai</span>
                     </div>
 
-                    {/* Internal Mockup Elements */}
+                    
                     <div className="space-y-4 sm:space-y-6">
                         <div className="flex justify-between items-center gap-2">
                             <div>
@@ -484,7 +484,7 @@ export default function LandingPage() {
                             </span>
                         </div>
 
-                        {/* Mini Interactive Chart Graphic */}
+                        
                         <div className="h-20 sm:h-28 relative">
                             <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
                                 <defs>
@@ -498,13 +498,13 @@ export default function LandingPage() {
                                 <circle cx="90" cy="5" r="2.5" fill="#F43F5E" className="animate-ping" />
                                 <circle cx="90" cy="5" r="1.5" fill="#F43F5E" />
                             </svg>
-                            {/* Mini floating indicator */}
+                            
                             <div className="absolute top-1 sm:top-2 right-4 sm:right-12 bg-darkCard/90 border border-white/10 text-[8px] sm:text-[9px] px-2 py-0.5 rounded shadow">
                                 Peak: ₹14,82,310 INR
                             </div>
                         </div>
 
-                        {/* Real-time Live booking activity element */}
+                        
                         <div className="glass-card p-2.5 sm:p-3 rounded-xl border border-white/10 flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accentCyan/10 flex items-center justify-center shrink-0">
@@ -521,7 +521,7 @@ export default function LandingPage() {
                 </div>
             </div>
 
-            {/* Left Copy Column */}
+            
             <div className="lg:col-span-6 space-y-6 sm:space-y-8 text-left z-10 order-2 lg:order-1">
                 <div id="hero-badge" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-accentCyan font-medium opacity-0">
                     <span className="w-2 h-2 rounded-full bg-accentCyan animate-pulse"></span>
@@ -545,7 +545,7 @@ export default function LandingPage() {
                     </a>
                 </div>
 
-                {/* Live Notification Feed Hook */}
+                
                 <div id="hero-feed-container" className="pt-6 border-t border-white/10 max-w-md opacity-0">
                     <div className="flex items-center gap-3">
                         <div className="relative flex h-3 w-3 shrink-0">
@@ -562,7 +562,7 @@ export default function LandingPage() {
         </div>
     </section>
 
-    {/* Detailed Alternating Features Ecosystem Section */}
+    
     <section id="features" className="py-12 bg-darkBg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-3xl mx-auto mb-16 space-y-4 reveal-up">
@@ -572,7 +572,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 1 */}
+        
         <div className="py-16 border-b border-white/5 relative">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-5 space-y-6 text-center lg:text-left order-2 lg:order-1 reveal-up">
@@ -621,7 +621,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 2 */}
+        
         <div className="py-16 border-b border-white/5 relative bg-white/[0.01]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-7 flex justify-center order-1 lg:order-1 reveal-up">
@@ -662,7 +662,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 3 */}
+        
         <div className="py-16 border-b border-white/5 relative">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-5 space-y-6 text-center lg:text-left order-2 lg:order-1 reveal-up">
@@ -705,7 +705,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 4 */}
+        
         <div className="py-16 border-b border-white/5 relative bg-white/[0.01]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-7 flex justify-center order-1 lg:order-1 reveal-up">
@@ -739,7 +739,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 5 */}
+        
         <div className="py-16 border-b border-white/5 relative">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-5 space-y-6 text-center lg:text-left order-2 lg:order-1 reveal-up">
@@ -773,7 +773,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 6 */}
+        
         <div className="py-16 border-b border-white/5 relative bg-white/[0.01]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-7 flex justify-center order-1 lg:order-1 reveal-up w-full">
@@ -806,7 +806,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 7 */}
+        
         <div className="py-16 border-b border-white/5 relative">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-5 space-y-6 text-center lg:text-left order-2 lg:order-1 reveal-up">
@@ -828,11 +828,11 @@ export default function LandingPage() {
                     <div className="w-full max-w-[500px] glass-panel rounded-2xl p-4 sm:p-6 border border-white/10 shadow-2xl relative text-center space-y-4">
                         <span className="text-xs text-slate-500 uppercase tracking-widest font-mono">Live Calling Waveform</span>
                         <div className="h-20 flex items-center justify-center gap-1.5 py-4">
-                            <span className="w-1.5 h-6 bg-accentCyan rounded-full animate-bounce" style={{'animation-delay': '0.1s'}}></span>
-                            <span className="w-1.5 h-12 bg-accentCyan rounded-full animate-bounce" style={{'animation-delay': '0.2s'}}></span>
-                            <span className="w-1.5 h-16 bg-accentCyan rounded-full animate-bounce" style={{'animation-delay': '0.3s'}}></span>
-                            <span className="w-1.5 h-8 bg-accentCyan rounded-full animate-bounce" style={{'animation-delay': '0.4s'}}></span>
-                            <span className="w-1.5 h-14 bg-accentCyan rounded-full animate-bounce" style={{'animation-delay': '0.5s'}}></span>
+                            <span className="w-1.5 h-6 bg-accentCyan rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+                            <span className="w-1.5 h-12 bg-accentCyan rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                            <span className="w-1.5 h-16 bg-accentCyan rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
+                            <span className="w-1.5 h-8 bg-accentCyan rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+                            <span className="w-1.5 h-14 bg-accentCyan rounded-full animate-bounce" style="animation-delay: 0.5s"></span>
                         </div>
                         <p className="text-xs text-slate-400">Automating lead conversion seamlessly through dynamic voice lines.</p>
                     </div>
@@ -840,7 +840,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 8 */}
+        
         <div className="py-16 border-b border-white/5 relative bg-white/[0.01]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-7 flex justify-center order-1 lg:order-1 reveal-up">
@@ -872,7 +872,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 9 */}
+        
         <div className="py-16 border-b border-white/5 relative">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-5 space-y-6 text-center lg:text-left order-2 lg:order-1 reveal-up">
@@ -905,7 +905,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 10 */}
+        
         <div className="py-16 border-b border-white/5 relative bg-white/[0.01]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-7 flex justify-center order-1 lg:order-1 reveal-up">
@@ -938,7 +938,7 @@ export default function LandingPage() {
             </div>
         </div>
 
-        {/* FEATURE 11 */}
+        
         <div className="py-16 relative">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-5 space-y-6 text-center lg:text-left order-2 lg:order-1 reveal-up">
@@ -979,7 +979,7 @@ export default function LandingPage() {
         </div>
     </section>
 
-    {/* FAQ Section (Accordion) */}
+    
     <section className="py-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 space-y-4 reveal-up">
             <span className="text-xs text-accentCyan uppercase tracking-widest font-semibold font-mono">Common Queries</span>
@@ -1030,7 +1030,7 @@ export default function LandingPage() {
         </div>
     </section>
    
-    {/* Testimonials Section */}
+    
     <section id="testimonials" className="py-24 bg-darkBg relative overflow-hidden border-t border-white/5">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primaryBlue/5 rounded-full blur-[120px] pointer-events-none"></div>
 
@@ -1050,7 +1050,7 @@ export default function LandingPage() {
             <div className="relative overflow-hidden px-4 py-8 max-w-3xl mx-auto" id="testimonial-slider-container">
                 <div id="testimonial-track" className="flex transition-transform duration-500 ease-out cursor-grab active:cursor-grabbing">
                     
-                    {/* Slide 1 */}
+                    
                     <div className="w-full shrink-0 px-4">
                         <div className="glass-card p-6 sm:p-8 rounded-3xl h-full flex flex-col justify-between relative overflow-hidden group">
                             <div className="absolute top-0 right-0 bg-emerald-500/10 text-emerald-400 text-[9px] sm:text-[10px] font-bold uppercase px-3 py-1.5 rounded-bl-xl tracking-wider border-l border-b border-emerald-500/15">
@@ -1077,7 +1077,7 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Slide 2 */}
+                    
                     <div className="w-full shrink-0 px-4">
                         <div className="glass-card p-6 sm:p-8 rounded-3xl h-full flex flex-col justify-between relative overflow-hidden group">
                             <div className="absolute top-0 right-0 bg-accentCyan/10 text-accentCyan text-[9px] sm:text-[10px] font-bold uppercase px-3 py-1.5 rounded-bl-xl tracking-wider border-l border-b border-accentCyan/15">
@@ -1104,7 +1104,7 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Slide 3 */}
+                    
                     <div className="w-full shrink-0 px-4">
                         <div className="glass-card p-6 sm:p-8 rounded-3xl h-full flex flex-col justify-between relative overflow-hidden group">
                             <div className="absolute top-0 right-0 bg-emerald-500/10 text-emerald-400 text-[9px] sm:text-[10px] font-bold uppercase px-3 py-1.5 rounded-bl-xl tracking-wider border-l border-b border-emerald-500/15">
@@ -1131,7 +1131,7 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Slide 4 */}
+                    
                     <div className="w-full shrink-0 px-4">
                         <div className="glass-card p-6 sm:p-8 rounded-3xl h-full flex flex-col justify-between relative overflow-hidden group">
                             <div className="absolute top-0 right-0 bg-emerald-500/10 text-emerald-400 text-[9px] sm:text-[10px] font-bold uppercase px-3 py-1.5 rounded-bl-xl tracking-wider border-l border-b border-emerald-500/15">
@@ -1160,15 +1160,15 @@ export default function LandingPage() {
 
                 </div>
 
-                {/* Navigation Indicator Dots */}
+                
                 <div className="flex justify-center items-center gap-2 mt-10" id="testimonial-dots">
-                    {/* Dots generated dynamically by JS */}
+                    
                 </div>
             </div>
         </div>
     </section>
 
-    {/* Final CTA Section (Cinematic Background Globe Simulation) */}
+    
     <section id="demo" className="relative py-24 sm:py-32 px-4 overflow-hidden border-t border-white/10 bg-darkBg">
         <div className="absolute inset-0 opacity-15 pointer-events-none flex items-center justify-center">
             <svg id="globe-network-svg" className="w-[800px] h-[800px]" viewBox="0 0 200 200" fill="none">
@@ -1191,7 +1191,7 @@ export default function LandingPage() {
                 Schedule an exploratory session with our technical integrations team to walk through custom dashboard flows and see how StayBooker AI can fit into your operations.
             </p>
 
-            {/* Dynamic Mock Calendar Demo Booker */}
+            
             <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-white/10 shadow-2xl max-w-lg mx-auto text-left space-y-4 reveal-up" id="demo-form-panel">
                 <h4 className="text-xs sm:text-sm font-semibold uppercase text-slate-400 font-mono">Request demo consultation</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1214,7 +1214,15 @@ export default function LandingPage() {
         </div>
     </section>
 
-            <LandingFooter />
+    
+    <div id="footer-placeholder"></div>
+
+   
+    
+    
+    
+    
+
         </div>
     );
 }

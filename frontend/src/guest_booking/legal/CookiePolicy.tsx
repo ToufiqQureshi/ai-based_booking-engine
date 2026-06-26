@@ -1,22 +1,24 @@
 // @ts-nocheck
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LandingHeader } from '../components/LandingHeader';
-import { LandingFooter } from '../components/LandingFooter';
 
 export default function CookiePolicy() {
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     return (
-        <div className="font-sans antialiased bg-[#0A0505] text-white relative selection:bg-[#F43F5E]/30 overflow-x-hidden" style={{ backgroundImage: 'linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
-            <LandingHeader />
-            {/* Ambient background glows */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px]"></div>
-                <div className="absolute top-[800px] right-1/4 w-[600px] h-[600px] bg-rose-500/5 rounded-full blur-[150px]"></div>
-            </div>
+        <div className="legal-page-container">
+            
 
-            <div id="header-placeholder"></div>
+    
+    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primaryBlue/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div className="absolute top-[700px] right-1/4 w-[600px] h-[600px] bg-accentCyan/5 rounded-full blur-[150px] pointer-events-none"></div>
 
-    {/* HEADER BLOCK: Radial Glow Legal Title Banner */}
+    
+    <div id="header-placeholder"></div>
+
+    
     <section className="relative pt-44 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
         <div id="threejs-container" className="absolute inset-0 pointer-events-none z-0 opacity-20"></div>
 
@@ -36,10 +38,10 @@ export default function CookiePolicy() {
         </div>
     </section>
 
-    {/* CONTENT GRID: Sticky Quick-Navigation & Clean Typography Sections */}
+    
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 relative z-10 grid lg:grid-cols-12 gap-12 text-left">
         
-        {/* LEFT COLUMN: Sticky Legal Navigation Bar */}
+        
         <aside className="lg:col-span-4 hidden lg:block">
             <div className="glass-panel p-6 rounded-2xl border border-white/10 sticky top-28 space-y-4">
                 <h4 className="text-xs font-bold font-mono uppercase tracking-widest text-accentCyan pb-2 border-b border-white/5">Table of Contents</h4>
@@ -60,17 +62,17 @@ export default function CookiePolicy() {
             </div>
         </aside>
 
-        {/* RIGHT COLUMN: Structured Text Content */}
+        
         <article className="lg:col-span-8 space-y-12 text-sm text-slate-300 leading-relaxed font-sans reveal-up">
             
-            {/* Quick Legal Metadata Banner */}
+            
             <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2.5 font-mono text-xs text-slate-400">
                 <div className="flex justify-between"><span>Legal Entity:</span> <span className="text-white font-semibold">Transinterface Digiserv Pvt. Ltd.</span></div>
                 <div className="flex justify-between"><span>Website:</span> <span className="text-white font-semibold">www.staybooker.ai</span></div>
                 <div className="flex justify-between"><span>Cookie Consent Node:</span> <span className="text-emerald-400 font-semibold">Dynamic User Choice Enabled</span></div>
             </div>
 
-            {/* 1. Introduction */}
+            
             <section id="introduction" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -87,7 +89,7 @@ export default function CookiePolicy() {
                 </p>
             </section>
 
-            {/* 2. What Are Cookies? */}
+            
             <section id="what-are-cookies" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -101,7 +103,7 @@ export default function CookiePolicy() {
                 </p>
             </section>
 
-            {/* 3. Similar Technologies */}
+            
             <section id="similar-tech" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -117,7 +119,7 @@ export default function CookiePolicy() {
                 <p className="pt-2 text-xs">These technologies may collect information about user interactions with our services.</p>
             </section>
 
-            {/* 4. Types of Cookies We Use */}
+            
             <section id="types-cookies" className="space-y-6 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -147,7 +149,7 @@ export default function CookiePolicy() {
                 </div>
             </section>
 
-            {/* 5. First-Party and Third-Party Cookies */}
+            
             <section id="first-third-party" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -161,7 +163,7 @@ export default function CookiePolicy() {
                 </p>
             </section>
 
-            {/* 6. Google Services and Technologies (Highlighted Block) */}
+            
             <section id="google" className="p-6 bg-red-950/10 border border-accentCyan/20 rounded-2xl space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-accentCyan animate-pulse"></span>
@@ -181,7 +183,7 @@ export default function CookiePolicy() {
                 </p>
             </section>
 
-            {/* 7. Other Third-Party Technologies */}
+            
             <section id="other-third" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -195,7 +197,7 @@ export default function CookiePolicy() {
                 </ul>
             </section>
 
-            {/* 13. Cookies and Analytics */}
+            
             <section id="cookies" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -206,7 +208,7 @@ export default function CookiePolicy() {
                 </p>
             </section>
 
-            {/* 11. Managing Cookies (Highlighted Block) */}
+            
             <section id="managing-cookies" className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -225,7 +227,7 @@ export default function CookiePolicy() {
                 </p>
             </section>
 
-            {/* 12-15. Withdrawal, Retention, Security, Changes */}
+            
             <section id="retention-security" className="space-y-6 scroll-mt-28">
                 <div className="space-y-2">
                     <h5 className="font-bold text-white text-xs font-mono uppercase tracking-wider">12. Withdrawal of Consent</h5>
@@ -245,7 +247,7 @@ export default function CookiePolicy() {
                 </div>
             </section>
 
-            {/* 16. Contact Information */}
+            
             <section id="contact" className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -265,7 +267,12 @@ export default function CookiePolicy() {
 
     </main>
 
-            <LandingFooter />
+    
+    <div id="footer-placeholder"></div>
+
+    
+    
+
         </div>
     );
 }

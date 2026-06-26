@@ -1,22 +1,24 @@
 // @ts-nocheck
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LandingHeader } from '../components/LandingHeader';
-import { LandingFooter } from '../components/LandingFooter';
 
 export default function PrivacyPolicy() {
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     return (
-        <div className="font-sans antialiased bg-[#0A0505] text-white relative selection:bg-[#F43F5E]/30 overflow-x-hidden" style={{ backgroundImage: 'linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
-            <LandingHeader />
-            {/* Ambient background glows */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px]"></div>
-                <div className="absolute top-[800px] right-1/4 w-[600px] h-[600px] bg-rose-500/5 rounded-full blur-[150px]"></div>
-            </div>
+        <div className="legal-page-container">
+            
 
-            <div id="header-placeholder"></div>
+    
+    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primaryBlue/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div className="absolute top-[700px] right-1/4 w-[600px] h-[600px] bg-accentCyan/5 rounded-full blur-[150px] pointer-events-none"></div>
 
-    {/* HEADER BLOCK: Radial Glow Legal Title Banner */}
+    
+    <div id="header-placeholder"></div>
+
+    
     <section className="relative pt-44 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
         <div id="threejs-container" className="absolute inset-0 pointer-events-none z-0 opacity-20"></div>
 
@@ -36,10 +38,10 @@ export default function PrivacyPolicy() {
         </div>
     </section>
 
-    {/* CONTENT GRID: Sticky Quick-Navigation & Clean Typography Sections */}
+    
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 relative z-10 grid lg:grid-cols-12 gap-12 text-left">
         
-        {/* LEFT COLUMN: Sticky Legal Navigation Bar */}
+        
         <aside className="lg:col-span-4 hidden lg:block">
             <div className="glass-panel p-6 rounded-2xl border border-white/10 sticky top-28 space-y-4">
                 <h4 className="text-xs font-bold font-mono uppercase tracking-widest text-accentCyan pb-2 border-b border-white/5">Table of Contents</h4>
@@ -62,17 +64,17 @@ export default function PrivacyPolicy() {
             </div>
         </aside>
 
-        {/* RIGHT COLUMN: Structured Text Content */}
+        
         <article className="lg:col-span-8 space-y-12 text-sm text-slate-300 leading-relaxed font-sans reveal-up">
             
-            {/* Quick Legal Metadata Banner */}
+            
             <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2.5 font-mono text-xs text-slate-400">
                 <div className="flex justify-between"><span>Legal Entity:</span> <span className="text-white font-semibold">Transinterface Digiserv Pvt. Ltd.</span></div>
                 <div className="flex justify-between"><span>Website:</span> <span className="text-white font-semibold">www.staybooker.ai</span></div>
                 <div className="flex justify-between"><span>Jurisdiction:</span> <span className="text-emerald-400 font-semibold">India (Digital Personal Data Protection Act, 2023)</span></div>
             </div>
 
-            {/* 1. Introduction */}
+            
             <section id="introduction" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -89,7 +91,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 2. Scope */}
+            
             <section id="scope" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -100,7 +102,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 3. Information We Collect */}
+            
             <section id="collect" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -109,7 +111,7 @@ export default function PrivacyPolicy() {
                 <p>We may collect the following categories of information:</p>
                 
                 <div className="grid md:grid-cols-2 gap-4 pt-2">
-                    {/* Identity */}
+                    
                     <div className="p-5 bg-white/[0.02] border border-white/5 rounded-xl space-y-2">
                         <h5 className="font-bold text-white text-xs font-mono uppercase tracking-wider">Identity Information</h5>
                         <ul className="list-disc pl-4 text-xs text-slate-400 space-y-1">
@@ -119,7 +121,7 @@ export default function PrivacyPolicy() {
                             <li>Government-issued ID (where required)</li>
                         </ul>
                     </div>
-                    {/* Contact */}
+                    
                     <div className="p-5 bg-white/[0.02] border border-white/5 rounded-xl space-y-2">
                         <h5 className="font-bold text-white text-xs font-mono uppercase tracking-wider">Contact Information</h5>
                         <ul className="list-disc pl-4 text-xs text-slate-400 space-y-1">
@@ -128,7 +130,7 @@ export default function PrivacyPolicy() {
                             <li>Mailing address</li>
                         </ul>
                     </div>
-                    {/* Booking */}
+                    
                     <div className="p-5 bg-white/[0.02] border border-white/5 rounded-xl space-y-2">
                         <h5 className="font-bold text-white text-xs font-mono uppercase tracking-wider">Booking Information</h5>
                         <ul className="list-disc pl-4 text-xs text-slate-400 space-y-1">
@@ -137,7 +139,7 @@ export default function PrivacyPolicy() {
                             <li>Travel & Guest parameters</li>
                         </ul>
                     </div>
-                    {/* Payments */}
+                    
                     <div className="p-5 bg-white/[0.02] border border-white/5 rounded-xl space-y-2">
                         <h5 className="font-bold text-white text-xs font-mono uppercase tracking-wider">Payment Information</h5>
                         <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -154,7 +156,7 @@ export default function PrivacyPolicy() {
                 </div>
             </section>
 
-            {/* 4. How We Collect Information */}
+            
             <section id="how-collect" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -171,7 +173,7 @@ export default function PrivacyPolicy() {
                 </ul>
             </section>
 
-            {/* 5. Purpose of Processing */}
+            
             <section id="purpose" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -189,7 +191,7 @@ export default function PrivacyPolicy() {
                 </ul>
             </section>
 
-            {/* 6. AI and Automated Services */}
+            
             <section id="ai" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -203,7 +205,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 7. Google Services and Third-Party Technologies */}
+            
             <section id="google" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -220,7 +222,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 8. Google User Data (Highlighted Block) */}
+            
             <section id="google-data" className="p-6 bg-red-950/10 border border-accentCyan/20 rounded-2xl space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-accentCyan animate-pulse"></span>
@@ -245,7 +247,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 9. Legal Basis for Processing */}
+            
             <section id="legal-basis" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -260,7 +262,7 @@ export default function PrivacyPolicy() {
                 </ul>
             </section>
 
-            {/* 10. Data Retention */}
+            
             <section id="retention" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -274,7 +276,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 11. Data Sharing and Disclosure */}
+            
             <section id="sharing" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -292,7 +294,7 @@ export default function PrivacyPolicy() {
                 </ul>
             </section>
 
-            {/* 12. WhatsApp Communications */}
+            
             <section id="whatsapp" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -303,7 +305,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 13. Cookies and Analytics */}
+            
             <section id="cookies" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -314,7 +316,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 14. Data Security */}
+            
             <section id="security" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -325,7 +327,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 15. Your Rights */}
+            
             <section id="rights" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -343,7 +345,7 @@ export default function PrivacyPolicy() {
                 </ul>
             </section>
 
-            {/* 16. Data Deletion Requests */}
+            
             <section id="deletion" className="space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -357,7 +359,7 @@ export default function PrivacyPolicy() {
                 </p>
             </section>
 
-            {/* 17-20. Transfers, Children's Privacy, 3rd Party, changes */}
+            
             <section id="legal-miscellaneous" className="space-y-6 scroll-mt-28">
                 <div className="space-y-2">
                     <h5 className="font-bold text-white text-xs font-mono uppercase tracking-wider">17. Cross-Border Transfers</h5>
@@ -377,7 +379,7 @@ export default function PrivacyPolicy() {
                 </div>
             </section>
 
-            {/* 21. Contact Information */}
+            
             <section id="contact" className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4 scroll-mt-28">
                 <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accentCyan"></span>
@@ -402,7 +404,12 @@ export default function PrivacyPolicy() {
 
     </main>
 
-            <LandingFooter />
+    
+    <div id="footer-placeholder"></div>
+
+    
+    
+
         </div>
     );
 }
