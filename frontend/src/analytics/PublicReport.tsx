@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Activity, MapPin, Share2 } from 'lucide-react';
 import ReportView, { ReportData } from '@/reports/ReportView';
+import { API_BASE_URL } from '@/core/api/client';
 
 interface ReportEnvelope {
   hotel_name: string;
@@ -30,7 +31,7 @@ const PublicReport: React.FC = () => {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/public/report/${token}`);
+        const res = await fetch(`${API_BASE_URL}/public/report/${token}`);
         if (!alive) return;
         if (res.status === 404) { setError('This report link is invalid or has been revoked.'); return; }
         if (res.status === 410) { setError('This report link has expired.'); return; }
