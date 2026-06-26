@@ -1,0 +1,47 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e8]: S
+          - generic [ref=e9]: Staybooker
+          - generic [ref=e10]: · Secure Booking
+        - generic [ref=e11]:
+          - img [ref=e12]
+          - generic [ref=e14]: 256-bit SSL Secured
+    - main [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e19]:
+          - generic [ref=e21] [cursor=pointer]:
+            - img [ref=e23]
+            - generic [ref=e25]: Search
+          - generic [ref=e27]:
+            - generic [ref=e28]: "2"
+            - generic [ref=e29]: Select Rooms
+          - generic [ref=e31]:
+            - generic [ref=e32]: "3"
+            - generic [ref=e33]: Enhance Stay
+          - generic [ref=e35]:
+            - generic [ref=e36]: "4"
+            - generic [ref=e37]: Guest Info
+        - generic [ref=e38]:
+          - paragraph [ref=e57]: We couldn't load rooms right now
+          - paragraph [ref=e41]: This is usually a temporary connection issue. Please try again.
+          - button "Retry" [ref=e58] [cursor=pointer]
+    - contentinfo [ref=e42]:
+      - generic [ref=e43]:
+        - paragraph [ref=e44]: Powered by Staybooker.ai
+        - generic [ref=e45]:
+          - link "Cancel Booking" [ref=e46] [cursor=pointer]:
+            - /url: /book/powerhouse/cancel
+          - generic [ref=e47]: ·
+          - generic [ref=e48]:
+            - img [ref=e49]
+            - text: Secure Payments
+          - generic [ref=e51]: ·
+          - generic [ref=e52]: Privacy Protected
+          - generic [ref=e53]: ·
+          - generic [ref=e54]: Best Price Guaranteed

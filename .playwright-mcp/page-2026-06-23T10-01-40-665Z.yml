@@ -1,0 +1,542 @@
+- generic:
+  - generic:
+    - list
+    - region "Notifications alt+T"
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - generic: S
+            - generic: Staybooker
+            - generic: · Secure Booking
+          - generic:
+            - img
+            - generic: 256-bit SSL Secured
+          - generic:
+            - button:
+              - generic: 🇬🇧
+              - generic: English
+              - img
+            - button:
+              - generic: INR
+              - img
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                    - generic: Search
+                - generic:
+                  - generic:
+                    - generic: "2"
+                    - generic: Select Rooms
+                - generic:
+                  - generic:
+                    - generic: "3"
+                    - generic: Enhance Stay
+                - generic:
+                  - generic:
+                    - generic: "4"
+                    - generic: Guest Info
+          - generic:
+            - img
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=1]: powerhouse
+                  - generic:
+                    - generic: 4 Star Property
+            - button:
+              - img
+            - button:
+              - img
+            - generic:
+              - button
+              - button
+              - button
+              - button
+          - generic:
+            - heading [level=3]: Property Videos
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                    - text: Rooms
+                  - button:
+                    - img
+                    - text: Packages
+              - generic:
+                - generic:
+                  - button:
+                    - generic:
+                      - img
+                    - generic:
+                      - generic: Check In
+                      - generic: 23 Jun 2026
+                      - generic: Tuesday
+                  - button:
+                    - generic:
+                      - img
+                    - generic:
+                      - generic: Check Out
+                      - generic: 24 Jun 2026
+                      - generic: Wednesday
+                - button:
+                  - generic:
+                    - img
+                  - generic:
+                    - generic: Guests & Rooms
+                    - generic: 2 Guests
+                    - generic: 1 Room, 2 Adults
+                  - img
+                - generic:
+                  - generic: Promo Code
+                  - textbox:
+                    - /placeholder: Optional
+                - button:
+                  - img
+                  - text: Search
+              - generic:
+                - checkbox
+                - generic: Flexible Dates
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                - generic:
+                  - heading [level=3]: Staybooker Loyalty Program
+                  - paragraph: Enter your email to unlock exclusive member rates & redeem your points.
+              - generic:
+                - generic:
+                  - textbox:
+                    - /placeholder: Enter email address
+                  - button [disabled]: Check
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                    - paragraph: Popular choice! 10 bookings this month
+                - generic:
+                  - heading [level=2]: Available Rooms
+                  - button:
+                    - img
+                    - text: Filters
+              - generic:
+                - generic:
+                  - heading [level=2]:
+                    - generic:
+                      - img
+                    - text: 4 Categories Available
+                  - generic:
+                    - generic: Sort By
+                    - combobox
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                          - button:
+                            - img
+                          - button:
+                            - img
+                        - generic:
+                          - generic:
+                            - generic: Available
+                      - generic:
+                        - generic:
+                          - generic:
+                            - heading [level=3]: Executive Room - Romantic Lonavala Getaway
+                            - generic:
+                              - generic:
+                                - img
+                                - text: 2 Adults
+                              - generic: •
+                              - generic:
+                                - img
+                                - text: 317 ft²
+                          - button: Room Details
+                        - generic:
+                          - generic:
+                            - img
+                            - generic: Free WiFi
+                          - generic:
+                            - img
+                            - generic: Air Conditioning
+                          - generic:
+                            - img
+                            - generic: Smart TV
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: EP
+                                - generic:
+                                  - generic: Room Only
+                                  - generic: Free cancellation up to 168 hours before check-in
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: ₹18,000
+                                  - generic: total
+                                - paragraph: ₹20,000
+                              - button: Select
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: CP
+                                - generic:
+                                  - generic: CP
+                                  - generic: Free cancellation up to 24 hours before check-in
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: ₹18,500
+                                  - generic: total
+                                - paragraph: ₹20,000
+                              - button: Select
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                          - button:
+                            - img
+                          - button:
+                            - img
+                        - generic:
+                          - generic:
+                            - generic: Available
+                      - generic:
+                        - generic:
+                          - generic:
+                            - heading [level=3]: Executive Room
+                            - generic:
+                              - generic:
+                                - img
+                                - text: 6 Adults
+                              - generic: •
+                              - generic:
+                                - img
+                                - text: 220 ft²
+                          - button: Room Details
+                        - generic:
+                          - generic:
+                            - img
+                            - generic: Air Conditioning
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: EP
+                                - generic:
+                                  - generic: Room Only
+                                  - generic: Free cancellation up to 72 hours before check-in
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: ₹10,000
+                                  - generic: total
+                              - button: Select
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: CP
+                                - generic:
+                                  - generic: CP
+                                  - generic: Non-Refundable
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: ₹10,500
+                                  - generic: total
+                              - button: Select
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                          - button:
+                            - img
+                          - button:
+                            - img
+                        - generic:
+                          - generic:
+                            - generic: Available
+                      - generic:
+                        - generic:
+                          - generic:
+                            - heading [level=3]: Romantic Lonavala Getaway
+                            - generic:
+                              - generic:
+                                - img
+                                - text: 2 Adults
+                              - generic: •
+                              - generic:
+                                - img
+                                - text: 300 ft²
+                          - button: Room Details
+                        - generic:
+                          - generic:
+                            - img
+                            - generic: Free WiFi
+                          - generic:
+                            - img
+                            - generic: Air Conditioning
+                          - generic:
+                            - img
+                            - generic: Smart TV
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: EP
+                                - generic:
+                                  - generic: Room Only
+                                  - generic: Free cancellation up to 48 hours before check-in
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: ₹5,800
+                                  - generic: total
+                              - button: Select
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: CP
+                                - generic:
+                                  - generic: CP
+                                  - generic: Non-Refundable
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: ₹6,300
+                                  - generic: total
+                              - button: Select
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                          - button:
+                            - img
+                          - button:
+                            - img
+                        - generic:
+                          - generic:
+                            - generic: Available
+                      - generic:
+                        - generic:
+                          - generic:
+                            - heading [level=3]: Deluxe
+                            - generic:
+                              - generic:
+                                - img
+                                - text: 2 Adults
+                              - generic: •
+                              - generic:
+                                - img
+                                - text: 297 ft²
+                          - button: Room Details
+                        - generic:
+                          - generic:
+                            - img
+                            - generic: Free WiFi
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: EP
+                                - generic:
+                                  - generic: Room Only
+                                  - generic: Free cancellation up to 48 hours before check-in
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: ₹5,000
+                                  - generic: total
+                              - button: Select
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: CP
+                                - generic:
+                                  - generic: CP
+                                  - generic: Free cancellation up to 48 hours before check-in
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: ₹5,500
+                                  - generic: total
+                              - button: Select
+          - generic:
+            - button:
+              - generic:
+                - img
+              - generic:
+                - generic: Live Concierge
+                - generic: How can I help?
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+                - generic:
+                  - generic:
+                    - heading [level=2]: powerhouse
+                    - generic:
+                      - img
+                      - generic: vasai, maharashtra
+                    - paragraph: Nestled in a prime location, our hotel offers a perfect blend of comfort, elegance, and modern hospitality. Designed for both business and leisure travelers, we provide well-appointed rooms, premium amenities, seamless service, and a relaxing atmosphere to ensure a memorable stay. Guests can enjoy spacious accommodations, high-speed Wi-Fi, in-room dining, and easy access to nearby attractions and transportation hubs. Whether you are visiting for work, vacation, or a weekend getaway, we are committed to delivering exceptional comfort and personalized experiences throughout your stay.
+                  - generic:
+                    - link:
+                      - /url: https://thelagoonaresort.com
+                      - text: Home
+                    - button: Privacy Policy
+                    - button: Payment Terms
+              - generic:
+                - generic:
+                  - img
+                  - heading [level=3]: Important Info
+                - generic:
+                  - generic:
+                    - paragraph: Cancellation Policy
+                    - paragraph: Free cancellation up to 24 hours before check-in. Cancellations made within 24 hours of arrival may incur a one-night charge.
+                  - generic:
+                    - paragraph: Payment Policy
+                    - paragraph: Guests may pay online at the time of booking or at the property, subject to availability and hotel rules.
+                  - generic:
+                    - paragraph: Child Policy
+                    - paragraph: Children below 5 years stay free when using existing bedding. Extra beds are subject to availability and additional charges.
+                  - generic:
+                    - paragraph: Privacy Policy
+                    - paragraph: Guest information is collected solely for booking and hospitality purposes and is not shared with third parties except where required by law.
+                  - generic:
+                    - paragraph: Important Information
+                    - paragraph: Valid government-issued photo identification is required at check-in. Early check-in and late check-out are subject to availability. The hotel reserves the right to refuse service in accordance with applicable laws and regulations.
+          - generic:
+            - generic:
+              - img
+              - generic: powerhouse, vasai west dattani prism it park 308, vasai, maharashtra, india , 401207
+            - generic:
+              - generic: "Business/GST No: 32erfgbv32ewdscx 21wq"
+      - contentinfo:
+        - generic:
+          - paragraph: Powered by Staybooker.ai
+          - generic:
+            - link:
+              - /url: /book/powerhouse/cancel
+              - text: Cancel Booking
+            - generic: ·
+            - generic:
+              - img
+              - text: Secure Payments
+            - generic: ·
+            - generic: Privacy Protected
+            - generic: ·
+            - generic: Best Price Guaranteed
+  - dialog "Enhance Your Stay" [ref=e560]:
+    - generic [ref=e561]:
+      - heading "Enhance Your Stay" [level=2] [ref=e562]:
+        - img [ref=e563]
+        - text: Enhance Your Stay
+      - paragraph [ref=e565]: Select optional experiences & activities to customize your stay.
+    - generic [ref=e566]:
+      - generic [ref=e567] [cursor=pointer]:
+        - img [ref=e570]
+        - generic [ref=e572]:
+          - generic [ref=e573]:
+            - generic [ref=e574]:
+              - generic [ref=e576]: food
+              - heading "candle light dinner" [level=4] [ref=e577]
+            - generic [ref=e580]: +
+          - generic [ref=e581]:
+            - generic [ref=e582]: Additional
+            - generic [ref=e583]: ₹4,000
+      - generic [ref=e584] [cursor=pointer]:
+        - img [ref=e587]
+        - generic [ref=e589]:
+          - generic [ref=e590]:
+            - generic [ref=e591]:
+              - generic [ref=e593]: wellness
+              - heading "Spa" [level=4] [ref=e594]
+            - generic [ref=e597]: +
+          - generic [ref=e598]:
+            - generic [ref=e599]: Additional
+            - generic [ref=e600]: ₹3,000
+      - generic [ref=e601] [cursor=pointer]:
+        - img [ref=e604]
+        - generic [ref=e606]:
+          - generic [ref=e607]:
+            - generic [ref=e608]:
+              - generic [ref=e610]: activity
+              - heading "adventure safari" [level=4] [ref=e611]
+            - generic [ref=e614]: +
+          - paragraph [ref=e615]: xyz
+          - generic [ref=e616]:
+            - generic [ref=e617]: Additional
+            - generic [ref=e618]: ₹4,000
+      - generic [ref=e619] [cursor=pointer]:
+        - img [ref=e622]
+        - generic [ref=e624]:
+          - generic [ref=e625]:
+            - generic [ref=e626]:
+              - generic [ref=e628]: general
+              - heading "Late Check-out" [level=4] [ref=e629]
+            - generic [ref=e632]: +
+          - paragraph [ref=e633]: Extend your stay until 2 PM hassle-free
+          - generic [ref=e634]:
+            - generic [ref=e635]: Additional
+            - generic [ref=e636]: ₹500
+      - generic [ref=e637] [cursor=pointer]:
+        - img [ref=e640]
+        - generic [ref=e642]:
+          - generic [ref=e643]:
+            - generic [ref=e644]:
+              - generic [ref=e646]: food
+              - heading "Breakfast Package" [level=4] [ref=e647]
+            - generic [ref=e650]: +
+          - paragraph [ref=e651]: Continental breakfast for 2 served in-room or at restaurant
+          - generic [ref=e652]:
+            - generic [ref=e653]: Additional
+            - generic [ref=e654]: ₹350
+      - generic [ref=e655] [cursor=pointer]:
+        - generic [ref=e656]:
+          - img [ref=e658]
+          - img "Airport pick" [ref=e660]
+        - generic [ref=e661]:
+          - generic [ref=e662]:
+            - generic [ref=e663]:
+              - generic [ref=e665]: transport
+              - heading "Airport pick" [level=4] [ref=e666]
+            - generic [ref=e669]: +
+          - paragraph [ref=e670]: we will pick up from airpot and will safetly drop to our Power House
+          - generic [ref=e671]:
+            - generic [ref=e672]: Additional
+            - generic [ref=e673]: ₹2,000
+    - button "Proceed to Cart" [active] [ref=e675] [cursor=pointer]:
+      - text: Proceed to Cart
+      - img
+    - button "Close" [ref=e676] [cursor=pointer]:
+      - img [ref=e677]
+      - generic [ref=e680]: Close

@@ -14,6 +14,7 @@ from app.bookings.booking import Booking, BookingStatus, Guest
 from app.rate_plans.rates_model import RatePlan, RoomRate
 from app.rate_plans.promo import PromoCode
 from app.core.utils.time import utcnow
+from app.core.utils.feature_flags import assert_hotel_not_paused
 from app.core.cache.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
@@ -159,6 +160,7 @@ async def search_public_rooms(
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
+    assert_hotel_not_paused(hotel)
 
     from datetime import timedelta
     def addDays(d, num):
@@ -543,6 +545,7 @@ async def get_calendar_availability(
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         return {}
+    assert_hotel_not_paused(hotel)
     featured_room_id = hotel.settings.get("featured_room_type_id") if hotel.settings else None
     if featured_room_id == "lowest":
         featured_room_id = None
@@ -669,6 +672,7 @@ async def get_public_addons(hotel_identifier: str, session: DbSession):
     hotel = await session.get(Hotel, hotel_id)
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
+    assert_hotel_not_paused(hotel)
         
     addon_query = select(AddOn).where(AddOn.hotel_id == hotel_id, AddOn.is_active == True)
     addon_res = await session.execute(addon_query)

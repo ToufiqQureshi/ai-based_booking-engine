@@ -1,0 +1,64 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img "Staybooker Logo" [ref=e7]
+      - heading "Staybooker" [level=1] [ref=e8]
+      - paragraph [ref=e9]: Multi-tenant hotel management platform
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - heading "Sign in" [level=3] [ref=e12]
+        - paragraph [ref=e13]: Enter your credentials to access your dashboard
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - text: Email
+            - textbox "Email" [ref=e17]:
+              - /placeholder: owner@hotel.com
+              - text: tech.revmerito@gmail.com
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - generic [ref=e20]: Password
+              - link "Forgot password?" [ref=e21] [cursor=pointer]:
+                - /url: /forgot-password
+            - generic [ref=e22]:
+              - textbox "Password" [ref=e23]:
+                - /placeholder: ••••••••
+                - text: Toufiq@651
+              - button [ref=e24] [cursor=pointer]:
+                - img
+        - generic [ref=e25]:
+          - button "Signing in..." [disabled]:
+            - img
+            - text: Signing in...
+          - generic [ref=e27]:
+            - paragraph [ref=e28]:
+              - text: Don't have an account?
+              - link "Create account" [ref=e29] [cursor=pointer]:
+                - /url: /signup
+            - paragraph [ref=e30]:
+              - text: By signing in, you agree to our
+              - link "Terms of Service" [ref=e31] [cursor=pointer]:
+                - /url: /terms-of-service
+              - text: and
+              - link "Privacy Policy" [ref=e32] [cursor=pointer]:
+                - /url: /privacy-policy
+    - contentinfo [ref=e33]:
+      - generic [ref=e34]:
+        - link "Privacy Policy" [ref=e35] [cursor=pointer]:
+          - /url: /privacy-policy
+        - generic [ref=e36]: •
+        - link "Terms of Service" [ref=e37] [cursor=pointer]:
+          - /url: /terms-of-service
+        - generic [ref=e38]: •
+        - link "Refund Policy" [ref=e39] [cursor=pointer]:
+          - /url: /refund-policy
+        - generic [ref=e40]: •
+        - link "Cookie Policy" [ref=e41] [cursor=pointer]:
+          - /url: /cookie-policy
+        - generic [ref=e42]: •
+        - link "Contact Us" [ref=e43] [cursor=pointer]:
+          - /url: /contact-us
+      - paragraph [ref=e44]: © 2026 Staybooker by Revmerito. All rights reserved.

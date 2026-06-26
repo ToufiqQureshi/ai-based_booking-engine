@@ -1,0 +1,183 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e56]:
+    - complementary [ref=e57]:
+      - generic [ref=e58]:
+        - img [ref=e60]
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Staybooker
+          - paragraph [ref=e65]: Admin Console
+      - navigation [ref=e66]:
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: Management
+          - generic [ref=e69]:
+            - button "Properties" [ref=e70] [cursor=pointer]:
+              - img [ref=e71]
+              - generic [ref=e75]: Properties
+            - button "Users" [ref=e76] [cursor=pointer]:
+              - img [ref=e77]
+              - generic [ref=e82]: Users
+      - generic [ref=e84]:
+        - generic [ref=e85]: T
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: toufiq revmerito
+          - paragraph [ref=e88]: tech.revmerito@gmail.com
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e91]:
+          - button [ref=e92] [cursor=pointer]:
+            - img
+          - generic [ref=e94]: Properties
+        - generic [ref=e95]:
+          - button [ref=e96] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e97] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e98]:
+        - generic [ref=e723]:
+          - generic [ref=e724]:
+            - generic [ref=e725]:
+              - heading "Properties" [level=1] [ref=e726]
+              - paragraph [ref=e727]: 7 total · 7 active
+            - generic [ref=e728]:
+              - textbox "Search by name, slug, email…" [ref=e730]
+              - button "Refresh" [ref=e731] [cursor=pointer]:
+                - img
+                - text: Refresh
+          - generic [ref=e732]:
+            - button "Add Hotel" [ref=e734] [cursor=pointer]:
+              - img
+              - text: Add Hotel
+            - generic [ref=e735]:
+              - table [ref=e737]:
+                - rowgroup [ref=e738]:
+                  - row "Property Status Actions" [ref=e739]:
+                    - columnheader [ref=e740]:
+                      - button [ref=e741] [cursor=pointer]:
+                        - img [ref=e742]
+                    - columnheader "Property" [ref=e744] [cursor=pointer]:
+                      - text: Property
+                      - img [ref=e1073]
+                    - columnheader "Status" [ref=e747] [cursor=pointer]
+                    - columnheader "Actions" [ref=e748]
+                - rowgroup [ref=e749]:
+                  - row "powerhouse N/A Active Login As" [ref=e914]:
+                    - cell [ref=e915]:
+                      - button [ref=e916] [cursor=pointer]:
+                        - img [ref=e917]
+                    - cell "powerhouse N/A" [ref=e919]:
+                      - generic [ref=e920]:
+                        - img [ref=e922]
+                        - generic [ref=e926]:
+                          - button "powerhouse" [ref=e927] [cursor=pointer]
+                          - paragraph [ref=e928]: N/A
+                    - cell "Active" [ref=e929]:
+                      - generic [ref=e932]: Active
+                    - cell "Login As" [ref=e933]:
+                      - button "Login As" [ref=e935] [cursor=pointer]:
+                        - img
+                        - text: Login As
+                  - row "Rajuyadav@gmail.com rajuyadav@gmail.com Active Login As" [ref=e936]:
+                    - cell [ref=e937]:
+                      - button [ref=e938] [cursor=pointer]:
+                        - img [ref=e939]
+                    - cell "Rajuyadav@gmail.com rajuyadav@gmail.com" [ref=e941]:
+                      - generic [ref=e942]:
+                        - img [ref=e944]
+                        - generic [ref=e948]:
+                          - button "Rajuyadav@gmail.com" [ref=e949] [cursor=pointer]
+                          - paragraph [ref=e950]: rajuyadav@gmail.com
+                    - cell "Active" [ref=e951]:
+                      - generic [ref=e954]: Active
+                    - cell "Login As" [ref=e955]:
+                      - button "Login As" [ref=e957] [cursor=pointer]:
+                        - img
+                        - text: Login As
+                  - row "the grand plaza mumbai N/A Active Login As" [ref=e794]:
+                    - cell [ref=e795]:
+                      - button [ref=e796] [cursor=pointer]:
+                        - img [ref=e797]
+                    - cell "the grand plaza mumbai N/A" [ref=e799]:
+                      - generic [ref=e800]:
+                        - img [ref=e802]
+                        - generic [ref=e806]:
+                          - button "the grand plaza mumbai" [ref=e807] [cursor=pointer]
+                          - paragraph [ref=e808]: N/A
+                    - cell "Active" [ref=e809]:
+                      - generic [ref=e812]: Active
+                    - cell "Login As" [ref=e813]:
+                      - button "Login As" [ref=e815] [cursor=pointer]:
+                        - img
+                        - text: Login As
+                  - row "The grand plaza pune N/A Active Login As" [ref=e816]:
+                    - cell [ref=e817]:
+                      - button [ref=e818] [cursor=pointer]:
+                        - img [ref=e819]
+                    - cell "The grand plaza pune N/A" [ref=e821]:
+                      - generic [ref=e822]:
+                        - img [ref=e824]
+                        - generic [ref=e828]:
+                          - button "The grand plaza pune" [ref=e829] [cursor=pointer]
+                          - paragraph [ref=e830]: N/A
+                    - cell "Active" [ref=e831]:
+                      - generic [ref=e834]: Active
+                    - cell "Login As" [ref=e835]:
+                      - button "Login As" [ref=e837] [cursor=pointer]:
+                        - img
+                        - text: Login As
+                  - row "The Heritage social.revmerito@gmail.com Active Login As" [ref=e958]:
+                    - cell [ref=e959]:
+                      - button [ref=e960] [cursor=pointer]:
+                        - img [ref=e961]
+                    - cell "The Heritage social.revmerito@gmail.com" [ref=e963]:
+                      - generic [ref=e964]:
+                        - img [ref=e966]
+                        - generic [ref=e970]:
+                          - button "The Heritage" [ref=e971] [cursor=pointer]
+                          - paragraph [ref=e972]: social.revmerito@gmail.com
+                    - cell "Active" [ref=e973]:
+                      - generic [ref=e976]: Active
+                    - cell "Login As" [ref=e977]:
+                      - button "Login As" [ref=e979] [cursor=pointer]:
+                        - img
+                        - text: Login As
+                  - row "The lagoona resort toufiqqureshi651@gmail.com Active Login As" [ref=e980]:
+                    - cell [ref=e981]:
+                      - button [ref=e982] [cursor=pointer]:
+                        - img [ref=e983]
+                    - cell "The lagoona resort toufiqqureshi651@gmail.com" [ref=e985]:
+                      - generic [ref=e986]:
+                        - img [ref=e988]
+                        - generic [ref=e992]:
+                          - button "The lagoona resort" [ref=e993] [cursor=pointer]
+                          - paragraph [ref=e994]: toufiqqureshi651@gmail.com
+                    - cell "Active" [ref=e995]:
+                      - generic [ref=e998]: Active
+                    - cell "Login As" [ref=e999]:
+                      - button "Login As" [ref=e1001] [cursor=pointer]:
+                        - img
+                        - text: Login As
+                  - row "web1.revmerito@gmail.com web1.revmerito@gmail.com Active Login As" [ref=e1002]:
+                    - cell [ref=e1003]:
+                      - button [ref=e1004] [cursor=pointer]:
+                        - img [ref=e1005]
+                    - cell "web1.revmerito@gmail.com web1.revmerito@gmail.com" [ref=e1007]:
+                      - generic [ref=e1008]:
+                        - img [ref=e1010]
+                        - generic [ref=e1014]:
+                          - button "web1.revmerito@gmail.com" [ref=e1015] [cursor=pointer]
+                          - paragraph [ref=e1016]: web1.revmerito@gmail.com
+                    - cell "Active" [ref=e1017]:
+                      - generic [ref=e1020]: Active
+                    - cell "Login As" [ref=e1021]:
+                      - button "Login As" [ref=e1023] [cursor=pointer]:
+                        - img
+                        - text: Login As
+              - generic [ref=e904]:
+                - generic [ref=e905]: Showing 7 of 7 properties
+                - button "Export CSV" [ref=e906] [cursor=pointer]:
+                  - img [ref=e907]
+                  - text: Export CSV

@@ -1,0 +1,108 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e9]: S
+          - generic [ref=e10]: Staybooker
+          - generic [ref=e11]: · Secure Booking
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e15]: 256-bit SSL Secured
+        - generic [ref=e16]:
+          - button "🇬🇧 English" [ref=e17] [cursor=pointer]:
+            - generic [ref=e18]: 🇬🇧
+            - generic [ref=e19]: English
+            - img [ref=e20]
+          - button "INR" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]: INR
+            - img [ref=e24]
+    - main [ref=e26]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - img "Logo" [ref=e30]
+            - generic [ref=e31]: powerhouse
+          - link "Return to Rooms" [ref=e32] [cursor=pointer]:
+            - /url: /book/powerhouse
+            - button "Return to Rooms" [ref=e33]:
+              - img
+              - text: Return to Rooms
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - img [ref=e37]
+              - text: Cancellation Portal
+            - heading "Cancel Your Reservation" [level=1] [ref=e39]
+            - paragraph [ref=e40]: Enter details below to check policies and confirm cancellation.
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - generic [ref=e44]:
+                - text: Booking Reference
+                - textbox "Booking Reference" [ref=e45]:
+                  - /placeholder: e.g. BK20260523ABC
+                  - text: <script>alert(1)</script>
+              - generic [ref=e46]:
+                - text: Guest Email Address
+                - textbox "Guest Email Address" [active] [ref=e47]:
+                  - /placeholder: john@example.com
+                  - text: "' OR '1'='1"
+            - button "Review Cancellation Terms" [ref=e48] [cursor=pointer]
+    - generic [ref=e50]:
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - img "powerhouse" [ref=e56]
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - heading "powerhouse" [level=2] [ref=e59]
+              - generic [ref=e60]:
+                - img [ref=e61]
+                - generic [ref=e64]: vasai, maharashtra
+              - paragraph [ref=e65]: Nestled in a prime location, our hotel offers a perfect blend of comfort, elegance, and modern hospitality. Designed for both business and leisure travelers, we provide well-appointed rooms, premium amenities, seamless service, and a relaxing atmosphere to ensure a memorable stay. Guests can enjoy spacious accommodations, high-speed Wi-Fi, in-room dining, and easy access to nearby attractions and transportation hubs. Whether you are visiting for work, vacation, or a weekend getaway, we are committed to delivering exceptional comfort and personalized experiences throughout your stay.
+            - generic [ref=e66]:
+              - link "Home" [ref=e67] [cursor=pointer]:
+                - /url: https://thelagoonaresort.com
+              - button "Privacy Policy" [ref=e68] [cursor=pointer]
+              - button "Payment Terms" [ref=e69] [cursor=pointer]
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - img [ref=e72]
+            - heading "Important Info" [level=3] [ref=e75]
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - paragraph [ref=e78]: Cancellation Policy
+              - paragraph [ref=e80]: Free cancellation up to 24 hours before check-in. Cancellations made within 24 hours of arrival may incur a one-night charge.
+            - generic [ref=e81]:
+              - paragraph [ref=e82]: Payment Policy
+              - paragraph [ref=e84]: Guests may pay online at the time of booking or at the property, subject to availability and hotel rules.
+            - generic [ref=e85]:
+              - paragraph [ref=e86]: Child Policy
+              - paragraph [ref=e88]: Children below 5 years stay free when using existing bedding. Extra beds are subject to availability and additional charges.
+            - generic [ref=e89]:
+              - paragraph [ref=e90]: Privacy Policy
+              - paragraph [ref=e92]: Guest information is collected solely for booking and hospitality purposes and is not shared with third parties except where required by law.
+            - generic [ref=e93]:
+              - paragraph [ref=e94]: Important Information
+              - paragraph [ref=e96]: Valid government-issued photo identification is required at check-in. Early check-in and late check-out are subject to availability. The hotel reserves the right to refuse service in accordance with applicable laws and regulations.
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - img [ref=e99]
+          - generic [ref=e102]: powerhouse, vasai west dattani prism it park 308, vasai, maharashtra, india , 401207
+        - generic [ref=e104]: "Business/GST No: 32erfgbv32ewdscx 21wq"
+    - contentinfo [ref=e105]:
+      - generic [ref=e106]:
+        - paragraph [ref=e107]: Powered by Staybooker.ai
+        - generic [ref=e108]:
+          - link "Cancel Booking" [ref=e109] [cursor=pointer]:
+            - /url: /book/powerhouse/cancel
+          - generic [ref=e110]: ·
+          - generic [ref=e111]:
+            - img [ref=e112]
+            - text: Secure Payments
+          - generic [ref=e114]: ·
+          - generic [ref=e115]: Privacy Protected
+          - generic [ref=e116]: ·
+          - generic [ref=e117]: Best Price Guaranteed

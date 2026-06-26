@@ -1,0 +1,90 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e11]:
+          - paragraph [ref=e12]: Staybooker
+          - paragraph [ref=e13]: Admin Console
+      - navigation [ref=e14]:
+        - generic [ref=e15]:
+          - paragraph [ref=e16]: Management
+          - generic [ref=e17]:
+            - button "Properties" [ref=e18] [cursor=pointer]:
+              - img [ref=e19]
+              - generic [ref=e23]: Properties
+            - button "Users" [ref=e24] [cursor=pointer]:
+              - img [ref=e25]
+              - generic [ref=e30]: Users
+      - generic [ref=e32]:
+        - generic [ref=e33]: T
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: toufiq revmerito
+          - paragraph [ref=e36]: tech.revmerito@gmail.com
+    - generic [ref=e37]:
+      - banner [ref=e38]:
+        - generic [ref=e39]:
+          - button [ref=e40] [cursor=pointer]:
+            - img
+          - generic [ref=e41]:
+            - generic [ref=e42]: Properties
+            - img [ref=e235]
+            - generic [ref=e237]: The lagoona resort
+        - generic [ref=e43]:
+          - button [ref=e44] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e45] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e46]:
+        - generic [ref=e238]:
+          - generic [ref=e239]:
+            - generic [ref=e240]:
+              - button [ref=e241] [cursor=pointer]:
+                - img
+              - generic [ref=e242]:
+                - img [ref=e244]
+                - generic [ref=e248]:
+                  - heading "The lagoona resort" [level=1] [ref=e249]
+                  - paragraph [ref=e250]: thelagoonaresort
+              - generic [ref=e251]: Active
+            - button "Login as Owner" [ref=e252] [cursor=pointer]:
+              - img
+              - text: Login as Owner
+          - generic [ref=e253]:
+            - tablist [ref=e254]:
+              - tab "Features" [ref=e255] [cursor=pointer]
+              - tab "Integrations" [ref=e256] [cursor=pointer]
+              - tab "Permissions" [ref=e257] [cursor=pointer]
+              - tab "Users" [ref=e258] [cursor=pointer]
+              - tab "Danger Zone" [active] [selected] [ref=e259] [cursor=pointer]
+            - tabpanel "Danger Zone" [ref=e368]:
+              - generic [ref=e369]:
+                - generic [ref=e370]:
+                  - img [ref=e371]
+                  - heading "Danger Zone" [level=3] [ref=e373]
+                  - paragraph [ref=e374]: These actions are immediate and may be irreversible
+                - generic [ref=e375]:
+                  - generic [ref=e376]:
+                    - paragraph [ref=e377]: Pause Property
+                    - paragraph [ref=e378]: Stop public bookings. Owner can still login and manage.
+                  - button "Pause" [ref=e379] [cursor=pointer]:
+                    - img
+                    - text: Pause
+                - generic [ref=e380]:
+                  - generic [ref=e381]:
+                    - paragraph [ref=e382]: Lock Account
+                    - paragraph [ref=e383]: Block all logins for this hotel completely
+                  - button "Lock" [ref=e384] [cursor=pointer]:
+                    - img
+                    - text: Lock
+                - generic [ref=e385]:
+                  - generic [ref=e386]:
+                    - paragraph [ref=e387]: Delete Property Permanently
+                    - paragraph [ref=e388]: Removes hotel, all bookings, guests, and users. Cannot be undone.
+                  - button "Delete" [ref=e389] [cursor=pointer]:
+                    - img
+                    - text: Delete

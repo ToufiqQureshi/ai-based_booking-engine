@@ -1,0 +1,104 @@
+- generic:
+  - generic:
+    - list
+    - region "Notifications alt+T"
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - img
+          - generic:
+            - paragraph: Staybooker
+            - paragraph: Admin Console
+        - navigation:
+          - generic:
+            - paragraph: Management
+            - generic:
+              - button:
+                - img
+                - generic: Properties
+              - button:
+                - img
+                - generic: Users
+        - generic:
+          - generic:
+            - generic: T
+            - generic:
+              - paragraph: toufiq revmerito
+              - paragraph: tech.revmerito@gmail.com
+      - generic:
+        - banner:
+          - generic:
+            - button:
+              - img
+            - generic:
+              - generic: Users
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+              - text: Sign out
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=3]: Staybooker Core Team
+                    - paragraph: Manage internal Super Admins with full platform access.
+                  - generic:
+                    - generic:
+                      - img
+                      - textbox:
+                        - /placeholder: Filter by email address...
+                        - text: tech.revmerito@gmail.com
+                    - button:
+                      - img
+                      - text: Add Employee
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                        - generic:
+                          - generic: Super Admin
+                          - generic: Active
+                          - button:
+                            - img
+                      - generic:
+                        - paragraph: toufiq revmerito
+                        - paragraph: tech.revmerito@gmail.com
+                        - generic:
+                          - img
+                          - generic: Staybooker Platform
+                    - generic:
+                      - generic: "Joined:"
+                      - generic: 18 Apr 2026
+  - dialog "Add Staybooker Employee" [ref=e84]:
+    - generic [ref=e85]:
+      - heading "Add Staybooker Employee" [level=2] [ref=e86]:
+        - img [ref=e87]
+        - text: Add Staybooker Employee
+      - paragraph [ref=e90]:
+        - text: This person will get
+        - strong [ref=e91]: SUPER_ADMIN
+        - text: access and can login at superadmin.staybooker.ai
+    - generic [ref=e92]:
+      - generic [ref=e93]:
+        - text: Full Name
+        - textbox "e.g. Rahul Sharma" [active] [ref=e94]
+      - generic [ref=e95]:
+        - text: Work Email
+        - textbox "rahul@staybooker.ai" [ref=e96]
+      - generic [ref=e97]:
+        - text: Temporary Password
+        - textbox "Min 8 characters" [ref=e98]: Toufiq@651
+        - paragraph [ref=e99]: Employee can change this after first login
+    - generic [ref=e100]:
+      - button "Cancel" [ref=e101] [cursor=pointer]
+      - button "Add Employee" [disabled]
+    - button "Close" [ref=e102] [cursor=pointer]:
+      - img [ref=e103]
+      - generic [ref=e106]: Close

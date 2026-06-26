@@ -1,0 +1,223 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications alt+T"
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Check In 23 Jun 2026 Tuesday" [ref=e8] [cursor=pointer]:
+          - img [ref=e10]
+          - generic [ref=e12]:
+            - generic [ref=e13]: Check In
+            - generic [ref=e14]: 23 Jun 2026
+            - generic [ref=e15]: Tuesday
+        - button "Check Out 24 Jun 2026 Wednesday" [ref=e16] [cursor=pointer]:
+          - img [ref=e18]
+          - generic [ref=e20]:
+            - generic [ref=e21]: Check Out
+            - generic [ref=e22]: 24 Jun 2026
+            - generic [ref=e23]: Wednesday
+      - button "Guests & Rooms 2 Guests 1 Room, 2 Adults" [ref=e24] [cursor=pointer]:
+        - img [ref=e26]
+        - generic [ref=e29]:
+          - generic [ref=e30]: Guests & Rooms
+          - generic [ref=e31]: 2 Guests
+          - generic [ref=e32]: 1 Room, 2 Adults
+        - img [ref=e33]
+      - button "Search" [ref=e35] [cursor=pointer]:
+        - img [ref=e36]
+        - text: Search
+  - dialog [ref=e40]:
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - paragraph [ref=e43]: Select Dates
+        - paragraph [ref=e44]: Tap check-in, then check-out
+      - button [ref=e45] [cursor=pointer]:
+        - img [ref=e46]
+    - generic [ref=e49]:
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: June 2026
+            - button "Go to previous month" [ref=e55] [cursor=pointer]:
+              - img [ref=e56]
+          - grid "June 2026" [ref=e58]:
+            - rowgroup [ref=e59]:
+              - row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday" [ref=e60]:
+                - columnheader "Sunday" [ref=e61]: Su
+                - columnheader "Monday" [ref=e62]: Mo
+                - columnheader "Tuesday" [ref=e63]: Tu
+                - columnheader "Wednesday" [ref=e64]: We
+                - columnheader "Thursday" [ref=e65]: Th
+                - columnheader "Friday" [ref=e66]: Fr
+                - columnheader "Saturday" [ref=e67]: Sa
+            - rowgroup [ref=e68]:
+              - row "31 1 2 3 4 5 6" [ref=e69]:
+                - gridcell "31" [disabled] [ref=e70]:
+                  - generic [ref=e309]: "31"
+                - gridcell "1" [disabled] [ref=e73]:
+                  - generic [ref=e311]: "1"
+                - gridcell "2" [disabled] [ref=e76]:
+                  - generic [ref=e313]: "2"
+                - gridcell "3" [disabled] [ref=e79]:
+                  - generic [ref=e315]: "3"
+                - gridcell "4" [disabled] [ref=e82]:
+                  - generic [ref=e317]: "4"
+                - gridcell "5" [disabled] [ref=e85]:
+                  - generic [ref=e319]: "5"
+                - gridcell "6" [disabled] [ref=e88]:
+                  - generic [ref=e321]: "6"
+              - row "7 8 9 10 11 12 13" [ref=e91]:
+                - gridcell "7" [disabled] [ref=e92]:
+                  - generic [ref=e323]: "7"
+                - gridcell "8" [disabled] [ref=e95]:
+                  - generic [ref=e325]: "8"
+                - gridcell "9" [disabled] [ref=e98]:
+                  - generic [ref=e327]: "9"
+                - gridcell "10" [disabled] [ref=e101]:
+                  - generic [ref=e329]: "10"
+                - gridcell "11" [disabled] [ref=e104]:
+                  - generic [ref=e331]: "11"
+                - gridcell "12" [disabled] [ref=e107]:
+                  - generic [ref=e333]: "12"
+                - gridcell "13" [disabled] [ref=e110]:
+                  - generic [ref=e335]: "13"
+              - row "14 15 16 17 18 19 20" [ref=e113]:
+                - gridcell "14" [disabled] [ref=e114]:
+                  - generic [ref=e337]: "14"
+                - gridcell "15" [disabled] [ref=e117]:
+                  - generic [ref=e339]: "15"
+                - gridcell "16" [disabled] [ref=e120]:
+                  - generic [ref=e341]: "16"
+                - gridcell "17" [disabled] [ref=e123]:
+                  - generic [ref=e343]: "17"
+                - gridcell "18" [disabled] [ref=e126]:
+                  - generic [ref=e345]: "18"
+                - gridcell "19" [disabled] [ref=e129]:
+                  - generic [ref=e347]: "19"
+                - gridcell "20" [disabled] [ref=e132]:
+                  - generic [ref=e349]: "20"
+              - row "21 22 23 24 25 26 27" [ref=e135]:
+                - gridcell "21" [disabled] [ref=e136]:
+                  - generic [ref=e351]: "21"
+                - gridcell "22" [disabled] [ref=e139]:
+                  - generic [ref=e353]: "22"
+                - gridcell "23" [active] [selected] [ref=e142] [cursor=pointer]:
+                  - generic [ref=e355]: "23"
+                - gridcell "24" [selected] [ref=e145] [cursor=pointer]:
+                  - generic [ref=e357]: "24"
+                - gridcell "25" [ref=e148] [cursor=pointer]:
+                  - generic [ref=e359]: "25"
+                - gridcell "26" [ref=e151] [cursor=pointer]:
+                  - generic [ref=e361]: "26"
+                - gridcell "27" [ref=e154] [cursor=pointer]:
+                  - generic [ref=e363]: "27"
+              - row "28 29 30 1 2 3 4" [ref=e157]:
+                - gridcell "28" [ref=e158] [cursor=pointer]:
+                  - generic [ref=e365]: "28"
+                - gridcell "29" [ref=e161] [cursor=pointer]:
+                  - generic [ref=e367]: "29"
+                - gridcell "30" [ref=e164] [cursor=pointer]:
+                  - generic [ref=e369]: "30"
+                - gridcell "1" [ref=e167] [cursor=pointer]:
+                  - generic [ref=e371]: "1"
+                - gridcell "2" [ref=e170] [cursor=pointer]:
+                  - generic [ref=e373]: "2"
+                - gridcell "3" [ref=e173] [cursor=pointer]:
+                  - generic [ref=e375]: "3"
+                - gridcell "4" [ref=e176] [cursor=pointer]:
+                  - generic [ref=e377]: "4"
+        - generic [ref=e179]:
+          - generic [ref=e180]:
+            - generic [ref=e181]: July 2026
+            - button "Go to next month" [ref=e182] [cursor=pointer]:
+              - img [ref=e183]
+          - grid "July 2026" [ref=e185]:
+            - rowgroup [ref=e186]:
+              - row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday" [ref=e187]:
+                - columnheader "Sunday" [ref=e188]: Su
+                - columnheader "Monday" [ref=e189]: Mo
+                - columnheader "Tuesday" [ref=e190]: Tu
+                - columnheader "Wednesday" [ref=e191]: We
+                - columnheader "Thursday" [ref=e192]: Th
+                - columnheader "Friday" [ref=e193]: Fr
+                - columnheader "Saturday" [ref=e194]: Sa
+            - rowgroup [ref=e195]:
+              - row "28 29 30 1 2 3 4" [ref=e196]:
+                - gridcell "28" [ref=e197] [cursor=pointer]:
+                  - generic [ref=e379]: "28"
+                - gridcell "29" [ref=e200] [cursor=pointer]:
+                  - generic [ref=e381]: "29"
+                - gridcell "30" [ref=e203] [cursor=pointer]:
+                  - generic [ref=e383]: "30"
+                - gridcell "1" [ref=e206] [cursor=pointer]:
+                  - generic [ref=e385]: "1"
+                - gridcell "2" [ref=e209] [cursor=pointer]:
+                  - generic [ref=e387]: "2"
+                - gridcell "3" [ref=e212] [cursor=pointer]:
+                  - generic [ref=e389]: "3"
+                - gridcell "4" [ref=e215] [cursor=pointer]:
+                  - generic [ref=e391]: "4"
+              - row "5 6 7 8 9 10 11" [ref=e218]:
+                - gridcell "5" [ref=e219] [cursor=pointer]:
+                  - generic [ref=e393]: "5"
+                - gridcell "6" [ref=e222] [cursor=pointer]:
+                  - generic [ref=e395]: "6"
+                - gridcell "7" [ref=e225] [cursor=pointer]:
+                  - generic [ref=e397]: "7"
+                - gridcell "8" [ref=e228] [cursor=pointer]:
+                  - generic [ref=e399]: "8"
+                - gridcell "9" [ref=e231] [cursor=pointer]:
+                  - generic [ref=e401]: "9"
+                - gridcell "10" [ref=e234] [cursor=pointer]:
+                  - generic [ref=e403]: "10"
+                - gridcell "11" [ref=e237] [cursor=pointer]:
+                  - generic [ref=e405]: "11"
+              - row "12 13 14 15 16 17 18" [ref=e240]:
+                - gridcell "12" [ref=e241] [cursor=pointer]:
+                  - generic [ref=e407]: "12"
+                - gridcell "13" [ref=e244] [cursor=pointer]:
+                  - generic [ref=e409]: "13"
+                - gridcell "14" [ref=e247] [cursor=pointer]:
+                  - generic [ref=e411]: "14"
+                - gridcell "15" [ref=e250] [cursor=pointer]:
+                  - generic [ref=e413]: "15"
+                - gridcell "16" [ref=e253] [cursor=pointer]:
+                  - generic [ref=e415]: "16"
+                - gridcell "17" [ref=e256] [cursor=pointer]:
+                  - generic [ref=e417]: "17"
+                - gridcell "18" [ref=e259] [cursor=pointer]:
+                  - generic [ref=e419]: "18"
+              - row "19 20 21 22 23 24 25" [ref=e262]:
+                - gridcell "19" [ref=e263] [cursor=pointer]:
+                  - generic [ref=e421]: "19"
+                - gridcell "20" [ref=e266] [cursor=pointer]:
+                  - generic [ref=e423]: "20"
+                - gridcell "21" [ref=e269] [cursor=pointer]:
+                  - generic [ref=e425]: "21"
+                - gridcell "22" [ref=e272] [cursor=pointer]:
+                  - generic [ref=e427]: "22"
+                - gridcell "23" [ref=e275] [cursor=pointer]:
+                  - generic [ref=e429]: "23"
+                - gridcell "24" [ref=e278] [cursor=pointer]:
+                  - generic [ref=e431]: "24"
+                - gridcell "25" [ref=e281] [cursor=pointer]:
+                  - generic [ref=e433]: "25"
+              - row "26 27 28 29 30 31 1" [ref=e284]:
+                - gridcell "26" [ref=e285] [cursor=pointer]:
+                  - generic [ref=e435]: "26"
+                - gridcell "27" [ref=e288] [cursor=pointer]:
+                  - generic [ref=e437]: "27"
+                - gridcell "28" [ref=e291] [cursor=pointer]:
+                  - generic [ref=e439]: "28"
+                - gridcell "29" [ref=e294] [cursor=pointer]:
+                  - generic [ref=e441]: "29"
+                - gridcell "30" [ref=e297] [cursor=pointer]:
+                  - generic [ref=e443]: "30"
+                - gridcell "31" [ref=e300] [cursor=pointer]:
+                  - generic [ref=e445]: "31"
+                - gridcell "1" [ref=e303] [cursor=pointer]:
+                  - generic [ref=e447]: "1"
+      - generic [ref=e306]:
+        - generic [ref=e307]: Sold
+        - text: = No rooms · From-price per night · taxes & extra guests may apply

@@ -1,0 +1,425 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications alt+T"
+    - generic [ref=e4]:
+      - banner [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e9]: S
+            - generic [ref=e10]: Staybooker
+            - generic [ref=e11]: · Secure Booking
+          - generic [ref=e12]:
+            - img [ref=e13]
+            - generic [ref=e15]: 256-bit SSL Secured
+          - generic [ref=e16]:
+            - button "🇬🇧 English" [ref=e17] [cursor=pointer]:
+              - generic [ref=e18]: 🇬🇧
+              - generic [ref=e19]: English
+              - img [ref=e20]
+            - button "INR" [ref=e22] [cursor=pointer]:
+              - generic [ref=e23]: INR
+              - img [ref=e24]
+      - main [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e30]:
+            - generic [ref=e32] [cursor=pointer]:
+              - img [ref=e34]
+              - generic [ref=e36]: Search
+            - generic [ref=e38]:
+              - generic [ref=e39]: "2"
+              - generic [ref=e40]: Select Rooms
+            - generic [ref=e42]:
+              - generic [ref=e43]: "3"
+              - generic [ref=e44]: Enhance Stay
+            - generic [ref=e46]:
+              - generic [ref=e47]: "4"
+              - generic [ref=e48]: Guest Info
+          - generic [ref=e49]:
+            - img "powerhouse - 2" [ref=e559]
+            - generic [ref=e53]:
+              - heading "powerhouse" [level=1] [ref=e54]
+              - generic [ref=e56]: 4 Star Property
+            - button [ref=e57] [cursor=pointer]:
+              - img [ref=e58]
+            - button [ref=e60] [cursor=pointer]:
+              - img [ref=e61]
+            - generic [ref=e63]:
+              - button [ref=e64] [cursor=pointer]
+              - button [ref=e65] [cursor=pointer]
+              - button [ref=e66] [cursor=pointer]
+              - button [ref=e67] [cursor=pointer]
+          - heading "Property Videos" [level=3] [ref=e69]
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - generic [ref=e75]:
+                - button "Rooms" [ref=e76] [cursor=pointer]:
+                  - img [ref=e77]
+                  - text: Rooms
+                - button "Packages" [ref=e80] [cursor=pointer]:
+                  - img [ref=e81]
+                  - text: Packages
+              - generic [ref=e83]:
+                - generic [ref=e84]:
+                  - button "Check In 23 Jun 2026 Tuesday" [ref=e85] [cursor=pointer]:
+                    - img [ref=e87]
+                    - generic [ref=e89]:
+                      - generic [ref=e90]: Check In
+                      - generic [ref=e91]: 23 Jun 2026
+                      - generic [ref=e92]: Tuesday
+                  - button "Check Out 24 Jun 2026 Wednesday" [ref=e93] [cursor=pointer]:
+                    - img [ref=e95]
+                    - generic [ref=e97]:
+                      - generic [ref=e98]: Check Out
+                      - generic [ref=e99]: 24 Jun 2026
+                      - generic [ref=e100]: Wednesday
+                - button "Guests & Rooms 2 Guests 1 Room, 2 Adults" [expanded] [ref=e101] [cursor=pointer]:
+                  - img [ref=e103]
+                  - generic [ref=e106]:
+                    - generic [ref=e107]: Guests & Rooms
+                    - generic [ref=e108]: 2 Guests
+                    - generic [ref=e109]: 1 Room, 2 Adults
+                  - img [ref=e110]
+                - generic [ref=e112]:
+                  - generic [ref=e113]: Promo Code
+                  - textbox "Optional" [ref=e114]
+                - button "Search" [ref=e115] [cursor=pointer]:
+                  - img [ref=e116]
+                  - text: Search
+              - generic [ref=e119]:
+                - checkbox "Flexible Dates" [ref=e120] [cursor=pointer]
+                - generic [ref=e121] [cursor=pointer]: Flexible Dates
+            - generic [ref=e122]:
+              - generic [ref=e123]:
+                - img [ref=e125]
+                - generic [ref=e127]:
+                  - heading "Staybooker Loyalty Program" [level=3] [ref=e128]
+                  - paragraph [ref=e129]: Enter your email to unlock exclusive member rates & redeem your points.
+              - generic [ref=e131]:
+                - textbox "Enter email address" [ref=e132]
+                - button "Check" [disabled]
+            - generic [ref=e133]:
+              - generic [ref=e134]:
+                - generic [ref=e560]:
+                  - img [ref=e562]
+                  - paragraph [ref=e565]: Free cancellation up to 24 hours before check-in. Cancellations made within 24 hours of arrival may incur a one-night charge.
+                - generic [ref=e142]:
+                  - heading "Available Rooms" [level=2] [ref=e143]
+                  - button "Filters" [ref=e144] [cursor=pointer]:
+                    - img [ref=e145]
+                    - text: Filters
+              - generic [ref=e146]:
+                - generic [ref=e147]:
+                  - heading "4 Categories Available" [level=2] [ref=e148]:
+                    - img [ref=e150]
+                    - text: 4 Categories Available
+                  - generic [ref=e153]:
+                    - generic [ref=e154]: Sort By
+                    - combobox [ref=e155] [cursor=pointer]:
+                      - option "Recommended" [selected]
+                      - 'option "Price: Low to High"'
+                      - 'option "Price: High to Low"'
+                - generic [ref=e156]:
+                  - generic [ref=e158]:
+                    - generic [ref=e159]:
+                      - generic [ref=e160]:
+                        - img "Executive Room - Romantic Lonavala Getaway" [ref=e161] [cursor=pointer]
+                        - button [ref=e162] [cursor=pointer]:
+                          - img [ref=e163]
+                        - button [ref=e165] [cursor=pointer]:
+                          - img [ref=e166]
+                      - generic [ref=e179]: Available
+                    - generic [ref=e180]:
+                      - generic [ref=e181]:
+                        - generic [ref=e182]:
+                          - heading "Executive Room - Romantic Lonavala Getaway" [level=3] [ref=e183]
+                          - generic [ref=e184]:
+                            - generic [ref=e185]:
+                              - img [ref=e186]
+                              - text: 2 Adults
+                            - generic [ref=e189]: •
+                            - generic [ref=e190]:
+                              - img [ref=e191]
+                              - text: 317 ft²
+                        - button "Room Details" [ref=e196] [cursor=pointer]
+                      - generic [ref=e197]:
+                        - generic "Free WiFi" [ref=e198]:
+                          - img [ref=e199]
+                          - generic [ref=e203]: Free WiFi
+                        - generic "Air Conditioning" [ref=e204]:
+                          - img [ref=e205]
+                          - generic [ref=e210]: Air Conditioning
+                        - generic "Smart TV" [ref=e211]:
+                          - img [ref=e212]
+                          - generic [ref=e215]: Smart TV
+                      - generic [ref=e216]:
+                        - generic [ref=e217]:
+                          - generic [ref=e219]:
+                            - generic [ref=e221]: EP
+                            - generic [ref=e222]:
+                              - generic [ref=e223]: Room Only
+                              - generic [ref=e224]: Free cancellation up to 168 hours before check-in
+                          - generic [ref=e225]:
+                            - generic [ref=e226]:
+                              - generic [ref=e227]:
+                                - generic [ref=e228]: ₹18,000
+                                - generic [ref=e229]: total
+                              - paragraph [ref=e230]: ₹20,000
+                            - button "Select" [ref=e231] [cursor=pointer]
+                        - generic [ref=e232]:
+                          - generic [ref=e234]:
+                            - generic [ref=e236]: CP
+                            - generic [ref=e237]:
+                              - generic [ref=e238]: CP
+                              - generic [ref=e239]: Free cancellation up to 24 hours before check-in
+                          - generic [ref=e240]:
+                            - generic [ref=e241]:
+                              - generic [ref=e242]:
+                                - generic [ref=e243]: ₹18,500
+                                - generic [ref=e244]: total
+                              - paragraph [ref=e245]: ₹20,000
+                            - button "Select" [ref=e246] [cursor=pointer]
+                  - generic [ref=e248]:
+                    - generic [ref=e249]:
+                      - generic [ref=e250]:
+                        - img "Executive Room" [ref=e251] [cursor=pointer]
+                        - button [ref=e252] [cursor=pointer]:
+                          - img [ref=e253]
+                        - button [ref=e255] [cursor=pointer]:
+                          - img [ref=e256]
+                      - generic [ref=e267]: Available
+                    - generic [ref=e268]:
+                      - generic [ref=e269]:
+                        - generic [ref=e270]:
+                          - heading "Executive Room" [level=3] [ref=e271]
+                          - generic [ref=e272]:
+                            - generic [ref=e273]:
+                              - img [ref=e274]
+                              - text: 6 Adults
+                            - generic [ref=e277]: •
+                            - generic [ref=e278]:
+                              - img [ref=e279]
+                              - text: 220 ft²
+                        - button "Room Details" [ref=e284] [cursor=pointer]
+                      - generic "Air Conditioning" [ref=e286]:
+                        - img [ref=e287]
+                        - generic [ref=e292]: Air Conditioning
+                      - generic [ref=e293]:
+                        - generic [ref=e294]:
+                          - generic [ref=e296]:
+                            - generic [ref=e298]: EP
+                            - generic [ref=e299]:
+                              - generic [ref=e300]: Room Only
+                              - generic [ref=e301]: Free cancellation up to 72 hours before check-in
+                          - generic [ref=e302]:
+                            - generic [ref=e304]:
+                              - generic [ref=e305]: ₹10,000
+                              - generic [ref=e306]: total
+                            - button "Select" [ref=e307] [cursor=pointer]
+                        - generic [ref=e308]:
+                          - generic [ref=e310]:
+                            - generic [ref=e312]: CP
+                            - generic [ref=e313]:
+                              - generic [ref=e314]: CP
+                              - generic [ref=e315]: Non-Refundable
+                          - generic [ref=e316]:
+                            - generic [ref=e318]:
+                              - generic [ref=e319]: ₹10,500
+                              - generic [ref=e320]: total
+                            - button "Select" [ref=e321] [cursor=pointer]
+                  - generic [ref=e323]:
+                    - generic [ref=e324]:
+                      - generic [ref=e325]:
+                        - img "Romantic Lonavala Getaway" [ref=e326] [cursor=pointer]
+                        - button [ref=e327] [cursor=pointer]:
+                          - img [ref=e328]
+                        - button [ref=e330] [cursor=pointer]:
+                          - img [ref=e331]
+                      - generic [ref=e342]: Available
+                    - generic [ref=e343]:
+                      - generic [ref=e344]:
+                        - generic [ref=e345]:
+                          - heading "Romantic Lonavala Getaway" [level=3] [ref=e346]
+                          - generic [ref=e347]:
+                            - generic [ref=e348]:
+                              - img [ref=e349]
+                              - text: 2 Adults
+                            - generic [ref=e352]: •
+                            - generic [ref=e353]:
+                              - img [ref=e354]
+                              - text: 300 ft²
+                        - button "Room Details" [ref=e359] [cursor=pointer]
+                      - generic [ref=e360]:
+                        - generic "Free WiFi" [ref=e361]:
+                          - img [ref=e362]
+                          - generic [ref=e366]: Free WiFi
+                        - generic "Air Conditioning" [ref=e367]:
+                          - img [ref=e368]
+                          - generic [ref=e373]: Air Conditioning
+                        - generic "Smart TV" [ref=e374]:
+                          - img [ref=e375]
+                          - generic [ref=e378]: Smart TV
+                      - generic [ref=e379]:
+                        - generic [ref=e380]:
+                          - generic [ref=e382]:
+                            - generic [ref=e384]: EP
+                            - generic [ref=e385]:
+                              - generic [ref=e386]: Room Only
+                              - generic [ref=e387]: Free cancellation up to 48 hours before check-in
+                          - generic [ref=e388]:
+                            - generic [ref=e390]:
+                              - generic [ref=e391]: ₹5,800
+                              - generic [ref=e392]: total
+                            - button "Select" [ref=e393] [cursor=pointer]
+                        - generic [ref=e394]:
+                          - generic [ref=e396]:
+                            - generic [ref=e398]: CP
+                            - generic [ref=e399]:
+                              - generic [ref=e400]: CP
+                              - generic [ref=e401]: Non-Refundable
+                          - generic [ref=e402]:
+                            - generic [ref=e404]:
+                              - generic [ref=e405]: ₹6,300
+                              - generic [ref=e406]: total
+                            - button "Select" [ref=e407] [cursor=pointer]
+                  - generic [ref=e409]:
+                    - generic [ref=e410]:
+                      - generic [ref=e411]:
+                        - img "Deluxe" [ref=e412] [cursor=pointer]
+                        - button [ref=e413] [cursor=pointer]:
+                          - img [ref=e414]
+                        - button [ref=e416] [cursor=pointer]:
+                          - img [ref=e417]
+                      - generic [ref=e428]: Available
+                    - generic [ref=e429]:
+                      - generic [ref=e430]:
+                        - generic [ref=e431]:
+                          - heading "Deluxe" [level=3] [ref=e432]
+                          - generic [ref=e433]:
+                            - generic [ref=e434]:
+                              - img [ref=e435]
+                              - text: 2 Adults
+                            - generic [ref=e438]: •
+                            - generic [ref=e439]:
+                              - img [ref=e440]
+                              - text: 297 ft²
+                        - button "Room Details" [ref=e445] [cursor=pointer]
+                      - generic "Free WiFi" [ref=e447]:
+                        - img [ref=e448]
+                        - generic [ref=e452]: Free WiFi
+                      - generic [ref=e453]:
+                        - generic [ref=e454]:
+                          - generic [ref=e456]:
+                            - generic [ref=e458]: EP
+                            - generic [ref=e459]:
+                              - generic [ref=e460]: Room Only
+                              - generic [ref=e461]: Free cancellation up to 48 hours before check-in
+                          - generic [ref=e462]:
+                            - generic [ref=e464]:
+                              - generic [ref=e465]: ₹5,000
+                              - generic [ref=e466]: total
+                            - button "Select" [ref=e467] [cursor=pointer]
+                        - generic [ref=e468]:
+                          - generic [ref=e470]:
+                            - generic [ref=e472]: CP
+                            - generic [ref=e473]:
+                              - generic [ref=e474]: CP
+                              - generic [ref=e475]: Free cancellation up to 48 hours before check-in
+                          - generic [ref=e476]:
+                            - generic [ref=e478]:
+                              - generic [ref=e479]: ₹5,500
+                              - generic [ref=e480]: total
+                            - button "Select" [ref=e481] [cursor=pointer]
+          - button "Chat Live Concierge How can I help?" [ref=e483] [cursor=pointer]:
+            - img "Chat" [ref=e486]
+            - generic [ref=e487]:
+              - generic [ref=e488]: Live Concierge
+              - generic [ref=e489]: How can I help?
+      - generic [ref=e491]:
+        - generic [ref=e493]:
+          - generic [ref=e494]:
+            - img "powerhouse" [ref=e497]
+            - generic [ref=e498]:
+              - generic [ref=e499]:
+                - heading "powerhouse" [level=2] [ref=e500]
+                - generic [ref=e501]:
+                  - img [ref=e502]
+                  - generic [ref=e505]: vasai, maharashtra
+                - paragraph [ref=e506]: Nestled in a prime location, our hotel offers a perfect blend of comfort, elegance, and modern hospitality. Designed for both business and leisure travelers, we provide well-appointed rooms, premium amenities, seamless service, and a relaxing atmosphere to ensure a memorable stay. Guests can enjoy spacious accommodations, high-speed Wi-Fi, in-room dining, and easy access to nearby attractions and transportation hubs. Whether you are visiting for work, vacation, or a weekend getaway, we are committed to delivering exceptional comfort and personalized experiences throughout your stay.
+              - generic [ref=e507]:
+                - link "Home" [ref=e508] [cursor=pointer]:
+                  - /url: https://thelagoonaresort.com
+                - button "Privacy Policy" [ref=e509] [cursor=pointer]
+                - button "Payment Terms" [ref=e510] [cursor=pointer]
+          - generic [ref=e511]:
+            - generic [ref=e512]:
+              - img [ref=e513]
+              - heading "Important Info" [level=3] [ref=e516]
+            - generic [ref=e517]:
+              - generic [ref=e518]:
+                - paragraph [ref=e519]: Cancellation Policy
+                - paragraph [ref=e521]: Free cancellation up to 24 hours before check-in. Cancellations made within 24 hours of arrival may incur a one-night charge.
+              - generic [ref=e522]:
+                - paragraph [ref=e523]: Payment Policy
+                - paragraph [ref=e525]: Guests may pay online at the time of booking or at the property, subject to availability and hotel rules.
+              - generic [ref=e526]:
+                - paragraph [ref=e527]: Child Policy
+                - paragraph [ref=e529]: Children below 5 years stay free when using existing bedding. Extra beds are subject to availability and additional charges.
+              - generic [ref=e530]:
+                - paragraph [ref=e531]: Privacy Policy
+                - paragraph [ref=e533]: Guest information is collected solely for booking and hospitality purposes and is not shared with third parties except where required by law.
+              - generic [ref=e534]:
+                - paragraph [ref=e535]: Important Information
+                - paragraph [ref=e537]: Valid government-issued photo identification is required at check-in. Early check-in and late check-out are subject to availability. The hotel reserves the right to refuse service in accordance with applicable laws and regulations.
+        - generic [ref=e538]:
+          - generic [ref=e539]:
+            - img [ref=e540]
+            - generic [ref=e543]: powerhouse, vasai west dattani prism it park 308, vasai, maharashtra, india , 401207
+          - generic [ref=e545]: "Business/GST No: 32erfgbv32ewdscx 21wq"
+      - contentinfo [ref=e546]:
+        - generic [ref=e547]:
+          - paragraph [ref=e548]: Powered by Staybooker.ai
+          - generic [ref=e549]:
+            - link "Cancel Booking" [ref=e550] [cursor=pointer]:
+              - /url: /book/powerhouse/cancel
+            - generic [ref=e551]: ·
+            - generic [ref=e552]:
+              - img [ref=e553]
+              - text: Secure Payments
+            - generic [ref=e555]: ·
+            - generic [ref=e556]: Privacy Protected
+            - generic [ref=e557]: ·
+            - generic [ref=e558]: Best Price Guaranteed
+  - dialog [ref=e567]:
+    - generic [ref=e568]:
+      - generic [ref=e569]:
+        - generic [ref=e570]:
+          - paragraph [ref=e571]: Rooms
+          - paragraph [ref=e572]: Total Rooms
+        - generic [ref=e573]:
+          - button [disabled]:
+            - img
+          - generic [ref=e574]: "1"
+          - button [active] [ref=e575] [cursor=pointer]:
+            - img
+      - generic [ref=e577]:
+        - generic [ref=e578]:
+          - paragraph [ref=e579]: Adults
+          - paragraph [ref=e580]: Ages 13+
+        - generic [ref=e581]:
+          - button [ref=e582] [cursor=pointer]:
+            - img
+          - generic [ref=e583]: "2"
+          - button [ref=e584] [cursor=pointer]:
+            - img
+      - generic [ref=e586]:
+        - generic [ref=e587]:
+          - paragraph [ref=e588]: Children
+          - paragraph [ref=e589]: Ages 0-12
+        - generic [ref=e590]:
+          - button [disabled]:
+            - img
+          - generic [ref=e591]: "0"
+          - button [ref=e592] [cursor=pointer]:
+            - img

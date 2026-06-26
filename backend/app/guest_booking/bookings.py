@@ -20,6 +20,7 @@ from app.core.auth.deps import DbSession
 from app.core.utils.limiter import limiter
 from app.core.cache.redis_client import redis_client
 from app.core.utils.time import utcnow
+from app.core.utils.feature_flags import assert_hotel_not_paused
 from app.bookings.booking import Booking, BookingStatus, BookingSource, Guest
 from app.brand_console.hotel import Hotel
 from app.loyalty.loyalty_model import GuestLoyalty, LoyaltyProgram, LoyaltyOffer
@@ -285,7 +286,9 @@ async def create_public_booking(
             await session.flush()
 
         hotel = await session.get(Hotel, hotel_id)
-        settings = hotel.settings if hotel and hotel.settings else {}
+        if hotel:
+            assert_hotel_not_paused(hotel)
+            settings = hotel.settings or {}
 
         # Validate payment mode
         hotel_payment_mode = settings.get("payment_mode", "both")
@@ -369,6 +372,9 @@ async def create_public_booking(
         total_before_discount = subtotal_amount + tax_amount
 
         hotel_model = await session.get(Hotel, hotel_id)
+        if hotel_model:
+            assert_hotel_not_paused(hotel_model)
+            h_settings = hotel_model.settings or {}
         chain_id = hotel_model.chain_id if hotel_model else None
 
         # Promo code discount

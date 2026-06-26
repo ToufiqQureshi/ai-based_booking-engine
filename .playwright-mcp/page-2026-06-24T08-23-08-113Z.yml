@@ -1,0 +1,106 @@
+- generic [active]:
+  - generic:
+    - list
+    - region "Notifications alt+T":
+      - list:
+        - listitem:
+          - generic:
+            - img
+          - generic:
+            - generic: A user with this email address already exists
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - img
+          - generic:
+            - paragraph: Staybooker
+            - paragraph: Admin Console
+        - navigation:
+          - generic:
+            - paragraph: Management
+            - generic:
+              - button:
+                - img
+                - generic: Properties
+              - button:
+                - img
+                - generic: Users
+        - generic:
+          - generic:
+            - generic: T
+            - generic:
+              - paragraph: toufiq revmerito
+              - paragraph: tech.revmerito@gmail.com
+      - generic:
+        - banner:
+          - generic:
+            - button:
+              - img
+            - generic:
+              - generic: Properties
+              - img
+              - generic: the grand plaza mumbai
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+              - text: Sign out
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                  - generic:
+                    - generic:
+                      - img
+                    - generic:
+                      - heading [level=1]: the grand plaza mumbai
+                      - paragraph: the-grand-plaza-mumbai
+                  - generic: Active
+                - button:
+                  - img
+                  - text: Login as Owner
+              - generic:
+                - tablist:
+                  - tab: Features
+                  - tab: Integrations
+                  - tab: Permissions
+                  - tab [selected]: Users
+                  - tab: Danger Zone
+                - tabpanel:
+                  - generic:
+                    - generic:
+                      - heading [level=3]: Hotel Users (0)
+                      - button: Add Employee
+                    - generic:
+                      - img
+                      - paragraph: No users found for this hotel
+  - dialog "Add Employee Account" [ref=e194]:
+    - generic [ref=e195]:
+      - heading "Add Employee Account" [level=2] [ref=e196]
+      - paragraph [ref=e197]: Create a new login credential directly registered under the grand plaza mumbai.
+    - generic [ref=e198]:
+      - generic [ref=e199]:
+        - generic [ref=e200]: Full Name
+        - textbox "John Doe" [ref=e201]: Test Staff Member
+      - generic [ref=e202]:
+        - generic [ref=e203]: Email Address
+        - textbox "john@example.com" [ref=e204]: grandplazastaff99@gmail.com
+      - generic [ref=e205]:
+        - generic [ref=e206]: Password
+        - textbox "Min 6 characters" [ref=e207]: TestPass@123
+      - generic [ref=e208]:
+        - generic [ref=e209]: Role / Privilege Level
+        - combobox [ref=e210] [cursor=pointer]:
+          - generic: Basic Staff Member
+          - img [ref=e211]
+    - generic [ref=e213]:
+      - button "Cancel" [ref=e214] [cursor=pointer]
+      - button "Create Account" [ref=e215] [cursor=pointer]
+    - button "Close" [ref=e216] [cursor=pointer]:
+      - img [ref=e217]
+      - generic [ref=e220]: Close

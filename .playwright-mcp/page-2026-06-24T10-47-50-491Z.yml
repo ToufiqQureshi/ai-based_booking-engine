@@ -1,0 +1,273 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list [ref=e46]:
+      - listitem [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49]: Welcome back!
+          - generic [ref=e50]: You have successfully logged in.
+        - button [ref=e51] [cursor=pointer]:
+          - img [ref=e52]
+  - region "Notifications alt+T"
+  - generic [ref=e57]:
+    - generic [ref=e61]:
+      - generic [ref=e63]:
+        - img "Logo" [ref=e65]
+        - generic [ref=e66]:
+          - generic [ref=e67]: powerhouse
+          - generic [ref=e68]: Super Admin
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e71]: Main Menu
+          - list [ref=e73]:
+            - listitem [ref=e74]:
+              - link "Brand Console" [ref=e75] [cursor=pointer]:
+                - /url: /chain/dashboard
+                - img [ref=e76]
+                - generic [ref=e80]: Brand Console
+            - listitem [ref=e81]:
+              - link "Dashboard" [ref=e82] [cursor=pointer]:
+                - /url: /dashboard
+                - img [ref=e83]
+                - generic [ref=e88]: Dashboard
+            - listitem [ref=e90]:
+              - link "Analytics" [ref=e91] [cursor=pointer]:
+                - /url: /analytics
+                - img [ref=e92]
+                - generic [ref=e95]: Analytics
+            - listitem [ref=e96]:
+              - link "BI Report" [ref=e97] [cursor=pointer]:
+                - /url: /reports
+                - img [ref=e98]
+                - generic [ref=e101]: BI Report
+            - listitem [ref=e102]:
+              - link "AI Assistant" [ref=e103] [cursor=pointer]:
+                - /url: /agent
+                - img [ref=e104]
+                - generic [ref=e107]: AI Assistant
+            - listitem [ref=e108]:
+              - link "Rooms" [ref=e109] [cursor=pointer]:
+                - /url: /rooms
+                - img [ref=e110]
+                - generic [ref=e112]: Rooms
+            - listitem [ref=e113]:
+              - link "Rate Plans" [ref=e114] [cursor=pointer]:
+                - /url: /rates
+                - img [ref=e115]
+                - generic [ref=e118]: Rate Plans
+            - listitem [ref=e119]:
+              - link "Rate Shopper" [ref=e120] [cursor=pointer]:
+                - /url: /rate-shopper
+                - img [ref=e121]
+                - generic [ref=e124]: Rate Shopper
+            - listitem [ref=e125]:
+              - link "Calendar" [ref=e126] [cursor=pointer]:
+                - /url: /availability
+                - img [ref=e127]
+                - generic [ref=e129]: Calendar
+            - listitem [ref=e130]:
+              - link "Bookings" [ref=e131] [cursor=pointer]:
+                - /url: /bookings
+                - img [ref=e132]
+                - generic [ref=e134]: Bookings
+            - listitem [ref=e135]:
+              - link "Taxes" [ref=e136] [cursor=pointer]:
+                - /url: /taxes
+                - img [ref=e137]
+                - generic [ref=e141]: Taxes
+            - listitem [ref=e142]:
+              - link "Guests" [ref=e143] [cursor=pointer]:
+                - /url: /guests
+                - img [ref=e144]
+                - generic [ref=e149]: Guests
+            - listitem [ref=e150]:
+              - link "Payments" [ref=e151] [cursor=pointer]:
+                - /url: /payments
+                - img [ref=e152]
+                - generic [ref=e154]: Payments
+            - listitem [ref=e155]:
+              - link "Google Reviews" [ref=e156] [cursor=pointer]:
+                - /url: /reviews
+                - img [ref=e157]
+                - generic [ref=e159]: Google Reviews
+            - listitem [ref=e160]:
+              - link "Channel Manager" [ref=e161] [cursor=pointer]:
+                - /url: /channel-settings
+                - img [ref=e162]
+                - generic [ref=e165]: Channel Manager
+        - generic [ref=e166]:
+          - generic [ref=e167]: Revenue
+          - list [ref=e169]:
+            - listitem [ref=e170]:
+              - link "Loyalty & Upsells" [ref=e171] [cursor=pointer]:
+                - /url: /loyalty
+                - img [ref=e172]
+                - generic [ref=e176]: Loyalty & Upsells
+            - listitem [ref=e177]:
+              - link "Add-on Upsells" [ref=e178] [cursor=pointer]:
+                - /url: /addons
+                - img [ref=e179]
+                - generic [ref=e181]: Add-on Upsells
+            - listitem [ref=e182]:
+              - link "Dynamic Pricing" [ref=e183] [cursor=pointer]:
+                - /url: /revenue/pricing
+                - img [ref=e184]
+                - generic [ref=e186]: Dynamic Pricing
+            - listitem [ref=e187]:
+              - link "Guest Recovery" [ref=e188] [cursor=pointer]:
+                - /url: /revenue/recovery
+                - img [ref=e189]
+                - generic [ref=e192]: Guest Recovery
+        - generic [ref=e193]:
+          - generic [ref=e194]: System
+          - list [ref=e196]:
+            - listitem [ref=e197]:
+              - link "Integration" [ref=e198] [cursor=pointer]:
+                - /url: /integration
+                - img [ref=e199]
+                - generic [ref=e201]: Integration
+            - listitem [ref=e202]:
+              - link "Settings" [ref=e203] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e204]
+                - generic [ref=e207]: Settings
+      - generic [ref=e209]:
+        - generic [ref=e211]: TR
+        - generic [ref=e212]:
+          - generic [ref=e213]: toufiq revmerito
+          - generic [ref=e214]: tech.revmerito@gmail.com
+        - button [ref=e215] [cursor=pointer]:
+          - img
+    - main [ref=e216]:
+      - generic [ref=e217]:
+        - button "Toggle Sidebar" [ref=e218] [cursor=pointer]:
+          - img
+          - generic [ref=e219]: Toggle Sidebar
+        - button "powerhouse Main Branch" [ref=e220] [cursor=pointer]:
+          - generic [ref=e221]:
+            - img
+          - generic [ref=e222]:
+            - generic [ref=e223]: powerhouse
+            - generic [ref=e224]: Main Branch
+          - img
+        - generic [ref=e226]:
+          - img [ref=e227]
+          - searchbox "Search bookings, rooms, guests..." [ref=e230]
+        - generic [ref=e231]:
+          - button "Switch to Dark Mode" [ref=e232] [cursor=pointer]:
+            - img
+          - button [ref=e233] [cursor=pointer]:
+            - img
+          - button "Notifications" [ref=e234] [cursor=pointer]:
+            - img
+            - generic [ref=e235]: Notifications
+          - button "TR toufiq revmerito SUPER_ADMIN" [ref=e236] [cursor=pointer]:
+            - generic [ref=e238]: TR
+            - generic [ref=e239]:
+              - generic [ref=e240]: toufiq revmerito
+              - generic [ref=e241]: SUPER_ADMIN
+            - img
+      - main [ref=e242]:
+        - generic [ref=e244]:
+          - generic [ref=e246]:
+            - heading "Dashboard" [level=1] [ref=e247]
+            - paragraph [ref=e248]: Welcome back, toufiq. Here's what's happening today at powerhouse.
+          - generic [ref=e249]:
+            - generic [ref=e252]:
+              - generic [ref=e253]: 🚀
+              - generic [ref=e254]:
+                - heading "Status Update" [level=3] [ref=e255]
+                - paragraph [ref=e256]: Have a productive day managing your hotel! 👋
+            - generic [ref=e257]:
+              - generic [ref=e258]:
+                - generic [ref=e259]:
+                  - heading "Arrivals" [level=3] [ref=e260]
+                  - img [ref=e261]
+                - generic [ref=e264]:
+                  - generic [ref=e265]: "0"
+                  - generic [ref=e266]:
+                    - generic [ref=e267]: "-100%"
+                    - generic [ref=e268]: vs yesterday
+              - generic [ref=e269]:
+                - generic [ref=e270]:
+                  - heading "Departures" [level=3] [ref=e271]
+                  - img [ref=e272]
+                - generic [ref=e276]:
+                  - generic [ref=e277]: "0"
+                  - generic [ref=e279]: 0 scheduled today
+              - generic [ref=e280]:
+                - generic [ref=e281]:
+                  - heading "Occupancy" [level=3] [ref=e282]
+                  - img [ref=e283]
+                - generic [ref=e285]:
+                  - generic [ref=e286]: "0"
+                  - generic [ref=e288]: 0 rooms occupied
+              - generic [ref=e289]:
+                - generic [ref=e290]:
+                  - heading "Revenue" [level=3] [ref=e291]
+                  - img [ref=e292]
+                - generic [ref=e294]:
+                  - generic [ref=e295]: ₹0
+                  - generic [ref=e297]: Today's total earnings
+            - generic [ref=e298]:
+              - generic [ref=e300]:
+                - generic [ref=e301]:
+                  - generic [ref=e302]:
+                    - heading "Recent Bookings" [level=3] [ref=e303]
+                    - paragraph [ref=e304]: Latest guest activity
+                  - link "View All" [ref=e305] [cursor=pointer]:
+                    - /url: /bookings
+                - generic [ref=e307]:
+                  - generic [ref=e308]:
+                    - generic [ref=e309]:
+                      - generic [ref=e310]: QD
+                      - generic [ref=e311]:
+                        - paragraph [ref=e312]: QA-TEST DELETE-ME
+                        - paragraph [ref=e313]: "#BK20260623335617 • Deluxe"
+                    - generic [ref=e314]:
+                      - generic [ref=e315]: Cancel Req.
+                      - paragraph [ref=e316]: 2026-06-23
+                  - generic [ref=e317]:
+                    - generic [ref=e318]:
+                      - generic [ref=e319]: CV
+                      - generic [ref=e320]:
+                        - paragraph [ref=e321]: Claim VerifyTest
+                        - paragraph [ref=e322]: "#BK202606239F3F82 • Executive Room - Romantic Lonavala Getaway"
+                    - generic [ref=e323]:
+                      - generic [ref=e324]: confirmed
+                      - paragraph [ref=e325]: 2026-06-23
+                  - generic [ref=e326]:
+                    - generic [ref=e327]:
+                      - generic [ref=e328]: TD
+                      - generic [ref=e329]:
+                        - paragraph [ref=e330]: Test Discount
+                        - paragraph [ref=e331]: "#BK20260622620FC2 • Executive Room - Romantic Lonavala Getaway"
+                    - generic [ref=e332]:
+                      - generic [ref=e333]: confirmed
+                      - paragraph [ref=e334]: 2026-06-22
+                  - generic [ref=e335]:
+                    - generic [ref=e336]:
+                      - generic [ref=e337]: TQ
+                      - generic [ref=e338]:
+                        - paragraph [ref=e339]: Toufiq Qureshi
+                        - paragraph [ref=e340]: "#BK20260622EA9C5E • Executive Room - Romantic Lonavala Getaway"
+                    - generic [ref=e341]:
+                      - generic [ref=e342]: confirmed
+                      - paragraph [ref=e343]: 2026-06-22
+                  - generic [ref=e344]:
+                    - generic [ref=e345]:
+                      - generic [ref=e346]: TQ
+                      - generic [ref=e347]:
+                        - paragraph [ref=e348]: Toufiq Qureshi
+                        - paragraph [ref=e349]: "#BK202606200735C7 • Executive Room - Romantic Lonavala Getaway"
+                    - generic [ref=e350]:
+                      - generic [ref=e351]: confirmed
+                      - paragraph [ref=e352]: 2026-06-21
+              - generic [ref=e354]:
+                - heading "Action Needed" [level=3] [ref=e356]
+                - generic [ref=e357]:
+                  - generic [ref=e358]:
+                    - generic [ref=e359]: "11"
+                    - generic [ref=e360]: Pending
+                  - paragraph [ref=e361]: Confirm bookings to secure your revenue.
+                  - link "Review All" [ref=e362] [cursor=pointer]:
+                    - /url: /bookings?status=pending

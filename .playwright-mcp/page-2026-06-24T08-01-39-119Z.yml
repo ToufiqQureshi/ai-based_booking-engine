@@ -1,0 +1,53 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - img "Staybooker Logo" [ref=e8]
+      - heading "Staybooker Master Control" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Global Platform Administration
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - heading "Admin Sign in" [level=3] [ref=e13]
+        - paragraph [ref=e14]: Enter master credentials to access global settings
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - text: Email
+            - textbox "Email" [ref=e18]:
+              - /placeholder: owner@hotel.com
+              - text: tech.revmerito@gmail.com
+          - generic [ref=e19]:
+            - generic [ref=e20]:
+              - generic [ref=e21]: Password
+              - link "Forgot password?" [ref=e22] [cursor=pointer]:
+                - /url: /forgot-password
+            - generic [ref=e23]:
+              - textbox "Password" [ref=e24]:
+                - /placeholder: ••••••••
+                - text: Toufiq@651
+              - button [ref=e25] [cursor=pointer]:
+                - img
+        - generic [ref=e26]:
+          - button "Signing in..." [disabled]:
+            - img
+            - text: Signing in...
+          - paragraph [ref=e28]: Proprietary System - Authorized Access Only
+    - contentinfo [ref=e29]:
+      - generic [ref=e30]:
+        - link "Privacy Policy" [ref=e31] [cursor=pointer]:
+          - /url: /privacy-policy
+        - generic [ref=e32]: •
+        - link "Terms of Service" [ref=e33] [cursor=pointer]:
+          - /url: /terms-of-service
+        - generic [ref=e34]: •
+        - link "Refund Policy" [ref=e35] [cursor=pointer]:
+          - /url: /refund-policy
+        - generic [ref=e36]: •
+        - link "Cookie Policy" [ref=e37] [cursor=pointer]:
+          - /url: /cookie-policy
+        - generic [ref=e38]: •
+        - link "Contact Us" [ref=e39] [cursor=pointer]:
+          - /url: /contact-us
+      - paragraph [ref=e40]: © 2026 Staybooker by Revmerito. All rights reserved.

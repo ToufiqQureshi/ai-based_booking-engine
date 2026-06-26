@@ -1,0 +1,111 @@
+- generic:
+  - generic:
+    - list
+    - region "Notifications alt+T"
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - img
+          - generic:
+            - paragraph: Staybooker
+            - paragraph: Admin Console
+        - navigation:
+          - generic:
+            - paragraph: Management
+            - generic:
+              - button:
+                - img
+                - generic: Properties
+              - button:
+                - img
+                - generic: Users
+        - generic:
+          - generic:
+            - generic: T
+            - generic:
+              - paragraph: toufiq revmerito
+              - paragraph: tech.revmerito@gmail.com
+      - generic:
+        - banner:
+          - generic:
+            - button:
+              - img
+            - generic:
+              - generic: Properties
+              - img
+              - generic: The lagoona resort
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+              - text: Sign out
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                  - generic:
+                    - generic:
+                      - img
+                    - generic:
+                      - heading [level=1]: The lagoona resort
+                      - paragraph: thelagoonaresort
+                  - generic: Active
+                - button:
+                  - img
+                  - text: Login as Owner
+              - generic:
+                - tablist:
+                  - tab: Features
+                  - tab: Integrations
+                  - tab: Permissions
+                  - tab [selected]: Users
+                  - tab: Danger Zone
+                - tabpanel:
+                  - generic:
+                    - generic:
+                      - heading [level=3]: Hotel Users (1)
+                      - button: Add Employee
+                    - table:
+                      - rowgroup:
+                        - row:
+                          - columnheader: Name
+                          - columnheader: Email
+                          - columnheader: Role
+                          - columnheader: Status
+                      - rowgroup:
+                        - row:
+                          - cell: Toufiq Qureshi
+                          - cell: toufiqqureshi651@gmail.com
+                          - cell:
+                            - generic: Owner
+                          - cell: Active
+  - dialog "Add Employee Account" [ref=e1229]:
+    - generic [ref=e1230]:
+      - heading "Add Employee Account" [level=2] [ref=e1231]
+      - paragraph [ref=e1232]: Create a new login credential directly registered under The lagoona resort .
+    - generic [ref=e1233]:
+      - generic [ref=e1234]:
+        - generic [ref=e1235]: Full Name
+        - textbox "John Doe" [active] [ref=e1236]
+      - generic [ref=e1237]:
+        - generic [ref=e1238]: Email Address
+        - textbox "john@example.com" [ref=e1239]: tech.revmerito@gmail.com
+      - generic [ref=e1240]:
+        - generic [ref=e1241]: Password
+        - textbox "Min 6 characters" [ref=e1242]: Toufiq@651
+      - generic [ref=e1243]:
+        - generic [ref=e1244]: Role / Privilege Level
+        - combobox [ref=e1245] [cursor=pointer]:
+          - generic: Basic Staff Member
+          - img [ref=e1246]
+    - generic [ref=e1248]:
+      - button "Cancel" [ref=e1249] [cursor=pointer]
+      - button "Create Account" [ref=e1250] [cursor=pointer]
+    - button "Close" [ref=e1251] [cursor=pointer]:
+      - img [ref=e1252]
+      - generic [ref=e1255]: Close

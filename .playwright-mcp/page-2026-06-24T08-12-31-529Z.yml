@@ -1,0 +1,60 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e39]:
+    - banner [ref=e40]:
+      - generic [ref=e41]:
+        - button [ref=e42] [cursor=pointer]:
+          - img
+        - generic [ref=e43]:
+          - generic [ref=e44]: Properties
+          - img [ref=e310]
+          - generic [ref=e312]: powerhouse
+      - generic [ref=e45]:
+        - button [ref=e46] [cursor=pointer]:
+          - img
+        - button "Sign out" [ref=e47] [cursor=pointer]:
+          - img
+          - text: Sign out
+    - main [ref=e48]:
+      - generic [ref=e313]:
+        - generic [ref=e314]:
+          - generic [ref=e315]:
+            - button [ref=e316] [cursor=pointer]:
+              - img
+            - generic [ref=e317]:
+              - img [ref=e319]
+              - generic [ref=e323]:
+                - heading "powerhouse" [level=1] [ref=e324]
+                - paragraph [ref=e325]: powerhouse
+            - generic [ref=e326]: Active
+          - button "Login as Owner" [ref=e327] [cursor=pointer]:
+            - img
+            - text: Login as Owner
+        - generic [ref=e328]:
+          - tablist [ref=e329]:
+            - tab "Features" [ref=e330] [cursor=pointer]
+            - tab "Integrations" [ref=e331] [cursor=pointer]
+            - tab "Permissions" [ref=e332] [cursor=pointer]
+            - tab "Users" [active] [selected] [ref=e333] [cursor=pointer]
+            - tab "Danger Zone" [ref=e334] [cursor=pointer]
+          - tabpanel "Users" [ref=e675]:
+            - generic [ref=e676]:
+              - generic [ref=e677]:
+                - heading "Hotel Users (1)" [level=3] [ref=e678]
+                - button "Add Employee" [ref=e679] [cursor=pointer]
+              - table [ref=e680]:
+                - rowgroup [ref=e681]:
+                  - row "Name Email Role Status" [ref=e682]:
+                    - columnheader "Name" [ref=e683]
+                    - columnheader "Email" [ref=e684]
+                    - columnheader "Role" [ref=e685]
+                    - columnheader "Status" [ref=e686]
+                - rowgroup [ref=e687]:
+                  - row "toufiq revmerito tech.revmerito@gmail.com SUPER_ADMIN Active" [ref=e688]:
+                    - cell "toufiq revmerito" [ref=e689]
+                    - cell "tech.revmerito@gmail.com" [ref=e690]
+                    - cell "SUPER_ADMIN" [ref=e691]:
+                      - generic [ref=e692]: SUPER_ADMIN
+                    - cell "Active" [ref=e693]: Active

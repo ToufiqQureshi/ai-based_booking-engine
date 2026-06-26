@@ -1,0 +1,69 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - img [ref=e7]
+        - generic [ref=e10]:
+          - paragraph [ref=e11]: Staybooker
+          - paragraph [ref=e12]: Admin Console
+      - navigation [ref=e13]:
+        - generic [ref=e14]:
+          - paragraph [ref=e15]: Management
+          - generic [ref=e16]:
+            - button "Properties" [ref=e17] [cursor=pointer]:
+              - img [ref=e18]
+              - generic [ref=e22]: Properties
+            - button "Users" [ref=e23] [cursor=pointer]:
+              - img [ref=e24]
+              - generic [ref=e29]: Users
+      - generic [ref=e31]:
+        - generic [ref=e32]: T
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: toufiq revmerito
+          - paragraph [ref=e35]: tech.revmerito@gmail.com
+    - generic [ref=e36]:
+      - banner [ref=e37]:
+        - generic [ref=e38]:
+          - button [ref=e39] [cursor=pointer]:
+            - img
+          - generic [ref=e41]: Users
+        - generic [ref=e42]:
+          - button [ref=e43] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e44] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e45]:
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - heading "Staybooker Core Team" [level=3] [ref=e51]
+              - paragraph [ref=e52]: Manage internal Super Admins with full platform access.
+            - generic [ref=e53]:
+              - generic [ref=e54]:
+                - img [ref=e55]
+                - textbox "Filter by email address..." [ref=e58]: tech.revmerito@gmail.com
+              - button "Add Employee" [ref=e59] [cursor=pointer]:
+                - img
+                - text: Add Employee
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - generic [ref=e63]:
+                - img [ref=e65]
+                - generic [ref=e68]:
+                  - generic [ref=e69]: Super Admin
+                  - generic [ref=e70]: Active
+                  - button [ref=e71] [cursor=pointer]:
+                    - img
+              - generic [ref=e72]:
+                - paragraph [ref=e73]: toufiq revmerito
+                - paragraph [ref=e74]: tech.revmerito@gmail.com
+                - generic [ref=e75]:
+                  - img [ref=e76]
+                  - generic [ref=e79]: Staybooker Platform
+            - generic [ref=e80]:
+              - generic [ref=e81]: "Joined:"
+              - generic [ref=e82]: 18 Apr 2026

@@ -1,0 +1,355 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications alt+T"
+    - generic [ref=e37]:
+      - generic [ref=e41]:
+        - generic [ref=e43]:
+          - img "Logo" [ref=e45]
+          - generic [ref=e46]:
+            - generic [ref=e47]: powerhouse
+            - generic [ref=e48]: Super Admin
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]: Main Menu
+            - list [ref=e53]:
+              - listitem [ref=e54]:
+                - link "Brand Console" [ref=e55] [cursor=pointer]:
+                  - /url: /chain/dashboard
+                  - img [ref=e56]
+                  - generic [ref=e60]: Brand Console
+              - listitem [ref=e61]:
+                - link "Dashboard" [ref=e62] [cursor=pointer]:
+                  - /url: /dashboard
+                  - img [ref=e63]
+                  - generic [ref=e68]: Dashboard
+              - listitem [ref=e69]:
+                - link "Analytics" [ref=e70] [cursor=pointer]:
+                  - /url: /analytics
+                  - img [ref=e71]
+                  - generic [ref=e74]: Analytics
+              - listitem [ref=e75]:
+                - link "BI Report" [ref=e76] [cursor=pointer]:
+                  - /url: /reports
+                  - img [ref=e77]
+                  - generic [ref=e80]: BI Report
+              - listitem [ref=e81]:
+                - link "AI Assistant" [ref=e82] [cursor=pointer]:
+                  - /url: /agent
+                  - img [ref=e83]
+                  - generic [ref=e86]: AI Assistant
+              - listitem [ref=e87]:
+                - link "Rooms" [ref=e88] [cursor=pointer]:
+                  - /url: /rooms
+                  - img [ref=e89]
+                  - generic [ref=e91]: Rooms
+              - listitem [ref=e92]:
+                - link "Rate Plans" [ref=e93] [cursor=pointer]:
+                  - /url: /rates
+                  - img [ref=e94]
+                  - generic [ref=e97]: Rate Plans
+              - listitem [ref=e98]:
+                - link "Rate Shopper" [ref=e99] [cursor=pointer]:
+                  - /url: /rate-shopper
+                  - img [ref=e100]
+                  - generic [ref=e103]: Rate Shopper
+              - listitem [ref=e104]:
+                - link "Calendar" [ref=e105] [cursor=pointer]:
+                  - /url: /availability
+                  - img [ref=e106]
+                  - generic [ref=e108]: Calendar
+              - listitem [ref=e109]:
+                - link "Bookings" [ref=e110] [cursor=pointer]:
+                  - /url: /bookings
+                  - img [ref=e111]
+                  - generic [ref=e113]: Bookings
+              - listitem [ref=e114]:
+                - link "Taxes" [ref=e115] [cursor=pointer]:
+                  - /url: /taxes
+                  - img [ref=e116]
+                  - generic [ref=e120]: Taxes
+              - listitem [ref=e121]:
+                - link "Guests" [ref=e122] [cursor=pointer]:
+                  - /url: /guests
+                  - img [ref=e123]
+                  - generic [ref=e128]: Guests
+              - listitem [ref=e129]:
+                - link "Payments" [ref=e130] [cursor=pointer]:
+                  - /url: /payments
+                  - img [ref=e131]
+                  - generic [ref=e133]: Payments
+              - listitem [ref=e134]:
+                - link "Google Reviews" [ref=e135] [cursor=pointer]:
+                  - /url: /reviews
+                  - img [ref=e136]
+                  - generic [ref=e138]: Google Reviews
+              - listitem [ref=e139]:
+                - link "Channel Manager" [ref=e140] [cursor=pointer]:
+                  - /url: /channel-settings
+                  - img [ref=e141]
+                  - generic [ref=e144]: Channel Manager
+          - generic [ref=e145]:
+            - generic [ref=e146]: Revenue
+            - list [ref=e148]:
+              - listitem [ref=e149]:
+                - link "Loyalty & Upsells" [ref=e150] [cursor=pointer]:
+                  - /url: /loyalty
+                  - img [ref=e151]
+                  - generic [ref=e155]: Loyalty & Upsells
+              - listitem [ref=e156]:
+                - link "Add-on Upsells" [ref=e157] [cursor=pointer]:
+                  - /url: /addons
+                  - img [ref=e158]
+                  - generic [ref=e160]: Add-on Upsells
+              - listitem [ref=e161]:
+                - link "Dynamic Pricing" [ref=e162] [cursor=pointer]:
+                  - /url: /revenue/pricing
+                  - img [ref=e163]
+                  - generic [ref=e165]: Dynamic Pricing
+              - listitem [ref=e166]:
+                - link "Guest Recovery" [ref=e167] [cursor=pointer]:
+                  - /url: /revenue/recovery
+                  - img [ref=e168]
+                  - generic [ref=e171]: Guest Recovery
+          - generic [ref=e172]:
+            - generic [ref=e173]: System
+            - list [ref=e175]:
+              - listitem [ref=e176]:
+                - link "Integration" [ref=e177] [cursor=pointer]:
+                  - /url: /integration
+                  - img [ref=e178]
+                  - generic [ref=e180]: Integration
+              - listitem [ref=e181]:
+                - link "Settings" [ref=e182] [cursor=pointer]:
+                  - /url: /settings
+                  - img [ref=e183]
+                  - generic [ref=e186]: Settings
+        - generic [ref=e188]:
+          - generic [ref=e190]: TR
+          - generic [ref=e191]:
+            - generic [ref=e192]: toufiq revmerito
+            - generic [ref=e193]: tech.revmerito@gmail.com
+          - button [ref=e194] [cursor=pointer]:
+            - img
+      - main [ref=e195]:
+        - generic [ref=e196]:
+          - button "Toggle Sidebar" [ref=e197] [cursor=pointer]:
+            - img
+            - generic [ref=e198]: Toggle Sidebar
+          - button "powerhouse Main Branch" [ref=e199] [cursor=pointer]:
+            - generic [ref=e200]:
+              - img
+            - generic [ref=e201]:
+              - generic [ref=e202]: powerhouse
+              - generic [ref=e203]: Main Branch
+            - img
+          - generic [ref=e205]:
+            - img [ref=e206]
+            - searchbox "Search bookings, rooms, guests..." [ref=e209]
+          - generic [ref=e210]:
+            - button "Switch to Dark Mode" [ref=e211] [cursor=pointer]:
+              - img
+            - button [ref=e212] [cursor=pointer]:
+              - img
+            - button "Notifications" [ref=e213] [cursor=pointer]:
+              - img
+              - generic [ref=e214]: Notifications
+            - button "TR toufiq revmerito SUPER_ADMIN" [ref=e215] [cursor=pointer]:
+              - generic [ref=e217]: TR
+              - generic [ref=e218]:
+                - generic [ref=e219]: toufiq revmerito
+                - generic [ref=e220]: SUPER_ADMIN
+              - img
+        - main [ref=e221]:
+          - generic [ref=e224]:
+            - generic [ref=e225]:
+              - generic [ref=e226]:
+                - heading "Analytics & Reports" [level=1] [ref=e227]
+                - paragraph [ref=e228]:
+                  - text: Performance data for the last
+                  - generic [ref=e229]: 30 days
+              - generic [ref=e230]:
+                - generic [ref=e231]: 0 Live
+                - generic [ref=e235]:
+                  - button "7d" [ref=e236] [cursor=pointer]
+                  - button "30d" [ref=e237] [cursor=pointer]
+                  - button "90d" [ref=e238] [cursor=pointer]
+                - button "Export CSV" [ref=e239] [cursor=pointer]:
+                  - img [ref=e240]
+                  - text: Export CSV
+            - generic [ref=e243]:
+              - generic [ref=e244]:
+                - img [ref=e247]
+                - generic [ref=e249]:
+                  - paragraph [ref=e250]: Total Revenue
+                  - heading "₹6,52,510" [level=3] [ref=e251]
+                  - paragraph [ref=e252]: "ADR: ₹18,125.28"
+              - generic [ref=e253]:
+                - img [ref=e256]
+                - generic [ref=e258]:
+                  - paragraph [ref=e259]: Total Bookings
+                  - heading "24" [level=3] [ref=e260]
+                  - paragraph [ref=e261]: From 12 visitors
+              - generic [ref=e262]:
+                - img [ref=e265]
+                - generic [ref=e267]:
+                  - paragraph [ref=e268]: Conversion Rate
+                  - heading "0%" [level=3] [ref=e269]
+                  - paragraph [ref=e270]: Look-to-book ratio
+              - generic [ref=e271]:
+                - img [ref=e274]
+                - generic [ref=e276]:
+                  - paragraph [ref=e277]: Occupancy Rate
+                  - heading "2%" [level=3] [ref=e278]
+                  - paragraph [ref=e279]: "RevPAR: ₹467.75"
+            - generic [ref=e280]:
+              - tablist [ref=e281]:
+                - tab "Overview" [selected] [ref=e282] [cursor=pointer]
+                - tab "Revenue & Rooms" [ref=e283] [cursor=pointer]
+                - tab "Traffic" [ref=e284] [cursor=pointer]
+                - tab "AI Performance" [ref=e285] [cursor=pointer]
+                - tab "Cancellations" [ref=e286] [cursor=pointer]
+              - tabpanel "Overview" [ref=e287]:
+                - generic [ref=e288]:
+                  - generic [ref=e289]:
+                    - generic [ref=e291]:
+                      - heading "Revenue & Visitor Trend" [level=2] [ref=e292]
+                      - paragraph [ref=e293]: Daily traffic vs direct revenue
+                    - img [ref=e297]:
+                      - generic [ref=e301]:
+                        - generic [ref=e303]: 2026-05-27
+                        - generic [ref=e305]: 2026-05-31
+                        - generic [ref=e307]: 2026-06-04
+                        - generic [ref=e309]: 2026-06-08
+                        - generic [ref=e311]: 2026-06-12
+                        - generic [ref=e313]: 2026-06-16
+                        - generic [ref=e315]: 2026-06-20
+                        - generic [ref=e317]: 2026-06-24
+                      - generic [ref=e319]:
+                        - generic [ref=e321]: "0"
+                        - generic [ref=e323]: "40000"
+                        - generic [ref=e325]: "80000"
+                        - generic [ref=e327]: "120000"
+                        - generic [ref=e329]: "160000"
+                    - generic [ref=e336]:
+                      - generic [ref=e337]: Visitors
+                      - generic [ref=e339]: Revenue
+                  - generic [ref=e341]:
+                    - generic [ref=e342]:
+                      - generic [ref=e343]:
+                        - heading "Booking Funnel" [level=2] [ref=e344]
+                        - paragraph [ref=e345]: Direct booking conversion path
+                      - img [ref=e347]
+                    - generic [ref=e349]:
+                      - generic [ref=e351]:
+                        - generic [ref=e352]: Visitors
+                        - generic [ref=e353]:
+                          - generic [ref=e354]: "12"
+                          - generic [ref=e355]: 100%
+                      - generic [ref=e359]:
+                        - generic [ref=e360]: Room Views
+                        - generic [ref=e361]:
+                          - generic [ref=e362]: "0"
+                          - generic [ref=e363]: 0%
+                      - generic [ref=e366]:
+                        - generic [ref=e367]: Checkout
+                        - generic [ref=e368]:
+                          - generic [ref=e369]: "0"
+                          - generic [ref=e370]: 0%
+                      - generic [ref=e373]:
+                        - generic [ref=e374]: Booked
+                        - generic [ref=e375]:
+                          - generic [ref=e376]: "0"
+                          - generic [ref=e377]: 0%
+                - generic [ref=e379]:
+                  - generic [ref=e380]:
+                    - generic [ref=e381]:
+                      - generic [ref=e382]:
+                        - heading "Live Activity Feed" [level=2] [ref=e383]
+                        - paragraph [ref=e384]: Real-time visitor events on your site
+                      - img [ref=e386]
+                    - generic [ref=e388]:
+                      - generic [ref=e389]:
+                        - generic [ref=e392]: 👁 Visit from India · Chrome Mobile 148.0.0
+                        - generic [ref=e394]: 01:57 pm
+                      - generic [ref=e395]:
+                        - generic [ref=e398]: 👁 Visit from India · Chrome Mobile 148.0.0
+                        - generic [ref=e400]: 01:57 pm
+                      - generic [ref=e401]:
+                        - generic [ref=e404]: 👁 Visit from India · Chrome 148.0.0
+                        - generic [ref=e406]: 10:28 am
+                      - generic [ref=e407]:
+                        - generic [ref=e410]: 👁 Visit from India · Chrome 148.0.0
+                        - generic [ref=e412]: 10:28 am
+                      - generic [ref=e413]:
+                        - generic [ref=e416]: 👁 Visit from India · Chrome Mobile 148.0.0
+                        - generic [ref=e418]: 10:08 am
+                      - generic [ref=e419]:
+                        - generic [ref=e422]: 👁 Visit from India · Chrome Mobile 148.0.0
+                        - generic [ref=e424]: 10:08 am
+                      - generic [ref=e425]:
+                        - generic [ref=e428]: 👁 Visit from India · Chrome 148.0.0
+                        - generic [ref=e430]: 06:35 am
+                      - generic [ref=e431]:
+                        - generic [ref=e434]: 👁 Visit from India · Chrome 148.0.0
+                        - generic [ref=e436]: 06:35 am
+                      - generic [ref=e437]:
+                        - generic [ref=e440]: 👁 Visit from India · Chrome Mobile 148.0.0
+                        - generic [ref=e442]: 04:36 pm
+                      - generic [ref=e443]:
+                        - generic [ref=e446]: 👁 Visit from India · Chrome Mobile 148.0.0
+                        - generic [ref=e448]: 04:36 pm
+                      - generic [ref=e449]:
+                        - generic [ref=e452]: 👁 Visit from India · Chrome 148.0.0
+                        - generic [ref=e454]: 11:52 am
+                      - generic [ref=e455]:
+                        - generic [ref=e458]: 👁 Visit from India · Chrome 148.0.0
+                        - generic [ref=e460]: 11:52 am
+                      - generic [ref=e461]:
+                        - generic [ref=e464]: 👁 Visit from India · Chrome Mobile 148.0.0
+                        - generic [ref=e466]: 02:19 pm
+                      - generic [ref=e467]:
+                        - generic [ref=e470]: 👁 Visit from India · Chrome Mobile 148.0.0
+                        - generic [ref=e472]: 02:19 pm
+                      - generic [ref=e473]:
+                        - generic [ref=e476]: 👁 Visit from India · Mobile Safari 26.4
+                        - generic [ref=e478]: 12:38 pm
+                      - generic [ref=e479]:
+                        - generic [ref=e482]: 👁 Visit from India · Mobile Safari 26.4
+                        - generic [ref=e484]: 12:38 pm
+                      - generic [ref=e485]:
+                        - generic [ref=e488]: 👁 Visit from India · Mobile Safari 26.4
+                        - generic [ref=e490]: 09:56 am
+                      - generic [ref=e491]:
+                        - generic [ref=e494]: 👁 Visit from India · Mobile Safari 26.4
+                        - generic [ref=e496]: 09:56 am
+                      - generic [ref=e497]:
+                        - generic [ref=e500]: 👁 Visit from India · Chrome 148.0.0
+                        - generic [ref=e502]: 06:13 pm
+                      - generic [ref=e503]:
+                        - generic [ref=e506]: 👁 Visit from India · Chrome 148.0.0
+                        - generic [ref=e508]: 06:13 pm
+                  - generic [ref=e509]:
+                    - generic [ref=e510]:
+                      - generic [ref=e511]:
+                        - heading "Device Breakdown" [level=2] [ref=e512]
+                        - paragraph [ref=e513]: What devices your visitors use
+                      - img [ref=e515]
+                    - generic [ref=e517]:
+                      - img [ref=e521]:
+                        - generic [ref=e523]:
+                          - img [ref=e525]
+                          - img [ref=e527]
+                      - generic [ref=e528]:
+                        - generic [ref=e529]:
+                          - img [ref=e530]
+                          - generic [ref=e533]:
+                            - generic [ref=e534]: Desktop
+                            - generic [ref=e535]: 50%
+                        - generic [ref=e538]:
+                          - img [ref=e539]
+                          - generic [ref=e542]:
+                            - generic [ref=e543]: Mobile
+                            - generic [ref=e544]: 50%
+  - generic [ref=e547]: "0"

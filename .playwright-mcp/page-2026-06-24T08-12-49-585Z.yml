@@ -1,0 +1,68 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e39]:
+    - banner [ref=e40]:
+      - generic [ref=e41]:
+        - button [ref=e42] [cursor=pointer]:
+          - img
+        - generic [ref=e43]:
+          - generic [ref=e44]: Properties
+          - img [ref=e310]
+          - generic [ref=e312]: powerhouse
+      - generic [ref=e45]:
+        - button [ref=e46] [cursor=pointer]:
+          - img
+        - button "Sign out" [ref=e47] [cursor=pointer]:
+          - img
+          - text: Sign out
+    - main [ref=e48]:
+      - generic [ref=e313]:
+        - generic [ref=e314]:
+          - generic [ref=e315]:
+            - button [ref=e316] [cursor=pointer]:
+              - img
+            - generic [ref=e317]:
+              - img [ref=e319]
+              - generic [ref=e323]:
+                - heading "powerhouse" [level=1] [ref=e324]
+                - paragraph [ref=e325]: powerhouse
+            - generic [ref=e326]: Active
+          - button "Login as Owner" [ref=e327] [cursor=pointer]:
+            - img
+            - text: Login as Owner
+        - generic [ref=e328]:
+          - tablist [ref=e329]:
+            - tab "Features" [ref=e330] [cursor=pointer]
+            - tab "Integrations" [ref=e331] [cursor=pointer]
+            - tab "Permissions" [ref=e332] [cursor=pointer]
+            - tab "Users" [ref=e333] [cursor=pointer]
+            - tab "Danger Zone" [active] [selected] [ref=e334] [cursor=pointer]
+          - tabpanel "Danger Zone" [ref=e695]:
+            - generic [ref=e696]:
+              - generic [ref=e697]:
+                - img [ref=e698]
+                - heading "Danger Zone" [level=3] [ref=e700]
+                - paragraph [ref=e701]: These actions are immediate and may be irreversible
+              - generic [ref=e702]:
+                - generic [ref=e703]:
+                  - paragraph [ref=e704]: Pause Property
+                  - paragraph [ref=e705]: Stop public bookings. Owner can still login and manage.
+                - button "Pause" [ref=e706] [cursor=pointer]:
+                  - img
+                  - text: Pause
+              - generic [ref=e707]:
+                - generic [ref=e708]:
+                  - paragraph [ref=e709]: Lock Account
+                  - paragraph [ref=e710]: Block all logins for this hotel completely
+                - button "Lock" [ref=e711] [cursor=pointer]:
+                  - img
+                  - text: Lock
+              - generic [ref=e712]:
+                - generic [ref=e713]:
+                  - paragraph [ref=e714]: Delete Property Permanently
+                  - paragraph [ref=e715]: Removes hotel, all bookings, guests, and users. Cannot be undone.
+                - button "Delete" [ref=e716] [cursor=pointer]:
+                  - img
+                  - text: Delete

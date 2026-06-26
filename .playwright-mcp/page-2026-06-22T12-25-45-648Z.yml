@@ -1,0 +1,206 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e9]: S
+          - generic [ref=e10]: Staybooker
+          - generic [ref=e11]: · Secure Booking
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e15]: 256-bit SSL Secured
+    - main [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e20]:
+          - generic [ref=e22] [cursor=pointer]:
+            - img [ref=e24]
+            - generic [ref=e26]: Search
+          - generic [ref=e28] [cursor=pointer]:
+            - img [ref=e30]
+            - generic [ref=e32]: Select Rooms
+          - generic [ref=e34]:
+            - img [ref=e36]
+            - generic [ref=e38]: Enhance Stay
+          - generic [ref=e40]:
+            - generic [ref=e41]: "4"
+            - generic [ref=e42]: Guest Info
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]:
+                - img [ref=e47]
+                - text: AI-Powered Booking Engine
+              - heading "Secure Your Stay" [level=1] [ref=e49]
+              - paragraph [ref=e50]: Complete your reservation in just a few steps.
+            - generic [ref=e51]:
+              - img [ref=e53]
+              - generic [ref=e56]:
+                - paragraph [ref=e57]: Guaranteed
+                - paragraph [ref=e58]: Secure Checkout
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - generic:
+                  - img
+                - generic [ref=e62]:
+                  - img [ref=e64]
+                  - generic [ref=e67]:
+                    - heading "Guest Information" [level=2] [ref=e68]
+                    - paragraph [ref=e69]: Please enter the details of the primary guest.
+                - generic [ref=e70]:
+                  - generic [ref=e71]:
+                    - generic [ref=e72]:
+                      - text: First Name
+                      - textbox "First Name" [ref=e73]:
+                        - /placeholder: e.g. John
+                        - text: <script>alert(1)</script>
+                    - generic [ref=e74]:
+                      - text: Last Name
+                      - textbox "Last Name" [ref=e75]:
+                        - /placeholder: e.g. Doe
+                        - text: Test'); DROP TABLE bookings;--
+                  - generic [ref=e76]:
+                    - generic [ref=e77]:
+                      - text: Email Address
+                      - generic [ref=e78]:
+                        - img [ref=e79]
+                        - textbox "Email Address" [active] [ref=e82]:
+                          - /placeholder: john@example.com
+                          - text: not-an-email
+                      - text: Invalid email address
+                    - generic [ref=e83]:
+                      - text: Phone Number
+                      - generic [ref=e84]:
+                        - img [ref=e85]
+                        - textbox "Phone Number" [ref=e87]:
+                          - /placeholder: +91 98765 43210
+                          - text: "123"
+                  - generic [ref=e88]:
+                    - text: Special Requests
+                    - textbox "Special Requests" [ref=e89]:
+                      - /placeholder: Any specific preferences? (Optional)
+              - generic [ref=e90]:
+                - generic [ref=e91]:
+                  - img [ref=e93]
+                  - generic [ref=e96]:
+                    - heading "Payment" [level=2] [ref=e97]
+                    - paragraph [ref=e98]: Powered by Razorpay • 256-bit SSL Encrypted
+                - generic [ref=e100]:
+                  - paragraph [ref=e101]: Choose how you'd like to pay
+                  - generic [ref=e102] [cursor=pointer]:
+                    - radio "Pay Now (Online) Instant Confirm Pay securely via Credit/Debit Card, UPI, or Net Banking. Booking confirmed instantly. Visa Mastercard + UPI, NetBanking" [checked] [ref=e104]
+                    - generic [ref=e105]:
+                      - generic [ref=e106]:
+                        - heading "Pay Now (Online)" [level=3] [ref=e107]
+                        - generic [ref=e108]: Instant Confirm
+                      - paragraph [ref=e109]: Pay securely via Credit/Debit Card, UPI, or Net Banking. Booking confirmed instantly.
+                      - generic [ref=e110]:
+                        - img "Visa" [ref=e111]
+                        - img "Mastercard" [ref=e112]
+                        - generic [ref=e113]: + UPI, NetBanking
+                  - generic [ref=e114] [cursor=pointer]:
+                    - radio "Pay at Property No Charge Today No charges today. Your booking is guaranteed and payment is collected at the hotel." [ref=e116]
+                    - generic [ref=e117]:
+                      - generic [ref=e118]:
+                        - heading "Pay at Property" [level=3] [ref=e119]
+                        - generic [ref=e120]: No Charge Today
+                      - paragraph [ref=e121]: No charges today. Your booking is guaranteed and payment is collected at the hotel.
+            - generic [ref=e122]:
+              - generic [ref=e123]:
+                - generic [ref=e124]:
+                  - img "Room" [ref=e125]
+                  - generic [ref=e127]:
+                    - heading "Executive Room - Romantic Lonavala Getaway" [level=3] [ref=e128]
+                    - paragraph [ref=e129]: Executive Room - Romantic Lonavala Getaway
+                    - generic [ref=e131]: EP
+                - generic [ref=e132]:
+                  - generic [ref=e133]:
+                    - img [ref=e135]
+                    - generic [ref=e137]:
+                      - paragraph [ref=e138]: Check-in
+                      - paragraph [ref=e139]: Jun 22
+                      - paragraph [ref=e140]: 2:00 PM
+                    - generic [ref=e141]:
+                      - paragraph [ref=e142]: Check-out
+                      - paragraph [ref=e143]: Jun 23
+                      - paragraph [ref=e144]: 11:00 AM
+                  - button "Modify Stay Dates" [ref=e145] [cursor=pointer]
+                  - generic [ref=e146]:
+                    - generic [ref=e148]:
+                      - generic [ref=e149]:
+                        - generic [ref=e150]: Executive Room - Romantic Lonavala Getaway
+                        - generic [ref=e151]: EP • (1 night)
+                      - generic [ref=e152]: ₹18,000
+                    - generic [ref=e154]:
+                      - generic [ref=e155]:
+                        - img [ref=e156]
+                        - text: candle light dinner
+                      - generic [ref=e158]: ₹4,000
+                    - generic [ref=e159]:
+                      - generic [ref=e160]:
+                        - generic [ref=e161]: Tax Breakdown (GST)
+                        - generic [ref=e162]: Extra
+                      - generic [ref=e163]:
+                        - generic [ref=e164]:
+                          - generic [ref=e165]: Room GST (0% · exclusive)
+                          - generic [ref=e166]: ₹0
+                        - generic [ref=e167]:
+                          - generic [ref=e168]: Experiences & Activities GST (0%)
+                          - generic [ref=e169]: ₹0
+                        - generic [ref=e170]:
+                          - generic [ref=e171]: Total Taxes
+                          - generic [ref=e172]: ₹0
+                  - generic [ref=e173]:
+                    - generic [ref=e175]: Promo Code
+                    - generic [ref=e176]:
+                      - textbox "Promo Code" [ref=e177]:
+                        - /placeholder: ENTER CODE
+                      - button "Apply" [disabled]
+                  - generic [ref=e178]:
+                    - generic [ref=e179]:
+                      - generic [ref=e180]:
+                        - generic [ref=e181]: Base Subtotal
+                        - generic [ref=e182]: ₹22,000
+                      - generic [ref=e183]:
+                        - generic [ref=e184]: Taxes
+                        - generic [ref=e185]: + ₹0
+                    - generic [ref=e186]:
+                      - generic [ref=e187]: Total to Pay
+                      - generic [ref=e189]: ₹22,000
+                    - paragraph [ref=e190]: Exclusive of Taxes (added above)
+                  - button "Finish Booking" [ref=e191] [cursor=pointer]:
+                    - text: Finish Booking
+                    - img
+              - generic [ref=e192]:
+                - generic [ref=e193]:
+                  - generic [ref=e194]:
+                    - img [ref=e195]
+                    - generic [ref=e198]: 256-Bit SSL Secured
+                  - generic [ref=e199]:
+                    - img "Visa" [ref=e200]
+                    - img "Mastercard" [ref=e201]
+                - paragraph [ref=e202]:
+                  - text: By proceeding, you agree to our
+                  - link "Terms" [ref=e203] [cursor=pointer]:
+                    - /url: "#"
+                  - text: "&"
+                  - link "Privacy Policy" [ref=e204] [cursor=pointer]:
+                    - /url: "#"
+                  - text: .
+    - contentinfo [ref=e205]:
+      - generic [ref=e206]:
+        - paragraph [ref=e207]: Powered by Staybooker.ai
+        - generic [ref=e208]:
+          - link "Cancel Booking" [ref=e209] [cursor=pointer]:
+            - /url: /book/powerhouse/cancel
+          - generic [ref=e210]: ·
+          - generic [ref=e211]:
+            - img [ref=e212]
+            - text: Secure Payments
+          - generic [ref=e214]: ·
+          - generic [ref=e215]: Privacy Protected
+          - generic [ref=e216]: ·
+          - generic [ref=e217]: Best Price Guaranteed

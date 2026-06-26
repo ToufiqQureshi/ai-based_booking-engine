@@ -1,0 +1,82 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e56]:
+    - complementary [ref=e57]:
+      - generic [ref=e58]:
+        - img [ref=e60]
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Staybooker
+          - paragraph [ref=e65]: Admin Console
+      - navigation [ref=e66]:
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: Management
+          - generic [ref=e69]:
+            - button "Properties" [ref=e70] [cursor=pointer]:
+              - img [ref=e71]
+              - generic [ref=e75]: Properties
+            - button "Users" [ref=e76] [cursor=pointer]:
+              - img [ref=e77]
+              - generic [ref=e82]: Users
+      - generic [ref=e84]:
+        - generic [ref=e85]: T
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: toufiq revmerito
+          - paragraph [ref=e88]: tech.revmerito@gmail.com
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e91]:
+          - button [ref=e92] [cursor=pointer]:
+            - img
+          - generic [ref=e93]:
+            - generic [ref=e94]: Properties
+            - img [ref=e1075]
+            - generic [ref=e1077]: The lagoona resort
+        - generic [ref=e95]:
+          - button [ref=e96] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e97] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e98]:
+        - generic [ref=e1078]:
+          - generic [ref=e1079]:
+            - generic [ref=e1080]:
+              - button [ref=e1081] [cursor=pointer]:
+                - img
+              - generic [ref=e1082]:
+                - img [ref=e1084]
+                - generic [ref=e1088]:
+                  - heading "The lagoona resort" [level=1] [ref=e1089]
+                  - paragraph [ref=e1090]: thelagoonaresort
+              - generic [ref=e1091]: Active
+            - button "Login as Owner" [ref=e1092] [cursor=pointer]:
+              - img
+              - text: Login as Owner
+          - generic [ref=e1093]:
+            - tablist [ref=e1094]:
+              - tab "Features" [ref=e1095] [cursor=pointer]
+              - tab "Integrations" [ref=e1096] [cursor=pointer]
+              - tab "Permissions" [ref=e1097] [cursor=pointer]
+              - tab "Users" [active] [selected] [ref=e1098] [cursor=pointer]
+              - tab "Danger Zone" [ref=e1099] [cursor=pointer]
+            - tabpanel "Users" [ref=e1208]:
+              - generic [ref=e1209]:
+                - generic [ref=e1210]:
+                  - heading "Hotel Users (1)" [level=3] [ref=e1211]
+                  - button "Add Employee" [ref=e1212] [cursor=pointer]
+                - table [ref=e1213]:
+                  - rowgroup [ref=e1214]:
+                    - row "Name Email Role Status" [ref=e1215]:
+                      - columnheader "Name" [ref=e1216]
+                      - columnheader "Email" [ref=e1217]
+                      - columnheader "Role" [ref=e1218]
+                      - columnheader "Status" [ref=e1219]
+                  - rowgroup [ref=e1220]:
+                    - row "Toufiq Qureshi toufiqqureshi651@gmail.com Owner Active" [ref=e1221]:
+                      - cell "Toufiq Qureshi" [ref=e1222]
+                      - cell "toufiqqureshi651@gmail.com" [ref=e1223]
+                      - cell "Owner" [ref=e1224]:
+                        - generic [ref=e1225]: Owner
+                      - cell "Active" [ref=e1226]: Active

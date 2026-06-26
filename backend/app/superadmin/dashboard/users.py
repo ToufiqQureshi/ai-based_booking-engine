@@ -16,6 +16,7 @@ from app.core.utils.config import get_settings
 from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel
 from app.guests.user import User, UserRole
+from app.bookings.links import UserHotelLink
 from app.superadmin.hotels.hotels import get_super_admin, _get_client_ip, require_permission
 
 logger = logging.getLogger(__name__)
@@ -418,5 +419,50 @@ async def create_hotel_user(
         "role": new_user.role, "hotel_id": new_user.hotel_id, "is_active": new_user.is_active,
         "created_at": new_user.created_at.isoformat() if new_user.created_at else None,
     }
+
+
+@router.delete("/hotels/{hotel_id}/users/{user_id}")
+async def remove_user_from_hotel(
+    hotel_id: str, user_id: str, request: Request, session: DbSession,
+    super_admin: User = Depends(require_permission("superadmin.users.write")),
+):
+    """Remove a user's access to a specific hotel. Does NOT delete the user account."""
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.hotel_id != hotel_id:
+        raise HTTPException(status_code=403, detail="User does not belong to this hotel")
+
+    if user.role == UserRole.OWNER:
+        raise HTTPException(status_code=400, detail="Cannot remove the hotel owner")
+
+    # Remove UserHotelLink if present
+    link = (await session.execute(
+        select(UserHotelLink).where(
+            UserHotelLink.user_id == user_id,
+            UserHotelLink.hotel_id == hotel_id,
+        )
+    )).scalar_one_or_none()
+    if link:
+        await session.delete(link)
+
+    # Clear the user's primary hotel association
+    user.hotel_id = None
+    user.is_active = False
+    session.add(user)
+
+    session.add(AuditLog(
+        user_id=super_admin.id, user_email=super_admin.email, hotel_id=hotel_id,
+        action="REMOVE_USER_FROM_HOTEL",
+        description=f"Removed user '{user.email}' from hotel '{hotel.name}'",
+        ip_address=_get_client_ip(request),
+    ))
+    await session.commit()
+    return {"message": f"User '{user.email}' removed from hotel '{hotel.name}'"}
 
 

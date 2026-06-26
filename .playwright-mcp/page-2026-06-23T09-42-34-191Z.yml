@@ -1,0 +1,31 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - button "Check In 23 Jun 2026 Tuesday" [ref=e8] [cursor=pointer]:
+        - img [ref=e10]
+        - generic [ref=e12]:
+          - generic [ref=e13]: Check In
+          - generic [ref=e14]: 23 Jun 2026
+          - generic [ref=e15]: Tuesday
+      - button "Check Out 25 Jun 2026 Thursday" [ref=e543] [cursor=pointer]:
+        - img [ref=e18]
+        - generic [ref=e20]:
+          - generic [ref=e21]: Check Out
+          - generic [ref=e22]: 25 Jun 2026
+          - generic [ref=e23]: Thursday
+    - button "Guests & Rooms 2 Guests 1 Room, 2 Adults" [ref=e24] [cursor=pointer]:
+      - img [ref=e26]
+      - generic [ref=e29]:
+        - generic [ref=e30]: Guests & Rooms
+        - generic [ref=e31]: 2 Guests
+        - generic [ref=e32]: 1 Room, 2 Adults
+      - img [ref=e33]
+    - generic [ref=e35]:
+      - generic [ref=e36]: Promo Code
+      - textbox "Optional" [ref=e37]
+    - button "Search" [ref=e38] [cursor=pointer]:
+      - img [ref=e39]
+      - text: Search

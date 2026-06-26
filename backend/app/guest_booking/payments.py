@@ -22,6 +22,7 @@ from app.services.email_service import get_email_service
 from app.core.utils.config import get_settings
 from app.core.utils.time import utcnow
 from app.core.utils.limiter import limiter
+from app.core.utils.feature_flags import assert_hotel_not_paused
 from app.guest_booking._booking_helpers import _update_guest_loyalty
 
 router = APIRouter(prefix="/public", tags=["Public"])
@@ -186,6 +187,10 @@ async def create_razorpay_order(
         raise HTTPException(status_code=404, detail="Booking not found for order creation")
 
     hotel = await session.get(Hotel, booking.hotel_id)
+    if not hotel:
+        redis_client.delete_value(lock_key)
+        raise HTTPException(status_code=404, detail="Hotel not found")
+    assert_hotel_not_paused(hotel)
     h_settings = hotel.settings if hotel and hotel.settings else {}
     from app.core.auth.vault import resolve_settings_secrets
     h_settings = await resolve_settings_secrets(session, h_settings)
@@ -265,6 +270,10 @@ async def verify_razorpay_payment(
         raise HTTPException(status_code=404, detail="Booking not found")
 
     hotel = await session.get(Hotel, booking.hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+    assert_hotel_not_paused(hotel)
+
     h_settings = hotel.settings if hotel and hotel.settings else {}
     from app.core.auth.vault import resolve_settings_secrets
     h_settings = await resolve_settings_secrets(session, h_settings)

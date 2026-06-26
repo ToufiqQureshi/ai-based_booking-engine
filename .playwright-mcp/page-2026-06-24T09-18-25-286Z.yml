@@ -1,0 +1,71 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e11]:
+          - paragraph [ref=e12]: Staybooker
+          - paragraph [ref=e13]: Admin Console
+      - navigation [ref=e14]:
+        - generic [ref=e15]:
+          - paragraph [ref=e16]: Management
+          - generic [ref=e17]:
+            - button "Properties" [ref=e18] [cursor=pointer]:
+              - img [ref=e19]
+              - generic [ref=e23]: Properties
+            - button "Users" [ref=e24] [cursor=pointer]:
+              - img [ref=e25]
+              - generic [ref=e30]: Users
+      - generic [ref=e32]:
+        - generic [ref=e33]: T
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: toufiq revmerito
+          - paragraph [ref=e36]: tech.revmerito@gmail.com
+    - generic [ref=e37]:
+      - banner [ref=e38]:
+        - generic [ref=e39]:
+          - button [ref=e40] [cursor=pointer]:
+            - img
+          - generic [ref=e41]:
+            - generic [ref=e42]: Properties
+            - img [ref=e285]
+            - generic [ref=e287]: the grand plaza mumbai
+        - generic [ref=e43]:
+          - button [ref=e44] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e45] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e46]:
+        - generic [ref=e288]:
+          - generic [ref=e289]:
+            - generic [ref=e290]:
+              - button [ref=e291] [cursor=pointer]:
+                - img
+              - generic [ref=e292]:
+                - img [ref=e294]
+                - generic [ref=e298]:
+                  - heading "the grand plaza mumbai" [level=1] [ref=e299]
+                  - paragraph [ref=e300]: the-grand-plaza-mumbai
+              - generic [ref=e301]: Active
+            - button "Login as Owner" [ref=e302] [cursor=pointer]:
+              - img
+              - text: Login as Owner
+          - generic [ref=e303]:
+            - tablist [ref=e304]:
+              - tab "Features" [ref=e305] [cursor=pointer]
+              - tab "Integrations" [ref=e306] [cursor=pointer]
+              - tab "Permissions" [ref=e307] [cursor=pointer]
+              - tab "Users" [active] [selected] [ref=e308] [cursor=pointer]
+              - tab "Danger Zone" [ref=e309] [cursor=pointer]
+            - tabpanel "Users" [ref=e418]:
+              - generic [ref=e419]:
+                - generic [ref=e420]:
+                  - heading "Hotel Users (0)" [level=3] [ref=e421]
+                  - button "Add Employee" [ref=e422] [cursor=pointer]
+                - generic [ref=e423]:
+                  - img [ref=e424]
+                  - paragraph [ref=e429]: No users found for this hotel

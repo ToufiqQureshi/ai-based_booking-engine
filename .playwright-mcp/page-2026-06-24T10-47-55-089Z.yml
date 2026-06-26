@@ -1,0 +1,7 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e32]:
+    - img [ref=e33]
+    - generic [ref=e35]: Loading…

@@ -1,0 +1,146 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=e505]:
+        - img [ref=e507]
+        - generic [ref=e510]: Integration settings updated successfully
+  - generic [ref=e56]:
+    - complementary [ref=e57]:
+      - generic [ref=e58]:
+        - img [ref=e60]
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Staybooker
+          - paragraph [ref=e65]: Admin Console
+      - navigation [ref=e66]:
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: Management
+          - generic [ref=e69]:
+            - button "Properties" [ref=e70] [cursor=pointer]:
+              - img [ref=e71]
+              - generic [ref=e75]: Properties
+            - button "Users" [ref=e76] [cursor=pointer]:
+              - img [ref=e77]
+              - generic [ref=e82]: Users
+      - generic [ref=e84]:
+        - generic [ref=e85]: T
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: toufiq revmerito
+          - paragraph [ref=e88]: tech.revmerito@gmail.com
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e91]:
+          - button [ref=e92] [cursor=pointer]:
+            - img
+          - generic [ref=e93]:
+            - generic [ref=e94]: Properties
+            - img [ref=e287]
+            - generic [ref=e289]: powerhouse
+        - generic [ref=e95]:
+          - button [ref=e96] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e97] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e98]:
+        - generic [ref=e290]:
+          - generic [ref=e291]:
+            - generic [ref=e292]:
+              - button [ref=e293] [cursor=pointer]:
+                - img
+              - generic [ref=e294]:
+                - img [ref=e296]
+                - generic [ref=e300]:
+                  - heading "powerhouse" [level=1] [ref=e301]
+                  - paragraph [ref=e302]: powerhouse
+              - generic [ref=e303]: Active
+            - button "Login as Owner" [ref=e304] [cursor=pointer]:
+              - img
+              - text: Login as Owner
+          - generic [ref=e305]:
+            - tablist [ref=e306]:
+              - tab "Features" [ref=e307] [cursor=pointer]
+              - tab "Integrations" [selected] [ref=e308] [cursor=pointer]
+              - tab "Permissions" [ref=e309] [cursor=pointer]
+              - tab "Users" [ref=e310] [cursor=pointer]
+              - tab "Danger Zone" [ref=e311] [cursor=pointer]
+            - tabpanel "Integrations" [ref=e420]:
+              - generic [ref=e421]:
+                - generic [ref=e422]:
+                  - generic [ref=e423]:
+                    - img [ref=e424]
+                    - heading "WhatsApp Business API Settings" [level=3] [ref=e426]
+                  - generic [ref=e427]:
+                    - generic [ref=e428]:
+                      - generic [ref=e429]:
+                        - generic [ref=e430]: Meta Temporary / Permanent Access Token
+                        - generic [ref=e511]: — Not set
+                      - textbox "EAAGz..." [ref=e432]
+                      - paragraph [ref=e433]: "Stored securely as `whatsapp_api_key` in hotel settings."
+                    - generic [ref=e434]:
+                      - text: WhatsApp Phone Number ID
+                      - textbox "e.g. 102938475647382" [ref=e435]
+                    - generic [ref=e436]:
+                      - text: WhatsApp Business Account ID
+                      - textbox "e.g. 987654321098765" [ref=e437]
+                - generic [ref=e438]:
+                  - generic [ref=e439]:
+                    - img [ref=e440]
+                    - heading "AI Booking Agent Config" [level=3] [ref=e452]
+                  - generic [ref=e453]:
+                    - generic [ref=e454]:
+                      - text: AI Provider
+                      - combobox [ref=e455] [cursor=pointer]:
+                        - generic: DeepSeek
+                        - img [ref=e456]
+                    - generic [ref=e458]:
+                      - text: AI Model Name
+                      - textbox "e.g. llama-3.1-70b-versatile, gpt-4o" [ref=e459]: deepseek-reasoner
+                    - generic [ref=e460]:
+                      - generic [ref=e461]:
+                        - generic [ref=e462]: AI API Key (Overrides platform key)
+                        - generic [ref=e512]:
+                          - img [ref=e513]
+                          - text: Configured
+                          - code [ref=e516]: sk-f••••••a8d2
+                      - textbox "•••••• Configured — leave blank to keep" [ref=e468]
+                    - generic [ref=e469]:
+                      - text: Custom API Base URL (Optional)
+                      - textbox "e.g. https://api.openai.com/v1" [ref=e470]: https://api.deepseek.com
+                    - generic [ref=e471]:
+                      - text: Max Tokens (Optional)
+                      - spinbutton [ref=e472]: "2048"
+              - generic [ref=e473]:
+                - generic [ref=e474]:
+                  - img [ref=e475]
+                  - heading "Email Service (Brevo) Configuration" [level=3] [ref=e477]
+                - generic [ref=e479]:
+                  - generic [ref=e480]:
+                    - generic [ref=e481]: Brevo API Key (Overrides platform key)
+                    - generic [ref=e517]: — Not set
+                  - textbox "xkeysib-..." [ref=e483]
+                  - paragraph [ref=e484]: "Stored securely as `brevo_api_key` in hotel settings. Leave empty to use platform default key."
+                - generic [ref=e485]:
+                  - generic [ref=e486]:
+                    - heading "Custom SMTP Configuration" [level=3] [ref=e487]
+                    - paragraph [ref=e488]: Configure custom SMTP instead of Brevo. If both are set, SMTP takes precedence.
+                  - generic [ref=e489]:
+                    - generic [ref=e490]:
+                      - text: SMTP Host
+                      - textbox "e.g. smtp.gmail.com" [ref=e491]
+                    - generic [ref=e492]:
+                      - text: SMTP Port
+                      - textbox "e.g. 587" [ref=e493]
+                    - generic [ref=e494]:
+                      - text: SMTP Username
+                      - textbox "Username" [ref=e495]
+                    - generic [ref=e496]:
+                      - generic [ref=e497]:
+                        - generic [ref=e498]: SMTP Password
+                        - generic [ref=e518]: — Not set
+                      - textbox "Password" [ref=e500]
+                    - generic [ref=e501]:
+                      - text: SMTP From Email
+                      - textbox "e.g. reservations@hotel.com" [ref=e502]
+              - button "Save Integration Settings" [ref=e504] [cursor=pointer]

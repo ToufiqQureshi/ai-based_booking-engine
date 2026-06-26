@@ -136,3 +136,16 @@ def require_not_paused():
 
     return _dep
 
+
+def assert_hotel_not_paused(hotel: Hotel) -> None:
+    """
+    Utility function for public routes that don't use CurrentUser.
+    Raises a 403 Forbidden if the hotel is paused.
+    """
+    if hotel_is_paused(hotel):
+        reason = (getattr(hotel, "pause_reason", "") or "").strip() or "Temporarily unavailable"
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=reason,
+        )
+

@@ -1,0 +1,719 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - region "Notifications (F8)":
+      - list
+    - region "Notifications alt+T"
+    - generic [ref=e4]:
+      - banner [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - generic [ref=e9]: S
+            - generic [ref=e10]: Staybooker
+            - generic [ref=e11]: · Secure Booking
+          - generic [ref=e12]:
+            - img [ref=e13]
+            - generic [ref=e15]: 256-bit SSL Secured
+      - main [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e20]:
+            - generic [ref=e22] [cursor=pointer]:
+              - img [ref=e24]
+              - generic [ref=e26]: Search
+            - generic [ref=e28]:
+              - generic [ref=e29]: "2"
+              - generic [ref=e30]: Select Rooms
+            - generic [ref=e32]:
+              - generic [ref=e33]: "3"
+              - generic [ref=e34]: Enhance Stay
+            - generic [ref=e36]:
+              - generic [ref=e37]: "4"
+              - generic [ref=e38]: Guest Info
+          - generic [ref=e39]:
+            - img "powerhouse - 2" [ref=e1091]
+            - generic [ref=e43]:
+              - heading "powerhouse" [level=1] [ref=e44]
+              - generic [ref=e46]: 4 Star Property
+            - button [ref=e47] [cursor=pointer]:
+              - img [ref=e48]
+            - button [ref=e50] [cursor=pointer]:
+              - img [ref=e51]
+            - generic [ref=e53]:
+              - button [ref=e54] [cursor=pointer]
+              - button [ref=e55] [cursor=pointer]
+              - button [ref=e56] [cursor=pointer]
+              - button [ref=e57] [cursor=pointer]
+          - heading "Property Videos" [level=3] [ref=e59]
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e65]:
+                - button "Rooms" [ref=e66] [cursor=pointer]:
+                  - img [ref=e67]
+                  - text: Rooms
+                - button "Packages" [ref=e70] [cursor=pointer]:
+                  - img [ref=e71]
+                  - text: Packages
+              - generic [ref=e73]:
+                - button "Check In 22 Jun 2026 Monday Check Out 27 Jun 2026 Saturday" [expanded] [ref=e1092] [cursor=pointer]:
+                  - generic [ref=e75]:
+                    - img [ref=e77]
+                    - generic [ref=e79]:
+                      - generic [ref=e80]: Check In
+                      - generic [ref=e81]: 22 Jun 2026
+                      - generic [ref=e82]: Monday
+                  - img [ref=e83]
+                  - generic [ref=e85]:
+                    - img [ref=e87]
+                    - generic [ref=e89]:
+                      - generic [ref=e90]: Check Out
+                      - generic [ref=e91]: 27 Jun 2026
+                      - generic [ref=e92]: Saturday
+                - button "Guests & Rooms 2 Guests 1 Room, 2 Adults" [ref=e93] [cursor=pointer]:
+                  - img [ref=e95]
+                  - generic [ref=e98]:
+                    - generic [ref=e99]: Guests & Rooms
+                    - generic [ref=e100]: 2 Guests
+                    - generic [ref=e101]: 1 Room, 2 Adults
+                  - img [ref=e102]
+                - generic [ref=e104]:
+                  - generic [ref=e105]: Promo Code
+                  - textbox "Optional" [ref=e106]
+                - button "Search" [ref=e107] [cursor=pointer]:
+                  - img [ref=e108]
+                  - text: Search
+              - generic [ref=e111]:
+                - checkbox "Flexible Dates" [ref=e112] [cursor=pointer]
+                - generic [ref=e113] [cursor=pointer]: Flexible Dates
+            - generic [ref=e114]:
+              - generic [ref=e115]:
+                - img [ref=e117]
+                - generic [ref=e119]:
+                  - heading "Staybooker Loyalty Program" [level=3] [ref=e120]
+                  - paragraph [ref=e121]: Enter your email to unlock exclusive member rates & redeem your points.
+              - generic [ref=e123]:
+                - textbox "Enter email address" [ref=e124]
+                - button "Check" [disabled]
+            - generic [ref=e125]:
+              - generic [ref=e126]:
+                - generic [ref=e1093]:
+                  - img [ref=e1095]
+                  - paragraph [ref=e1098]: Popular choice! 8 bookings this month
+                - generic [ref=e134]:
+                  - heading "Available Rooms" [level=2] [ref=e135]
+                  - button "Filters" [ref=e136] [cursor=pointer]:
+                    - img [ref=e137]
+                    - text: Filters
+              - generic [ref=e138]:
+                - generic [ref=e139]:
+                  - heading "4 Categories Available" [level=2] [ref=e140]:
+                    - img [ref=e142]
+                    - text: 4 Categories Available
+                  - generic [ref=e145]:
+                    - generic [ref=e146]: Sort By
+                    - combobox [ref=e147] [cursor=pointer]:
+                      - option "Recommended" [selected]
+                      - 'option "Price: Low to High"'
+                      - 'option "Price: High to Low"'
+                - generic [ref=e148]:
+                  - generic [ref=e150]:
+                    - generic [ref=e151]:
+                      - generic [ref=e152]:
+                        - img "Executive Room - Romantic Lonavala Getaway" [ref=e153] [cursor=pointer]
+                        - button [ref=e154] [cursor=pointer]:
+                          - img [ref=e155]
+                        - button [ref=e157] [cursor=pointer]:
+                          - img [ref=e158]
+                      - generic [ref=e171]: Available
+                      - generic "Book this room for 5 nights to unlock 15% off!" [ref=e172]:
+                        - generic [ref=e173]:
+                          - img [ref=e174]
+                          - generic [ref=e177]: 5+ nights
+                        - generic:
+                          - generic: Book this room for 5 nights to unlock 15% off!
+                    - generic [ref=e178]:
+                      - generic [ref=e179]:
+                        - generic [ref=e180]:
+                          - heading "Executive Room - Romantic Lonavala Getaway" [level=3] [ref=e181]
+                          - generic [ref=e182]:
+                            - generic [ref=e183]:
+                              - img [ref=e184]
+                              - text: 2 Adults
+                            - generic [ref=e187]: •
+                            - generic [ref=e188]:
+                              - img [ref=e189]
+                              - text: 317 ft²
+                        - button "Room Details" [ref=e194] [cursor=pointer]
+                      - generic [ref=e195]:
+                        - generic "Free WiFi" [ref=e196]:
+                          - img [ref=e197]
+                          - generic [ref=e201]: Free WiFi
+                        - generic "Air Conditioning" [ref=e202]:
+                          - img [ref=e203]
+                          - generic [ref=e208]: Air Conditioning
+                        - generic "Smart TV" [ref=e209]:
+                          - img [ref=e210]
+                          - generic [ref=e213]: Smart TV
+                      - generic [ref=e214]:
+                        - generic [ref=e215]:
+                          - generic [ref=e217]:
+                            - generic [ref=e219]: EP
+                            - generic [ref=e220]:
+                              - generic [ref=e221]: Room Only
+                              - generic [ref=e222]: Free cancellation up to 168 hours before check-in
+                          - generic [ref=e223]:
+                            - generic [ref=e224]:
+                              - generic [ref=e225]:
+                                - generic [ref=e226]: ₹18,000
+                                - generic [ref=e227]: total
+                              - paragraph [ref=e228]: ₹80,000
+                            - button "Select" [ref=e229] [cursor=pointer]
+                        - generic [ref=e230]:
+                          - generic [ref=e232]:
+                            - generic [ref=e234]: CP
+                            - generic [ref=e235]:
+                              - generic [ref=e236]: CP
+                              - generic [ref=e237]: Free cancellation up to 24 hours before check-in
+                          - generic [ref=e238]:
+                            - generic [ref=e239]:
+                              - generic [ref=e240]:
+                                - generic [ref=e241]: ₹18,500
+                                - generic [ref=e242]: total
+                              - paragraph [ref=e243]: ₹80,000
+                            - button "Select" [ref=e244] [cursor=pointer]
+                  - generic [ref=e246]:
+                    - generic [ref=e247]:
+                      - generic [ref=e248]:
+                        - img "Executive Room" [ref=e249] [cursor=pointer]
+                        - button [ref=e250] [cursor=pointer]:
+                          - img [ref=e251]
+                        - button [ref=e253] [cursor=pointer]:
+                          - img [ref=e254]
+                      - generic [ref=e265]: Available
+                      - generic "Book this room for 5 nights to unlock 15% off!" [ref=e266]:
+                        - generic [ref=e267]:
+                          - img [ref=e268]
+                          - generic [ref=e271]: 5+ nights
+                        - generic:
+                          - generic: Book this room for 5 nights to unlock 15% off!
+                    - generic [ref=e272]:
+                      - generic [ref=e273]:
+                        - generic [ref=e274]:
+                          - heading "Executive Room" [level=3] [ref=e275]
+                          - generic [ref=e276]:
+                            - generic [ref=e277]:
+                              - img [ref=e278]
+                              - text: 6 Adults
+                            - generic [ref=e281]: •
+                            - generic [ref=e282]:
+                              - img [ref=e283]
+                              - text: 220 ft²
+                        - button "Room Details" [ref=e288] [cursor=pointer]
+                      - generic "Air Conditioning" [ref=e290]:
+                        - img [ref=e291]
+                        - generic [ref=e296]: Air Conditioning
+                      - generic [ref=e297]:
+                        - generic [ref=e298]:
+                          - generic [ref=e300]:
+                            - generic [ref=e302]: EP
+                            - generic [ref=e303]:
+                              - generic [ref=e304]: Room Only
+                              - generic [ref=e305]: Free cancellation up to 72 hours before check-in
+                          - generic [ref=e306]:
+                            - generic [ref=e308]:
+                              - generic [ref=e309]: ₹10,000
+                              - generic [ref=e310]: total
+                            - button "Select" [ref=e311] [cursor=pointer]
+                        - generic [ref=e312]:
+                          - generic [ref=e314]:
+                            - generic [ref=e316]: CP
+                            - generic [ref=e317]:
+                              - generic [ref=e318]: CP
+                              - generic [ref=e319]: Non-Refundable
+                          - generic [ref=e320]:
+                            - generic [ref=e322]:
+                              - generic [ref=e323]: ₹10,500
+                              - generic [ref=e324]: total
+                            - button "Select" [ref=e325] [cursor=pointer]
+                  - generic [ref=e327]:
+                    - generic [ref=e328]:
+                      - generic [ref=e329]:
+                        - img "Romantic Lonavala Getaway" [ref=e330] [cursor=pointer]
+                        - button [ref=e331] [cursor=pointer]:
+                          - img [ref=e332]
+                        - button [ref=e334] [cursor=pointer]:
+                          - img [ref=e335]
+                      - generic [ref=e346]: Available
+                      - generic "Book this room for 5 nights to unlock 15% off!" [ref=e347]:
+                        - generic [ref=e348]:
+                          - img [ref=e349]
+                          - generic [ref=e352]: 5+ nights
+                        - generic:
+                          - generic: Book this room for 5 nights to unlock 15% off!
+                    - generic [ref=e353]:
+                      - generic [ref=e354]:
+                        - generic [ref=e355]:
+                          - heading "Romantic Lonavala Getaway" [level=3] [ref=e356]
+                          - generic [ref=e357]:
+                            - generic [ref=e358]:
+                              - img [ref=e359]
+                              - text: 2 Adults
+                            - generic [ref=e362]: •
+                            - generic [ref=e363]:
+                              - img [ref=e364]
+                              - text: 300 ft²
+                        - button "Room Details" [ref=e369] [cursor=pointer]
+                      - generic [ref=e370]:
+                        - generic "Free WiFi" [ref=e371]:
+                          - img [ref=e372]
+                          - generic [ref=e376]: Free WiFi
+                        - generic "Air Conditioning" [ref=e377]:
+                          - img [ref=e378]
+                          - generic [ref=e383]: Air Conditioning
+                        - generic "Smart TV" [ref=e384]:
+                          - img [ref=e385]
+                          - generic [ref=e388]: Smart TV
+                      - generic [ref=e389]:
+                        - generic [ref=e390]:
+                          - generic [ref=e392]:
+                            - generic [ref=e394]: EP
+                            - generic [ref=e395]:
+                              - generic [ref=e396]: Room Only
+                              - generic [ref=e397]: Free cancellation up to 48 hours before check-in
+                          - generic [ref=e398]:
+                            - generic [ref=e400]:
+                              - generic [ref=e401]: ₹5,800
+                              - generic [ref=e402]: total
+                            - button "Select" [ref=e403] [cursor=pointer]
+                        - generic [ref=e404]:
+                          - generic [ref=e406]:
+                            - generic [ref=e408]: CP
+                            - generic [ref=e409]:
+                              - generic [ref=e410]: CP
+                              - generic [ref=e411]: Non-Refundable
+                          - generic [ref=e412]:
+                            - generic [ref=e414]:
+                              - generic [ref=e415]: ₹6,300
+                              - generic [ref=e416]: total
+                            - button "Select" [ref=e417] [cursor=pointer]
+                  - generic [ref=e419]:
+                    - generic [ref=e420]:
+                      - generic [ref=e421]:
+                        - img "Deluxe" [ref=e422] [cursor=pointer]
+                        - button [ref=e423] [cursor=pointer]:
+                          - img [ref=e424]
+                        - button [ref=e426] [cursor=pointer]:
+                          - img [ref=e427]
+                      - generic [ref=e438]: Available
+                      - generic "Book this room for 5 nights to unlock 15% off!" [ref=e439]:
+                        - generic [ref=e440]:
+                          - img [ref=e441]
+                          - generic [ref=e444]: 5+ nights
+                        - generic:
+                          - generic: Book this room for 5 nights to unlock 15% off!
+                    - generic [ref=e445]:
+                      - generic [ref=e446]:
+                        - generic [ref=e447]:
+                          - heading "Deluxe" [level=3] [ref=e448]
+                          - generic [ref=e449]:
+                            - generic [ref=e450]:
+                              - img [ref=e451]
+                              - text: 2 Adults
+                            - generic [ref=e454]: •
+                            - generic [ref=e455]:
+                              - img [ref=e456]
+                              - text: 297 ft²
+                        - button "Room Details" [ref=e461] [cursor=pointer]
+                      - generic "Free WiFi" [ref=e463]:
+                        - img [ref=e464]
+                        - generic [ref=e468]: Free WiFi
+                      - generic [ref=e469]:
+                        - generic [ref=e470]:
+                          - generic [ref=e472]:
+                            - generic [ref=e474]: EP
+                            - generic [ref=e475]:
+                              - generic [ref=e476]: Room Only
+                              - generic [ref=e477]: Free cancellation up to 48 hours before check-in
+                          - generic [ref=e478]:
+                            - generic [ref=e480]:
+                              - generic [ref=e481]: ₹5,000
+                              - generic [ref=e482]: total
+                            - button "Select" [ref=e483] [cursor=pointer]
+                        - generic [ref=e484]:
+                          - generic [ref=e486]:
+                            - generic [ref=e488]: CP
+                            - generic [ref=e489]:
+                              - generic [ref=e490]: CP
+                              - generic [ref=e491]: Free cancellation up to 48 hours before check-in
+                          - generic [ref=e492]:
+                            - generic [ref=e494]:
+                              - generic [ref=e495]: ₹5,500
+                              - generic [ref=e496]: total
+                            - button "Select" [ref=e497] [cursor=pointer]
+          - generic [ref=e1101]:
+            - button "Close" [ref=e1102] [cursor=pointer]:
+              - img [ref=e1103]
+            - generic [ref=e1107]:
+              - img [ref=e1110]
+              - img [ref=e1114]
+            - generic [ref=e1118]:
+              - img [ref=e1119]
+              - text: Stay Longer, Save More
+            - heading "maaa chuda loude" [level=2] [ref=e1121]
+            - paragraph [ref=e1122]: Stay 1 more night(s) and unlock 15% off!
+            - generic [ref=e1124]:
+              - generic [ref=e1125]: 4 / 5 nights
+              - generic [ref=e1126]: 80%
+            - generic [ref=e1129]:
+              - paragraph [ref=e1130]: Unlock at 5 nights
+              - paragraph [ref=e1131]: 15% off
+            - button "Add 1 Night" [ref=e1132] [cursor=pointer]:
+              - img
+              - text: Add 1 Night
+            - button "No thanks, continue with 4 nights" [ref=e1133] [cursor=pointer]
+          - button "Chat Live Concierge How can I help?" [ref=e499] [cursor=pointer]:
+            - img "Chat" [ref=e502]
+            - generic [ref=e503]:
+              - generic [ref=e504]: Live Concierge
+              - generic [ref=e505]: How can I help?
+      - generic [ref=e507]:
+        - generic [ref=e509]:
+          - generic [ref=e510]:
+            - img "powerhouse" [ref=e513]
+            - generic [ref=e514]:
+              - generic [ref=e515]:
+                - heading "powerhouse" [level=2] [ref=e516]
+                - generic [ref=e517]:
+                  - img [ref=e518]
+                  - generic [ref=e521]: vasai, maharashtra
+                - paragraph [ref=e522]: Nestled in a prime location, our hotel offers a perfect blend of comfort, elegance, and modern hospitality. Designed for both business and leisure travelers, we provide well-appointed rooms, premium amenities, seamless service, and a relaxing atmosphere to ensure a memorable stay. Guests can enjoy spacious accommodations, high-speed Wi-Fi, in-room dining, and easy access to nearby attractions and transportation hubs. Whether you are visiting for work, vacation, or a weekend getaway, we are committed to delivering exceptional comfort and personalized experiences throughout your stay.
+              - generic [ref=e523]:
+                - link "Home" [ref=e524] [cursor=pointer]:
+                  - /url: https://thelagoonaresort.com
+                - button "Privacy Policy" [ref=e525] [cursor=pointer]
+                - button "Payment Terms" [ref=e526] [cursor=pointer]
+          - generic [ref=e527]:
+            - generic [ref=e528]:
+              - img [ref=e529]
+              - heading "Important Info" [level=3] [ref=e532]
+            - generic [ref=e533]:
+              - generic [ref=e534]:
+                - paragraph [ref=e535]: Cancellation Policy
+                - paragraph [ref=e537]: Free cancellation up to 24 hours before check-in. Cancellations made within 24 hours of arrival may incur a one-night charge.
+              - generic [ref=e538]:
+                - paragraph [ref=e539]: Payment Policy
+                - paragraph [ref=e541]: Guests may pay online at the time of booking or at the property, subject to availability and hotel rules.
+              - generic [ref=e542]:
+                - paragraph [ref=e543]: Child Policy
+                - paragraph [ref=e545]: Children below 5 years stay free when using existing bedding. Extra beds are subject to availability and additional charges.
+              - generic [ref=e546]:
+                - paragraph [ref=e547]: Privacy Policy
+                - paragraph [ref=e549]: Guest information is collected solely for booking and hospitality purposes and is not shared with third parties except where required by law.
+              - generic [ref=e550]:
+                - paragraph [ref=e551]: Important Information
+                - paragraph [ref=e553]: Valid government-issued photo identification is required at check-in. Early check-in and late check-out are subject to availability. The hotel reserves the right to refuse service in accordance with applicable laws and regulations.
+        - generic [ref=e554]:
+          - generic [ref=e555]:
+            - img [ref=e556]
+            - generic [ref=e559]: powerhouse, vasai west dattani prism it park 308, vasai, maharashtra, india , 401207
+          - generic [ref=e561]: "Business/GST No: 32erfgbv32ewdscx 21wq"
+      - contentinfo [ref=e562]:
+        - generic [ref=e563]:
+          - paragraph [ref=e564]: Powered by Staybooker.ai
+          - generic [ref=e565]:
+            - link "Cancel Booking" [ref=e566] [cursor=pointer]:
+              - /url: /book/powerhouse/cancel
+            - generic [ref=e567]: ·
+            - generic [ref=e568]:
+              - img [ref=e569]
+              - text: Secure Payments
+            - generic [ref=e571]: ·
+            - generic [ref=e572]: Privacy Protected
+            - generic [ref=e573]: ·
+            - generic [ref=e574]: Best Price Guaranteed
+  - dialog [ref=e583]:
+    - generic [ref=e584]:
+      - generic [ref=e585]:
+        - paragraph [ref=e586]: Select Dates
+        - paragraph [ref=e587]: Tap check-in, then check-out
+      - button [ref=e588] [cursor=pointer]:
+        - img [ref=e589]
+    - generic [ref=e592]:
+      - generic [ref=e594]:
+        - generic [ref=e595]:
+          - generic [ref=e596]:
+            - generic [ref=e597]: June 2026
+            - button "Go to previous month" [ref=e598] [cursor=pointer]:
+              - img [ref=e599]
+          - grid "June 2026" [ref=e601]:
+            - rowgroup [ref=e602]:
+              - row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday" [ref=e603]:
+                - columnheader "Sunday" [ref=e604]: Su
+                - columnheader "Monday" [ref=e605]: Mo
+                - columnheader "Tuesday" [ref=e606]: Tu
+                - columnheader "Wednesday" [ref=e607]: We
+                - columnheader "Thursday" [ref=e608]: Th
+                - columnheader "Friday" [ref=e609]: Fr
+                - columnheader "Saturday" [ref=e610]: Sa
+            - rowgroup [ref=e611]:
+              - row "31 1 2 3 4 5 6" [ref=e612]:
+                - gridcell "31" [disabled] [ref=e613]:
+                  - generic [ref=e1135]: "31"
+                - gridcell "1" [disabled] [ref=e616]:
+                  - generic [ref=e1137]: "1"
+                - gridcell "2" [disabled] [ref=e619]:
+                  - generic [ref=e1139]: "2"
+                - gridcell "3" [disabled] [ref=e622]:
+                  - generic [ref=e1141]: "3"
+                - gridcell "4" [disabled] [ref=e625]:
+                  - generic [ref=e1143]: "4"
+                - gridcell "5" [disabled] [ref=e628]:
+                  - generic [ref=e1145]: "5"
+                - gridcell "6" [disabled] [ref=e631]:
+                  - generic [ref=e1147]: "6"
+              - row "7 8 9 10 11 12 13" [ref=e634]:
+                - gridcell "7" [disabled] [ref=e635]:
+                  - generic [ref=e1149]: "7"
+                - gridcell "8" [disabled] [ref=e638]:
+                  - generic [ref=e1151]: "8"
+                - gridcell "9" [disabled] [ref=e641]:
+                  - generic [ref=e1153]: "9"
+                - gridcell "10" [disabled] [ref=e644]:
+                  - generic [ref=e1155]: "10"
+                - gridcell "11" [disabled] [ref=e647]:
+                  - generic [ref=e1157]: "11"
+                - gridcell "12" [disabled] [ref=e650]:
+                  - generic [ref=e1159]: "12"
+                - gridcell "13" [disabled] [ref=e653]:
+                  - generic [ref=e1161]: "13"
+              - row "14 15 16 17 18 19 20" [ref=e656]:
+                - gridcell "14" [disabled] [ref=e657]:
+                  - generic [ref=e1163]: "14"
+                - gridcell "15" [disabled] [ref=e660]:
+                  - generic [ref=e1165]: "15"
+                - gridcell "16" [disabled] [ref=e663]:
+                  - generic [ref=e1167]: "16"
+                - gridcell "17" [disabled] [ref=e666]:
+                  - generic [ref=e1169]: "17"
+                - gridcell "18" [disabled] [ref=e669]:
+                  - generic [ref=e1171]: "18"
+                - gridcell "19" [disabled] [ref=e672]:
+                  - generic [ref=e1173]: "19"
+                - gridcell "20" [disabled] [ref=e675]:
+                  - generic [ref=e1175]: "20"
+              - row "21 22 ₹5.8k 23 ₹5.8k 24 ₹5.8k 25 ₹5.8k 26 ₹5.8k 27 ₹5.8k" [ref=e678]:
+                - gridcell "21" [disabled] [ref=e679]:
+                  - generic [ref=e1177]: "21"
+                - gridcell "22 ₹5.8k" [selected] [ref=e682] [cursor=pointer]:
+                  - generic [ref=e1178]:
+                    - generic [ref=e1179]: "22"
+                    - generic [ref=e1180]: ₹5.8k
+                - gridcell "23 ₹5.8k" [selected] [ref=e686] [cursor=pointer]:
+                  - generic [ref=e1181]:
+                    - generic [ref=e1182]: "23"
+                    - generic [ref=e1183]: ₹5.8k
+                - gridcell "24 ₹5.8k" [selected] [ref=e690] [cursor=pointer]:
+                  - generic [ref=e1184]:
+                    - generic [ref=e1185]: "24"
+                    - generic [ref=e1186]: ₹5.8k
+                - gridcell "25 ₹5.8k" [selected] [ref=e694] [cursor=pointer]:
+                  - generic [ref=e1187]:
+                    - generic [ref=e1188]: "25"
+                    - generic [ref=e1189]: ₹5.8k
+                - gridcell "26 ₹5.8k" [selected] [ref=e698] [cursor=pointer]:
+                  - generic [ref=e1190]:
+                    - generic [ref=e1191]: "26"
+                    - generic [ref=e1192]: ₹5.8k
+                - gridcell "27 ₹5.8k" [active] [selected] [ref=e702] [cursor=pointer]:
+                  - generic [ref=e1193]:
+                    - generic [ref=e1194]: "27"
+                    - generic [ref=e1195]: ₹5.8k
+              - row "28 ₹5.8k 29 ₹5.8k 30 ₹5.8k 1 ₹5.8k 2 ₹5.8k 3 ₹5.8k 4 ₹5.8k" [ref=e706]:
+                - gridcell "28 ₹5.8k" [ref=e707] [cursor=pointer]:
+                  - generic [ref=e1196]:
+                    - generic [ref=e1197]: "28"
+                    - generic [ref=e1198]: ₹5.8k
+                - gridcell "29 ₹5.8k" [ref=e711] [cursor=pointer]:
+                  - generic [ref=e1199]:
+                    - generic [ref=e1200]: "29"
+                    - generic [ref=e1201]: ₹5.8k
+                - gridcell "30 ₹5.8k" [ref=e715] [cursor=pointer]:
+                  - generic [ref=e1202]:
+                    - generic [ref=e1203]: "30"
+                    - generic [ref=e1204]: ₹5.8k
+                - gridcell "1 ₹5.8k" [ref=e719] [cursor=pointer]:
+                  - generic [ref=e1205]:
+                    - generic [ref=e1206]: "1"
+                    - generic [ref=e1207]: ₹5.8k
+                - gridcell "2 ₹5.8k" [ref=e723] [cursor=pointer]:
+                  - generic [ref=e1208]:
+                    - generic [ref=e1209]: "2"
+                    - generic [ref=e1210]: ₹5.8k
+                - gridcell "3 ₹5.8k" [ref=e727] [cursor=pointer]:
+                  - generic [ref=e1211]:
+                    - generic [ref=e1212]: "3"
+                    - generic [ref=e1213]: ₹5.8k
+                - gridcell "4 ₹5.8k" [ref=e731] [cursor=pointer]:
+                  - generic [ref=e1214]:
+                    - generic [ref=e1215]: "4"
+                    - generic [ref=e1216]: ₹5.8k
+        - generic [ref=e735]:
+          - generic [ref=e736]:
+            - generic [ref=e737]: July 2026
+            - button "Go to next month" [ref=e738] [cursor=pointer]:
+              - img [ref=e739]
+          - grid "July 2026" [ref=e741]:
+            - rowgroup [ref=e742]:
+              - row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday" [ref=e743]:
+                - columnheader "Sunday" [ref=e744]: Su
+                - columnheader "Monday" [ref=e745]: Mo
+                - columnheader "Tuesday" [ref=e746]: Tu
+                - columnheader "Wednesday" [ref=e747]: We
+                - columnheader "Thursday" [ref=e748]: Th
+                - columnheader "Friday" [ref=e749]: Fr
+                - columnheader "Saturday" [ref=e750]: Sa
+            - rowgroup [ref=e751]:
+              - row "28 ₹5.8k 29 ₹5.8k 30 ₹5.8k 1 ₹5.8k 2 ₹5.8k 3 ₹5.8k 4 ₹5.8k" [ref=e752]:
+                - gridcell "28 ₹5.8k" [ref=e753] [cursor=pointer]:
+                  - generic [ref=e1217]:
+                    - generic [ref=e1218]: "28"
+                    - generic [ref=e1219]: ₹5.8k
+                - gridcell "29 ₹5.8k" [ref=e757] [cursor=pointer]:
+                  - generic [ref=e1220]:
+                    - generic [ref=e1221]: "29"
+                    - generic [ref=e1222]: ₹5.8k
+                - gridcell "30 ₹5.8k" [ref=e761] [cursor=pointer]:
+                  - generic [ref=e1223]:
+                    - generic [ref=e1224]: "30"
+                    - generic [ref=e1225]: ₹5.8k
+                - gridcell "1 ₹5.8k" [ref=e765] [cursor=pointer]:
+                  - generic [ref=e1226]:
+                    - generic [ref=e1227]: "1"
+                    - generic [ref=e1228]: ₹5.8k
+                - gridcell "2 ₹5.8k" [ref=e769] [cursor=pointer]:
+                  - generic [ref=e1229]:
+                    - generic [ref=e1230]: "2"
+                    - generic [ref=e1231]: ₹5.8k
+                - gridcell "3 ₹5.8k" [ref=e773] [cursor=pointer]:
+                  - generic [ref=e1232]:
+                    - generic [ref=e1233]: "3"
+                    - generic [ref=e1234]: ₹5.8k
+                - gridcell "4 ₹5.8k" [ref=e777] [cursor=pointer]:
+                  - generic [ref=e1235]:
+                    - generic [ref=e1236]: "4"
+                    - generic [ref=e1237]: ₹5.8k
+              - row "5 ₹5.8k 6 ₹5.8k 7 ₹5.8k 8 ₹5.8k 9 ₹5.8k 10 ₹5.8k 11 ₹5.8k" [ref=e781]:
+                - gridcell "5 ₹5.8k" [ref=e782] [cursor=pointer]:
+                  - generic [ref=e1238]:
+                    - generic [ref=e1239]: "5"
+                    - generic [ref=e1240]: ₹5.8k
+                - gridcell "6 ₹5.8k" [ref=e786] [cursor=pointer]:
+                  - generic [ref=e1241]:
+                    - generic [ref=e1242]: "6"
+                    - generic [ref=e1243]: ₹5.8k
+                - gridcell "7 ₹5.8k" [ref=e790] [cursor=pointer]:
+                  - generic [ref=e1244]:
+                    - generic [ref=e1245]: "7"
+                    - generic [ref=e1246]: ₹5.8k
+                - gridcell "8 ₹5.8k" [ref=e794] [cursor=pointer]:
+                  - generic [ref=e1247]:
+                    - generic [ref=e1248]: "8"
+                    - generic [ref=e1249]: ₹5.8k
+                - gridcell "9 ₹5.8k" [ref=e798] [cursor=pointer]:
+                  - generic [ref=e1250]:
+                    - generic [ref=e1251]: "9"
+                    - generic [ref=e1252]: ₹5.8k
+                - gridcell "10 ₹5.8k" [ref=e802] [cursor=pointer]:
+                  - generic [ref=e1253]:
+                    - generic [ref=e1254]: "10"
+                    - generic [ref=e1255]: ₹5.8k
+                - gridcell "11 ₹5.8k" [ref=e806] [cursor=pointer]:
+                  - generic [ref=e1256]:
+                    - generic [ref=e1257]: "11"
+                    - generic [ref=e1258]: ₹5.8k
+              - row "12 ₹5.8k 13 ₹5.8k 14 ₹5.8k 15 ₹5.8k 16 ₹5.8k 17 ₹5.8k 18 ₹5.8k" [ref=e810]:
+                - gridcell "12 ₹5.8k" [ref=e811] [cursor=pointer]:
+                  - generic [ref=e1259]:
+                    - generic [ref=e1260]: "12"
+                    - generic [ref=e1261]: ₹5.8k
+                - gridcell "13 ₹5.8k" [ref=e815] [cursor=pointer]:
+                  - generic [ref=e1262]:
+                    - generic [ref=e1263]: "13"
+                    - generic [ref=e1264]: ₹5.8k
+                - gridcell "14 ₹5.8k" [ref=e819] [cursor=pointer]:
+                  - generic [ref=e1265]:
+                    - generic [ref=e1266]: "14"
+                    - generic [ref=e1267]: ₹5.8k
+                - gridcell "15 ₹5.8k" [ref=e823] [cursor=pointer]:
+                  - generic [ref=e1268]:
+                    - generic [ref=e1269]: "15"
+                    - generic [ref=e1270]: ₹5.8k
+                - gridcell "16 ₹5.8k" [ref=e827] [cursor=pointer]:
+                  - generic [ref=e1271]:
+                    - generic [ref=e1272]: "16"
+                    - generic [ref=e1273]: ₹5.8k
+                - gridcell "17 ₹5.8k" [ref=e831] [cursor=pointer]:
+                  - generic [ref=e1274]:
+                    - generic [ref=e1275]: "17"
+                    - generic [ref=e1276]: ₹5.8k
+                - gridcell "18 ₹5.8k" [ref=e835] [cursor=pointer]:
+                  - generic [ref=e1277]:
+                    - generic [ref=e1278]: "18"
+                    - generic [ref=e1279]: ₹5.8k
+              - row "19 ₹5.8k 20 ₹5.8k 21 ₹5.8k 22 ₹5.8k 23 ₹5.8k 24 ₹5.8k 25 ₹5.8k" [ref=e839]:
+                - gridcell "19 ₹5.8k" [ref=e840] [cursor=pointer]:
+                  - generic [ref=e1280]:
+                    - generic [ref=e1281]: "19"
+                    - generic [ref=e1282]: ₹5.8k
+                - gridcell "20 ₹5.8k" [ref=e844] [cursor=pointer]:
+                  - generic [ref=e1283]:
+                    - generic [ref=e1284]: "20"
+                    - generic [ref=e1285]: ₹5.8k
+                - gridcell "21 ₹5.8k" [ref=e848] [cursor=pointer]:
+                  - generic [ref=e1286]:
+                    - generic [ref=e1287]: "21"
+                    - generic [ref=e1288]: ₹5.8k
+                - gridcell "22 ₹5.8k" [ref=e852] [cursor=pointer]:
+                  - generic [ref=e1289]:
+                    - generic [ref=e1290]: "22"
+                    - generic [ref=e1291]: ₹5.8k
+                - gridcell "23 ₹5.8k" [ref=e856] [cursor=pointer]:
+                  - generic [ref=e1292]:
+                    - generic [ref=e1293]: "23"
+                    - generic [ref=e1294]: ₹5.8k
+                - gridcell "24 ₹5.8k" [ref=e860] [cursor=pointer]:
+                  - generic [ref=e1295]:
+                    - generic [ref=e1296]: "24"
+                    - generic [ref=e1297]: ₹5.8k
+                - gridcell "25 ₹5.8k" [ref=e864] [cursor=pointer]:
+                  - generic [ref=e1298]:
+                    - generic [ref=e1299]: "25"
+                    - generic [ref=e1300]: ₹5.8k
+              - row "26 ₹5.8k 27 ₹5.8k 28 ₹5.8k 29 ₹5.8k 30 ₹5.8k 31 ₹5.8k 1" [ref=e868]:
+                - gridcell "26 ₹5.8k" [ref=e869] [cursor=pointer]:
+                  - generic [ref=e1301]:
+                    - generic [ref=e1302]: "26"
+                    - generic [ref=e1303]: ₹5.8k
+                - gridcell "27 ₹5.8k" [ref=e873] [cursor=pointer]:
+                  - generic [ref=e1304]:
+                    - generic [ref=e1305]: "27"
+                    - generic [ref=e1306]: ₹5.8k
+                - gridcell "28 ₹5.8k" [ref=e877] [cursor=pointer]:
+                  - generic [ref=e1307]:
+                    - generic [ref=e1308]: "28"
+                    - generic [ref=e1309]: ₹5.8k
+                - gridcell "29 ₹5.8k" [ref=e881] [cursor=pointer]:
+                  - generic [ref=e1310]:
+                    - generic [ref=e1311]: "29"
+                    - generic [ref=e1312]: ₹5.8k
+                - gridcell "30 ₹5.8k" [ref=e885] [cursor=pointer]:
+                  - generic [ref=e1313]:
+                    - generic [ref=e1314]: "30"
+                    - generic [ref=e1315]: ₹5.8k
+                - gridcell "31 ₹5.8k" [ref=e889] [cursor=pointer]:
+                  - generic [ref=e1316]:
+                    - generic [ref=e1317]: "31"
+                    - generic [ref=e1318]: ₹5.8k
+                - gridcell "1" [ref=e893] [cursor=pointer]:
+                  - generic [ref=e1320]: "1"
+      - generic [ref=e896]:
+        - generic [ref=e897]: Sold
+        - text: = No rooms · From-price per night · taxes & extra guests may apply

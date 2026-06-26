@@ -1,0 +1,83 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e11]:
+          - paragraph [ref=e12]: Staybooker
+          - paragraph [ref=e13]: Admin Console
+      - navigation [ref=e14]:
+        - generic [ref=e15]:
+          - paragraph [ref=e16]: Management
+          - generic [ref=e17]:
+            - button "Properties" [ref=e18] [cursor=pointer]:
+              - img [ref=e19]
+              - generic [ref=e23]: Properties
+            - button "Users" [ref=e24] [cursor=pointer]:
+              - img [ref=e25]
+              - generic [ref=e30]: Users
+      - generic [ref=e32]:
+        - generic [ref=e33]: T
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: toufiq revmerito
+          - paragraph [ref=e36]: tech.revmerito@gmail.com
+    - generic [ref=e37]:
+      - banner [ref=e38]:
+        - generic [ref=e39]:
+          - button [ref=e40] [cursor=pointer]:
+            - img
+          - generic [ref=e42]: Properties
+        - generic [ref=e43]:
+          - button [ref=e44] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e45] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e46]:
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - heading "Properties" [level=1] [ref=e51]
+              - paragraph [ref=e52]: 7 total · 0 active
+            - generic [ref=e53]:
+              - textbox "Search by name, slug, email…" [ref=e55]: heritage
+              - button "Refresh" [ref=e56] [cursor=pointer]:
+                - img
+                - text: Refresh
+          - generic [ref=e58]:
+            - table [ref=e60]:
+              - rowgroup [ref=e61]:
+                - row "Property Status Actions" [ref=e62]:
+                  - columnheader [ref=e63]:
+                    - button [ref=e64] [cursor=pointer]:
+                      - img [ref=e65]
+                  - columnheader "Property" [ref=e67] [cursor=pointer]:
+                    - text: Property
+                    - img [ref=e233]
+                  - columnheader "Status" [ref=e70] [cursor=pointer]
+                  - columnheader "Actions" [ref=e71]
+              - rowgroup [ref=e72]:
+                - row "The Heritage social.revmerito@gmail.com Active Login As" [ref=e161]:
+                  - cell [ref=e162]:
+                    - button [ref=e163] [cursor=pointer]:
+                      - img [ref=e164]
+                  - cell "The Heritage social.revmerito@gmail.com" [ref=e166]:
+                    - generic [ref=e167]:
+                      - img [ref=e169]
+                      - generic [ref=e173]:
+                        - button "The Heritage" [ref=e174] [cursor=pointer]
+                        - paragraph [ref=e175]: social.revmerito@gmail.com
+                  - cell "Active" [ref=e176]:
+                    - generic [ref=e179]: Active
+                  - cell "Login As" [ref=e180]:
+                    - button "Login As" [ref=e182] [cursor=pointer]:
+                      - img
+                      - text: Login As
+            - generic [ref=e227]:
+              - generic [ref=e228]: Showing 1 of 1 properties
+              - button "Export CSV" [active] [ref=e229] [cursor=pointer]:
+                - img [ref=e230]
+                - text: Export CSV

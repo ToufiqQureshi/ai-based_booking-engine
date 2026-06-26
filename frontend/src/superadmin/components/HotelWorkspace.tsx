@@ -254,7 +254,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
             toast.success(paused ? 'Property paused' : 'Property unpaused');
             qc.invalidateQueries({ queryKey: ['superadmin-hotels'] });
         },
-        onError: () => toast.error('Failed'),
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed'),
     });
 
     const disableMutation = useMutation({
@@ -263,13 +263,22 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
             toast.success(active ? 'Hotel enabled' : 'Hotel locked');
             qc.invalidateQueries({ queryKey: ['superadmin-hotels'] });
         },
-        onError: () => toast.error('Failed'),
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed'),
     });
 
     const deleteMutation = useMutation({
         mutationFn: () => apiClient.delete(`/superadmin/hotels/${hotel.id}`),
         onSuccess: () => { toast.success('Hotel permanently deleted'); qc.invalidateQueries({ queryKey: ['superadmin-hotels'] }); onBack(); },
-        onError: () => toast.error('Failed to delete'),
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to delete'),
+    });
+
+    const deleteUserMutation = useMutation({
+        mutationFn: (userId: string) => apiClient.delete(`/superadmin/hotels/${hotel.id}/users/${userId}`),
+        onSuccess: () => {
+            toast.success('User deleted successfully');
+            qc.invalidateQueries({ queryKey: ['superadmin-users'] });
+        },
+        onError: (err: any) => toast.error(err?.response?.data?.detail || err?.message || 'Failed to delete user'),
     });
 
     const healthStatus = health?.health_status ?? 'loading';
@@ -477,6 +486,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                         <th className="text-left py-2.5 px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Email</th>
                                         <th className="text-left py-2.5 px-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Role</th>
                                         <th className="text-left py-2.5 pr-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
+                                        <th className="text-right py-2.5 pr-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -492,6 +502,17 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                             <td className="py-3 pr-4">
                                                 <span className={cn("w-1.5 h-1.5 rounded-full inline-block mr-1.5", u.is_active ? "bg-emerald-500" : "bg-red-500")} />
                                                 <span className="text-xs">{u.is_active ? 'Active' : 'Inactive'}</span>
+                                            </td>
+                                            <td className="py-3 pr-4 text-right">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-7 w-7 text-red-500 hover:bg-red-100 dark:hover:bg-red-950/30" 
+                                                    onClick={() => { if (window.confirm(`Remove ${u.name} from this hotel? Their account will not be deleted.`)) deleteUserMutation.mutate(u.id); }}
+                                                    disabled={deleteUserMutation.isPending}
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))}
@@ -509,7 +530,8 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                 </DialogDescription>
                             </DialogHeader>
 
-                            <div className="space-y-4 py-4">
+                            <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>
+                                <div className="space-y-4 py-4">
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">
                                         Full Name
@@ -529,6 +551,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     <Input
                                         type="email"
                                         placeholder="john@example.com"
+                                        autoComplete="off"
                                         className="h-11 bg-muted/20 border-border rounded-xl font-medium text-foreground"
                                         value={addUserEmail}
                                         onChange={(e) => setAddUserEmail(e.target.value)}
@@ -542,6 +565,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     <Input
                                         type="password"
                                         placeholder="Min 6 characters"
+                                        autoComplete="new-password"
                                         className="h-11 bg-muted/20 border-border rounded-xl font-medium text-foreground"
                                         value={addUserPassword}
                                         onChange={(e) => setAddUserPassword(e.target.value)}
@@ -564,6 +588,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     </Select>
                                 </div>
                             </div>
+                            </form>
 
                             <DialogFooter className="flex gap-3">
                                 <Button
@@ -825,7 +850,15 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
                                     hotel.is_paused ? "text-emerald-600 border-emerald-300 hover:bg-emerald-50" :
                                     "text-amber-600 border-amber-300 hover:bg-amber-50"
                                 )}
-                                onClick={() => pauseMutation.mutate(!hotel.is_paused)}
+                                onClick={() => {
+                                    if (!hotel.is_paused) {
+                                        if (window.confirm("Are you sure you want to pause all online services for this hotel? Guests will be locked out.")) {
+                                            pauseMutation.mutate(!hotel.is_paused);
+                                        }
+                                    } else {
+                                        pauseMutation.mutate(!hotel.is_paused);
+                                    }
+                                }}
                                 disabled={pauseMutation.isPending}
                             >
                                 {hotel.is_paused

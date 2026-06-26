@@ -1,0 +1,93 @@
+- generic:
+  - generic:
+    - list
+    - region "Notifications alt+T"
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - img
+          - generic:
+            - paragraph: Staybooker
+            - paragraph: Admin Console
+        - navigation:
+          - generic:
+            - paragraph: Management
+            - generic:
+              - button:
+                - img
+                - generic: Properties
+              - button:
+                - img
+                - generic: Users
+        - generic:
+          - generic:
+            - generic: T
+            - generic:
+              - paragraph: toufiq revmerito
+              - paragraph: tech.revmerito@gmail.com
+      - generic:
+        - banner:
+          - generic:
+            - button:
+              - img
+            - generic:
+              - generic: Users
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+              - text: Sign out
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=3]: Staybooker Core Team
+                    - paragraph: Manage internal Super Admins with full platform access.
+                  - generic:
+                    - generic:
+                      - img
+                      - textbox:
+                        - /placeholder: Filter by email address...
+                    - button:
+                      - img
+                      - text: Add Employee
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                        - generic:
+                          - generic: Super Admin
+                          - generic: Active
+                          - button [expanded]:
+                            - img
+                      - generic:
+                        - paragraph: toufiq revmerito
+                        - paragraph: tech.revmerito@gmail.com
+                        - generic:
+                          - img
+                          - generic: Staybooker Platform
+                    - generic:
+                      - generic: "Joined:"
+                      - generic: 18 Apr 2026
+  - menu [active] [ref=e107]:
+    - generic [ref=e108]: User Actions
+    - separator [ref=e109]
+    - generic [ref=e110]: Change Role
+    - menuitem "Super Admin" [ref=e111] [cursor=pointer]
+    - menuitem "Owner" [ref=e112] [cursor=pointer]
+    - menuitem "Manager" [ref=e113] [cursor=pointer]
+    - menuitem "Staff" [ref=e114] [cursor=pointer]
+    - separator [ref=e115]
+    - menuitem "Suspend Account" [ref=e116] [cursor=pointer]:
+      - img [ref=e117]
+      - generic [ref=e121]: Suspend Account
+    - separator [ref=e122]
+    - menuitem "Delete Account" [ref=e123] [cursor=pointer]:
+      - img [ref=e124]
+      - generic [ref=e127]: Delete Account

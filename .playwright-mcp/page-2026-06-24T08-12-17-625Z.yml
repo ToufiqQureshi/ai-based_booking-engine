@@ -1,0 +1,189 @@
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e39]:
+    - banner [ref=e40]:
+      - generic [ref=e41]:
+        - button [ref=e42] [cursor=pointer]:
+          - img
+        - generic [ref=e43]:
+          - generic [ref=e44]: Properties
+          - img [ref=e310]
+          - generic [ref=e312]: powerhouse
+      - generic [ref=e45]:
+        - button [ref=e46] [cursor=pointer]:
+          - img
+        - button "Sign out" [ref=e47] [cursor=pointer]:
+          - img
+          - text: Sign out
+    - main [ref=e48]:
+      - generic [ref=e313]:
+        - generic [ref=e314]:
+          - generic [ref=e315]:
+            - button [ref=e316] [cursor=pointer]:
+              - img
+            - generic [ref=e317]:
+              - img [ref=e319]
+              - generic [ref=e323]:
+                - heading "powerhouse" [level=1] [ref=e324]
+                - paragraph [ref=e325]: powerhouse
+            - generic [ref=e326]: Active
+          - button "Login as Owner" [ref=e327] [cursor=pointer]:
+            - img
+            - text: Login as Owner
+        - generic [ref=e328]:
+          - tablist [ref=e329]:
+            - tab "Features" [ref=e330] [cursor=pointer]
+            - tab "Integrations" [ref=e331] [cursor=pointer]
+            - tab "Permissions" [active] [selected] [ref=e332] [cursor=pointer]
+            - tab "Users" [ref=e333] [cursor=pointer]
+            - tab "Danger Zone" [ref=e334] [cursor=pointer]
+          - tabpanel "Permissions" [ref=e527]:
+            - generic [ref=e528]:
+              - generic [ref=e529]:
+                - heading "Granular Role-Based Permissions" [level=3] [ref=e530]
+                - paragraph [ref=e531]: Configure which pages and sections are accessible by each user role within this hotel property.
+              - generic [ref=e532]:
+                - generic [ref=e533]:
+                  - generic [ref=e534]:
+                    - generic [ref=e535]: OWNER
+                    - generic [ref=e536]: 14 allowed
+                  - generic [ref=e537]:
+                    - generic [ref=e538] [cursor=pointer]:
+                      - checkbox "Dashboard" [checked] [ref=e539]
+                      - generic [ref=e540]: Dashboard
+                    - generic [ref=e541] [cursor=pointer]:
+                      - checkbox "Analytics" [checked] [ref=e542]
+                      - generic [ref=e543]: Analytics
+                    - generic [ref=e544] [cursor=pointer]:
+                      - checkbox "AI Chat Agent" [checked] [ref=e545]
+                      - generic [ref=e546]: AI Chat Agent
+                    - generic [ref=e547] [cursor=pointer]:
+                      - checkbox "Rooms" [checked] [ref=e548]
+                      - generic [ref=e549]: Rooms
+                    - generic [ref=e550] [cursor=pointer]:
+                      - checkbox "Rates" [checked] [ref=e551]
+                      - generic [ref=e552]: Rates
+                    - generic [ref=e553] [cursor=pointer]:
+                      - checkbox "Availability" [checked] [ref=e554]
+                      - generic [ref=e555]: Availability
+                    - generic [ref=e556] [cursor=pointer]:
+                      - checkbox "Bookings" [checked] [ref=e557]
+                      - generic [ref=e558]: Bookings
+                    - generic [ref=e559] [cursor=pointer]:
+                      - checkbox "Guests" [checked] [ref=e560]
+                      - generic [ref=e561]: Guests
+                    - generic [ref=e562] [cursor=pointer]:
+                      - checkbox "Payments" [checked] [ref=e563]
+                      - generic [ref=e564]: Payments
+                    - generic [ref=e565] [cursor=pointer]:
+                      - checkbox "Addons" [checked] [ref=e566]
+                      - generic [ref=e567]: Addons
+                    - generic [ref=e568] [cursor=pointer]:
+                      - checkbox "Amenities" [checked] [ref=e569]
+                      - generic [ref=e570]: Amenities
+                    - generic [ref=e571] [cursor=pointer]:
+                      - checkbox "Channel Settings" [checked] [ref=e572]
+                      - generic [ref=e573]: Channel Settings
+                    - generic [ref=e574] [cursor=pointer]:
+                      - checkbox "Integrations" [checked] [ref=e575]
+                      - generic [ref=e576]: Integrations
+                    - generic [ref=e577] [cursor=pointer]:
+                      - checkbox "Settings" [checked] [ref=e578]
+                      - generic [ref=e579]: Settings
+                - generic [ref=e580]:
+                  - generic [ref=e581]:
+                    - generic [ref=e582]: MANAGER
+                    - generic [ref=e583]: 10 allowed
+                  - generic [ref=e584]:
+                    - generic [ref=e585] [cursor=pointer]:
+                      - checkbox "Dashboard" [checked] [ref=e586]
+                      - generic [ref=e587]: Dashboard
+                    - generic [ref=e588] [cursor=pointer]:
+                      - checkbox "Analytics" [checked] [ref=e589]
+                      - generic [ref=e590]: Analytics
+                    - generic [ref=e591] [cursor=pointer]:
+                      - checkbox "AI Chat Agent" [ref=e592]
+                      - generic [ref=e593]: AI Chat Agent
+                    - generic [ref=e594] [cursor=pointer]:
+                      - checkbox "Rooms" [checked] [ref=e595]
+                      - generic [ref=e596]: Rooms
+                    - generic [ref=e597] [cursor=pointer]:
+                      - checkbox "Rates" [checked] [ref=e598]
+                      - generic [ref=e599]: Rates
+                    - generic [ref=e600] [cursor=pointer]:
+                      - checkbox "Availability" [checked] [ref=e601]
+                      - generic [ref=e602]: Availability
+                    - generic [ref=e603] [cursor=pointer]:
+                      - checkbox "Bookings" [checked] [ref=e604]
+                      - generic [ref=e605]: Bookings
+                    - generic [ref=e606] [cursor=pointer]:
+                      - checkbox "Guests" [checked] [ref=e607]
+                      - generic [ref=e608]: Guests
+                    - generic [ref=e609] [cursor=pointer]:
+                      - checkbox "Payments" [checked] [ref=e610]
+                      - generic [ref=e611]: Payments
+                    - generic [ref=e612] [cursor=pointer]:
+                      - checkbox "Addons" [ref=e613]
+                      - generic [ref=e614]: Addons
+                    - generic [ref=e615] [cursor=pointer]:
+                      - checkbox "Amenities" [checked] [ref=e616]
+                      - generic [ref=e617]: Amenities
+                    - generic [ref=e618] [cursor=pointer]:
+                      - checkbox "Channel Settings" [ref=e619]
+                      - generic [ref=e620]: Channel Settings
+                    - generic [ref=e621] [cursor=pointer]:
+                      - checkbox "Integrations" [ref=e622]
+                      - generic [ref=e623]: Integrations
+                    - generic [ref=e624] [cursor=pointer]:
+                      - checkbox "Settings" [checked] [ref=e625]
+                      - generic [ref=e626]: Settings
+                - generic [ref=e627]:
+                  - generic [ref=e628]:
+                    - generic [ref=e629]: STAFF
+                    - generic [ref=e630]: 3 allowed
+                  - generic [ref=e631]:
+                    - generic [ref=e632] [cursor=pointer]:
+                      - checkbox "Dashboard" [ref=e633]
+                      - generic [ref=e634]: Dashboard
+                    - generic [ref=e635] [cursor=pointer]:
+                      - checkbox "Analytics" [ref=e636]
+                      - generic [ref=e637]: Analytics
+                    - generic [ref=e638] [cursor=pointer]:
+                      - checkbox "AI Chat Agent" [ref=e639]
+                      - generic [ref=e640]: AI Chat Agent
+                    - generic [ref=e641] [cursor=pointer]:
+                      - checkbox "Rooms" [ref=e642]
+                      - generic [ref=e643]: Rooms
+                    - generic [ref=e644] [cursor=pointer]:
+                      - checkbox "Rates" [ref=e645]
+                      - generic [ref=e646]: Rates
+                    - generic [ref=e647] [cursor=pointer]:
+                      - checkbox "Availability" [checked] [ref=e648]
+                      - generic [ref=e649]: Availability
+                    - generic [ref=e650] [cursor=pointer]:
+                      - checkbox "Bookings" [checked] [ref=e651]
+                      - generic [ref=e652]: Bookings
+                    - generic [ref=e653] [cursor=pointer]:
+                      - checkbox "Guests" [checked] [ref=e654]
+                      - generic [ref=e655]: Guests
+                    - generic [ref=e656] [cursor=pointer]:
+                      - checkbox "Payments" [ref=e657]
+                      - generic [ref=e658]: Payments
+                    - generic [ref=e659] [cursor=pointer]:
+                      - checkbox "Addons" [ref=e660]
+                      - generic [ref=e661]: Addons
+                    - generic [ref=e662] [cursor=pointer]:
+                      - checkbox "Amenities" [ref=e663]
+                      - generic [ref=e664]: Amenities
+                    - generic [ref=e665] [cursor=pointer]:
+                      - checkbox "Channel Settings" [ref=e666]
+                      - generic [ref=e667]: Channel Settings
+                    - generic [ref=e668] [cursor=pointer]:
+                      - checkbox "Integrations" [ref=e669]
+                      - generic [ref=e670]: Integrations
+                    - generic [ref=e671] [cursor=pointer]:
+                      - checkbox "Settings" [ref=e672]
+                      - generic [ref=e673]: Settings
+              - button "Save Role Permissions" [ref=e674] [cursor=pointer]

@@ -14,7 +14,7 @@ from pydantic import BaseModel, EmailStr
 from sqlmodel import select
 
 from app.core.auth.deps import CurrentUser, DbSession
-from app.core.auth.vault import store_settings_secret, store_column_secret
+from app.core.auth.vault import store_settings_secret, store_column_secret, resolve_column_secret
 from app.core.utils.config import get_settings
 from app.system.audit import AuditLog
 from app.brand_console.hotel import Hotel, HotelUpdate, HotelSettings
@@ -386,6 +386,35 @@ async def update_hotel_status(
         setattr(hotel, key, value)
     hotel.updated_at = datetime.utcnow()
     session.add(hotel)
+
+    # Sync AI config changes to integration_settings so they take priority
+    # over any previous hotelier-configured values.
+    ai_fields_changed = set(db_data.keys()) & {
+        "ai_provider", "ai_model", "ai_base_url", "ai_max_tokens"
+    }
+    ai_key_changed = "ai_api_key" in secret_changes
+
+    if ai_fields_changed or ai_key_changed:
+        from app.integration.integration import IntegrationSettings
+        from sqlmodel import select as _select
+        int_res = await session.execute(
+            _select(IntegrationSettings).where(IntegrationSettings.hotel_id == hotel_id)
+        )
+        int_settings = int_res.scalar_one_or_none()
+        if int_settings is not None:
+            for f in ai_fields_changed:
+                setattr(int_settings, f, db_data[f])
+            if ai_key_changed:
+                # Mirror the secret to integration_settings vault so it has priority
+                new_key = await resolve_column_secret(
+                    session, hotel, "ai_api_key", "ai_api_key_vault_id"
+                )
+                if new_key is not None:
+                    await store_column_secret(
+                        session, int_settings, "ai_api_key", "ai_api_key_vault_id",
+                        new_key, f"hotel_{hotel_id}_int_ai_api_key",
+                    )
+            session.add(int_settings)
 
     # Audit secret updates by field name only — never the value.
     all_changes = changes + [f"{k}: <updated>" for k in secret_changes]

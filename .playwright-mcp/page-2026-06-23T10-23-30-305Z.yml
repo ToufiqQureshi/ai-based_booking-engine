@@ -1,0 +1,289 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e9]: S
+          - generic [ref=e10]: Staybooker
+          - generic [ref=e11]: · Secure Booking
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e15]: 256-bit SSL Secured
+        - generic [ref=e16]:
+          - button "🇬🇧 English" [ref=e17] [cursor=pointer]:
+            - generic [ref=e18]: 🇬🇧
+            - generic [ref=e19]: English
+            - img [ref=e20]
+          - button "INR" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]: INR
+            - img [ref=e24]
+    - main [ref=e26]:
+      - generic [ref=e734]:
+        - generic [ref=e737]:
+          - generic [ref=e739] [cursor=pointer]:
+            - img [ref=e741]
+            - generic [ref=e743]: Search
+          - generic [ref=e745] [cursor=pointer]:
+            - img [ref=e747]
+            - generic [ref=e749]: Select Rooms
+          - generic [ref=e751]:
+            - img [ref=e753]
+            - generic [ref=e755]: Enhance Stay
+          - generic [ref=e757]:
+            - generic [ref=e758]: "4"
+            - generic [ref=e759]: Guest Info
+        - generic [ref=e760]:
+          - generic [ref=e761]:
+            - generic [ref=e762]:
+              - generic [ref=e763]:
+                - img [ref=e764]
+                - text: AI-Powered Booking Engine
+              - heading "Secure Your Stay" [level=1] [ref=e766]
+              - paragraph [ref=e767]: Complete your reservation in just a few steps.
+            - generic [ref=e768]:
+              - img [ref=e770]
+              - generic [ref=e773]:
+                - paragraph [ref=e774]: Guaranteed
+                - paragraph [ref=e775]: Secure Checkout
+          - generic [ref=e776]:
+            - generic [ref=e777]:
+              - generic [ref=e778]:
+                - generic:
+                  - img
+                - generic [ref=e779]:
+                  - img [ref=e781]
+                  - generic [ref=e784]:
+                    - heading "Guest Information" [level=2] [ref=e785]
+                    - paragraph [ref=e786]: Please enter the details of the primary guest.
+                - generic [ref=e787]:
+                  - generic [ref=e788]:
+                    - generic [ref=e789]:
+                      - text: First Name
+                      - textbox "First Name" [ref=e790]:
+                        - /placeholder: e.g. John
+                    - generic [ref=e791]:
+                      - text: Last Name
+                      - textbox "Last Name" [ref=e792]:
+                        - /placeholder: e.g. Doe
+                  - generic [ref=e793]:
+                    - generic [ref=e794]:
+                      - text: Email Address
+                      - generic [ref=e795]:
+                        - img [ref=e796]
+                        - textbox "Email Address" [ref=e799]:
+                          - /placeholder: john@example.com
+                    - generic [ref=e800]:
+                      - text: Phone Number
+                      - generic [ref=e801]:
+                        - img [ref=e802]
+                        - textbox "Phone Number" [ref=e804]:
+                          - /placeholder: +91 98765 43210
+                  - generic [ref=e805]:
+                    - text: Special Requests
+                    - textbox "Special Requests" [ref=e806]:
+                      - /placeholder: Any specific preferences? (Optional)
+              - generic [ref=e807]:
+                - generic:
+                  - img
+                - generic [ref=e808]:
+                  - img [ref=e810]
+                  - generic [ref=e816]:
+                    - heading "Enhance Your Stay" [level=2] [ref=e817]
+                    - paragraph [ref=e818]: Add exclusive experiences, activities, and dining options to your booking.
+                - generic [ref=e819]:
+                  - generic [ref=e820] [cursor=pointer]:
+                    - img [ref=e822]
+                    - generic [ref=e824]:
+                      - heading "candle light dinner" [level=4] [ref=e825]
+                      - paragraph [ref=e826]: ₹4,000
+                    - img [ref=e828]
+                  - generic [ref=e829] [cursor=pointer]:
+                    - img [ref=e831]
+                    - generic [ref=e833]:
+                      - heading "Spa" [level=4] [ref=e834]
+                      - paragraph [ref=e835]: ₹3,000
+                    - img [ref=e837]
+                  - generic [ref=e838] [cursor=pointer]:
+                    - img [ref=e840]
+                    - generic [ref=e842]:
+                      - heading "adventure safari" [level=4] [ref=e843]
+                      - paragraph [ref=e844]: ₹4,000
+                    - img [ref=e846]
+                  - generic [ref=e847] [cursor=pointer]:
+                    - img [ref=e849]
+                    - generic [ref=e851]:
+                      - heading "Late Check-out" [level=4] [ref=e852]
+                      - paragraph [ref=e853]: ₹500
+                    - img [ref=e855]
+                  - generic [ref=e856] [cursor=pointer]:
+                    - img [ref=e858]
+                    - generic [ref=e860]:
+                      - heading "Breakfast Package" [level=4] [ref=e861]
+                      - paragraph [ref=e862]: ₹350
+                    - img [ref=e864]
+                  - generic [ref=e865] [cursor=pointer]:
+                    - generic [ref=e866]:
+                      - img [ref=e867]
+                      - img "Airport pick" [ref=e869]
+                    - generic [ref=e870]:
+                      - heading "Airport pick" [level=4] [ref=e871]
+                      - paragraph [ref=e872]: ₹2,000
+                    - img [ref=e874]
+              - generic [ref=e875]:
+                - generic [ref=e876]:
+                  - img [ref=e878]
+                  - generic [ref=e881]:
+                    - heading "Payment" [level=2] [ref=e882]
+                    - paragraph [ref=e883]: Powered by Razorpay • 256-bit SSL Encrypted
+                - generic [ref=e885]:
+                  - paragraph [ref=e886]: Choose how you'd like to pay
+                  - generic [ref=e887] [cursor=pointer]:
+                    - radio "Pay Now (Online) Instant Confirm Pay securely via Credit/Debit Card, UPI, or Net Banking. Booking confirmed instantly. Visa Mastercard + UPI, NetBanking" [checked] [ref=e889]
+                    - generic [ref=e890]:
+                      - generic [ref=e891]:
+                        - heading "Pay Now (Online)" [level=3] [ref=e892]
+                        - generic [ref=e893]: Instant Confirm
+                      - paragraph [ref=e894]: Pay securely via Credit/Debit Card, UPI, or Net Banking. Booking confirmed instantly.
+                      - generic [ref=e895]:
+                        - img "Visa" [ref=e896]
+                        - img "Mastercard" [ref=e897]
+                        - generic [ref=e898]: + UPI, NetBanking
+                  - generic [ref=e899] [cursor=pointer]:
+                    - radio "Pay at Property No Charge Today No charges today. Your booking is guaranteed and payment is collected at the hotel." [ref=e901]
+                    - generic [ref=e902]:
+                      - generic [ref=e903]:
+                        - heading "Pay at Property" [level=3] [ref=e904]
+                        - generic [ref=e905]: No Charge Today
+                      - paragraph [ref=e906]: No charges today. Your booking is guaranteed and payment is collected at the hotel.
+            - generic [ref=e907]:
+              - generic [ref=e908]:
+                - generic [ref=e909]:
+                  - img "Room" [ref=e910]
+                  - generic [ref=e912]:
+                    - heading "Deluxe" [level=3] [ref=e913]
+                    - paragraph [ref=e914]: Deluxe
+                    - generic [ref=e916]: EP
+                - generic [ref=e917]:
+                  - generic [ref=e918]:
+                    - img [ref=e920]
+                    - generic [ref=e922]:
+                      - paragraph [ref=e923]: Check-in
+                      - paragraph [ref=e924]: Jun 23
+                      - paragraph [ref=e925]: 2:00 PM
+                    - generic [ref=e926]:
+                      - paragraph [ref=e927]: Check-out
+                      - paragraph [ref=e928]: Jun 24
+                      - paragraph [ref=e929]: 11:00 AM
+                  - button "Modify Stay Dates" [ref=e930] [cursor=pointer]
+                  - generic [ref=e931]:
+                    - generic [ref=e933]:
+                      - generic [ref=e934]:
+                        - generic [ref=e935]: Deluxe
+                        - generic [ref=e936]: EP • (1 night)
+                      - generic [ref=e937]: ₹5,000
+                    - generic [ref=e938]:
+                      - generic [ref=e939]:
+                        - generic [ref=e940]: Tax Breakdown (GST)
+                        - generic [ref=e941]: Extra
+                      - generic [ref=e942]:
+                        - generic [ref=e943]:
+                          - generic [ref=e944]: Room GST (0% · exclusive)
+                          - generic [ref=e945]: ₹0
+                        - generic [ref=e946]:
+                          - generic [ref=e947]: Total Taxes
+                          - generic [ref=e948]: ₹0
+                  - generic [ref=e949]:
+                    - generic [ref=e951]: Promo Code
+                    - generic [ref=e952]:
+                      - textbox "Promo Code" [ref=e953]:
+                        - /placeholder: ENTER CODE
+                      - button "Apply" [disabled]
+                  - generic [ref=e954]:
+                    - generic [ref=e955]:
+                      - generic [ref=e956]:
+                        - generic [ref=e957]: Base Subtotal
+                        - generic [ref=e958]: ₹5,000
+                      - generic [ref=e959]:
+                        - generic [ref=e960]: Taxes
+                        - generic [ref=e961]: + ₹0
+                    - generic [ref=e962]:
+                      - generic [ref=e963]: Total to Pay
+                      - generic [ref=e965]: ₹5,000
+                    - paragraph [ref=e966]: Exclusive of Taxes (added above)
+                  - button "Finish Booking" [ref=e967] [cursor=pointer]:
+                    - text: Finish Booking
+                    - img
+              - generic [ref=e968]:
+                - generic [ref=e969]:
+                  - generic [ref=e970]:
+                    - img [ref=e971]
+                    - generic [ref=e974]: 256-Bit SSL Secured
+                  - generic [ref=e975]:
+                    - img "Visa" [ref=e976]
+                    - img "Mastercard" [ref=e977]
+                - paragraph [ref=e978]:
+                  - text: By proceeding, you agree to our
+                  - link "Terms" [ref=e979] [cursor=pointer]:
+                    - /url: "#"
+                  - text: "&"
+                  - link "Privacy Policy" [ref=e980] [cursor=pointer]:
+                    - /url: "#"
+                  - text: .
+    - generic [ref=e493]:
+      - generic [ref=e495]:
+        - generic [ref=e496]:
+          - img "powerhouse" [ref=e499]
+          - generic [ref=e500]:
+            - generic [ref=e501]:
+              - heading "powerhouse" [level=2] [ref=e502]
+              - generic [ref=e503]:
+                - img [ref=e504]
+                - generic [ref=e507]: vasai, maharashtra
+              - paragraph [ref=e508]: Nestled in a prime location, our hotel offers a perfect blend of comfort, elegance, and modern hospitality. Designed for both business and leisure travelers, we provide well-appointed rooms, premium amenities, seamless service, and a relaxing atmosphere to ensure a memorable stay. Guests can enjoy spacious accommodations, high-speed Wi-Fi, in-room dining, and easy access to nearby attractions and transportation hubs. Whether you are visiting for work, vacation, or a weekend getaway, we are committed to delivering exceptional comfort and personalized experiences throughout your stay.
+            - generic [ref=e509]:
+              - link "Home" [ref=e510] [cursor=pointer]:
+                - /url: https://thelagoonaresort.com
+              - button "Privacy Policy" [ref=e511] [cursor=pointer]
+              - button "Payment Terms" [ref=e512] [cursor=pointer]
+        - generic [ref=e513]:
+          - generic [ref=e514]:
+            - img [ref=e515]
+            - heading "Important Info" [level=3] [ref=e518]
+          - generic [ref=e519]:
+            - generic [ref=e520]:
+              - paragraph [ref=e521]: Cancellation Policy
+              - paragraph [ref=e523]: Free cancellation up to 24 hours before check-in. Cancellations made within 24 hours of arrival may incur a one-night charge.
+            - generic [ref=e524]:
+              - paragraph [ref=e525]: Payment Policy
+              - paragraph [ref=e527]: Guests may pay online at the time of booking or at the property, subject to availability and hotel rules.
+            - generic [ref=e528]:
+              - paragraph [ref=e529]: Child Policy
+              - paragraph [ref=e531]: Children below 5 years stay free when using existing bedding. Extra beds are subject to availability and additional charges.
+            - generic [ref=e532]:
+              - paragraph [ref=e533]: Privacy Policy
+              - paragraph [ref=e535]: Guest information is collected solely for booking and hospitality purposes and is not shared with third parties except where required by law.
+            - generic [ref=e536]:
+              - paragraph [ref=e537]: Important Information
+              - paragraph [ref=e539]: Valid government-issued photo identification is required at check-in. Early check-in and late check-out are subject to availability. The hotel reserves the right to refuse service in accordance with applicable laws and regulations.
+      - generic [ref=e540]:
+        - generic [ref=e541]:
+          - img [ref=e542]
+          - generic [ref=e545]: powerhouse, vasai west dattani prism it park 308, vasai, maharashtra, india , 401207
+        - generic [ref=e547]: "Business/GST No: 32erfgbv32ewdscx 21wq"
+    - contentinfo [ref=e548]:
+      - generic [ref=e549]:
+        - paragraph [ref=e550]: Powered by Staybooker.ai
+        - generic [ref=e551]:
+          - link "Cancel Booking" [ref=e552] [cursor=pointer]:
+            - /url: /book/powerhouse/cancel
+          - generic [ref=e553]: ·
+          - generic [ref=e554]:
+            - img [ref=e555]
+            - text: Secure Payments
+          - generic [ref=e557]: ·
+          - generic [ref=e558]: Privacy Protected
+          - generic [ref=e559]: ·
+          - generic [ref=e560]: Best Price Guaranteed

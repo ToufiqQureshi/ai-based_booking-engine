@@ -1,0 +1,90 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e56]:
+    - complementary [ref=e57]:
+      - generic [ref=e58]:
+        - img [ref=e60]
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Staybooker
+          - paragraph [ref=e65]: Admin Console
+      - navigation [ref=e66]:
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: Management
+          - generic [ref=e69]:
+            - button "Properties" [ref=e70] [cursor=pointer]:
+              - img [ref=e71]
+              - generic [ref=e75]: Properties
+            - button "Users" [ref=e76] [cursor=pointer]:
+              - img [ref=e77]
+              - generic [ref=e82]: Users
+      - generic [ref=e84]:
+        - generic [ref=e85]: T
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: toufiq revmerito
+          - paragraph [ref=e88]: tech.revmerito@gmail.com
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e91]:
+          - button [ref=e92] [cursor=pointer]:
+            - img
+          - generic [ref=e93]:
+            - generic [ref=e94]: Properties
+            - img [ref=e287]
+            - generic [ref=e289]: powerhouse
+        - generic [ref=e95]:
+          - button [ref=e96] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e97] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e98]:
+        - generic [ref=e290]:
+          - generic [ref=e291]:
+            - generic [ref=e292]:
+              - button [ref=e293] [cursor=pointer]:
+                - img
+              - generic [ref=e294]:
+                - img [ref=e296]
+                - generic [ref=e300]:
+                  - heading "powerhouse" [level=1] [ref=e301]
+                  - paragraph [ref=e302]: powerhouse
+              - generic [ref=e303]: Active
+            - button "Login as Owner" [ref=e304] [cursor=pointer]:
+              - img
+              - text: Login as Owner
+          - generic [ref=e305]:
+            - tablist [ref=e306]:
+              - tab "Features" [ref=e307] [cursor=pointer]
+              - tab "Integrations" [ref=e308] [cursor=pointer]
+              - tab "Permissions" [ref=e309] [cursor=pointer]
+              - tab "Users" [ref=e310] [cursor=pointer]
+              - tab "Danger Zone" [active] [selected] [ref=e311] [cursor=pointer]
+            - tabpanel "Danger Zone" [ref=e687]:
+              - generic [ref=e688]:
+                - generic [ref=e689]:
+                  - img [ref=e690]
+                  - heading "Danger Zone" [level=3] [ref=e692]
+                  - paragraph [ref=e693]: These actions are immediate and may be irreversible
+                - generic [ref=e694]:
+                  - generic [ref=e695]:
+                    - paragraph [ref=e696]: Pause Property
+                    - paragraph [ref=e697]: Stop public bookings. Owner can still login and manage.
+                  - button "Pause" [ref=e698] [cursor=pointer]:
+                    - img
+                    - text: Pause
+                - generic [ref=e699]:
+                  - generic [ref=e700]:
+                    - paragraph [ref=e701]: Lock Account
+                    - paragraph [ref=e702]: Block all logins for this hotel completely
+                  - button "Lock" [ref=e703] [cursor=pointer]:
+                    - img
+                    - text: Lock
+                - generic [ref=e704]:
+                  - generic [ref=e705]:
+                    - paragraph [ref=e706]: Delete Property Permanently
+                    - paragraph [ref=e707]: Removes hotel, all bookings, guests, and users. Cannot be undone.
+                  - button "Delete" [ref=e708] [cursor=pointer]:
+                    - img
+                    - text: Delete

@@ -1,0 +1,125 @@
+- generic [ref=e3]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e56]:
+    - complementary [ref=e57]:
+      - generic [ref=e58]:
+        - img [ref=e60]
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Staybooker
+          - paragraph [ref=e65]: Admin Console
+      - navigation [ref=e66]:
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: Management
+          - generic [ref=e69]:
+            - button "Properties" [ref=e70] [cursor=pointer]:
+              - img [ref=e71]
+              - generic [ref=e75]: Properties
+            - button "Users" [ref=e76] [cursor=pointer]:
+              - img [ref=e77]
+              - generic [ref=e82]: Users
+      - generic [ref=e84]:
+        - generic [ref=e85]: T
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: toufiq revmerito
+          - paragraph [ref=e88]: tech.revmerito@gmail.com
+    - generic [ref=e89]:
+      - banner [ref=e90]:
+        - generic [ref=e91]:
+          - button [ref=e92] [cursor=pointer]:
+            - img
+          - generic [ref=e93]:
+            - generic [ref=e94]: Properties
+            - img [ref=e1075]
+            - generic [ref=e1077]: The lagoona resort
+        - generic [ref=e95]:
+          - button [ref=e96] [cursor=pointer]:
+            - img
+          - button "Sign out" [ref=e97] [cursor=pointer]:
+            - img
+            - text: Sign out
+      - main [ref=e98]:
+        - generic [ref=e1078]:
+          - generic [ref=e1079]:
+            - generic [ref=e1080]:
+              - button [ref=e1081] [cursor=pointer]:
+                - img
+              - generic [ref=e1082]:
+                - img [ref=e1084]
+                - generic [ref=e1088]:
+                  - heading "The lagoona resort" [level=1] [ref=e1089]
+                  - paragraph [ref=e1090]: thelagoonaresort
+              - generic [ref=e1091]: Active
+            - button "Login as Owner" [ref=e1092] [cursor=pointer]:
+              - img
+              - text: Login as Owner
+          - generic [ref=e1093]:
+            - tablist [ref=e1094]:
+              - tab "Features" [selected] [ref=e1095] [cursor=pointer]
+              - tab "Integrations" [ref=e1096] [cursor=pointer]
+              - tab "Permissions" [ref=e1097] [cursor=pointer]
+              - tab "Users" [ref=e1098] [cursor=pointer]
+              - tab "Danger Zone" [ref=e1099] [cursor=pointer]
+            - tabpanel "Features" [ref=e1100]:
+              - generic [ref=e1101]:
+                - generic [ref=e1102]:
+                  - heading "Feature Access Control" [level=3] [ref=e1103]
+                  - paragraph [ref=e1104]: Changes apply immediately
+                - generic [ref=e1105]:
+                  - generic [ref=e1106]:
+                    - generic [ref=e1107]:
+                      - img [ref=e1109]
+                      - generic [ref=e1121]:
+                        - paragraph [ref=e1122]: AI Agent
+                        - paragraph [ref=e1123]: AI booking assistant on WhatsApp & chat
+                    - switch [checked] [ref=e1124] [cursor=pointer]
+                  - generic [ref=e1125]:
+                    - generic [ref=e1126]:
+                      - img [ref=e1128]
+                      - generic [ref=e1130]:
+                        - paragraph [ref=e1131]: Guest Bot
+                        - paragraph [ref=e1132]: Automated guest messaging & responses
+                    - switch [checked] [ref=e1133] [cursor=pointer]
+                  - generic [ref=e1134]:
+                    - generic [ref=e1135]:
+                      - img [ref=e1137]
+                      - generic [ref=e1149]:
+                        - paragraph [ref=e1150]: AI Assistant
+                        - paragraph [ref=e1151]: Dashboard AI assistant for hotel staff
+                    - switch [checked] [ref=e1152] [cursor=pointer]
+                  - generic [ref=e1153]:
+                    - generic [ref=e1154]:
+                      - img [ref=e1156]
+                      - generic [ref=e1159]:
+                        - paragraph [ref=e1160]: Booking Engine
+                        - paragraph [ref=e1161]: Public booking page & widget
+                    - switch [checked] [ref=e1162] [cursor=pointer]
+                  - generic [ref=e1163]:
+                    - generic [ref=e1164]:
+                      - img [ref=e1166]
+                      - generic [ref=e1172]:
+                        - paragraph [ref=e1173]: Color Palette
+                        - paragraph [ref=e1174]: Custom brand colors on booking page
+                    - switch [checked] [ref=e1175] [cursor=pointer]
+                  - generic [ref=e1176]:
+                    - generic [ref=e1177]:
+                      - img [ref=e1179]
+                      - generic [ref=e1183]:
+                        - paragraph [ref=e1184]: Custom Logo
+                        - paragraph [ref=e1185]: Upload hotel logo on booking widget
+                    - switch [checked] [ref=e1186] [cursor=pointer]
+                  - generic [ref=e1187]:
+                    - generic [ref=e1188]:
+                      - img [ref=e1190]
+                      - generic [ref=e1194]:
+                        - paragraph [ref=e1195]: Custom Widget
+                        - paragraph [ref=e1196]: Advanced widget layout customization
+                    - switch [checked] [ref=e1197] [cursor=pointer]
+                  - generic [ref=e1198]:
+                    - generic [ref=e1199]:
+                      - img [ref=e1201]
+                      - generic [ref=e1204]:
+                        - paragraph [ref=e1205]: Google Hotel Ads
+                        - paragraph [ref=e1206]: Google Hotel Ads XML feed integration
+                    - switch [checked] [ref=e1207] [cursor=pointer]

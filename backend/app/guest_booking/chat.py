@@ -21,6 +21,7 @@ from app.core.cache.redis_client import redis_client
 import json
 from app.services.email_service import get_email_service
 from app.core.utils.time import utcnow
+from app.core.utils.feature_flags import assert_hotel_not_paused
 
 router = APIRouter(prefix="/public", tags=["Public"])
 logger = logging.getLogger(__name__)
@@ -207,6 +208,8 @@ async def chat_with_guest_ai(
             # Fallback: Check if it's a valid ID but passed as slug
             # (This logic is now covered by the OR condition above)
             raise HTTPException(status_code=404, detail="Hotel not found")
+            
+        assert_hotel_not_paused(hotel)
 
         # Deactivated hotels must be indistinguishable from non-existent ones.
         if not getattr(hotel, "is_active", True):
@@ -378,6 +381,8 @@ async def stream_guest_ai(
         hotel = result.scalar_one_or_none()
         if not hotel:
             raise HTTPException(status_code=404, detail="Hotel not found")
+            
+        assert_hotel_not_paused(hotel)
 
         # Deactivated hotels must be indistinguishable from non-existent ones.
         if not getattr(hotel, "is_active", True):
