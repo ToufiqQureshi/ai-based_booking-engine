@@ -54,15 +54,6 @@ const BookingCancel = lazy(() => import("@/guest_booking/BookingCancel"));
 const BookingWidget = lazy(() => import("@/guest_booking/BookingWidget"));
 const ChainBookingWidget = lazy(() => import("@/guest_booking/ChainBookingWidget"));
 const ChatEmbed = lazy(() => import("@/guest_booking/ChatEmbed"));
-const LandingPage = lazy(() => import("@/guest_booking/LandingPage"));
-
-// Public Legal Pages
-const PrivacyPolicy = lazy(() => import("@/guest_booking/legal/PrivacyPolicy"));
-const TermsOfService = lazy(() => import("@/guest_booking/legal/TermsOfService"));
-const DataDeletion = lazy(() => import("@/guest_booking/legal/DataDeletion"));
-const RefundPolicy = lazy(() => import("@/guest_booking/legal/RefundPolicy"));
-const CookiePolicy = lazy(() => import("@/guest_booking/legal/CookiePolicy"));
-const ContactUs = lazy(() => import("@/guest_booking/legal/ContactUs"));
 
 // Slim top progress bar — does NOT block the whole screen
 const PageLoader = () => <div className="page-progress" />;
@@ -169,25 +160,10 @@ const App = () => {
                     {/* Public shared analytics report (no login) */}
                     <Route path="/r/:token" element={<PublicReport />} />
 
-                    {/* Public Legal Routes */}
-                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                    <Route path="/terms-of-service" element={<TermsOfService />} />
-                    <Route path="/data-deletion" element={<DataDeletion />} />
-                    <Route path="/refund-policy" element={<RefundPolicy />} />
-                    <Route path="/cookie-policy" element={<CookiePolicy />} />
-                    <Route path="/contact-us" element={<ContactUs />} />
-                    <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
-
                     {/* Redirects */}
                     <Route 
                       path="/" 
-                      element={
-                        window.location.hostname.startsWith('app.') ? (
-                          <Navigate to="/dashboard" replace />
-                        ) : (
-                          <LandingPage />
-                        )
-                      } 
+                      element={<Navigate to="/dashboard" replace />} 
                     />
 
                     {/* 404 */}
