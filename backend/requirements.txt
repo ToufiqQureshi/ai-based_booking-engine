@@ -8,6 +8,7 @@ alembic
 apscheduler
 argon2-cffi
 asyncpg
+psycopg[binary]
 brevo-python
 duckduckgo-search
 email-validator
