@@ -54,6 +54,7 @@ const BookingCancel = lazy(() => import("@/guest_booking/BookingCancel"));
 const BookingWidget = lazy(() => import("@/guest_booking/BookingWidget"));
 const ChainBookingWidget = lazy(() => import("@/guest_booking/ChainBookingWidget"));
 const ChatEmbed = lazy(() => import("@/guest_booking/ChatEmbed"));
+const LandingPage = lazy(() => import("@/guest_booking/LandingPage"));
 
 // Slim top progress bar — does NOT block the whole screen
 const PageLoader = () => <div className="page-progress" />;
@@ -163,7 +164,13 @@ const App = () => {
                     {/* Redirects */}
                     <Route 
                       path="/" 
-                      element={<Navigate to="/dashboard" replace />} 
+                      element={
+                        window.location.hostname.startsWith('app.') ? (
+                          <Navigate to="/dashboard" replace />
+                        ) : (
+                          <LandingPage />
+                        )
+                      } 
                     />
 
                     {/* 404 */}
