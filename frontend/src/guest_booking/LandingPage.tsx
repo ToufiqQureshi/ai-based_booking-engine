@@ -197,7 +197,7 @@ export default function LandingPage() {
         }
 
         // --- PAGE INITIALIZATION & LOAD ANIMATIONS ---
-        window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
             const tl = gsap.timeline();
 
             // Dynamic header/footer load logic start
