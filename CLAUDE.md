@@ -332,6 +332,75 @@ grep -r "cancellation_rate" backend/app/analytics/analytics.py
 If the backend grep returns nothing → the field is missing from the backend.
 If the frontend grep returns nothing → the frontend ignores a field the backend computes (wasted DB work).
 
+---
+
+## 🚦 12. Mandatory Test Policy — No Exceptions
+
+**Every PR that touches backend code must include or update a real test. This is non-negotiable.**
+
+### 12.1 — The three triggers
+
+| Trigger | Required test action |
+|---|---|
+| **New endpoint** | Create tests in `backend/tests/api/v1/test_<domain>.py` covering auth guard, happy path, IDOR, empty state, 422 for bad input, and tampered client values ignored (for POST/PUT: assert server uses authenticated `hotel_id`, not a client-supplied one) |
+| **Bug fix** | Write the regression test first (it must fail), then fix the code (it must pass) — commit both together |
+| **Modified endpoint** | Update the existing test to cover the changed behaviour; if the test already covers it, verify the assertion still holds |
+
+### 12.2 — What counts as a real test (what does NOT)
+
+**Real tests:**
+- Hit the actual FastAPI router via `AsyncClient` + `ASGITransport`
+- Assert specific response fields that the frontend reads (`assert "field" in data`)
+- Seed real DB rows and verify they appear / are isolated
+- Override only the auth dependency; let all other code run
+
+**Not acceptable (stub/boilerplate):**
+- Tests that only assert `status_code == 200` without checking response shape
+- Tests that target endpoints that don't exist (phantom URLs)
+- Tests that patch the entire handler and bypass all logic
+- Empty test classes or `pass` bodies
+- Tests that test only the trivially obvious (e.g. `assert True`)
+
+### 12.3 — Enforcement checklist (run before every push)
+
+```bash
+# 1. Confirm test file exists or was updated for every changed domain
+ls backend/tests/api/v1/test_<domain>.py
+
+# 2. Confirm no phantom endpoints (test URLs must map to a real router)
+grep -r "<your_url_path>" backend/app/
+
+# 3. Run the full suite — must be green
+cd backend && pytest tests/ -x -q --tb=short
+
+# 4. Syntax check
+cd backend && python -m compileall -q app main.py
+```
+
+### 12.4 — File naming convention
+
+```text
+backend/tests/api/v1/test_<domain>.py
+```
+
+One file per domain, matching the backend domain folder name:
+- `test_auth.py` — `/auth/onboarding`, JWT guards
+- `test_bookings.py` — `/bookings`, cancel, status changes
+- `test_payments.py` — `/payments`, refund, IDOR
+- `test_calendar.py` — `/availability/blocks`, rates, weekend-update, copy
+- `test_webhooks.py` — `/public/razorpay/webhook`, `/public/razorpay/verify`
+- `test_dashboard.py` — `/dashboard/stats`
+- `test_loyalty.py` — `/loyalty/program`, members, offers
+- `test_guests.py` — `/guests`
+- `test_marketing.py` — `/leads`
+- `test_google_reviews.py` — `/social-proof`
+- `test_channel_manager.py` — `/channel-manager`
+- `test_rate_shopper.py` — `/competitors`
+- `test_experiences.py` — `/addons`
+- `test_auth_rbac.py` — cross-cutting RBAC matrix
+
+---
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

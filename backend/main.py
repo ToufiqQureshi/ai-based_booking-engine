@@ -70,6 +70,7 @@ async def lifespan(app: FastAPI):
         logger.info("Database initialized successfully!")
     except Exception as e:
         logger.error(f"CRITICAL: Database connection failed during startup: {e}")
+        raise
 
     if settings.ENABLE_SCHEDULER:
         try:

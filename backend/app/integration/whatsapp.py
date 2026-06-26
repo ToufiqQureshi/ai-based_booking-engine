@@ -117,12 +117,11 @@ async def whatsapp_webhook_receive(
 
             if not is_central_number:
                 # Specific hotel number — match by stored phone_number_id.
-                # Filter in SQL using Postgres JSON extraction to avoid a full-table scan.
-                from sqlalchemy import cast, String, func
+                # Use SQLAlchemy JSON path accessor: generates ->> on Postgres, JSON_EXTRACT on SQLite.
                 hotel_res = await session.execute(
                     select(Hotel).where(
-                        Hotel.is_active == True,
-                        func.jsonb_extract_path_text(Hotel.settings, "whatsapp_phone_number_id") == phone_number_id,
+                        Hotel.is_active,
+                        Hotel.settings["whatsapp_phone_number_id"].as_string() == phone_number_id,
                     )
                 )
                 h = hotel_res.scalars().first()
@@ -180,14 +179,16 @@ async def whatsapp_webhook_receive(
                 # Idempotency guard: Meta retries webhook delivery on non-200 responses.
                 # Use the WhatsApp message ID (wamid) as a deduplication key so a
                 # retry does not trigger the AI agent twice or double-decrement credits.
+                # set_nx_ex atomically sets the key only if absent — avoids the
+                # check-then-set race of separate get/set calls.
                 wamid = msg.get("id")
                 if wamid:
                     idempotency_key = f"whatsapp:processed:{wamid}"
                     try:
-                        if redis_client.get_value(idempotency_key):
+                        already_set = not await redis_client.set_nx_ex(idempotency_key, "1", expire=86400)
+                        if already_set:
                             debug_log.append(f"SKIP: already processed wamid={wamid}")
                             continue
-                        redis_client.set_value(idempotency_key, "1", expire=86400)
                     except Exception as e:
                         logger.warning("Redis idempotency check failed for wamid=%s: %s", wamid, e)
 

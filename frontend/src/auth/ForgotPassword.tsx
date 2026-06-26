@@ -46,9 +46,7 @@ export function ForgotPasswordPage() {
 
     setIsLoading(true);
     try {
-      // Real API call
-      // Currently, authApi.forgotPassword doesn't accept captcha token, but we require it on frontend to block bots.
-      await authApi.forgotPassword(data.email);
+      await authApi.forgotPassword(data.email, captchaToken || undefined);
 
       setSubmittedEmail(data.email);
       setIsSubmitted(true);

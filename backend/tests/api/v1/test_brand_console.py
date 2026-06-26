@@ -1,34 +1,42 @@
+"""
+Brand Console / Hotel Settings Tests
+Covers:
+  - GET /hotels/me — auth guard, returns hotel settings shape
+  - PATCH /hotels/me — STAFF blocked from modifying hotel settings
+"""
 import pytest
 from httpx import AsyncClient
 
-# --- AUTH TESTS ---
+pytestmark = pytest.mark.asyncio
 
-async def test_brand_console_requires_auth(client: AsyncClient):
-    """Unauthenticated requests must be rejected."""
-    res = await client.get("/api/v1/brand_console")
-    assert res.status_code == 401
 
-# --- SHAPE TESTS ---
+class TestHotelSettings:
+    async def test_requires_auth(self, client: AsyncClient):
+        r = await client.get("/api/v1/hotels/me")
+        assert r.status_code == 401
 
-async def test_brand_console_returns_expected_keys(auth_client: AsyncClient):
-    """Response must include every field the frontend reads."""
-    res = await auth_client.get("/api/v1/brand_console")
-    if res.status_code == 200:
-        data = res.json()
-        if isinstance(data, dict) and "id" in data:
-            assert "id" in data
+    async def test_returns_hotel_shape(self, auth_client: AsyncClient):
+        r = await auth_client.get("/api/v1/hotels/me")
+        assert r.status_code == 200
+        data = r.json()
+        assert "id" in data
+        assert "name" in data
+        assert "slug" in data
 
-# --- TENANT ISOLATION (IDOR) ---
+    async def test_patch_requires_auth(self, client: AsyncClient):
+        r = await client.patch("/api/v1/hotels/me", json={"description": "No auth"})
+        assert r.status_code == 401
 
-async def test_brand_console_cannot_access_other_hotel_data(auth_client: AsyncClient):
-    """Hotel A must never see Hotel B's data."""
-    fake_hotel_id = "00000000-0000-0000-0000-000000000000"
-    res = await auth_client.get(f"/api/v1/brand_console?hotel_id={fake_hotel_id}")
-    assert res.status_code in (200, 401, 403, 404)
+    async def test_owner_can_update_hotel(self, auth_client: AsyncClient):
+        """Owner PATCH /hotels/me returns 200 with the mutated field reflected."""
+        r = await auth_client.patch("/api/v1/hotels/me", json={"description": "Updated by test"})
+        assert r.status_code == 200
+        data = r.json()
+        assert "id" in data
+        assert "name" in data
+        assert "slug" in data
+        assert data.get("description") == "Updated by test"
 
-# --- EMPTY STATE ---
-
-async def test_brand_console_empty_db_no_crash(auth_client: AsyncClient):
-    """Must return 200 with empty data, never 500, when DB has no records."""
-    res = await auth_client.get("/api/v1/brand_console")
-    assert res.status_code in (200, 401, 403, 404, 405)
+    async def test_staff_cannot_update_settings(self, staff_client: AsyncClient):
+        r = await staff_client.patch("/api/v1/hotels/me", json={"name": "Hacked"})
+        assert r.status_code == 403
