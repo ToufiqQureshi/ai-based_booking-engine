@@ -478,16 +478,12 @@ async def delete_hotel(
     # Calling supabase.auth.admin.delete_user() while the DB transaction is still
     # open causes Supabase-side cascades to race with our own SQL deletes on the
     # users table, which is the root cause of the DeadlockDetectedError.
-    try:
-        supabase_id_rows = (await session.execute(
-            select(User.supabase_id).where(
-                User.hotel_id == hotel_id, User.supabase_id.isnot(None)
-            )
-        )).all()
-        supabase_ids = [r[0] for r in supabase_id_rows]
-    except Exception as e:
-        logger.warning("Could not snapshot supabase_ids for hotel %s: %s", hotel_id, e)
-        supabase_ids = []
+    supabase_id_rows = (await session.execute(
+        select(User.supabase_id).where(
+            User.hotel_id == hotel_id, User.supabase_id.isnot(None)
+        )
+    )).all()
+    supabase_ids = [r[0] for r in supabase_id_rows]
 
     # --- All deletes run flat in a single transaction (no begin_nested savepoints).
     #
@@ -499,41 +495,36 @@ async def delete_hotel(
     # Fix: pure raw SQL throughout; session.delete() is never called so ORM
     # cascades never fire.  Supabase auth deletion happens as a background task
     # AFTER the transaction commits.
-    deep_queries = [
-        "DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)",
-        "DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)",
-        "DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)",
-        "DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)",
-        "DELETE FROM payments WHERE hotel_id = :id",
-    ]
-    tables = [
-        "channel_logs", "channel_room_mappings", "room_rates", "room_blocks", "room_rate_links",
-        "bookings", "guests", "rate_plans", "room_types", "analytics_sessions",
-        "addons", "amenities", "api_keys", "channel_manager_settings",
-        "integration_settings", "leads", "promo_codes", "user_hotel_links", "subscriptions",
-    ]
     try:
-        for q in deep_queries:
-            try:
-                await session.execute(text(q), {"id": hotel_id})
-            except Exception as e:
-                logger.warning("Deep cleanup failed: %s", e)
-
-        for table in tables:
-            try:
-                await session.execute(text(f"DELETE FROM {table} WHERE hotel_id = :id"), {"id": hotel_id})
-            except Exception as e:
-                logger.warning("Failed to delete from %s: %s", table, e)
-
-        try:
-            await session.execute(text("DELETE FROM audit_logs WHERE hotel_id = :id"), {"id": hotel_id})
-        except Exception as e:
-            logger.warning("Failed to delete audit logs: %s", e)
-
-        # Delete users via raw SQL — avoids ORM cascade that caused the deadlock.
+        # Child rows that reference tables deleted below — must go first.
+        await session.execute(text("DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM payments WHERE hotel_id = :id"), {"id": hotel_id})
+        # Dependent tables (all parameterised — no f-strings).
+        await session.execute(text("DELETE FROM channel_logs WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM channel_room_mappings WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_rates WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_blocks WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_rate_links WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM bookings WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM guests WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM rate_plans WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_types WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM analytics_sessions WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM addons WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM amenities WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM api_keys WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM channel_manager_settings WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM integration_settings WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM leads WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM promo_codes WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM user_hotel_links WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM subscriptions WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM audit_logs WHERE hotel_id = :id"), {"id": hotel_id})
+        # Users and hotel row last — raw SQL avoids ORM cascade that caused the deadlock.
         await session.execute(text("DELETE FROM users WHERE hotel_id = :id"), {"id": hotel_id})
-
-        # Delete the hotel row itself via raw SQL for the same reason.
         await session.execute(text("DELETE FROM hotels WHERE id = :id"), {"id": hotel_id})
 
         session.add(AuditLog(

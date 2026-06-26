@@ -44,16 +44,15 @@ async def _is_vault_available(session: AsyncSession) -> bool:
     global _VAULT_AVAILABLE, _VAULT_LAST_CHECKED
     if _VAULT_AVAILABLE is True:
         return True
-    now = time.monotonic()
-    if _VAULT_AVAILABLE is False and (now - _VAULT_LAST_CHECKED) < _VAULT_RETRY_INTERVAL:
+    if _VAULT_AVAILABLE is False and (time.monotonic() - _VAULT_LAST_CHECKED) < _VAULT_RETRY_INTERVAL:
         return False
     try:
         await session.execute(text("SELECT 1 FROM vault.secrets LIMIT 1"))
         _VAULT_AVAILABLE = True
-        _VAULT_LAST_CHECKED = now
+        _VAULT_LAST_CHECKED = time.monotonic()
     except Exception:
         _VAULT_AVAILABLE = False
-        _VAULT_LAST_CHECKED = now
+        _VAULT_LAST_CHECKED = time.monotonic()
         logger.warning("Supabase Vault not available — secrets stored as plain text (enable supabase_vault extension)")
     return _VAULT_AVAILABLE
 
