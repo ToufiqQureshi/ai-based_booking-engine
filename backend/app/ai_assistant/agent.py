@@ -22,11 +22,13 @@ _AVG_TOKENS_PER_CONVERSATION = 800
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: str | None = None
     history: List[List[str]] = []  # [[role, content], ...]
 
 
 class ChatResponse(BaseModel):
     response: str
+    session_id: str
 
 
 @router.get("/usage")
@@ -125,6 +127,18 @@ async def chat_with_agent(
     current_user: CurrentUser,
     session: DbSession
 ):
+    """
+    Handle user chat interactions with the AI Assistant.
+    
+    ARCHITECTURE OVERVIEW:
+    - **API Gateway**: This is the primary REST endpoint for frontend chat communication.
+    - **Rate Limiting (GEMINI.md Rule 5)**: Protected by Redis-backed sliding window limiter (15 req/min).
+    - **Usage Quotas (GEMINI.md Rule 4)**: Uses `enforce_ai_token_quota` to protect against token exhaustion.
+    - **Session Isolation (GEMINI.md Rule 1 & ChatGPT-style Memory)**: By passing `payload.session_id`, 
+      Agno loads only the messages specific to this chat thread from `PostgresDb`. This limits token 
+      bloat and prevents cross-contamination of contexts between different user topics.
+    - **Usage Logging**: Every request persistently records actual LLM tokens used to Postgres via `record_ai_usage`.
+    """
     # Enforce SaaS feature flag guard
     if not current_user.hotel or not getattr(current_user.hotel, "feature_ai_assistant", False):
         raise HTTPException(
@@ -140,25 +154,15 @@ async def chat_with_agent(
         from app.ai_engine.agent import create_agent_executor
         agent = await create_agent_executor(session, current_user, user_query=payload.message)
 
-        # 2. Build history as Agno Messages (limit last 20)
-        from agno.agent import Message
-        chat_history = []
-        for item in payload.history[-20:]:
-            if len(item) == 2:
-                role, content = item
-                if role.lower() in ["human", "user"]:
-                    chat_history.append(Message(role="user", content=content))
-                elif role.lower() in ["ai", "assistant", "model"]:
-                    chat_history.append(Message(role="assistant", content=content))
-
-        # 3. Build input: history messages + new user message
-        input_messages = chat_history + [Message(role="user", content=payload.message)]
-
-        # 4. Run agent
-        result = await agent.arun(input_messages)
+        # 2. Run agent with persistent session tracking
+        result = await agent.arun(
+            message=payload.message,
+            user_id=str(current_user.id),
+            session_id=payload.session_id  # If None, Agno auto-generates a UUID
+        )
         record_ai_usage(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
         await persist_ai_usage_db(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
-        return ChatResponse(response=result.content or "")
+        return ChatResponse(response=result.content or "", session_id=agent.session_id)
 
     except ValueError as e:
         # Config-level problems (e.g. missing AI key) — safe, actionable message.
@@ -169,4 +173,60 @@ async def chat_with_agent(
         # client. Log the detail server-side, return a generic message.
         logger.error(f"Agent Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="The AI Assistant hit a temporary error. Please try again.")
+
+
+@router.get("/sessions", dependencies=[Depends(require_feature("feature_ai_agent"))])
+async def get_chat_sessions(
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Fetch past chat sessions for the hotelier."""
+    from app.ai_engine.agent import create_agent_executor
+    agent = await create_agent_executor(session, current_user, user_query="")
+    
+    # agent.db (PostgresDb) has get_sessions
+    try:
+        sessions = agent.db.get_sessions(user_id=str(current_user.id), limit=50)
+        return [
+            {
+                "session_id": s.session_id,
+                "session_name": s.session_data.get("session_name") or "New Chat",
+                "created_at": s.created_at,
+            }
+            for s in sessions
+        ]
+    except Exception as e:
+        logger.warning(f"Failed to fetch sessions: {e}")
+        return []
+
+
+@router.get("/sessions/{session_id}", dependencies=[Depends(require_feature("feature_ai_agent"))])
+async def get_chat_session_history(
+    session_id: str,
+    current_user: CurrentUser,
+    session: DbSession
+):
+    """Fetch messages of a specific chat session."""
+    from app.ai_engine.agent import create_agent_executor
+    agent = await create_agent_executor(session, current_user, user_query="")
+    
+    try:
+        sess = agent.db.get_session(session_id)
+        if not sess or sess.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+            
+        messages = []
+        if sess.memory and hasattr(sess.memory, "messages"):
+            for m in sess.memory.messages:
+                if m.role in ("user", "assistant"):
+                    messages.append({
+                        "role": "human" if m.role == "user" else "ai",
+                        "content": m.content
+                    })
+        return {"messages": messages}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch session messages: {e}")
+        return {"messages": []}
 

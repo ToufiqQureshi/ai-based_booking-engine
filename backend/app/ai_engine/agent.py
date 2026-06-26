@@ -3,6 +3,11 @@ from datetime import date, timedelta, datetime
 from sqlmodel import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agno.agent import Agent
+from agno.team import Team
+from agno.db.postgres import PostgresDb
+from app.ai_engine.cache import cached_tool
+
 from app.core.utils.config import get_settings
 from app.bookings.timeline import BookingTimeline
 from app.bookings.booking import Booking, BookingStatus, BookingSource, Guest
@@ -40,21 +45,22 @@ SYSTEM_PROMPT = """You are 'Staybooker AI', a smart hotel assistant.
 GOAL: Help the hotelier manage bookings, revenue, and tasks directly and professionally.
 
 ### COMMUNICATION STYLE 🗣️
-- **Language**: Hinglish (Hindi+English mix) or English. Match the user's language.
+- **Language**: English. Speak professionally and clearly. Do NOT use Hinglish.
 - **Tone**: Concise, Professional, Direct. NO fluff.
-- **Formatting**: Use Markdown (lists, bolding) for readability.
+- **Formatting**: Use Markdown (lists, bolding, tables) for readability. Present data cleanly.
 
 ### CRITICAL RULES ⚡
-3. **Direct Answers Only**:
+1. **Access control**: You have FULL access to the booking report, rooms, and hotel data via your tools. Do NOT claim you need authentication or lack access. If a tool returns no data, just say there is no data.
+2. **Direct Answers Only**:
    - "How many pending bookings?" -> Use `get_pending_approvals`. IGNORE 'today' filter. Return ALL pending.
    - "Pending payments?" -> Use `get_pending_payments`.
-4. **Safe Actions**: For modifications (price update, cancel), ALWAYS ask for explicit confirmation first.
-5. **Smart Pricing**: Check Weather/Events/Web Search before suggesting price changes.
-6. **Reasoning First**: ALWAYS explain 'WHY' before recommending an action. Cite data (e.g. "Because of Coldplay concert...").
-7. **Use Web Search**: If you lack context (e.g. "Is it a holiday?"), use `search_web`.
+3. **Safe Actions**: For modifications (price update, cancel), ALWAYS ask for explicit confirmation first.
+4. **Smart Pricing**: Check Weather/Events/Web Search before suggesting price changes.
+5. **Reasoning First**: ALWAYS explain 'WHY' before recommending an action. Cite data (e.g. "Because of Coldplay concert...").
+6. **Use Web Search**: If you lack context (e.g. "Is it a holiday?"), use `search_web`.
 
 ### CHART & ANALYTICS RULES 📊
-8. **Use Analytics Tools**: When user asks for trends, charts, revenue analysis, occupancy, forecasts, VIP guests, or upsell — use the dedicated analytics tools.
+7. **Use Analytics Tools**: When user asks for trends, charts, revenue analysis, occupancy, forecasts, VIP guests, or upsell — use the dedicated analytics tools.
    - Revenue trend/chart → `get_revenue_trend`
    - Occupancy trend → `get_occupancy_trend`
    - Room performance → `get_room_performance`
@@ -65,7 +71,7 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
    - VIP guests → `get_vip_guests`
    - At-risk bookings → `get_at_risk_bookings`
    - Upsell opportunities → `get_upsell_opportunities`
-9. **Chart Data**: When a tool returns a [CHART_DATA]...[/CHART_DATA] block, ALWAYS include it VERBATIM in your response. Do NOT modify, summarize, or remove the JSON inside it. Place it after your text explanation.
+8. **Chart Data**: When a tool returns a [CHART_DATA]...[/CHART_DATA] block, ALWAYS include it VERBATIM in your response. Do NOT modify, summarize, or remove the JSON inside it. Place it after your text explanation.
 
 ### CURRENT CONTEXT
 - Date: {current_date}
@@ -75,11 +81,21 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 async def create_agent_executor(session: AsyncSession, user: User, user_query: Optional[str] = None):
     """
     Creates an Agent Graph instance with tools bound to the current user and database session.
+    
+    ARCHITECTURE OVERVIEW:
+    - **Multi-Agent Routing**: Uses Agno `Team` to route queries to specialized sub-agents 
+      (Finance, Booking, Operations, General).
+    - **Database Isolation (GEMINI.md Rule 1)**: Sessions are scoped to the user (`current_user.id`), 
+      and tools explicitly filter all SQL queries by `user.hotel_id` (e.g., `Booking.hotel_id == user.hotel_id`).
+    - **Cost Control (GEMINI.md Rule 3)**: LLM token caps are dynamically applied via `effective_max_tokens`.
+      Uses cheaper fast models (llama-3.1-8b-instant via Groq) unless configured otherwise.
+    - **Caching**: Tools use `@cached_tool` with Redis to prevent duplicate DB hits and rate limits.
     """
     settings = get_settings()
 
     # --- TOOLS ---
 
+    @cached_tool(ttl=300)
     async def get_dashboard_stats(days: int = 30) -> Dict[str, Any]:
         """
         Get consolidated dashboard stats (Revenue, Occupancy, Bookings) for the last N days.
@@ -548,6 +564,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
 
     # --- ADVANCED ANALYTICS TOOLS ---
 
+    @cached_tool(ttl=300)
     async def get_revenue_trend(days: int = 30) -> str:
         """
         Get daily revenue trend for the last N days as a chart.
@@ -555,6 +572,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_revenue_trend(session, user.hotel_id, days)
 
+    @cached_tool(ttl=300)
     async def get_occupancy_trend(days: int = 30) -> str:
         """
         Get daily occupancy percentage trend for the last N days as a chart.
@@ -562,6 +580,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_occupancy_trend(session, user.hotel_id, days)
 
+    @cached_tool(ttl=300)
     async def get_booking_source_breakdown(days: int = 30) -> str:
         """
         Get breakdown of bookings by source (OTA, direct, walk-in, etc.) as a pie chart.
@@ -569,6 +588,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_booking_source_breakdown(session, user.hotel_id, days)
 
+    @cached_tool(ttl=300)
     async def get_room_performance(days: int = 30) -> str:
         """
         Get revenue and booking count per room type as a bar chart.
@@ -576,6 +596,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_room_performance(session, user.hotel_id, days)
 
+    @cached_tool(ttl=300)
     async def get_revpar_analysis(days: int = 30) -> str:
         """
         Calculate RevPAR (Revenue per Available Room), ADR (Average Daily Rate),
@@ -584,6 +605,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_revpar(session, user.hotel_id, days)
 
+    @cached_tool(ttl=300)
     async def get_revenue_forecast(forecast_days: int = 30) -> str:
         """
         Forecast revenue for the next N days based on historical day-of-week patterns.
@@ -591,6 +613,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_revenue_forecast(session, user.hotel_id, forecast_days)
 
+    @cached_tool(ttl=300)
     async def get_smart_alerts() -> str:
         """
         Get proactive operational alerts: low occupancy windows, high demand periods,
@@ -599,6 +622,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_smart_alerts(session, user.hotel_id)
 
+    @cached_tool(ttl=300)
     async def get_vip_guests(limit: int = 10) -> str:
         """
         Get top guests ranked by total lifetime spend, with visit count and tier labels.
@@ -606,6 +630,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_vip_guests(session, user.hotel_id, limit)
 
+    @cached_tool(ttl=300)
     async def get_at_risk_bookings() -> str:
         """
         Identify bookings that are at risk: imminent check-ins still pending,
@@ -614,6 +639,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return await logic_get_at_risk_bookings(session, user.hotel_id)
 
+    @cached_tool(ttl=300)
     async def get_upsell_opportunities() -> str:
         """
         Find current in-house or upcoming guests who could be upgraded to a higher room category.
@@ -819,8 +845,6 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
     if user.hotel and user.hotel.address:
         hotel_city = user.hotel.address.get("city", "Unknown City")
 
-    from agno.agent import Agent
-
     effective_provider = (target_provider or "").lower().strip()
     if not effective_provider:
         if target_api_key.startswith("gsk_"):
@@ -860,16 +884,76 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
             max_tokens=effective_max_tokens,
         )
 
-    agent = Agent(
+    # Ensure PostgresDb is initialized for history
+    db_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg") if "+asyncpg" in settings.DATABASE_URL else settings.DATABASE_URL
+    agent_db = PostgresDb(db_url=db_url, session_table="agno_sessions")
+
+    # Split tools into focused groups
+    finance_tools = [
+        get_revenue_trend, get_occupancy_trend, get_booking_source_breakdown,
+        get_room_performance, get_revpar_analysis, get_revenue_forecast,
+        get_daily_revenue, get_pending_payments, get_upsell_opportunities
+    ]
+    
+    booking_tools = [
+        search_bookings, get_booking_details, cancel_booking, 
+        create_quick_booking, check_availability_matrix, find_guest
+    ]
+    
+    ops_tools = [
+        get_dashboard_stats, get_room_inventory, get_todays_arrivals,
+        get_todays_departures, block_room_dates, get_pending_approvals,
+        get_smart_alerts, get_vip_guests, get_at_risk_bookings,
+        update_room_price, create_promo_code
+    ]
+    
+    general_tools = [get_weather_forecast, get_local_events, search_web, generate_pdf_report]
+
+    finance_agent = Agent(
+        name="Finance Agent",
+        role="Handles all revenue, billing, and financial reporting queries",
         model=llm_model,
-        tools=tools,
+        tools=finance_tools,
+        instructions="You are a hotel finance specialist. Always use tables/charts for revenue data.",
+    )
+
+    booking_agent = Agent(
+        name="Booking Agent",
+        role="Handles all reservation, availability, and guest booking queries",
+        model=llm_model,
+        tools=booking_tools,
+        instructions="You are a hotel reservations specialist.",
+    )
+
+    ops_agent = Agent(
+        name="Operations Agent",
+        role="Handles dashboard stats, arrivals, departures, inventory, and alerts",
+        model=llm_model,
+        tools=ops_tools,
+        instructions="You are a hotel operations specialist. Be proactive and concise.",
+    )
+
+    general_agent = Agent(
+        name="General Assistant",
+        role="Handles web search, weather, events, and reports",
+        model=llm_model,
+        tools=general_tools,
+        instructions="You are a general assistant.",
+    )
+
+    hotel_team = Team(
+        name="Hotel Assistant Router",
+        model=llm_model,
+        db=agent_db,
+        update_memory_on_run=True,
+        add_history_to_context=True,
+        num_history_runs=10,
+        members=[finance_agent, booking_agent, ops_agent, general_agent],
         instructions=SYSTEM_PROMPT.format(
             current_date=date.today().isoformat(),
             city=hotel_city
-        ),
+        ) + "\n\nROUTE INSTRUCTIONS:\n- Route financial/revenue/payment questions to the Finance Agent.\n- Route reservation/booking/availability questions to the Booking Agent.\n- Route operations/arrivals/inventory/alerts to the Operations Agent.\n- Route weather/events/reports/general queries to the General Assistant.",
         markdown=True,
-        max_tool_calls_from_history=3,  # Optimizes history context token usage
-        tool_call_limit=6,              # Prevents runaway loops / excessive calls
-        compress_tool_results=True,     # Compress large tool outputs to save tokens
+        show_members_responses=False,
     )
-    return agent
+    return hotel_team

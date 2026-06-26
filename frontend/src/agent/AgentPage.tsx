@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, Loader2, ShieldAlert, Sparkles, BarChart3, RefreshCw, WifiOff } from 'lucide-react';
+import { Send, Bot, User, Loader2, ShieldAlert, Sparkles, BarChart3, RefreshCw, WifiOff, Menu, X, MessageSquarePlus, MessageSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { apiClient } from "@/core/api/client";
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/core/contexts/AuthContext';
 import {
@@ -24,6 +25,13 @@ interface Message {
 
 interface ChatResponse {
     response: string;
+    session_id: string;
+}
+
+interface ChatSession {
+    session_id: string;
+    session_name: string;
+    created_at: number;
 }
 
 interface ChartYKey {
@@ -303,15 +311,67 @@ const QUICK_ASKS = [
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-
+/**
+ * AgentPage Component
+ * 
+ * ARCHITECTURE OVERVIEW & RULES (GEMINI.md compliance):
+ * 1. **ChatGPT-style UI & Sessions**: Manages a list of past `sessions` in the sidebar. 
+ *    Memory isolation is achieved by maintaining an `activeSessionId` instead of a local history dump.
+ * 2. **Never trust the client**: The frontend does not dictate role or hotel limits; it purely forwards 
+ *    the text input. Backend API endpoints enforce quota limits and AI logic.
+ * 3. **API Integration**: Connects to the backend via `/agent/chat` (POST) and `/agent/sessions` (GET). 
+ *    React state manages optimistic UI updates during slow network conditions.
+ * 4. **No Secrets**: Tokens, LLM keys, and API routing logic remain fully contained in the FastAPI backend.
+ */
 const AgentPage = () => {
     const { hotel } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const activeTab = (searchParams.get('tab') as 'chat' | 'usage') || 'chat';
     const setActiveTab = (tab: string) => setSearchParams({ tab });
+    
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'ai', content: 'Namaste! Main Staybooker AI hun. Main aapki hotel growth aur operations mein kaise madad kar sakta hun?' }
+        { role: 'ai', content: 'Hello! I am Staybooker AI. How can I help you with your hotel operations and growth today?' }
     ]);
+    const [sessions, setSessions] = useState<ChatSession[]>([]);
+    const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    const fetchSessions = useCallback(async () => {
+        try {
+            const data = await apiClient.get<ChatSession[]>('/agent/sessions');
+            setSessions(data);
+        } catch {
+            // silent fail
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchSessions();
+    }, [fetchSessions]);
+
+    const loadSession = async (sessionId: string) => {
+        setActiveSessionId(sessionId);
+        setIsLoading(true);
+        try {
+            const data = await apiClient.get<{messages: Message[]}>(`/agent/sessions/${sessionId}`);
+            if (data.messages && data.messages.length > 0) {
+                setMessages(data.messages);
+            } else {
+                setMessages([{ role: 'ai', content: 'Hello! I am Staybooker AI. How can I help you with your hotel operations and growth today?' }]);
+            }
+            if (window.innerWidth < 1024) setIsSidebarOpen(false);
+        } catch {
+            toast({ title: "Error", description: "Could not load chat history", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const clearChat = () => {
+        setMessages([{ role: 'ai', content: 'Hello! I am Staybooker AI. How can I help you with your hotel operations and growth today?' }]);
+        setActiveSessionId(null);
+        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+    };
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [usageData, setUsageData] = useState<AIUsageData | null>(null);
@@ -353,9 +413,14 @@ const AgentPage = () => {
         try {
             const data = await apiClient.post<ChatResponse>('/agent/chat', {
                 message: userMessage,
+                session_id: activeSessionId,
                 history: newMessages.map(m => [m.role, m.content]),
             }, { timeout: 120000 });
             setMessages(prev => [...prev, { role: 'ai', content: data.response }]);
+            if (data.session_id && data.session_id !== activeSessionId) {
+                setActiveSessionId(data.session_id);
+                fetchSessions();
+            }
         } catch (error: any) {
             const isTimeout = error.name === 'TimeoutError' || error.name === 'AbortError';
             toast({
@@ -393,12 +458,46 @@ const AgentPage = () => {
     }
 
     return (
-        <div className="container mx-auto p-4 h-[calc(100vh-4rem)] flex flex-col">
-            <Card className="flex-1 flex flex-col shadow-lg border-2 overflow-hidden">
+        <div className="container mx-auto p-4 h-[calc(100vh-4rem)] flex gap-4">
+            {/* Sidebar */}
+            {isSidebarOpen && (
+                <Card className="w-64 flex-shrink-0 flex flex-col shadow-lg border-0 bg-muted/20 overflow-hidden hidden md:flex">
+                    <div className="p-3 border-b">
+                        <Button onClick={clearChat} className="w-full justify-start gap-2" variant="outline">
+                            <MessageSquarePlus size={16} />
+                            New Chat
+                        </Button>
+                    </div>
+                    <ScrollArea className="flex-1">
+                        <div className="p-2 space-y-1">
+                            {sessions.map(s => (
+                                <Button 
+                                    key={s.session_id} 
+                                    variant={activeSessionId === s.session_id ? "secondary" : "ghost"}
+                                    className="w-full justify-start text-left font-normal text-sm px-2 truncate h-9"
+                                    onClick={() => loadSession(s.session_id)}
+                                >
+                                    <MessageSquare size={14} className="mr-2 opacity-70 shrink-0" />
+                                    <span className="truncate">{s.session_name}</span>
+                                </Button>
+                            ))}
+                            {sessions.length === 0 && (
+                                <p className="text-xs text-muted-foreground text-center p-4">No past chats found.</p>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </Card>
+            )}
+
+            {/* Main Chat Area */}
+            <Card className="flex-1 flex flex-col shadow-2xl border-0 overflow-hidden bg-gradient-to-br from-background to-muted/30">
                 {/* Header */}
-                <CardHeader className="border-b bg-muted/20 shrink-0">
+                <CardHeader className="border-b bg-background/80 backdrop-blur-md shrink-0 sticky top-0 z-10 py-3">
                     <div className="flex items-center justify-between gap-3 w-full">
                         <div className="flex items-center gap-3">
+                            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="shrink-0 h-9 w-9 -ml-2 hidden md:flex text-muted-foreground hover:text-foreground">
+                                <Menu size={20} />
+                            </Button>
                             <Avatar className="h-10 w-10 border-2 border-primary">
                                 <AvatarFallback className="bg-primary text-primary-foreground">
                                     <Bot size={22} />
@@ -442,6 +541,9 @@ const AgentPage = () => {
                                 Usage
                             </button>
                         </div>
+                        <Button variant="ghost" size="icon" onClick={clearChat} title="Clear Chat" className="h-8 w-8 rounded-full ml-1 text-muted-foreground hover:text-foreground">
+                            <RefreshCw size={14} />
+                        </Button>
                     </div>
                 </CardHeader>
 
@@ -474,12 +576,16 @@ const AgentPage = () => {
                                                         <>
                                                             <div className="prose dark:prose-invert max-w-none text-sm break-words">
                                                                 <ReactMarkdown
+                                                                    remarkPlugins={[remarkGfm]}
                                                                     components={{
-                                                                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                                                                        ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2" {...props} />,
-                                                                        ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2" {...props} />,
+                                                                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                                                                        ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+                                                                        ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
                                                                         strong: ({ node, ...props }) => <strong className="font-bold text-foreground" {...props} />,
-                                                                        h3: ({ node, ...props }) => <h3 className="font-bold text-base mt-2 mb-1" {...props} />,
+                                                                        h3: ({ node, ...props }) => <h3 className="font-bold text-base mt-3 mb-2" {...props} />,
+                                                                        table: ({ node, ...props }) => <div className="overflow-x-auto my-4"><table className="w-full border-collapse border border-border text-left text-sm rounded-lg overflow-hidden" {...props} /></div>,
+                                                                        th: ({ node, ...props }) => <th className="bg-muted px-4 py-2 font-semibold border border-border" {...props} />,
+                                                                        td: ({ node, ...props }) => <td className="px-4 py-2 border border-border" {...props} />,
                                                                     }}
                                                                 >
                                                                     {parsed!.text}

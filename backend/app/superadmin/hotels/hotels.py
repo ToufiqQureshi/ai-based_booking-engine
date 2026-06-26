@@ -527,6 +527,7 @@ async def delete_hotel(
         await session.execute(text("DELETE FROM users WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM hotels WHERE id = :id"), {"id": hotel_id})
 
+
         session.add(AuditLog(
             user_id=super_admin.id, user_email=super_admin.email,
             action="DELETE_HOTEL",
