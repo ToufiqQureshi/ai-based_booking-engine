@@ -148,6 +148,13 @@ async def search_public_rooms(
     """
     hotel_id = await resolve_hotel_id(hotel_identifier, session)
 
+    # Fetch hotel first so pause check always runs — even on cache hit.
+    # Returning cached rooms for a paused hotel would bypass the block.
+    hotel = await session.get(Hotel, hotel_id)
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+    assert_hotel_not_paused(hotel)
+
     # Short-lived cache for public searches to prevent DB hammering
     # Keys include all search parameters
     cache_key = f"public:rooms:{hotel_id}:{check_in}:{check_out}:{guests}:{adults}:{children}:{rooms_count}:{promo_code}"
@@ -157,10 +164,6 @@ async def search_public_rooms(
             return json.loads(cached)
     except Exception as e:
         logger.error(f"Failed to get rooms cache: {e}")
-    hotel = await session.get(Hotel, hotel_id)
-    if not hotel:
-        raise HTTPException(status_code=404, detail="Hotel not found")
-    assert_hotel_not_paused(hotel)
 
     from datetime import timedelta
     def addDays(d, num):

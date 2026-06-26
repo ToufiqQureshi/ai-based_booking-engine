@@ -127,22 +127,22 @@ class TestPublicHotelPause:
         """Regression test for Bug #1: Paused hotel must block public bookings/chat."""
         from tests.conftest import engine
         from sqlalchemy.ext.asyncio import AsyncSession
-        from app.core.cache.redis_client import redis_client
-        
+
         # Pause the hotel
         async with AsyncSession(engine) as session:
             db_hotel = await session.get(Hotel, seeded_hotel.id)
             db_hotel.is_paused = True
             await session.commit()
-            
-        r = await client.get(
-            f"/api/v1/public/hotels/{seeded_hotel.slug}/rooms"
-            f"?check_in={_future(5)}&check_out={_future(6)}"
-        )
-        assert r.status_code == 403
 
-        # Unpause the hotel to not break other tests using seeded_hotel
-        async with AsyncSession(engine) as session:
-            db_hotel = await session.get(Hotel, seeded_hotel.id)
-            db_hotel.is_paused = False
-            await session.commit()
+        try:
+            r = await client.get(
+                f"/api/v1/public/hotels/{seeded_hotel.slug}/rooms"
+                f"?check_in={_future(5)}&check_out={_future(6)}"
+            )
+            assert r.status_code == 403
+        finally:
+            # Always unpause so subsequent tests using seeded_hotel are not affected
+            async with AsyncSession(engine) as session:
+                db_hotel = await session.get(Hotel, seeded_hotel.id)
+                db_hotel.is_paused = False
+                await session.commit()

@@ -452,7 +452,6 @@ async def delete_hotel(
 ):
     """Permanently delete a hotel and all associated data."""
     from sqlalchemy import text
-    from app.core.db.supabase import get_supabase
     from app.core.storage import delete_media_objects
     from app.rooms.room import RoomType
 
@@ -460,9 +459,10 @@ async def delete_hotel(
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
-    # Snapshot all media (hotel + every room) BEFORE the cascade deletes so we
-    # can purge it from storage afterwards — otherwise deleting a hotel orphans
-    # all its images forever. Best-effort; failures here never block the delete.
+    hotel_name = hotel.name
+    hotel_slug = hotel.slug
+
+    # Snapshot media BEFORE deletes so we can purge storage afterwards.
     media_to_clean = list(hotel.photos or []) + list(getattr(hotel, "videos", None) or [])
     try:
         room_media_rows = (await session.execute(
@@ -474,69 +474,86 @@ async def delete_hotel(
     except Exception as e:
         logger.warning("Could not snapshot room media for hotel %s: %s", hotel_id, e)
 
-    users_to_delete = (await session.execute(select(User).where(User.hotel_id == hotel_id))).scalars().all()
+    # Snapshot Supabase auth IDs BEFORE deletes so we can purge them after commit.
+    # Calling supabase.auth.admin.delete_user() while the DB transaction is still
+    # open causes Supabase-side cascades to race with our own SQL deletes on the
+    # users table, which is the root cause of the DeadlockDetectedError.
+    supabase_id_rows = (await session.execute(
+        select(User.supabase_id).where(
+            User.hotel_id == hotel_id, User.supabase_id.isnot(None)
+        )
+    )).all()
+    supabase_ids = [r[0] for r in supabase_id_rows]
 
-    deep_queries = [
-        "DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)",
-        "DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)",
-        "DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)",
-        "DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)",
-        "DELETE FROM payments WHERE hotel_id = :id",
-    ]
-    tables = [
-        "channel_logs", "channel_room_mappings", "room_rates", "room_blocks", "room_rate_links",
-        "bookings", "guests", "rate_plans", "room_types", "analytics_sessions",
-        "addons", "amenities", "api_keys", "channel_manager_settings",
-        "integration_settings", "leads", "promo_codes", "user_hotel_links", "subscriptions",
-    ]
-    for q in deep_queries:
-        try:
-            async with session.begin_nested():
-                await session.execute(text(q), {"id": hotel_id})
-        except Exception as e:
-            logger.warning("Deep cleanup failed: %s", e)
-    for table in tables:
-        try:
-            async with session.begin_nested():
-                await session.execute(text(f"DELETE FROM {table} WHERE hotel_id = :id"), {"id": hotel_id})
-        except Exception as e:
-            logger.warning("Failed to delete from %s: %s", table, e)
+    # --- All deletes run flat in a single transaction (no begin_nested savepoints).
+    #
+    # The original code wrapped each delete in begin_nested(), which created
+    # savepoints.  SQLAlchemy's ORM cascade on session.delete(hotel) then issued
+    # DELETE FROM users WHERE users.id = $1 while a savepoint still held a row
+    # lock from DELETE FROM users WHERE hotel_id = :id — circular lock → deadlock.
+    #
+    # Fix: pure raw SQL throughout; session.delete() is never called so ORM
+    # cascades never fire.  Supabase auth deletion happens as a background task
+    # AFTER the transaction commits.
     try:
-        async with session.begin_nested():
-            await session.execute(text("DELETE FROM audit_logs WHERE hotel_id = :id"), {"id": hotel_id})
-    except Exception as e:
-        logger.warning("Failed to delete audit logs: %s", e)
+        # Child rows that reference tables deleted below — must go first.
+        await session.execute(text("DELETE FROM analytics_events WHERE session_id IN (SELECT id FROM analytics_sessions WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_amenity_links WHERE room_id IN (SELECT id FROM room_types WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM booking_timeline WHERE booking_id IN (SELECT id FROM bookings WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM payments WHERE hotel_id = :id"), {"id": hotel_id})
+        # Dependent tables (all parameterised — no f-strings).
+        await session.execute(text("DELETE FROM channel_logs WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM channel_room_mappings WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_rates WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_blocks WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_rate_links WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM bookings WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM guests WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM rate_plans WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM room_types WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM analytics_sessions WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM addons WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM amenities WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM api_keys WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM channel_manager_settings WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM integration_settings WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM leads WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM promo_codes WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM user_hotel_links WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM subscriptions WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM audit_logs WHERE hotel_id = :id"), {"id": hotel_id})
+        # Users and hotel row last — raw SQL avoids ORM cascade that caused the deadlock.
+        await session.execute(text("DELETE FROM users WHERE hotel_id = :id"), {"id": hotel_id})
+        await session.execute(text("DELETE FROM hotels WHERE id = :id"), {"id": hotel_id})
 
-    supabase_admin = get_supabase()
-    for u in users_to_delete:
-        if u.supabase_id:
-            try:
-                supabase_admin.auth.admin.delete_user(u.supabase_id)
-            except Exception as e:
-                logger.warning("Could not delete auth user %s: %s", u.supabase_id, e)
-
-    try:
-        async with session.begin_nested():
-            await session.execute(text("DELETE FROM users WHERE hotel_id = :id"), {"id": hotel_id})
-    except Exception as e:
-        logger.error("Failed to delete users for hotel %s: %s", hotel_id, e)
-
-    try:
-        await session.delete(hotel)
         session.add(AuditLog(
             user_id=super_admin.id, user_email=super_admin.email,
             action="DELETE_HOTEL",
-            description=f"Permanently deleted hotel '{hotel.name}' (Slug: {hotel.slug})",
+            description=f"Permanently deleted hotel '{hotel_name}' (Slug: {hotel_slug})",
             ip_address=_get_client_ip(request),
         ))
         await session.commit()
-        # Purge hotel + room media from storage after the response (best-effort).
-        if media_to_clean:
-            background_tasks.add_task(delete_media_objects, media_to_clean)
-        return {"message": "Hotel and all associated data deleted successfully"}
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete hotel: {str(e)}")
+
+    # Post-commit cleanup (best-effort, non-blocking).
+    # Supabase auth deletes happen here so they never interfere with our transaction.
+    def _delete_supabase_users(ids: list) -> None:
+        supabase_admin = get_supabase()
+        for sid in ids:
+            try:
+                supabase_admin.auth.admin.delete_user(sid)
+            except Exception as exc:
+                logger.warning("Could not delete Supabase auth user %s: %s", sid, exc)
+
+    if supabase_ids:
+        background_tasks.add_task(_delete_supabase_users, supabase_ids)
+    if media_to_clean:
+        background_tasks.add_task(delete_media_objects, media_to_clean)
+
+    return {"message": "Hotel and all associated data deleted successfully"}
 
 
 @router.post("/impersonate/{hotel_id}")
