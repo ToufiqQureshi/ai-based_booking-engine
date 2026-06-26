@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Deletion Request & Policy - StayBooker AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0A0505',
+                        darkCard: '#140E0E',
+                        primaryBlue: '#DC2626', // Premium Red
+                        accentCyan: '#F43F5E',  // Premium Rose Accent
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700;800&family=JetBrains+Mono:wght=400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- GSAP & ScrollTrigger CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        body {
+            background-color: #0A0505;
+            color: #FFFFFF;
+            overflow-x: hidden;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0A0505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1F1212;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #DC2626;
+        }
+
+        .group:hover .arrow-icon {
+            transform: rotate(180deg);
+        }
+
+        @keyframes slideDown {
+            0% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown-animate {
+            animation: slideDown 0.3s ease-out forwards;
+        }
+
+        /* Glassmorphism elements */
+        .glass-panel {
+            background: rgba(20, 14, 14, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        /* Grid Overlay */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        }
+
+        /* Initial reveal state */
+        .reveal-up {
+            opacity: 0;
+            transform: translateY(30px);              
+        }
+    </style>
+</head>
+<body class="font-sans antialiased bg-darkBg text-white bg-grid relative selection:bg-accentCyan/30">
+
+    <!-- Ambient background glows -->
+    <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primaryBlue/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-accentCyan/5 rounded-full blur-[150px] pointer-events-none"></div>
+
+    <!-- HEADER PLACEHOLDER -->
+    <div id="header-placeholder"></div>
+
+    <!-- HERO / TITLE AREA -->
+    <section class="relative pt-44 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
+        <div id="threejs-deletion-container" class="absolute inset-0 pointer-events-none z-0 opacity-30"></div>
+        
+        <div class="relative z-10 space-y-4 max-w-3xl mx-auto">
+            <div id="hero-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-accentCyan font-medium opacity-0">
+                <span class="w-2 h-2 rounded-full bg-accentCyan animate-pulse"></span>
+                Privacy Operations Dashboard
+            </div>
+            <h1 id="hero-title" class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 opacity-0">
+                Data Deletion Requests
+            </h1>
+            <div id="hero-desc" class="flex flex-wrap items-center justify-center gap-4 text-xs font-mono text-slate-400 opacity-0">
+                <span>Effective Date: June 02, 2026</span>
+                <span class="text-white/20">•</span>
+                <span>Last Updated: June 02, 2026</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- INTERACTIVE INTAKE FORM & TERMINAL FEED -->
+    <section class="py-6 pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="grid lg:grid-cols-12 gap-8 items-stretch max-w-6xl mx-auto">
+            
+            <!-- Left Panel: Submission Console Form -->
+            <div class="lg:col-span-7 glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl space-y-4 text-left reveal-up">
+                <h4 class="text-xs font-semibold uppercase text-slate-400 font-mono flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-accentCyan animate-pulse"></span>
+                    Direct Data Deletion Portal
+                </h4>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Full Name</label>
+                        <input type="text" id="del-name" placeholder="Full Registered Name" class="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-accentCyan/50 text-white w-full transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Registered Email Address</label>
+                        <input type="email" id="del-email" placeholder="email@domain.com" class="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-accentCyan/50 text-white w-full transition-colors">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Mobile Number (Optional)</label>
+                        <input type="text" id="del-phone" placeholder="+1 (555) 000-0000" class="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-accentCyan/50 text-white w-full transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Booking Reference (Optional)</label>
+                        <input type="text" id="del-ref" placeholder="Reference Number" class="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-accentCyan/50 text-white w-full transition-colors">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Request Details & Focus Parameters</label>
+                    <textarea id="del-statement" rows="3" placeholder="Please specify if you want specific records or full account structures purged..." class="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-xs focus:outline-none focus:border-accentCyan/50 text-white w-full transition-colors resize-none"></textarea>
+                </div>
+
+                <div class="flex items-start gap-3 bg-white/[0.02] border border-white/5 p-4 rounded-xl">
+                    <input type="checkbox" id="del-consent" class="mt-0.5 rounded border-white/10 bg-white/5 text-accentCyan focus:ring-accentCyan/50 cursor-pointer">
+                    <label for="del-consent" class="text-[10px] text-slate-400 leading-normal cursor-pointer">
+                        I confirm that I am the authorized owner of this account data, and understand that account deletion is permanent and irreversible.
+                    </label>
+                </div>
+
+                <button onclick="transmitDeletionPayload()" class="w-full py-4 rounded-xl bg-gradient-to-r from-primaryBlue to-accentCyan text-white font-bold text-xs uppercase tracking-wide shadow-lg shadow-red-500/20 hover:shadow-red-500/40 transition-all duration-300">
+                    Submit Purge Request
+                </button>
+            </div>
+
+            <!-- Right Panel: Compliance Operational Feedback -->
+            <div class="lg:col-span-5 glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 text-left flex flex-col justify-between reveal-up">
+                <div class="space-y-4">
+                    <h4 class="text-xs font-semibold uppercase text-slate-400 font-mono border-b border-white/5 pb-2">Verification Operations Log</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        StayBooker requires immediate structural verification. Your submission details trigger automatic routing protocols directly to our security pipeline.
+                    </p>
+                </div>
+
+                <!-- Simulation Output Panel -->
+                <div class="bg-black/60 border border-white/10 p-4 rounded-xl font-mono text-[10px] text-slate-400 space-y-2 mt-4" id="purge-terminal">
+                    <div class="text-slate-600">[14:22:04] Operations pipeline initialized...</div>
+                    <div class="text-slate-500">[14:22:05] Idle. Ready for dynamic data allocation.</div>
+                </div>
+
+                <div class="pt-4 border-t border-white/5 mt-4 text-[10px] text-slate-500">
+                    Requests are processed according to our general operational timelines (usually within 30 business days).
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- DOCUMENT CORE LAYOUT -->
+    <section class="pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative z-10">
+        <div class="grid lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- STICKY SIDEBAR NAVIGATION (Table of Contents) -->
+            <aside class="hidden lg:block lg:col-span-3 sticky top-32 glass-panel p-5 rounded-2xl border border-white/5 text-left text-xs space-y-1 max-h-[70vh] overflow-y-auto">
+                <h4 class="text-[10px] font-mono tracking-widest text-slate-400 uppercase mb-3 px-3">Sections</h4>
+                <nav class="space-y-0.5" id="toc-nav">
+                    <a href="#introduction" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">1. Introduction</a>
+                    <a href="#right-to-request" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">2. Right to Request</a>
+                    <a href="#how-to-submit" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">3. How to Submit</a>
+                    <a href="#alternative-methods" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">4. Alternative Methods</a>
+                    <a href="#verification" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">5. Identity Verification</a>
+                    <a href="#eligible-info" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">6. Eligible Information</a>
+                    <a href="#google-data" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">7. Google Data Deletion</a>
+                    <a href="#retained-info" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">8. Retained Information</a>
+                    <a href="#timeline" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">9. Processing Timeline</a>
+                    <a href="#confirmation" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">10. Confirmation</a>
+                    <a href="#backup" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">11. Backup Information</a>
+                    <a href="#effect" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">12. Effect of Deletion</a>
+                    <a href="#third-parties" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">13. Third-Party Providers</a>
+                    <a href="#refusal" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">14. Refused Requests</a>
+                    <a href="#copy" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">15. Copy of Your Data</a>
+                    <a href="#withdrawal" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">16. Withdrawal of Consent</a>
+                    <a href="#contact-info" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">17. Contact Info</a>
+                    <a href="#changes" class="block py-2 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium">18. Policy Changes</a>
+                </nav>
+            </aside>
+
+            <!-- MAIN TEXT CONTENT -->
+            <main class="lg:col-span-9 glass-panel p-6 sm:p-12 rounded-3xl border border-white/5 text-left relative overflow-hidden space-y-10" id="legal-content">
+                
+                <!-- Metadata Header -->
+                <div class="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2 text-xs font-mono text-slate-400">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <span>Platform: <b class="text-white">Staybooker.ai</b></span>
+                        <span>Legal Entity: <b class="text-white">Transinterface Digiserv Pvt. Ltd.</b></span>
+                        <span>Website: <a href="https://www.staybooker.ai" class="text-accentCyan hover:underline">www.staybooker.ai</a></span>
+                    </div>
+                </div>
+
+                <!-- Section 1 -->
+                <section id="introduction" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">01.</span> Introduction
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Staybooker.ai respects the privacy rights of its users and is committed to providing transparent mechanisms for managing personal information. This Data Deletion Policy explains how users may request the deletion of personal data collected through Staybooker.ai and related services.
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        This policy applies to personal information collected through our website, applications, booking systems, APIs, WhatsApp communications, customer support channels, and other services operated by Transinterface Digiserv Pvt. Ltd.
+                    </p>
+                </section>
+
+                <!-- Section 2 -->
+                <section id="right-to-request" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">02.</span> Right to Request Deletion
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Subject to applicable laws, users may request the deletion of personal information associated with their Staybooker.ai account or services.
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Users may exercise this right at any time by submitting a deletion request using the contact details provided in this policy.
+                    </p>
+                </section>
+
+                <!-- Section 3 -->
+                <section id="how-to-submit" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">03.</span> How to Submit a Data Deletion Request
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Users may request deletion of their personal information by sending an email to:
+                    </p>
+                    <p class="text-xs sm:text-sm text-accentCyan font-mono font-bold">
+                        support@staybooker.ai
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed font-semibold">
+                        To help us verify and process the request efficiently, please include:
+                    </p>
+                    <ul class="list-disc pl-5 text-xs sm:text-sm text-slate-400 space-y-1.5">
+                        <li>Full Name</li>
+                        <li>Registered Email Address</li>
+                        <li>Mobile Number (if applicable)</li>
+                        <li>Booking Reference Number (if applicable)</li>
+                        <li>Details of the deletion request</li>
+                    </ul>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Incomplete requests may require additional verification before processing.
+                    </p>
+                </section>
+
+                <!-- Section 4 -->
+                <section id="alternative-methods" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">04.</span> Alternative Account Deletion Methods
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Where available, users may also delete their account and associated personal information directly through account settings within the Staybooker.ai platform.
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed font-mono text-[11px]">
+                        If an in-platform deletion feature is available, users may initiate deletion without contacting customer support, subject to verification and applicable legal requirements.
+                    </p>
+                </section>
+
+                <!-- Section 5 -->
+                <section id="verification" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">05.</span> Identity Verification
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        To protect users from unauthorized access, fraudulent deletion requests, or misuse of personal information, Staybooker.ai may require reasonable identity verification before processing any deletion request. Verification methods may include:
+                    </p>
+                    <ul class="list-disc pl-5 text-xs sm:text-sm text-slate-400 space-y-1.5">
+                        <li>Confirmation through the registered email address</li>
+                        <li>Account authentication</li>
+                        <li>Verification of booking details</li>
+                        <li>Additional supporting information where necessary</li>
+                    </ul>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Failure to complete verification may delay or prevent processing of the request.
+                    </p>
+                </section>
+
+                <!-- Section 6 -->
+                <section id="eligible-info" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">06.</span> Information Eligible for Deletion
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed font-semibold">
+                        Subject to applicable legal and contractual obligations, users may request deletion of:
+                    </p>
+                    <ul class="list-disc pl-5 text-xs sm:text-sm text-slate-400 space-y-1.5">
+                        <li>User account information</li>
+                        <li>Profile information</li>
+                        <li>Contact details</li>
+                        <li>Communication records</li>
+                        <li>Marketing preferences</li>
+                        <li>Customer support records</li>
+                        <li>Booking-related personal information</li>
+                        <li>Usage data associated with identifiable users</li>
+                        <li>Other personal information maintained by Staybooker.ai</li>
+                    </ul>
+                </section>
+
+                <!-- Section 7 -->
+                <section id="google-data" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">07.</span> Google User Data Deletion
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Where users have connected their Google account through Google Sign-In, Google OAuth, or other Google services, users may:
+                    </p>
+                    <ul class="list-disc pl-5 text-xs sm:text-sm text-slate-400 space-y-1.5">
+                        <li>Request deletion of Google-related account information stored by Staybooker.ai</li>
+                        <li>Disconnect their Google account from Staybooker.ai</li>
+                        <li>Revoke Staybooker.ai access through their Google Account security settings</li>
+                    </ul>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Users may manage Google account permissions directly through their Google Account settings. Upon successful deletion, Google user data retained by Staybooker.ai will be deleted unless retention is required by law or legitimate business obligations.
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed font-mono text-[11px]">
+                        Staybooker.ai's use and transfer of information received from Google APIs will comply with the Google API Services User Data Policy, including the Limited Use requirements where applicable.
+                    </p>
+                </section>
+
+                <!-- Section 8 -->
+                <section id="retained-info" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">08.</span> Information That May Be Retained
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed font-semibold">
+                        Certain information may be retained where required for:
+                    </p>
+                    <ul class="list-disc pl-5 text-xs sm:text-sm text-slate-400 space-y-1.5">
+                        <li>Compliance with applicable laws and regulations</li>
+                        <li>Tax, accounting, and financial recordkeeping obligations</li>
+                        <li>Fraud prevention and security monitoring</li>
+                        <li>Dispute resolution and legal claims</li>
+                        <li>Contract enforcement</li>
+                        <li>Regulatory investigations</li>
+                        <li>Protection of platform integrity and security</li>
+                    </ul>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Where retention is required, such information will remain protected in accordance with our Privacy Policy.
+                    </p>
+                </section>
+
+                <!-- Section 9 -->
+                <section id="timeline" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">09.</span> Deletion Processing Timeline
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Staybooker.ai aims to acknowledge deletion requests within 7 business days of receipt. Eligible requests will generally be processed within 30 business days, subject to verification requirements, legal obligations, and operational considerations.
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Processing times may vary depending on verification requirements, complexity of the request, legal obligations affecting data retention, or technical limitations.
+                    </p>
+                </section>
+
+                <!-- Section 10 -->
+                <section id="confirmation" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">10.</span> Confirmation of Deletion
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Upon completion of an eligible deletion request, Staybooker.ai may provide confirmation that the request has been processed.
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Where certain information cannot be deleted due to legal, regulatory, security, fraud prevention, or contractual obligations, users may be informed regarding the categories of information retained and the reasons for retention where permitted by law.
+                    </p>
+                </section>
+
+                <!-- Section 11 -->
+                <section id="backup" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">11.</span> Backup and Archived Information
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Deleted personal information may remain temporarily within secure backup systems, disaster recovery environments, or archived records for a limited period. Such information will remain subject to appropriate security safeguards and will be deleted or overwritten in accordance with applicable retention schedules and operational requirements.
+                    </p>
+                </section>
+
+                <!-- Section 12 -->
+                <section id="effect" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">12.</span> Effect of Data Deletion
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed font-semibold">
+                        Deletion of personal information may result in:
+                    </p>
+                    <ul class="list-disc pl-5 text-xs sm:text-sm text-slate-400 space-y-1.5">
+                        <li>Loss of access to user accounts</li>
+                        <li>Removal of booking history</li>
+                        <li>Inability to access certain services</li>
+                        <li>Permanent deletion of stored preferences and settings</li>
+                    </ul>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Certain anonymized, aggregated, or non-personally identifiable information may continue to be retained for analytics, security, operational, or legal purposes.
+                    </p>
+                </section>
+
+                <!-- Section 13 -->
+                <section id="third-parties" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">13.</span> Third-Party Service Providers
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Staybooker.ai may use third-party service providers for hosting, analytics, payment processing, customer support, communications, and platform operations. Where personal information has been shared with authorized service providers, Staybooker.ai will take reasonable steps to ensure deletion requests are communicated and processed in accordance with applicable contractual and legal requirements, where feasible.
+                    </p>
+                </section>
+
+                <!-- Section 14 -->
+                <section id="refusal" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">14.</span> Circumstances Where Requests May Be Refused
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Staybooker.ai may refuse or limit deletion requests where: identity cannot be verified, the request is fraudulent or abusive, retention is required by law or regulatory obligations, retention is necessary for security, fraud prevention, or dispute resolution purposes, or applicable legal exemptions permit continued retention.
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Where permitted by law, users may be informed of the reasons for refusal.
+                    </p>
+                </section>
+
+                <!-- Section 15 -->
+                <section id="copy" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">15.</span> Requesting a Copy of Your Data
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Before requesting deletion, users may contact Staybooker.ai to request information regarding personal data associated with their account, subject to applicable laws and verification requirements.
+                    </p>
+                </section>
+
+                <!-- Section 16 -->
+                <section id="withdrawal" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">16.</span> Withdrawal of Consent
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Where personal data is processed based on user consent, users may withdraw consent at any time by contacting Staybooker.ai. Withdrawal of consent will not affect processing that occurred prior to the withdrawal request.
+                    </p>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Users may revoke Staybooker.ai's access to their Google Account by visiting Google's Security Settings and removing Staybooker.ai from the list of authorized applications.
+                    </p>
+                </section>
+
+                <!-- Section 17 -->
+                <section id="contact-info" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">17.</span> Contact Information
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed font-semibold">
+                        For data deletion requests, privacy concerns, or questions regarding this policy, please contact:
+                    </p>
+                    <div class="p-5 bg-white/[0.02] border border-white/5 rounded-2xl text-xs sm:text-sm text-slate-400 space-y-1.5 font-mono">
+                        <p class="text-white font-bold font-sans">Transinterface Digiserv Pvt. Ltd.</p>
+                        <p>Registered Office Address: [Insert Registered Company Address]</p>
+                        <p>Email: <a href="mailto:support@staybooker.ai" class="text-accentCyan hover:underline">support@staybooker.ai</a></p>
+                        <p>Website: <a href="https://www.staybooker.ai" class="text-accentCyan hover:underline">www.staybooker.ai</a></p>
+                    </div>
+                </section>
+
+                <!-- Section 18 -->
+                <section id="changes" class="space-y-3 pt-6 border-t border-white/5">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-accentCyan font-mono">18.</span> Changes to This Policy
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Staybooker.ai reserves the right to update or modify this Data Deletion Policy at any time. Updated versions will be published on the website with a revised effective date. Continued use of the platform following such updates constitutes acceptance of the revised policy.
+                    </p>
+                </section>
+
+            </main>
+        </div>
+    </section>
+
+    <!-- FOOTER PLACEHOLDER -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Scripts -->
+    <script>
+        // GSAP core & ScrollTrigger ko properly register karna
+        gsap.registerPlugin(ScrollTrigger);
+
+        // --- 1. ASYNC HEADER & FOOTER LOADER (with Auto Cleaner) ---
+        async function loadHeaderAndFooter() {
+            try {
+                // Cache bypass
+                const version = new Date().getTime();
+
+                // Header Load
+                const headerResponse = await fetch('header.html?v=' + version);
+                const headerData = await headerResponse.text();
+                document.getElementById('header-placeholder').innerHTML = headerData;
+                
+                // Header active toggles
+                initializeHeaderLogic(); 
+
+                // Footer Load
+                const footerResponse = await fetch('footer.html?v=' + version);
+                const footerData = await footerResponse.text();
+                document.getElementById('footer-placeholder').innerHTML = footerData;
+                
+                // Current year
+                const yearEl = document.getElementById('current-year');
+                if (yearEl) {
+                    yearEl.textContent = new Date().getFullYear();
+                }
+
+                // Automatic Stray Tag Fix
+                removeStrayArrow();
+
+            } catch (error) {
+                console.error("Error loading layout components:", error);
+            }
+        }
+
+        // --- 2. AUTO-CLEANER FOR STRAY ARROWS (FIX) ---
+        function removeStrayArrow() {
+            // Body direct child check
+            Array.from(document.body.childNodes).forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().includes('-->')) {
+                    node.remove();
+                }
+            });
+
+            // Header placeholder check
+            const headerPlaceholder = document.getElementById('header-placeholder');
+            if (headerPlaceholder) {
+                Array.from(headerPlaceholder.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().includes('-->')) {
+                        node.remove();
+                    }
+                });
+            }
+        }
+
+        // --- 3. HEADER MENU & DROPDOWN LOGIC ---
+        function initializeHeaderLogic() {
+            if (typeof gsap !== 'undefined') {
+                gsap.to("#main-header", {
+                    y: 0,
+                    opacity: 1,
+                    duration: 1,
+                    ease: "power4.out"
+                });
+            } else {
+                const header = document.getElementById('main-header');
+                if (header) {
+                    header.style.opacity = '1';
+                    header.style.transform = 'translateY(0)';
+                }
+            }
+
+            // Mobile menu drawer
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const hamburgerIcon = document.getElementById('hamburger-icon');
+            const closeIcon = document.getElementById('close-icon');
+
+            if (hamburgerBtn && mobileMenu) {
+                hamburgerBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const isHidden = mobileMenu.classList.contains('hidden');
+                    
+                    if (isHidden) {
+                        mobileMenu.classList.remove('hidden');
+                        mobileMenu.classList.add('flex');
+                        hamburgerIcon.classList.add('hidden');
+                        closeIcon.classList.remove('hidden');
+                    } else {
+                        mobileMenu.classList.add('hidden');
+                        mobileMenu.classList.remove('flex');
+                        hamburgerIcon.classList.remove('hidden');
+                        closeIcon.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Mobile dropdown triggers
+            const submenuButtons = document.querySelectorAll('.mobile-sublist-btn');
+            submenuButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const sublistContent = button.nextElementSibling;
+                    const arrowIcon = button.querySelector('svg');
+                    
+                    if (sublistContent) {
+                        if (sublistContent.classList.contains('hidden')) {
+                            sublistContent.classList.remove('hidden');
+                            sublistContent.classList.add('flex');
+                            if(arrowIcon) arrowIcon.classList.add('rotate-180');
+                        } else {
+                            sublistContent.classList.remove('flex');
+                            sublistContent.classList.add('hidden');
+                            if(arrowIcon) arrowIcon.classList.remove('rotate-180');
+                        }
+                    }
+                });
+            });
+        }
+
+        // --- THREE.JS BACKGROUND SCENE ---
+        let scene, camera, renderer, particles;
+        const container = document.getElementById('threejs-deletion-container');
+
+        function init3DDeletionAtmosphere() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.z = 25;
+
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            const count = 400;
+            const positions = new Float32Array(count * 3);
+            const r = 12;
+
+            for (let i = 0; i < count; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+
+                positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = r * Math.cos(phi);
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const mat = new THREE.PointsMaterial({
+                color: 0xF43F5E,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(geo, mat);
+            scene.add(particles);
+
+            window.addEventListener('resize', onResize);
+            animateScene();
+        }
+
+        function onResize() {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animateScene() {
+            requestAnimationFrame(animateScene);
+            particles.rotation.y += 0.0005;
+            particles.rotation.x += 0.0002;
+            renderer.render(scene, camera);
+        }
+
+        // --- SCROLL REVEALS INITIALIZATION ---
+        function initScrollReveals() {
+            const revealUpElements = gsap.utils.toArray('.reveal-up');
+            revealUpElements.forEach((element) => {
+                gsap.to(element, {
+                    opacity: 1,
+                    y: 0,
+                    duration: 0.8,
+                    ease: "power2.out",
+                    scrollTrigger: {
+                        trigger: element,
+                        start: "top 85%",
+                        toggleActions: "play none none none"
+                    }
+                });
+            });
+        }
+
+        // --- PAGE INITIALIZATION & REVEALS ---
+        window.addEventListener('DOMContentLoaded', () => {
+            // Dynamic load of Header & Footer
+            loadHeaderAndFooter();
+            
+            init3DDeletionAtmosphere();
+
+            // Setup elements animations
+            const tl = gsap.timeline();
+            tl.to("#hero-badge", { opacity: 1, y: 0, duration: 0.6 })
+              .to("#hero-title", { opacity: 1, y: 0, duration: 0.8 }, "-=0.4")
+              .to("#hero-desc", { opacity: 1, y: 0, duration: 0.8 }, "-=0.6");
+
+            // Scroll animations trigger initialize
+            initScrollReveals();
+            initTableOfContentsHighlight();
+        });
+
+        // --- ACTIVE TOC HIGHLIGHTING ---
+        function initTableOfContentsHighlight() {
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('#toc-nav a');
+
+            window.addEventListener('scroll', () => {
+                let currentSectionId = "";
+
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop - 150;
+                    if (window.scrollY >= sectionTop) {
+                        currentSectionId = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('text-accentCyan', 'bg-white/5');
+                    link.classList.add('text-slate-300');
+                    
+                    if (link.getAttribute('href') === `#${currentSectionId}`) {
+                        link.classList.remove('text-slate-300');
+                        link.classList.add('text-accentCyan', 'bg-white/5');
+                    }
+                });
+            });
+        }
+
+        // --- TRANSMIT DELETION PAYLOAD (SIMULATION) ---
+        function transmitDeletionPayload() {
+            const name = document.getElementById('del-name').value;
+            const email = document.getElementById('del-email').value;
+            const phone = document.getElementById('del-phone').value;
+            const ref = document.getElementById('del-ref').value;
+            const consent = document.getElementById('del-consent').checked;
+            const terminal = document.getElementById('purge-terminal');
+
+            if (!name || !email) {
+                alert("Please fill out your Name and Registered Email Address.");
+                return;
+            }
+
+            if (!consent) {
+                alert("You must confirm the permanently permanent deletion consent checkbox.");
+                return;
+            }
+
+            // Create new dynamic console row
+            const timeStr = new Date().toLocaleTimeString();
+            
+            terminal.innerHTML = ""; // Clear log
+            
+            const logs = [
+                `[${timeStr}] CONNECTED: Sending deletion intent payload for ${name}...`,
+                `[${timeStr}] VERIFYING: Authenticating user email: ${email}...`,
+                `[${timeStr}] MAPPING: Isolating transaction history & account nodes...`,
+                `[${timeStr}] COMPLETED: Deletion request logged successfully. A verification link has been sent to ${email} to finalize operations.`
+            ];
+
+            logs.forEach((logText, index) => {
+                setTimeout(() => {
+                    const logRow = document.createElement('div');
+                    logRow.className = index === 3 ? "text-emerald-400 font-bold font-mono" : "text-slate-400 font-mono";
+                    logRow.textContent = logText;
+                    terminal.appendChild(logRow);
+                }, index * 800);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import htmlToTsxPlugin from "./plugins/html-to-tsx.js";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
@@ -33,7 +34,7 @@ export default defineConfig(() => ({
   build: {
     sourcemap: false,
   },
-  plugins: [react()],
+  plugins: [htmlToTsxPlugin(), react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
