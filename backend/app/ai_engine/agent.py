@@ -885,7 +885,11 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         )
 
     # Ensure PostgresDb is initialized for history
-    db_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg") if "+asyncpg" in settings.DATABASE_URL else settings.DATABASE_URL
+    # psycopg3 needs +psycopg driver and sslmode=require (not ssl=true which is asyncpg-style)
+    db_url = settings.DATABASE_URL
+    if "+asyncpg" in db_url:
+        db_url = db_url.replace("+asyncpg", "+psycopg")
+    db_url = db_url.replace("ssl=true", "sslmode=require").replace("ssl=True", "sslmode=require")
     agent_db = PostgresDb(db_url=db_url, session_table="agno_sessions")
 
     # Split tools into focused groups

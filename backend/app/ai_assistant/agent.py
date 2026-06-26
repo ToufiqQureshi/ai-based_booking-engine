@@ -155,8 +155,9 @@ async def chat_with_agent(
         agent = await create_agent_executor(session, current_user, user_query=payload.message)
 
         # 2. Run agent with persistent session tracking
+        # agno Team.arun() requires 'input' as first positional argument
         result = await agent.arun(
-            message=payload.message,
+            payload.message,
             user_id=str(current_user.id),
             session_id=payload.session_id  # If None, Agno auto-generates a UUID
         )
