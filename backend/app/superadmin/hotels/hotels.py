@@ -514,11 +514,12 @@ async def delete_hotel(
                 supabase_admin.auth.admin.delete_user(u.supabase_id)
             except Exception as e:
                 logger.warning("Could not delete auth user %s: %s", u.supabase_id, e)
-        try:
-            async with session.begin_nested():
-                await session.delete(u)
-        except Exception as e:
-            logger.error("Failed to delete user %s: %s", u.email, e)
+
+    try:
+        async with session.begin_nested():
+            await session.execute(text("DELETE FROM users WHERE hotel_id = :id"), {"id": hotel_id})
+    except Exception as e:
+        logger.error("Failed to delete users for hotel %s: %s", hotel_id, e)
 
     try:
         await session.delete(hotel)
