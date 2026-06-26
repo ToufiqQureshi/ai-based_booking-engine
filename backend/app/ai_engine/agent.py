@@ -811,6 +811,8 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
 
     if not target_api_key:
         raise ValueError("No valid GROQ_API_KEY available for this hotel.")
+    
+    target_api_key = target_api_key.strip()
 
     # Fetch Hotel City for Context - Handle NoneType safety
     hotel_city = "Unknown City"
@@ -827,6 +829,13 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
             effective_provider = "openai"
         elif target_api_key.startswith("AIza"):
             effective_provider = "gemini"
+
+    # If the user put an OpenAI key but left base_url and model blank, they defaulted to Groq. Fix it here:
+    if effective_provider == "openai":
+        if target_base_url == "https://api.groq.com/openai/v1":
+            target_base_url = None
+        if target_model == "llama-3.3-70b-versatile":
+            target_model = "gpt-4o"
 
     if effective_provider in ("gemini", "google"):
         from agno.models.google import Gemini
