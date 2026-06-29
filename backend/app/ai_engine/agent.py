@@ -884,10 +884,17 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
             max_tokens=effective_max_tokens,
         )
 
-    # AsyncPostgresDb: fully async, uses asyncpg under the hood, and accepts
-    # the DATABASE_URL as-is (ssl=require is valid asyncpg format — no driver
-    # or SSL conversion needed unlike the sync PostgresDb/psycopg path).
-    agent_db = AsyncPostgresDb(db_url=settings.DATABASE_URL, session_table="agno_sessions")
+    # Supabase uses pgbouncer in transaction mode — asyncpg's default prepared
+    # statement cache creates server-side prepared statements that do not survive
+    # across pooled connections, causing InvalidSQLStatementNameError on the
+    # second request.  Passing statement_cache_size=0 via connect_args disables
+    # the cache so every query uses the simple query protocol instead.
+    from sqlalchemy.ext.asyncio import create_async_engine
+    _agent_engine = create_async_engine(
+        settings.DATABASE_URL,
+        connect_args={"statement_cache_size": 0},
+    )
+    agent_db = AsyncPostgresDb(db_engine=_agent_engine, session_table="agno_sessions")
 
     # Split tools into focused groups
     finance_tools = [
