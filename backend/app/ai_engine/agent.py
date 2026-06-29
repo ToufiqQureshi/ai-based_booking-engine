@@ -230,26 +230,32 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         Cancels a booking with the given booking number.
         WARNING: This action cannot be undone easily.
+        IMPORTANT: Call this tool ONE booking at a time. Do NOT call it in parallel for multiple bookings.
         """
-        query = select(Booking).where(
-            Booking.hotel_id == user.hotel_id,
-            Booking.booking_number == booking_number
-        )
-        result = await session.execute(query)
-        booking = result.scalar_one_or_none()
+        try:
+            query = select(Booking).where(
+                Booking.hotel_id == user.hotel_id,
+                Booking.booking_number == booking_number
+            )
+            result = await session.execute(query)
+            booking = result.scalar_one_or_none()
 
-        if not booking:
-            return f"Booking {booking_number} not found."
+            if not booking:
+                return f"ERROR: Booking {booking_number} not found in this hotel."
 
-        if booking.status == BookingStatus.CANCELLED:
-            return f"Booking {booking_number} is already cancelled."
+            if booking.status == BookingStatus.CANCELLED:
+                return f"Booking {booking_number} is already cancelled (no action taken)."
 
-        booking.status = BookingStatus.CANCELLED
-        session.add(booking)
-        await session.commit()
-        await session.refresh(booking)
+            booking.status = BookingStatus.CANCELLED
+            session.add(booking)
+            await session.commit()
+            await session.refresh(booking)
 
-        return f"Booking {booking_number} has been successfully cancelled."
+            return f"SUCCESS: Booking {booking_number} has been cancelled."
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"cancel_booking {booking_number}: {e}", exc_info=True)
+            return f"ERROR cancelling {booking_number}: database error — {type(e).__name__}. Please try again one at a time."
 
 
 

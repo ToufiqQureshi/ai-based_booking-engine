@@ -229,19 +229,19 @@ async def chat_stream(
     # Agno emits events at two layers:
     # - Team-level:  TeamRunContent, TeamToolCallStarted, TeamRunCompleted, TeamRunError
     # - Member-level: RunContent, ToolCallStarted (no session_id on RunCompleted)
-    # Both layers must be handled so streaming works when the Team delegates to a sub-agent.
-    _CONTENT_EVENTS = {"TeamRunContent", "RunContent"}
-    _TOOL_EVENTS    = {"TeamToolCallStarted", "ToolCallStarted"}
+    # We intentionally DO NOT stream RunContent/TeamRunContent events because they contain
+    # intermediate LLM narration ("Let me check...", "Let me fetch...") that pollutes the UI.
+    # TeamRunCompleted.content is the single clean final response — we send only that.
+    _TOOL_EVENTS = {"TeamToolCallStarted", "ToolCallStarted"}
 
     async def generate():
         try:
             from app.ai_engine.agent import create_agent_executor
             agent = await create_agent_executor(session, current_user, user_query=payload.message)
 
-            # Track whether any content was already streamed incrementally.
-            # When the Team only routes (never generates its own text), all content
-            # lives in TeamRunCompleted.content — we send it as one chunk there.
-            content_streamed = False
+            # Capture session_id from the first event that carries it (TeamRunStarted arrives
+            # before TeamRunCompleted and reliably has session_id set by Agno).
+            captured_session_id: str | None = None
 
             async for evt in agent.arun(
                 payload.message,
@@ -252,26 +252,27 @@ async def chat_stream(
             ):
                 ev = getattr(evt, "event", "")
 
+                # Grab session_id from any event that carries it
+                if not captured_session_id:
+                    captured_session_id = getattr(evt, "session_id", None) or None
+
                 if ev in _TOOL_EVENTS:
                     tool_name = ""
                     if getattr(evt, "tool", None):
                         tool_name = getattr(evt.tool, "tool_name", "") or ""
                     yield f"data: {json.dumps({'type': 'tool', 'name': tool_name})}\n\n"
 
-                elif ev in _CONTENT_EVENTS:
-                    chunk = getattr(evt, "content", None)
-                    if chunk:
-                        content_streamed = True
-                        yield f"data: {json.dumps({'type': 'content', 'delta': str(chunk)})}\n\n"
-
                 elif ev == "TeamRunCompleted":
-                    sid = getattr(evt, "session_id", None) or agent.session_id
-                    # If the Team routed to a member without streaming its own text,
-                    # the full answer is in evt.content — send it as a single chunk.
-                    if not content_streamed:
-                        full_text = getattr(evt, "content", None)
-                        if full_text:
-                            yield f"data: {json.dumps({'type': 'content', 'delta': str(full_text)})}\n\n"
+                    sid = (
+                        getattr(evt, "session_id", None)
+                        or captured_session_id
+                        or getattr(agent, "session_id", None)
+                    )
+                    # Always use TeamRunCompleted.content — it's the clean, final response
+                    # with no intermediate "Let me check..." narration.
+                    full_text = getattr(evt, "content", None)
+                    if full_text:
+                        yield f"data: {json.dumps({'type': 'content', 'delta': str(full_text)})}\n\n"
                     record_ai_usage(current_user.hotel_id, evt, agent_type="hotelier", user_identifier=str(current_user.id))
                     await persist_ai_usage_db(current_user.hotel_id, evt, agent_type="hotelier", user_identifier=str(current_user.id))
                     if not payload.session_id and sid:

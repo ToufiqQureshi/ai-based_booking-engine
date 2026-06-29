@@ -441,6 +441,8 @@ const AgentPage = () => {
     const sendMessage = async (text: string) => {
         if (!text.trim() || isLoading) return;
         const userMessage = text.trim();
+        // Capture before clearing so we know if this was a brand-new chat
+        const wasNewChat = !activeSessionId;
         setInput('');
         setMessages(prev => [...prev, { role: 'human', content: userMessage }]);
         setIsLoading(true);
@@ -511,8 +513,13 @@ const AgentPage = () => {
             if (accumulated) {
                 setMessages(prev => [...prev, { role: 'ai', content: accumulated }]);
             }
-            if (doneSessionId && doneSessionId !== activeSessionId) {
+            // Always update active session when backend returns a session_id
+            if (doneSessionId) {
                 setActiveSessionId(doneSessionId);
+            }
+            // Refresh sidebar: always after a new chat (session just got created),
+            // or if the session_id changed unexpectedly on an existing chat
+            if (wasNewChat || (doneSessionId && doneSessionId !== activeSessionId)) {
                 fetchSessions();
             }
         } catch (error: any) {
