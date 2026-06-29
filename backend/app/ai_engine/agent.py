@@ -48,6 +48,7 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 - **Language**: English. Speak professionally and clearly. Do NOT use Hinglish.
 - **Tone**: Concise, Professional, Direct. NO fluff.
 - **Formatting**: Use Markdown (lists, bolding, tables) for readability. Present data cleanly.
+- **Response Start**: NEVER begin your response with "Let me check", "Let me fetch", "Let me search", "Let me look up", or any similar phrase. Jump DIRECTLY to the result. If you must indicate what you did, use past tense at the end (e.g., "Here are the results — I checked arrivals for today.").
 
 ### CRITICAL RULES ⚡
 1. **Access control**: You have FULL access to the booking report, rooms, and hotel data via your tools. Do NOT claim you need authentication or lack access. If a tool returns no data, just say there is no data.
@@ -928,7 +929,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         role="Handles all revenue, billing, and financial reporting queries",
         model=llm_model,
         tools=finance_tools,
-        instructions="You are a hotel finance specialist. Always use tables/charts for revenue data.",
+        instructions="You are a hotel finance specialist. Always use tables/charts for revenue data. Never start responses with 'Let me check/fetch/search' — jump directly to the result.",
         user_id=str(user.id),
     )
 
@@ -937,7 +938,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         role="Handles all reservation, availability, and guest booking queries",
         model=llm_model,
         tools=booking_tools,
-        instructions="You are a hotel reservations specialist.",
+        instructions="You are a hotel reservations specialist. Never start responses with 'Let me check/fetch/search' — jump directly to the result.",
         user_id=str(user.id),
     )
 
@@ -946,7 +947,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         role="Handles dashboard stats, arrivals, departures, inventory, and alerts",
         model=llm_model,
         tools=ops_tools,
-        instructions="You are a hotel operations specialist. Be proactive and concise.",
+        instructions="You are a hotel operations specialist. Be proactive and concise. Never start responses with 'Let me check/fetch/search' — jump directly to the result.",
         user_id=str(user.id),
     )
 
