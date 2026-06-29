@@ -7,7 +7,89 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Roles permitted to perform destructive booking changes via the assistant.
+# STAFF is intentionally excluded (CLAUDE.md RBAC: STAFF cannot modify critical data).
+_CANCEL_ALLOWED_ROLES = {"OWNER", "MANAGER", "SUPER_ADMIN"}
+
 # Logic functions to be wrapped as @tool in agent.py
+
+
+async def logic_cancel_booking(session, user, booking_number: str, confirm: bool = False) -> str:
+    """Cancel a single booking — destructive, two-phase, role-gated, audited.
+
+    Lives here (not as a closure in agent.py) so it can be unit-tested directly.
+
+    Safety layers:
+      - RBAC: only OWNER / MANAGER / SUPER_ADMIN may cancel.
+      - Status guard: a CHECKED_IN / CHECKED_OUT stay can't be cancelled here.
+      - Two-phase: confirm=False only previews; the DB changes solely on confirm=True.
+      - Audit: writes a BookingTimeline row attributing the change to the AI agent.
+    """
+    # Imported here to avoid a heavy import at module load for the tool layer.
+    from app.bookings.booking import Booking, BookingStatus
+    from app.bookings.timeline import BookingTimeline
+
+    role = getattr(user.role, "value", str(user.role)).upper()
+    if role not in _CANCEL_ALLOWED_ROLES:
+        return (
+            "ERROR: You do not have permission to cancel bookings. "
+            "Only an OWNER or MANAGER can do this — please ask them."
+        )
+
+    try:
+        result = await session.execute(
+            select(Booking).where(
+                Booking.hotel_id == user.hotel_id,
+                Booking.booking_number == booking_number,
+            )
+        )
+        booking = result.scalar_one_or_none()
+
+        if not booking:
+            return f"ERROR: Booking {booking_number} not found in this hotel."
+
+        if booking.status == BookingStatus.CANCELLED:
+            return f"Booking {booking_number} is already cancelled (no action taken)."
+
+        if booking.status in (BookingStatus.CHECKED_IN, BookingStatus.CHECKED_OUT):
+            return (
+                f"ERROR: Booking {booking_number} is '{booking.status.value}'. "
+                "A checked-in or checked-out booking cannot be cancelled from the "
+                "assistant — handle it at the front desk."
+            )
+
+        if not confirm:
+            return (
+                f"⚠️ CONFIRMATION REQUIRED — nothing has been changed yet.\n"
+                f"You asked to cancel booking **{booking_number}** "
+                f"(status: {booking.status.value}, dates: {booking.check_in} → {booking.check_out}, "
+                f"amount: ₹{booking.total_amount}). This is irreversible.\n"
+                f"Reply **\"yes, cancel {booking_number}\"** to confirm, or tell me to stop."
+            )
+
+        old_status = booking.status
+        booking.status = BookingStatus.CANCELLED
+        session.add(booking)
+        session.add(BookingTimeline(
+            booking_id=booking.id,
+            event_type="booking_cancelled",
+            old_value=old_status.value,
+            new_value=BookingStatus.CANCELLED.value,
+            message=f"Cancelled via AI assistant on hotelier confirmation (user {user.id}).",
+            changed_by="ai_agent",
+        ))
+        await session.commit()
+        await session.refresh(booking)
+
+        logger.info(f"Booking {booking_number} cancelled via AI assistant by user {user.id}")
+        return f"SUCCESS: Booking {booking_number} has been cancelled."
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"logic_cancel_booking {booking_number}: {e}", exc_info=True)
+        return (
+            f"ERROR cancelling {booking_number}: database error — {type(e).__name__}. "
+            "Please try again one at a time."
+        )
 
 
 async def logic_update_room_price(session, user, room_name: str, new_price: float) -> str:

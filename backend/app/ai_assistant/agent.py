@@ -18,23 +18,45 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/agent", tags=["AI Agent"])
 
 
+# Module-level singleton so the session list/history/rename/delete endpoints do
+# NOT create a fresh AsyncEngine (and therefore a fresh connection pool) on every
+# request. Per-request engines leaked pools and, under Supabase's pgbouncer
+# transaction pooling, surfaced as InvalidSQLStatementNameError ("prepared
+# statement ... does not exist") on /agent/sessions (Sentry STAYBOOKERAI-3A).
+_agent_db_singleton = None
+
+
 def _make_agent_db():
-    """Return a lightweight AsyncPostgresDb without spinning up the full agent.
+    """Return a cached, lightweight AsyncPostgresDb without spinning up the full agent.
 
     The full create_agent_executor() initialises the LLM, all tool functions,
     and four sub-agents — unnecessary overhead for pure DB reads/writes on the
-    sessions table.  This helper creates only the DB layer so that session list,
-    history, rename, and delete endpoints stay fast.
+    sessions table.  This helper creates only the DB layer (once) so that session
+    list, history, rename, and delete endpoints stay fast and connection-safe.
     """
+    global _agent_db_singleton
+    if _agent_db_singleton is not None:
+        return _agent_db_singleton
+
     from agno.db.postgres import AsyncPostgresDb
     from sqlalchemy.ext.asyncio import create_async_engine
     from app.core.utils.config import get_settings
     settings = get_settings()
-    engine = create_async_engine(
-        settings.DATABASE_URL,
-        connect_args={"statement_cache_size": 0},
-    )
-    return AsyncPostgresDb(db_engine=engine, session_table="agno_sessions")
+
+    # Force the asyncpg driver. A bare postgres:// / postgresql:// URL can resolve
+    # to the sync psycopg dialect, which rejects the asyncpg-only `ssl` /
+    # `statement_cache_size` connect args (Sentry STAYBOOKERAI-32: invalid
+    # connection option "ssl"; STAYBOOKERAI-30: No module named 'psycopg').
+    db_url = settings.DATABASE_URL
+    if db_url.startswith("postgres://"):
+        db_url = "postgresql+asyncpg://" + db_url[len("postgres://"):]
+    elif db_url.startswith("postgresql://"):
+        db_url = "postgresql+asyncpg://" + db_url[len("postgresql://"):]
+
+    connect_args = {"statement_cache_size": 0} if "asyncpg" in db_url else {}
+    engine = create_async_engine(db_url, connect_args=connect_args, pool_pre_ping=True)
+    _agent_db_singleton = AsyncPostgresDb(db_engine=engine, session_table="agno_sessions")
+    return _agent_db_singleton
 
 # Rough average tokens per guest conversation — used only for the "estimated
 # conversations" display metric shown to hoteliers. Not used in billing logic.
@@ -335,30 +357,46 @@ async def get_chat_session_history(session_id: str, current_user: CurrentUser):
     """Fetch messages of a specific chat session."""
     from agno.db.base import SessionType
     db = _make_agent_db()
+    # Ownership (IDOR guard) is delegated to agno: passing user_id filters the
+    # row in SQL, so a session belonging to another user simply isn't returned.
+    # The previous manual `sess.user_id != str(current_user.id)` check 404'd even
+    # for the legitimate owner whenever the deserialized user_id didn't string-match.
     try:
-        sess = await db.get_session(session_id, session_type=SessionType.TEAM)
-        if not sess or sess.user_id != str(current_user.id):
-            raise HTTPException(status_code=404, detail="Session not found")
+        sess = await db.get_session(
+            session_id, session_type=SessionType.TEAM, user_id=str(current_user.id)
+        )
+    except Exception as e:
+        # Don't silently return an empty history — that hid real DB errors and
+        # showed the hotelier a blank, "working" chat. Log and surface 503 so the
+        # frontend shows a real "could not load" toast instead of fake-empty data.
+        logger.error(f"Failed to fetch session {session_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Could not load chat history. Please try again.")
 
-        messages = []
-        for run in (sess.runs or []):
-            if run is None:
-                continue
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    messages = []
+    for run in (getattr(sess, "runs", None) or []):
+        if run is None:
+            continue
+        try:
             raw_input = getattr(run, "input", None)
             ai_text = getattr(run, "content", None)
-            # run.input is a TeamRunInput dataclass — extract plain text from input_content
+            # run.input is a TeamRunInput dataclass — extract plain text from input_content.
             if raw_input is not None:
-                user_text = getattr(raw_input, "input_content", None) or str(raw_input)
+                user_text = getattr(raw_input, "input_content", None)
+                if user_text is None and isinstance(raw_input, dict):
+                    user_text = raw_input.get("input_content")
+                user_text = user_text or (str(raw_input) if not isinstance(raw_input, dict) else None)
                 if user_text:
                     messages.append({"role": "human", "content": str(user_text)})
             if ai_text:
                 messages.append({"role": "ai", "content": str(ai_text)})
-        return {"messages": messages}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to fetch session messages: {e}")
-        return {"messages": []}
+        except Exception as e:
+            # One malformed run must not blank the whole conversation.
+            logger.warning(f"Skipping unreadable run in session {session_id}: {e}")
+            continue
+    return {"messages": messages}
 
 
 @router.patch("/sessions/{session_id}/rename", dependencies=[Depends(require_feature("feature_ai_agent"))])
@@ -370,34 +408,41 @@ async def rename_chat_session(
     """Rename a chat session."""
     from agno.db.base import SessionType
     db = _make_agent_db()
+    name = payload.session_name.strip()[:80] or "New Chat"
     try:
-        sess = await db.get_session(session_id, session_type=SessionType.TEAM)
-        if not sess or sess.user_id != str(current_user.id):
-            raise HTTPException(status_code=404, detail="Session not found")
-        name = payload.session_name.strip()[:80] or "New Chat"
-        await db.rename_session(session_id=session_id, session_type=SessionType.TEAM, session_name=name)
-        return {"session_id": session_id, "session_name": name}
-    except HTTPException:
-        raise
+        # user_id scopes the rename to the owner — returns None for someone
+        # else's session, which we map to 404 (IDOR guard).
+        result = await db.rename_session(
+            session_id=session_id,
+            session_type=SessionType.TEAM,
+            session_name=name,
+            user_id=str(current_user.id),
+        )
     except Exception as e:
-        logger.error(f"Failed to rename session: {e}")
+        logger.error(f"Failed to rename session {session_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not rename session")
+    if not result:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"session_id": session_id, "session_name": name}
 
 
 @router.delete("/sessions/{session_id}", dependencies=[Depends(require_feature("feature_ai_agent"))])
 async def delete_chat_session(session_id: str, current_user: CurrentUser):
     """Delete a chat session."""
-    from agno.db.base import SessionType
     db = _make_agent_db()
+    # agno's delete_session takes (session_id, user_id) — NOT session_type. The
+    # old code passed session_type to a pre-fetch and then deleted; in production
+    # the delete call was raising "unexpected keyword argument 'session_type'"
+    # (Sentry STAYBOOKERAI-3C → surfaced as STAYBOOKERAI-3B "Could not delete").
+    # Passing user_id scopes deletion to the owner (IDOR guard); the boolean
+    # return tells us whether a row was actually removed instead of always
+    # claiming success.
     try:
-        sess = await db.get_session(session_id, session_type=SessionType.TEAM)
-        if not sess or sess.user_id != str(current_user.id):
-            raise HTTPException(status_code=404, detail="Session not found")
-        await db.delete_session(session_id=session_id)
-        return {"deleted": True}
-    except HTTPException:
-        raise
+        deleted = await db.delete_session(session_id=session_id, user_id=str(current_user.id))
     except Exception as e:
-        logger.error(f"Failed to delete session: {e}")
+        logger.error(f"Failed to delete session {session_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not delete session")
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"deleted": True}
 

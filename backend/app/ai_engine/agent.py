@@ -19,7 +19,7 @@ from app.ai_engine.tools.weather import get_weather_forecast
 from app.ai_engine.tools.events import get_local_events
 from app.ai_engine.tools.reporting import generate_pdf_report
 
-from app.ai_engine.tools.actions import logic_update_room_price, logic_create_promo_code
+from app.ai_engine.tools.actions import logic_update_room_price, logic_create_promo_code, logic_cancel_booking
 from app.ai_engine.tools.analytics import (
     logic_get_revenue_trend,
     logic_get_occupancy_trend,
@@ -55,7 +55,7 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 2. **Direct Answers Only**:
    - "How many pending bookings?" -> Use `get_pending_approvals`. IGNORE 'today' filter. Return ALL pending.
    - "Pending payments?" -> Use `get_pending_payments`.
-3. **Safe Actions**: For modifications (price update, cancel), ALWAYS ask for explicit confirmation first.
+3. **Safe Actions (HARD RULE)**: For any DESTRUCTIVE or money-affecting action (cancel booking, price update, promo, block dates), you MUST first show the details and get the hotelier's EXPLICIT "yes" for that specific item. NEVER cancel bookings on your own initiative, in bulk, or to "clean up" pending bookings. `cancel_booking` must first be called with confirm=False (preview) and only with confirm=True after the user explicitly confirms that exact booking number. A pending booking is awaiting the hotelier's decision — do NOT cancel it unless they explicitly ask to cancel that specific booking.
 4. **Smart Pricing**: Check Weather/Events/Web Search before suggesting price changes.
 5. **Reasoning First**: ALWAYS explain 'WHY' before recommending an action. Cite data (e.g. "Because of Coldplay concert...").
 6. **Use Web Search**: If you lack context (e.g. "Is it a holiday?"), use `search_web`.
@@ -227,36 +227,21 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return details
 
-    async def cancel_booking(booking_number: str) -> str:
+    async def cancel_booking(booking_number: str, confirm: bool = False) -> str:
         """
-        Cancels a booking with the given booking number.
-        WARNING: This action cannot be undone easily.
-        IMPORTANT: Call this tool ONE booking at a time. Do NOT call it in parallel for multiple bookings.
+        Cancel a single booking. This is a DESTRUCTIVE, hard-to-reverse action.
+
+        TWO-STEP SAFETY (mandatory):
+          1. First call this with confirm=False (the default). It will NOT change
+             anything — it returns the booking details and asks the hotelier to
+             confirm.
+          2. Only call again with confirm=True AFTER the hotelier has explicitly
+             said yes to cancelling THIS specific booking number.
+
+        NEVER pass confirm=True on your own initiative, in bulk, or to "clean up"
+        pending bookings. Call this ONE booking at a time, never in parallel.
         """
-        try:
-            query = select(Booking).where(
-                Booking.hotel_id == user.hotel_id,
-                Booking.booking_number == booking_number
-            )
-            result = await session.execute(query)
-            booking = result.scalar_one_or_none()
-
-            if not booking:
-                return f"ERROR: Booking {booking_number} not found in this hotel."
-
-            if booking.status == BookingStatus.CANCELLED:
-                return f"Booking {booking_number} is already cancelled (no action taken)."
-
-            booking.status = BookingStatus.CANCELLED
-            session.add(booking)
-            await session.commit()
-            await session.refresh(booking)
-
-            return f"SUCCESS: Booking {booking_number} has been cancelled."
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"cancel_booking {booking_number}: {e}", exc_info=True)
-            return f"ERROR cancelling {booking_number}: database error — {type(e).__name__}. Please try again one at a time."
+        return await logic_cancel_booking(session, user, booking_number, confirm)
 
 
 
@@ -408,8 +393,9 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
 
     async def get_pending_approvals() -> str:
         """
-        List bookings that are waiting for YOUR confirmation (Status = Pending).
-        Action Required: Confirm or Cancel these.
+        List bookings that are waiting for the hotelier's confirmation (Status = Pending).
+        This is a READ-ONLY overview. Do NOT cancel these — a pending booking is
+        awaiting the hotelier's decision. Only act if the hotelier explicitly asks.
         """
         from app.ai_engine.tools.operations import logic_get_pending_bookings
         pending = await logic_get_pending_bookings(session, user.id)
@@ -722,14 +708,23 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
                 get_room_inventory
             ])
             
-        # 6. Booking Search / Creation / Details / Cancel
-        if any(w in q for w in ["booking", "book", "reserve", "quick", "create", "details", "cancel", "void", "delete", "room"]):
+        # 6. Booking Search / Creation / Details (read + create only)
+        if any(w in q for w in ["booking", "book", "reserve", "quick", "create", "details", "room"]):
             selected_tools.extend([
                 create_quick_booking,
                 search_bookings,
                 get_booking_details,
-                cancel_booking,
                 check_availability_matrix
+            ])
+
+        # 6b. Cancellation — destructive. Only expose cancel_booking when the
+        # hotelier explicitly signals intent to cancel/void, so the model can't
+        # reach for it while answering a plain "show me bookings" question.
+        if any(w in q for w in ["cancel", "void"]):
+            selected_tools.extend([
+                search_bookings,
+                get_booking_details,
+                cancel_booking,
             ])
             
         # 7. Occupancy / Block dates
@@ -938,7 +933,15 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         role="Handles all reservation, availability, and guest booking queries",
         model=llm_model,
         tools=booking_tools,
-        instructions="You are a hotel reservations specialist. Never start responses with 'Let me check/fetch/search' — jump directly to the result.",
+        instructions=(
+            "You are a hotel reservations specialist. "
+            "DESTRUCTIVE-ACTION RULE: never cancel a booking without the hotelier's "
+            "explicit confirmation for that exact booking number. Always call "
+            "cancel_booking with confirm=False first (preview), and only call it with "
+            "confirm=True after the user clearly says yes. Never cancel pending bookings "
+            "to 'clean up' or in bulk. "
+            "Never start responses with 'Let me check/fetch/search' — jump directly to the result."
+        ),
         user_id=str(user.id),
     )
 
@@ -947,7 +950,13 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         role="Handles dashboard stats, arrivals, departures, inventory, and alerts",
         model=llm_model,
         tools=ops_tools,
-        instructions="You are a hotel operations specialist. Be proactive and concise. Never start responses with 'Let me check/fetch/search' — jump directly to the result.",
+        instructions=(
+            "You are a hotel operations specialist. Be proactive and concise. "
+            "DESTRUCTIVE-ACTION RULE: for price updates, promo codes, or blocking dates, "
+            "always show the change and get the hotelier's explicit confirmation before "
+            "applying it. "
+            "Never start responses with 'Let me check/fetch/search' — jump directly to the result."
+        ),
         user_id=str(user.id),
     )
 
