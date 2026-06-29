@@ -327,6 +327,31 @@ async def _get_booking_id(booking_number: str) -> str:
         return b.id
 
 
+class TestCancelIntentGating:
+    """The cancel_booking tool is only exposed to the agent on an explicit cancel
+    request. Word-boundary matching avoids re-exposing it on read-only phrases."""
+
+    @pytest.mark.parametrize("query", [
+        "cancel booking BK123",
+        "please void this reservation",
+        "Cancel BK999",
+    ])
+    def test_real_cancel_intent_detected(self, query):
+        from app.ai_engine.agent import _has_cancel_intent
+        assert _has_cancel_intent(query) is True
+
+    @pytest.mark.parametrize("query", [
+        "show cancelled bookings",
+        "what is the cancellation policy",
+        "how do I avoid overbooking",   # contains 'void' as a substring
+        "list my bookings",
+        "",
+    ])
+    def test_readonly_phrases_do_not_trigger_cancel(self, query):
+        from app.ai_engine.agent import _has_cancel_intent
+        assert _has_cancel_intent(query) is False
+
+
 class TestCancelBookingSafety:
     """`logic_cancel_booking` is the server-side guard that runs only AFTER agno's
     human-in-the-loop gate has already obtained the hotelier's "Proceed" (the

@@ -35,11 +35,22 @@ from app.ai_engine.tools.analytics import (
 )
 
 import logging
+import re
 
 # AI-FIX: module-level logger. This was referenced (e.g. in the smart tool
 # selector) but never defined, so any non-empty hotelier query raised a
 # NameError and the assistant 500'd on every message. Define it once here.
 logger = logging.getLogger(__name__)
+
+
+def _has_cancel_intent(query: str) -> bool:
+    """True only when the query contains the standalone word 'cancel' or 'void'.
+
+    Word boundaries matter: a raw substring check exposed the destructive
+    cancel_booking tool on read-only phrases like 'show cancelled bookings',
+    'cancellation policy', or even 'avoid overbooking' (which contains 'void').
+    """
+    return bool(re.search(r"\b(cancel|void)\b", query or "", re.IGNORECASE))
 
 
 # Module-level singleton for the agno session store. Previously create_agent_executor
@@ -760,7 +771,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         # 6b. Cancellation — destructive. Only expose cancel_booking when the
         # hotelier explicitly signals intent to cancel/void, so the model can't
         # reach for it while answering a plain "show me bookings" question.
-        if any(w in q for w in ["cancel", "void"]):
+        if _has_cancel_intent(q):
             selected_tools.extend([
                 search_bookings,
                 get_booking_details,
@@ -946,7 +957,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
     # is called with no user_query). There cancel_booking MUST stay registered so
     # agno can execute the paused run — so default to True. Do NOT change this to
     # False: it would break confirm-resume of a cancellation.
-    cancel_intent = any(w in q for w in ["cancel", "void"]) if q else True
+    cancel_intent = _has_cancel_intent(q) if q else True
     booking_tools = [
         search_bookings, get_booking_details,
         create_quick_booking, check_availability_matrix, find_guest
