@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Request, status, Depends
+from fastapi.responses import StreamingResponse
 from typing import List
+import json
 from pydantic import BaseModel
 import logging
 
@@ -209,6 +211,77 @@ async def chat_with_agent(
         raise HTTPException(status_code=500, detail="The AI Assistant hit a temporary error. Please try again.")
 
 
+@router.post("/chat/stream", dependencies=[Depends(require_feature("feature_ai_agent"))])
+@limiter.limit("15/minute")
+async def chat_stream(
+    request: Request,
+    payload: ChatRequest,
+    current_user: CurrentUser,
+    session: DbSession,
+):
+    """Streaming chat — returns Server-Sent Events so the frontend can render
+    tokens as they arrive instead of waiting for the full response."""
+    if not current_user.hotel or not getattr(current_user.hotel, "feature_ai_assistant", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AI Assistant feature is not enabled")
+
+    await enforce_ai_token_quota("hotelier", current_user.hotel_id, session)
+
+    async def generate():
+        try:
+            from app.ai_engine.agent import create_agent_executor
+            agent = await create_agent_executor(session, current_user, user_query=payload.message)
+
+            async for evt in await agent.arun(
+                payload.message,
+                user_id=str(current_user.id),
+                session_id=payload.session_id,
+                stream=True,
+                stream_events=True,
+            ):
+                ev = getattr(evt, "event", "")
+
+                if ev == "TeamToolCallStarted":
+                    tool_name = ""
+                    if evt.tool:
+                        tool_name = getattr(evt.tool, "tool_name", "") or ""
+                    yield f"data: {json.dumps({'type': 'tool', 'name': tool_name})}\n\n"
+
+                elif ev == "TeamRunContent":
+                    if evt.content:
+                        yield f"data: {json.dumps({'type': 'content', 'delta': str(evt.content)})}\n\n"
+
+                elif ev == "TeamRunCompleted":
+                    sid = getattr(evt, "session_id", None) or agent.session_id
+                    # Record usage using the event's metrics (same fields as TeamRunOutput)
+                    record_ai_usage(current_user.hotel_id, evt, agent_type="hotelier", user_identifier=str(current_user.id))
+                    await persist_ai_usage_db(current_user.hotel_id, evt, agent_type="hotelier", user_identifier=str(current_user.id))
+                    # Auto-name new sessions
+                    if not payload.session_id and sid:
+                        try:
+                            from agno.db.base import SessionType
+                            await agent.db.rename_session(
+                                session_id=sid,
+                                session_type=SessionType.TEAM,
+                                session_name=payload.message[:60].strip(),
+                            )
+                        except Exception:
+                            pass
+                    yield f"data: {json.dumps({'type': 'done', 'session_id': sid or ''})}\n\n"
+
+                elif ev == "TeamRunError":
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'AI error occurred'})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Stream error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': 'AI Assistant hit a temporary error. Please try again.'})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 class RenameSessionRequest(BaseModel):
     session_name: str
 
@@ -301,7 +374,7 @@ async def delete_chat_session(session_id: str, current_user: CurrentUser):
         sess = await db.get_session(session_id, session_type=SessionType.TEAM)
         if not sess or sess.user_id != str(current_user.id):
             raise HTTPException(status_code=404, detail="Session not found")
-        await db.delete_session(session_id=session_id, session_type=SessionType.TEAM)
+        await db.delete_session(session_id=session_id)
         return {"deleted": True}
     except HTTPException:
         raise

@@ -409,6 +409,8 @@ const AgentPage = () => {
     };
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [streamingText, setStreamingText] = useState('');
+    const [activeToolName, setActiveToolName] = useState('');
     const [usageData, setUsageData] = useState<AIUsageData | null>(null);
     const [usageLoading, setUsageLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -440,33 +442,76 @@ const AgentPage = () => {
         if (!text.trim() || isLoading) return;
         const userMessage = text.trim();
         setInput('');
-
-        const newMessages: Message[] = [...messages, { role: 'human', content: userMessage }];
-        setMessages(newMessages);
+        setMessages(prev => [...prev, { role: 'human', content: userMessage }]);
         setIsLoading(true);
+        setStreamingText('');
+        setActiveToolName('');
 
         try {
-            const data = await apiClient.post<ChatResponse>('/agent/chat', {
-                message: userMessage,
-                session_id: activeSessionId,
-                history: newMessages.map(m => [m.role, m.content]),
-            }, { timeout: 120000 });
-            setMessages(prev => [...prev, { role: 'ai', content: data.response }]);
-            if (data.session_id && data.session_id !== activeSessionId) {
-                setActiveSessionId(data.session_id);
+            const { API_BASE_URL, tokenStorage } = await import('@/core/api/client');
+            const token = tokenStorage.getAccessToken();
+            const res = await fetch(`${API_BASE_URL}/agent/chat/stream`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ message: userMessage, session_id: activeSessionId }),
+            });
+
+            if (!res.ok || !res.body) {
+                throw new Error(`Server error ${res.status}`);
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulated = '';
+            let doneSessionId = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        const evt = JSON.parse(line.slice(6));
+                        if (evt.type === 'tool') {
+                            setActiveToolName(evt.name || 'tool');
+                        } else if (evt.type === 'content') {
+                            accumulated += evt.delta;
+                            setStreamingText(accumulated);
+                            setActiveToolName('');
+                        } else if (evt.type === 'done') {
+                            doneSessionId = evt.session_id;
+                        } else if (evt.type === 'error') {
+                            throw new Error(evt.message);
+                        }
+                    } catch (parseErr: any) {
+                        if (parseErr.message && !parseErr.message.includes('JSON')) throw parseErr;
+                    }
+                }
+            }
+
+            // Commit streamed text as a proper message
+            if (accumulated) {
+                setMessages(prev => [...prev, { role: 'ai', content: accumulated }]);
+            }
+            if (doneSessionId && doneSessionId !== activeSessionId) {
+                setActiveSessionId(doneSessionId);
                 fetchSessions();
             }
         } catch (error: any) {
-            const isTimeout = error.name === 'TimeoutError' || error.name === 'AbortError';
             toast({
-                title: isTimeout ? "Request Timed Out" : "Error",
-                description: isTimeout
-                    ? "AI is taking longer than expected. Please try again."
-                    : (error.message || "Something went wrong."),
-                variant: "destructive"
+                title: "Error",
+                description: error.message || "Something went wrong.",
+                variant: "destructive",
             });
         } finally {
             setIsLoading(false);
+            setStreamingText('');
+            setActiveToolName('');
         }
     };
 
@@ -690,16 +735,33 @@ const AgentPage = () => {
                                     </div>
                                 )}
 
-                                {/* AI thinking indicator */}
+                                {/* Live streaming bubble */}
                                 {isLoading && (
                                     <div className="flex justify-start">
                                         <div className="flex gap-3 max-w-[85%]">
                                             <Avatar className="h-8 w-8 mt-1 shrink-0">
                                                 <AvatarFallback className="bg-primary text-primary-foreground"><Bot size={16} /></AvatarFallback>
                                             </Avatar>
-                                            <div className="bg-muted border p-3 rounded-xl flex items-center gap-2">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                <span className="text-xs text-muted-foreground">Thinking…</span>
+                                            <div className="bg-muted border p-3 rounded-xl text-sm text-foreground whitespace-pre-wrap min-w-[120px]">
+                                                {streamingText ? (
+                                                    <>
+                                                        {streamingText}
+                                                        <span className="inline-block w-0.5 h-4 bg-primary ml-0.5 align-middle animate-pulse" />
+                                                    </>
+                                                ) : activeToolName ? (
+                                                    <span className="flex items-center gap-2 text-muted-foreground text-xs">
+                                                        <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                                                        Fetching data…
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center gap-2 text-muted-foreground text-xs">
+                                                        <span className="flex gap-1">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:0ms]" />
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:150ms]" />
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:300ms]" />
+                                                        </span>
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
