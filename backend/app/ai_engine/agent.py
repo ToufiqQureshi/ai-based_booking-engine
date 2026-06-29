@@ -885,11 +885,19 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         )
 
     # Ensure PostgresDb is initialized for history
-    # psycopg3 needs +psycopg driver and sslmode=require (not ssl=true which is asyncpg-style)
+    # psycopg3 needs +psycopg driver and sslmode=require.
+    # config.py appends ?ssl=require (asyncpg format) for Supabase; we must
+    # convert ALL asyncpg ssl= variants to psycopg sslmode= here.
+    import re as _re
     db_url = settings.DATABASE_URL
     if "+asyncpg" in db_url:
         db_url = db_url.replace("+asyncpg", "+psycopg")
-    db_url = db_url.replace("ssl=true", "sslmode=require").replace("ssl=True", "sslmode=require")
+    # Replace ?ssl=<val> or &ssl=<val> → sslmode=require/disable for psycopg3
+    def _ssl_to_sslmode(m: _re.Match) -> str:
+        sep, val = m.group(1), m.group(2).lower()
+        mode = "require" if val in ("true", "require", "1") else "disable"
+        return f"{sep}sslmode={mode}"
+    db_url = _re.sub(r"([?&])ssl=([^&]+)", _ssl_to_sslmode, db_url)
     agent_db = PostgresDb(db_url=db_url, session_table="agno_sessions")
 
     # Split tools into focused groups

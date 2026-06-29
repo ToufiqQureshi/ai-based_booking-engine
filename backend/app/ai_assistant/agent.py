@@ -183,18 +183,23 @@ async def get_chat_sessions(
 ):
     """Fetch past chat sessions for the hotelier."""
     from app.ai_engine.agent import create_agent_executor
+    from agno.db.base import SessionType
     agent = await create_agent_executor(session, current_user, user_query="")
-    
-    # agent.db (PostgresDb) has get_sessions
+
     try:
-        sessions = agent.db.get_sessions(user_id=str(current_user.id), limit=50)
+        sessions = agent.db.get_sessions(
+            user_id=str(current_user.id),
+            session_type=SessionType.TEAM,
+            limit=50,
+        )
         return [
             {
                 "session_id": s.session_id,
-                "session_name": s.session_data.get("session_name") or "New Chat",
+                "session_name": (s.session_data or {}).get("session_name") or "New Chat",
                 "created_at": s.created_at,
             }
             for s in sessions
+            if s is not None
         ]
     except Exception as e:
         logger.warning(f"Failed to fetch sessions: {e}")
@@ -209,21 +214,24 @@ async def get_chat_session_history(
 ):
     """Fetch messages of a specific chat session."""
     from app.ai_engine.agent import create_agent_executor
+    from agno.db.base import SessionType
     agent = await create_agent_executor(session, current_user, user_query="")
-    
+
     try:
-        sess = agent.db.get_session(session_id)
+        sess = agent.db.get_session(session_id, session_type=SessionType.TEAM)
         if not sess or sess.user_id != str(current_user.id):
             raise HTTPException(status_code=404, detail="Session not found")
-            
+
         messages = []
-        if sess.memory and hasattr(sess.memory, "messages"):
-            for m in sess.memory.messages:
-                if m.role in ("user", "assistant"):
-                    messages.append({
-                        "role": "human" if m.role == "user" else "ai",
-                        "content": m.content
-                    })
+        for run in (sess.runs or []):
+            if run is None:
+                continue
+            user_text = getattr(run, "input", None)
+            ai_text = getattr(run, "content", None)
+            if user_text:
+                messages.append({"role": "human", "content": str(user_text)})
+            if ai_text:
+                messages.append({"role": "ai", "content": str(ai_text)})
         return {"messages": messages}
     except HTTPException:
         raise
