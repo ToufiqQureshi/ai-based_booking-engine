@@ -163,6 +163,20 @@ async def chat_with_agent(
         )
         record_ai_usage(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
         await persist_ai_usage_db(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
+
+        # Set session name from first message so sidebar shows meaningful names
+        if not payload.session_id and agent.session_id:
+            try:
+                from agno.db.base import SessionType
+                session_name = payload.message[:60].strip()
+                await agent.db.rename_session(
+                    session_id=agent.session_id,
+                    session_type=SessionType.TEAM,
+                    session_name=session_name,
+                )
+            except Exception:
+                pass  # non-critical — sidebar falls back to "New Chat"
+
         return ChatResponse(response=result.content or "", session_id=agent.session_id)
 
     except ValueError as e:
@@ -226,10 +240,13 @@ async def get_chat_session_history(
         for run in (sess.runs or []):
             if run is None:
                 continue
-            user_text = getattr(run, "input", None)
+            raw_input = getattr(run, "input", None)
             ai_text = getattr(run, "content", None)
-            if user_text:
-                messages.append({"role": "human", "content": str(user_text)})
+            # run.input is a TeamRunInput dataclass — extract plain text from input_content
+            if raw_input is not None:
+                user_text = getattr(raw_input, "input_content", None) or str(raw_input)
+                if user_text:
+                    messages.append({"role": "human", "content": str(user_text)})
             if ai_text:
                 messages.append({"role": "ai", "content": str(ai_text)})
         return {"messages": messages}
