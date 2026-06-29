@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, Loader2, ShieldAlert, Sparkles, BarChart3, RefreshCw, WifiOff, Menu, X, MessageSquarePlus, MessageSquare } from 'lucide-react';
+import { Send, Bot, User, Loader2, ShieldAlert, Sparkles, BarChart3, RefreshCw, WifiOff, Menu, MessageSquarePlus, MessageSquare, Trash2, Pencil, Check, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -335,6 +335,9 @@ const AgentPage = () => {
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSessionLoading, setIsSessionLoading] = useState(false);
+    const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+    const [editingName, setEditingName] = useState('');
 
     const fetchSessions = useCallback(async () => {
         try {
@@ -350,8 +353,10 @@ const AgentPage = () => {
     }, [fetchSessions]);
 
     const loadSession = async (sessionId: string) => {
+        if (sessionId === activeSessionId) return;
         setActiveSessionId(sessionId);
-        setIsLoading(true);
+        setMessages([]);
+        setIsSessionLoading(true);
         try {
             const data = await apiClient.get<{messages: Message[]}>(`/agent/sessions/${sessionId}`);
             if (data.messages && data.messages.length > 0) {
@@ -363,7 +368,37 @@ const AgentPage = () => {
         } catch {
             toast({ title: "Error", description: "Could not load chat history", variant: "destructive" });
         } finally {
-            setIsLoading(false);
+            setIsSessionLoading(false);
+        }
+    };
+
+    const deleteSession = async (sessionId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            await apiClient.delete(`/agent/sessions/${sessionId}`);
+            setSessions(prev => prev.filter(s => s.session_id !== sessionId));
+            if (activeSessionId === sessionId) clearChat();
+        } catch {
+            toast({ title: "Error", description: "Could not delete chat", variant: "destructive" });
+        }
+    };
+
+    const startRename = (s: ChatSession, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingSessionId(s.session_id);
+        setEditingName(s.session_name);
+    };
+
+    const submitRename = async (sessionId: string) => {
+        const name = editingName.trim();
+        if (!name) { setEditingSessionId(null); return; }
+        try {
+            await apiClient.patch(`/agent/sessions/${sessionId}/rename`, { session_name: name });
+            setSessions(prev => prev.map(s => s.session_id === sessionId ? { ...s, session_name: name } : s));
+        } catch {
+            toast({ title: "Error", description: "Could not rename chat", variant: "destructive" });
+        } finally {
+            setEditingSessionId(null);
         }
     };
 
@@ -471,15 +506,43 @@ const AgentPage = () => {
                     <ScrollArea className="flex-1">
                         <div className="p-2 space-y-1">
                             {sessions.map(s => (
-                                <Button 
-                                    key={s.session_id} 
-                                    variant={activeSessionId === s.session_id ? "secondary" : "ghost"}
-                                    className="w-full justify-start text-left font-normal text-sm px-2 truncate h-9"
-                                    onClick={() => loadSession(s.session_id)}
+                                <div
+                                    key={s.session_id}
+                                    onClick={() => editingSessionId !== s.session_id && loadSession(s.session_id)}
+                                    className={`group flex items-center gap-1 w-full rounded-md px-2 h-9 cursor-pointer text-sm transition-colors
+                                        ${activeSessionId === s.session_id
+                                            ? 'bg-secondary text-secondary-foreground'
+                                            : 'hover:bg-muted text-foreground'
+                                        }`}
                                 >
-                                    <MessageSquare size={14} className="mr-2 opacity-70 shrink-0" />
-                                    <span className="truncate">{s.session_name}</span>
-                                </Button>
+                                    <MessageSquare size={14} className="opacity-50 shrink-0" />
+                                    {editingSessionId === s.session_id ? (
+                                        <input
+                                            autoFocus
+                                            className="flex-1 bg-transparent outline-none text-sm min-w-0"
+                                            value={editingName}
+                                            onChange={e => setEditingName(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') submitRename(s.session_id);
+                                                if (e.key === 'Escape') setEditingSessionId(null);
+                                            }}
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    ) : (
+                                        <span className="flex-1 truncate">{s.session_name}</span>
+                                    )}
+                                    {editingSessionId === s.session_id ? (
+                                        <div className="flex items-center gap-0.5 shrink-0">
+                                            <button onClick={e => { e.stopPropagation(); submitRename(s.session_id); }} className="p-0.5 hover:text-green-500"><Check size={13} /></button>
+                                            <button onClick={e => { e.stopPropagation(); setEditingSessionId(null); }} className="p-0.5 hover:text-red-500"><X size={13} /></button>
+                                        </div>
+                                    ) : (
+                                        <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                                            <button onClick={e => startRename(s, e)} className="p-0.5 opacity-60 hover:opacity-100 hover:text-primary" title="Rename"><Pencil size={12} /></button>
+                                            <button onClick={e => deleteSession(s.session_id, e)} className="p-0.5 opacity-60 hover:opacity-100 hover:text-red-500" title="Delete"><Trash2 size={12} /></button>
+                                        </div>
+                                    )}
+                                </div>
                             ))}
                             {sessions.length === 0 && (
                                 <p className="text-xs text-muted-foreground text-center p-4">No past chats found.</p>
@@ -627,7 +690,7 @@ const AgentPage = () => {
                                     </div>
                                 )}
 
-                                {/* Loading indicator */}
+                                {/* AI thinking indicator */}
                                 {isLoading && (
                                     <div className="flex justify-start">
                                         <div className="flex gap-3 max-w-[85%]">
@@ -638,6 +701,16 @@ const AgentPage = () => {
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                 <span className="text-xs text-muted-foreground">Thinking…</span>
                                             </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Session history loading indicator */}
+                                {isSessionLoading && (
+                                    <div className="flex justify-center py-6">
+                                        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>Loading chat…</span>
                                         </div>
                                     </div>
                                 )}

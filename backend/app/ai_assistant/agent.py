@@ -15,6 +15,25 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agent", tags=["AI Agent"])
 
+
+def _make_agent_db():
+    """Return a lightweight AsyncPostgresDb without spinning up the full agent.
+
+    The full create_agent_executor() initialises the LLM, all tool functions,
+    and four sub-agents — unnecessary overhead for pure DB reads/writes on the
+    sessions table.  This helper creates only the DB layer so that session list,
+    history, rename, and delete endpoints stay fast.
+    """
+    from agno.db.postgres import AsyncPostgresDb
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from app.core.utils.config import get_settings
+    settings = get_settings()
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        connect_args={"statement_cache_size": 0},
+    )
+    return AsyncPostgresDb(db_engine=engine, session_table="agno_sessions")
+
 # Rough average tokens per guest conversation — used only for the "estimated
 # conversations" display metric shown to hoteliers. Not used in billing logic.
 _AVG_TOKENS_PER_CONVERSATION = 800
@@ -190,18 +209,17 @@ async def chat_with_agent(
         raise HTTPException(status_code=500, detail="The AI Assistant hit a temporary error. Please try again.")
 
 
-@router.get("/sessions", dependencies=[Depends(require_feature("feature_ai_agent"))])
-async def get_chat_sessions(
-    current_user: CurrentUser,
-    session: DbSession
-):
-    """Fetch past chat sessions for the hotelier."""
-    from app.ai_engine.agent import create_agent_executor
-    from agno.db.base import SessionType
-    agent = await create_agent_executor(session, current_user, user_query="")
+class RenameSessionRequest(BaseModel):
+    session_name: str
 
+
+@router.get("/sessions", dependencies=[Depends(require_feature("feature_ai_agent"))])
+async def get_chat_sessions(current_user: CurrentUser):
+    """Fetch past chat sessions for the hotelier."""
+    from agno.db.base import SessionType
+    db = _make_agent_db()
     try:
-        sessions = await agent.db.get_sessions(
+        sessions = await db.get_sessions(
             user_id=str(current_user.id),
             session_type=SessionType.TEAM,
             limit=50,
@@ -221,18 +239,12 @@ async def get_chat_sessions(
 
 
 @router.get("/sessions/{session_id}", dependencies=[Depends(require_feature("feature_ai_agent"))])
-async def get_chat_session_history(
-    session_id: str,
-    current_user: CurrentUser,
-    session: DbSession
-):
+async def get_chat_session_history(session_id: str, current_user: CurrentUser):
     """Fetch messages of a specific chat session."""
-    from app.ai_engine.agent import create_agent_executor
     from agno.db.base import SessionType
-    agent = await create_agent_executor(session, current_user, user_query="")
-
+    db = _make_agent_db()
     try:
-        sess = await agent.db.get_session(session_id, session_type=SessionType.TEAM)
+        sess = await db.get_session(session_id, session_type=SessionType.TEAM)
         if not sess or sess.user_id != str(current_user.id):
             raise HTTPException(status_code=404, detail="Session not found")
 
@@ -255,4 +267,45 @@ async def get_chat_session_history(
     except Exception as e:
         logger.error(f"Failed to fetch session messages: {e}")
         return {"messages": []}
+
+
+@router.patch("/sessions/{session_id}/rename", dependencies=[Depends(require_feature("feature_ai_agent"))])
+async def rename_chat_session(
+    session_id: str,
+    payload: RenameSessionRequest,
+    current_user: CurrentUser,
+):
+    """Rename a chat session."""
+    from agno.db.base import SessionType
+    db = _make_agent_db()
+    try:
+        sess = await db.get_session(session_id, session_type=SessionType.TEAM)
+        if not sess or sess.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        name = payload.session_name.strip()[:80] or "New Chat"
+        await db.rename_session(session_id=session_id, session_type=SessionType.TEAM, session_name=name)
+        return {"session_id": session_id, "session_name": name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to rename session: {e}")
+        raise HTTPException(status_code=500, detail="Could not rename session")
+
+
+@router.delete("/sessions/{session_id}", dependencies=[Depends(require_feature("feature_ai_agent"))])
+async def delete_chat_session(session_id: str, current_user: CurrentUser):
+    """Delete a chat session."""
+    from agno.db.base import SessionType
+    db = _make_agent_db()
+    try:
+        sess = await db.get_session(session_id, session_type=SessionType.TEAM)
+        if not sess or sess.user_id != str(current_user.id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        await db.delete_session(session_id=session_id, session_type=SessionType.TEAM)
+        return {"deleted": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete session: {e}")
+        raise HTTPException(status_code=500, detail="Could not delete session")
 
