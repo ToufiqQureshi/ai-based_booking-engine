@@ -919,6 +919,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         model=llm_model,
         tools=finance_tools,
         instructions="You are a hotel finance specialist. Always use tables/charts for revenue data.",
+        user_id=str(user.id),
     )
 
     booking_agent = Agent(
@@ -927,6 +928,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         model=llm_model,
         tools=booking_tools,
         instructions="You are a hotel reservations specialist.",
+        user_id=str(user.id),
     )
 
     ops_agent = Agent(
@@ -935,6 +937,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         model=llm_model,
         tools=ops_tools,
         instructions="You are a hotel operations specialist. Be proactive and concise.",
+        user_id=str(user.id),
     )
 
     general_agent = Agent(
@@ -943,6 +946,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         model=llm_model,
         tools=general_tools,
         instructions="You are a general assistant.",
+        user_id=str(user.id),
     )
 
     hotel_team = Team(
@@ -959,5 +963,6 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         ) + "\n\nROUTE INSTRUCTIONS:\n- Route financial/revenue/payment questions to the Finance Agent.\n- Route reservation/booking/availability questions to the Booking Agent.\n- Route operations/arrivals/inventory/alerts to the Operations Agent.\n- Route weather/events/reports/general queries to the General Assistant.",
         markdown=True,
         show_members_responses=False,
+        user_id=str(user.id),
     )
     return hotel_team
