@@ -238,6 +238,11 @@ async def chat_stream(
             from app.ai_engine.agent import create_agent_executor
             agent = await create_agent_executor(session, current_user, user_query=payload.message)
 
+            # Track whether any content was already streamed incrementally.
+            # When the Team only routes (never generates its own text), all content
+            # lives in TeamRunCompleted.content — we send it as one chunk there.
+            content_streamed = False
+
             async for evt in await agent.arun(
                 payload.message,
                 user_id=str(current_user.id),
@@ -256,13 +261,19 @@ async def chat_stream(
                 elif ev in _CONTENT_EVENTS:
                     chunk = getattr(evt, "content", None)
                     if chunk:
+                        content_streamed = True
                         yield f"data: {json.dumps({'type': 'content', 'delta': str(chunk)})}\n\n"
 
                 elif ev == "TeamRunCompleted":
                     sid = getattr(evt, "session_id", None) or agent.session_id
+                    # If the Team routed to a member without streaming its own text,
+                    # the full answer is in evt.content — send it as a single chunk.
+                    if not content_streamed:
+                        full_text = getattr(evt, "content", None)
+                        if full_text:
+                            yield f"data: {json.dumps({'type': 'content', 'delta': str(full_text)})}\n\n"
                     record_ai_usage(current_user.hotel_id, evt, agent_type="hotelier", user_identifier=str(current_user.id))
                     await persist_ai_usage_db(current_user.hotel_id, evt, agent_type="hotelier", user_identifier=str(current_user.id))
-                    # Auto-name new sessions from first user message
                     if not payload.session_id and sid:
                         try:
                             from agno.db.base import SessionType
