@@ -187,7 +187,7 @@ async def get_chat_sessions(
     agent = await create_agent_executor(session, current_user, user_query="")
 
     try:
-        sessions = agent.db.get_sessions(
+        sessions = await agent.db.get_sessions(
             user_id=str(current_user.id),
             session_type=SessionType.TEAM,
             limit=50,
@@ -218,7 +218,7 @@ async def get_chat_session_history(
     agent = await create_agent_executor(session, current_user, user_query="")
 
     try:
-        sess = agent.db.get_session(session_id, session_type=SessionType.TEAM)
+        sess = await agent.db.get_session(session_id, session_type=SessionType.TEAM)
         if not sess or sess.user_id != str(current_user.id):
             raise HTTPException(status_code=404, detail="Session not found")
 
