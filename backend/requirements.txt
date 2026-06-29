@@ -15,7 +15,10 @@ email-validator
 fastapi
 gunicorn
 httpx
-agno
+# Pinned: the destructive-action safety gate relies on agno's
+# @tool(requires_confirmation=True) human-in-the-loop pause/resume API. Leaving
+# this unpinned would let a future release silently change that behaviour.
+agno==2.6.20
 groq
 openai
 matplotlib

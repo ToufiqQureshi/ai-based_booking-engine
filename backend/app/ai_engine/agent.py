@@ -41,6 +41,47 @@ import logging
 # NameError and the assistant 500'd on every message. Define it once here.
 logger = logging.getLogger(__name__)
 
+
+# Module-level singleton for the agno session store. Previously create_agent_executor
+# built a fresh AsyncEngine on every call, leaking one connection pool per request
+# (the chat path AND the /agent/chat/confirm resume path). Cache one engine/db per
+# worker, with env-driven pool sizing so DB_POOL_SIZE * WEB_CONCURRENCY * replicas
+# stays within Supabase's connection limit.
+_agent_session_db = None
+
+
+def _get_agent_session_db():
+    """Return a cached AsyncPostgresDb for agno sessions (one engine per worker)."""
+    global _agent_session_db
+    if _agent_session_db is not None:
+        return _agent_session_db
+
+    from sqlalchemy.ext.asyncio import create_async_engine
+    settings = get_settings()
+
+    # Force asyncpg so a bare postgres:// URL doesn't resolve to psycopg (which
+    # rejects the asyncpg-only ssl/statement_cache_size connect args).
+    db_url = settings.DATABASE_URL
+    if db_url.startswith("postgres://"):
+        db_url = "postgresql+asyncpg://" + db_url[len("postgres://"):]
+    elif db_url.startswith("postgresql://"):
+        db_url = "postgresql+asyncpg://" + db_url[len("postgresql://"):]
+
+    # statement_cache_size=0 avoids InvalidSQLStatementNameError under Supabase's
+    # pgbouncer transaction pooling.
+    connect_args = {"statement_cache_size": 0} if "asyncpg" in db_url else {}
+    engine_kwargs = {"connect_args": connect_args, "pool_pre_ping": True}
+    if "sqlite" not in db_url:
+        engine_kwargs.update(
+            pool_size=settings.DB_POOL_SIZE,
+            max_overflow=settings.DB_MAX_OVERFLOW,
+            pool_recycle=settings.DB_POOL_RECYCLE,
+            pool_timeout=settings.DB_POOL_TIMEOUT,
+        )
+    engine = create_async_engine(db_url, **engine_kwargs)
+    _agent_session_db = AsyncPostgresDb(db_engine=engine, session_table="agno_sessions")
+    return _agent_session_db
+
 # System Prompt specialized for Staybooker
 SYSTEM_PROMPT = """You are 'Staybooker AI', a smart hotel assistant.
 GOAL: Help the hotelier manage bookings, revenue, and tasks directly and professionally.
@@ -885,17 +926,9 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
             max_tokens=effective_max_tokens,
         )
 
-    # Supabase uses pgbouncer in transaction mode — asyncpg's default prepared
-    # statement cache creates server-side prepared statements that do not survive
-    # across pooled connections, causing InvalidSQLStatementNameError on the
-    # second request.  Passing statement_cache_size=0 via connect_args disables
-    # the cache so every query uses the simple query protocol instead.
-    from sqlalchemy.ext.asyncio import create_async_engine
-    _agent_engine = create_async_engine(
-        settings.DATABASE_URL,
-        connect_args={"statement_cache_size": 0},
-    )
-    agent_db = AsyncPostgresDb(db_engine=_agent_engine, session_table="agno_sessions")
+    # Reuse one cached engine/db for the agno session store across all runs and
+    # the confirm-resume path — see _get_agent_session_db() (no per-request pool).
+    agent_db = _get_agent_session_db()
 
     # Split tools into focused groups
     finance_tools = [
@@ -909,6 +942,10 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
     # we also keep it OUT of the Booking Agent's toolset unless the query actually
     # signals cancel/void intent — so the model can't even reach for it while
     # answering a plain "show me my bookings" question (defense-in-depth).
+    # `q` is empty only on the /agent/chat/confirm resume path (create_agent_executor
+    # is called with no user_query). There cancel_booking MUST stay registered so
+    # agno can execute the paused run — so default to True. Do NOT change this to
+    # False: it would break confirm-resume of a cancellation.
     cancel_intent = any(w in q for w in ["cancel", "void"]) if q else True
     booking_tools = [
         search_bookings, get_booking_details,

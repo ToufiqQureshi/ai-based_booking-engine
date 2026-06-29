@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: int = 1800   # recycle idle connections every 30 min
     DB_POOL_TIMEOUT: int = 10     # fail fast (was 30s) so requests don't pile up
 
+    # Hard cap (seconds) for resuming a paused human-in-the-loop AI action
+    # (/agent/chat/confirm). aget_run_output + acontinue_run hit the DB and the
+    # LLM, so a stuck provider must not hold the request open indefinitely.
+    AI_CONFIRM_TIMEOUT_SECONDS: int = 60
+
     # Background scheduler (APScheduler). Runs periodic jobs (social-proof
     # refresh, subscription-expiry) guarded by a Redis lock so only one
     # worker/replica runs each tick. Disable with ENABLE_SCHEDULER=false.

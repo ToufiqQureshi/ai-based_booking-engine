@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query, Request, status, Depends
 from fastapi.responses import StreamingResponse
-from typing import List
+from typing import List, Literal
+import asyncio
 import json
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import logging
 
 from app.core.auth.deps import CurrentUser, DbSession
@@ -95,9 +96,9 @@ class ChatResponse(BaseModel):
 
 
 class ConfirmRequest(BaseModel):
-    session_id: str
-    run_id: str
-    decision: str  # "proceed" | "cancel"
+    session_id: str = Field(min_length=1)
+    run_id: str = Field(min_length=1)
+    decision: Literal["proceed", "cancel"]
 
 
 # Friendly descriptions of what each destructive tool is about to do, built from
@@ -427,14 +428,22 @@ async def confirm_pending_action(
     if not current_user.hotel or not getattr(current_user.hotel, "feature_ai_assistant", False):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AI Assistant feature is not enabled")
 
-    proceed = payload.decision.strip().lower() == "proceed"
+    proceed = payload.decision == "proceed"
     await enforce_ai_token_quota("hotelier", current_user.hotel_id, session)
+
+    # Hard timeout: aget_run_output + acontinue_run hit the DB and the LLM, so a
+    # stuck provider must not hold the request open indefinitely (CLAUDE.md §5).
+    from app.core.utils.config import get_settings
+    timeout = get_settings().AI_CONFIRM_TIMEOUT_SECONDS
 
     try:
         from app.ai_engine.agent import create_agent_executor
         agent = await create_agent_executor(session, current_user)
 
-        paused = await agent.aget_run_output(payload.run_id, payload.session_id, user_id=str(current_user.id))
+        paused = await asyncio.wait_for(
+            agent.aget_run_output(payload.run_id, payload.session_id, user_id=str(current_user.id)),
+            timeout=timeout,
+        )
         if paused is None or not getattr(paused, "is_paused", False):
             raise HTTPException(status_code=404, detail="No pending action to confirm — it may have already been handled or expired.")
 
@@ -446,10 +455,13 @@ async def confirm_pending_action(
             else:
                 req.reject(note="Hotelier declined the action.")
 
-        result = await agent.acontinue_run(
-            run_response=paused,
-            session_id=payload.session_id,
-            user_id=str(current_user.id),
+        result = await asyncio.wait_for(
+            agent.acontinue_run(
+                run_response=paused,
+                session_id=payload.session_id,
+                user_id=str(current_user.id),
+            ),
+            timeout=timeout,
         )
         record_ai_usage(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
         await persist_ai_usage_db(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
@@ -468,6 +480,9 @@ async def confirm_pending_action(
 
     except HTTPException:
         raise
+    except asyncio.TimeoutError as e:
+        logger.error(f"Confirm timed out after {timeout}s for run {payload.run_id}")
+        raise HTTPException(status_code=504, detail="The action timed out. Please try again.") from e
     except ValueError as e:
         logger.warning(f"Confirm config error: {e}")
         raise HTTPException(status_code=503, detail="AI Assistant is not configured. Please contact support.") from e

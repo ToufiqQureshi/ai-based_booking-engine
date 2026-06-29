@@ -575,6 +575,11 @@ const AgentPage = () => {
             setMessages(prev => [...prev, msg]);
             if (data.session_id) setActiveSessionId(data.session_id);
         } catch (error: any) {
+            // Re-enable Proceed/Cancel so the hotelier can retry the decision
+            // instead of being stuck with hidden buttons after a failed request.
+            setMessages(prev => prev.map(m =>
+                m.confirm?.runId === runId ? { ...m, confirm: { runId, resolved: false } } : m
+            ));
             toast({
                 title: "Error",
                 description: error.message || "Could not complete the action.",

@@ -374,17 +374,21 @@ class TestCancelBookingSafety:
         assert len(rows) == 1
         assert rows[0].new_value == "cancelled"
 
-    async def test_checked_in_booking_cannot_be_cancelled(self, seeded_hotel):
+    @pytest.mark.parametrize("status_name", ["CHECKED_IN", "CHECKED_OUT"])
+    async def test_inhouse_or_completed_booking_cannot_be_cancelled(self, seeded_hotel, status_name):
+        """Both an in-house (CHECKED_IN) and a completed (CHECKED_OUT) stay must be
+        refused — cancelling either corrupts billing/inventory."""
         from app.ai_engine.tools.actions import logic_cancel_booking
         from app.core.db.database import engine
         from app.bookings.booking import BookingStatus
 
-        bn = await _seed_booking(seeded_hotel.id, BookingStatus.CHECKED_IN)
+        status = getattr(BookingStatus, status_name)
+        bn = await _seed_booking(seeded_hotel.id, status)
         user = SimpleNamespace(id="u-owner", hotel_id=seeded_hotel.id, role="OWNER")
         async with AsyncSession(engine) as s:
             msg = await logic_cancel_booking(s, user, bn)
         assert "front desk" in msg.lower()
-        assert await _get_status(bn) == BookingStatus.CHECKED_IN
+        assert await _get_status(bn) == status
 
     async def test_cancel_isolates_by_hotel(self, seeded_hotel):
         """A booking number from another hotel is invisible (tenant isolation)."""
@@ -448,9 +452,10 @@ class _FakeCompletedRun:
 
 
 class _FakeHITLAgent:
-    def __init__(self, run_id="run-1", session_id="sess-1"):
+    def __init__(self, run_id="run-1", session_id="sess-1", owner_user_id="hitl-owner"):
         self.session_id = session_id
         self.run_id = run_id
+        self.owner_user_id = owner_user_id
         self._paused = _FakePausedRun(run_id, session_id)
 
     async def arun(self, message, user_id=None, session_id=None):
@@ -460,6 +465,11 @@ class _FakeHITLAgent:
         return self._paused
 
     async def aget_run_output(self, run_id, session_id=None, user_id=None):
+        # Mirror agno's ownership scoping: only return the run when run_id,
+        # session_id AND user_id all match — so the confirm tests genuinely
+        # exercise tenant/run isolation instead of always succeeding.
+        if run_id != self.run_id or session_id != self.session_id or user_id != self.owner_user_id:
+            return None
         return self._paused
 
     async def acontinue_run(self, run_response=None, session_id=None, user_id=None):
@@ -550,15 +560,47 @@ class TestHITLConfirmation:
         assert "no changes" in data["response"].lower()
         assert fake._paused.active_requirements[0].confirmed is False
 
-    async def test_confirm_unknown_run_is_404(self, hitl_client, monkeypatch):
-        client, fake = hitl_client
-
-        async def _none(*a, **k):
-            return None
-
-        monkeypatch.setattr(fake, "aget_run_output", _none)
+    async def test_confirm_unknown_run_is_404(self, hitl_client):
+        """A run_id that doesn't match the owner's paused run resolves to None → 404."""
+        client, _ = hitl_client
         r = await client.post(
             "/api/v1/agent/chat/confirm",
             json={"session_id": "sess-1", "run_id": "nope", "decision": "proceed"},
         )
         assert r.status_code == 404
+
+    async def test_confirm_other_users_run_is_404(self, hitl_client, monkeypatch):
+        """IDOR: a different user cannot resume someone else's paused run.
+        The endpoint passes the authenticated user_id, which won't match the run's
+        owner, so aget_run_output returns None → 404."""
+        from app.core.auth.deps import get_current_active_user
+        from main import app
+        client, _ = hitl_client
+        intruder = SimpleNamespace(
+            id="someone-else",
+            hotel_id="hotel-hitl",
+            role="OWNER",
+            hotel=SimpleNamespace(feature_ai_agent=True, feature_ai_assistant=True),
+        )
+        app.dependency_overrides[get_current_active_user] = lambda: intruder
+        r = await client.post(
+            "/api/v1/agent/chat/confirm",
+            json={"session_id": "sess-1", "run_id": "run-1", "decision": "proceed"},
+        )
+        assert r.status_code == 404
+
+    async def test_confirm_invalid_decision_is_422(self, hitl_client):
+        client, _ = hitl_client
+        r = await client.post(
+            "/api/v1/agent/chat/confirm",
+            json={"session_id": "sess-1", "run_id": "run-1", "decision": "maybe"},
+        )
+        assert r.status_code == 422
+
+    async def test_confirm_blank_run_id_is_422(self, hitl_client):
+        client, _ = hitl_client
+        r = await client.post(
+            "/api/v1/agent/chat/confirm",
+            json={"session_id": "sess-1", "run_id": "", "decision": "proceed"},
+        )
+        assert r.status_code == 422
