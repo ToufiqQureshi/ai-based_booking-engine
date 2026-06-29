@@ -243,7 +243,7 @@ async def chat_stream(
             # lives in TeamRunCompleted.content — we send it as one chunk there.
             content_streamed = False
 
-            async for evt in await agent.arun(
+            async for evt in agent.arun(
                 payload.message,
                 user_id=str(current_user.id),
                 session_id=payload.session_id,
