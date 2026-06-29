@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agno.agent import Agent
 from agno.team import Team
-from agno.db.postgres import PostgresDb
+from agno.db.postgres import AsyncPostgresDb
 from app.ai_engine.cache import cached_tool
 
 from app.core.utils.config import get_settings
@@ -884,21 +884,10 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
             max_tokens=effective_max_tokens,
         )
 
-    # Ensure PostgresDb is initialized for history
-    # psycopg3 needs +psycopg driver and sslmode=require.
-    # config.py appends ?ssl=require (asyncpg format) for Supabase; we must
-    # convert ALL asyncpg ssl= variants to psycopg sslmode= here.
-    import re as _re
-    db_url = settings.DATABASE_URL
-    if "+asyncpg" in db_url:
-        db_url = db_url.replace("+asyncpg", "+psycopg")
-    # Replace ?ssl=<val> or &ssl=<val> → sslmode=require/disable for psycopg3
-    def _ssl_to_sslmode(m: _re.Match) -> str:
-        sep, val = m.group(1), m.group(2).lower()
-        mode = "require" if val in ("true", "require", "1") else "disable"
-        return f"{sep}sslmode={mode}"
-    db_url = _re.sub(r"([?&])ssl=([^&]+)", _ssl_to_sslmode, db_url)
-    agent_db = PostgresDb(db_url=db_url, session_table="agno_sessions")
+    # AsyncPostgresDb: fully async, uses asyncpg under the hood, and accepts
+    # the DATABASE_URL as-is (ssl=require is valid asyncpg format — no driver
+    # or SSL conversion needed unlike the sync PostgresDb/psycopg path).
+    agent_db = AsyncPostgresDb(db_url=settings.DATABASE_URL, session_table="agno_sessions")
 
     # Split tools into focused groups
     finance_tools = [
