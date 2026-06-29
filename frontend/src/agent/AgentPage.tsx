@@ -448,9 +448,15 @@ const AgentPage = () => {
         setActiveToolName('');
 
         try {
-            const { API_BASE_URL, tokenStorage } = await import('@/core/api/client');
-            const token = tokenStorage.getAccessToken();
-            const res = await fetch(`${API_BASE_URL}/agent/chat/stream`, {
+            const token = localStorage.getItem('hotel_access_token');
+            const baseUrl = (() => {
+                const h = window.location.hostname;
+                if (h.includes('staybooker.ai') || h.includes('pages.dev')) return 'https://api.staybooker.ai/api/v1';
+                if (import.meta.env.VITE_API_URL) return (import.meta.env.VITE_API_URL as string).replace(/\/$/, '').replace(/\/api\/v1$/, '') + '/api/v1';
+                return '/api/v1';
+            })();
+
+            const res = await fetch(`${baseUrl}/agent/chat/stream`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -459,37 +465,44 @@ const AgentPage = () => {
                 body: JSON.stringify({ message: userMessage, session_id: activeSessionId }),
             });
 
-            if (!res.ok || !res.body) {
-                throw new Error(`Server error ${res.status}`);
-            }
+            if (!res.ok || !res.body) throw new Error(`Server error ${res.status}`);
 
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let accumulated = '';
             let doneSessionId = '';
+            // Buffer for partial SSE lines that span multiple network chunks
+            let lineBuffer = '';
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    try {
-                        const evt = JSON.parse(line.slice(6));
-                        if (evt.type === 'tool') {
-                            setActiveToolName(evt.name || 'tool');
-                        } else if (evt.type === 'content') {
-                            accumulated += evt.delta;
-                            setStreamingText(accumulated);
-                            setActiveToolName('');
-                        } else if (evt.type === 'done') {
-                            doneSessionId = evt.session_id;
-                        } else if (evt.type === 'error') {
-                            throw new Error(evt.message);
+                lineBuffer += decoder.decode(value, { stream: true });
+
+                // Split on double-newline (SSE message boundary)
+                const parts = lineBuffer.split('\n\n');
+                // Last part may be incomplete — keep it in the buffer
+                lineBuffer = parts.pop() ?? '';
+
+                for (const part of parts) {
+                    for (const line of part.split('\n')) {
+                        if (!line.startsWith('data: ')) continue;
+                        try {
+                            const evt = JSON.parse(line.slice(6));
+                            if (evt.type === 'tool') {
+                                setActiveToolName(evt.name || 'tool');
+                            } else if (evt.type === 'content') {
+                                accumulated += evt.delta;
+                                setStreamingText(accumulated);
+                                setActiveToolName('');
+                            } else if (evt.type === 'done') {
+                                doneSessionId = evt.session_id;
+                            } else if (evt.type === 'error') {
+                                throw new Error(evt.message);
+                            }
+                        } catch (parseErr: any) {
+                            if (parseErr.message && !parseErr.message.includes('JSON')) throw parseErr;
                         }
-                    } catch (parseErr: any) {
-                        if (parseErr.message && !parseErr.message.includes('JSON')) throw parseErr;
                     }
                 }
             }
@@ -582,9 +595,9 @@ const AgentPage = () => {
                                             <button onClick={e => { e.stopPropagation(); setEditingSessionId(null); }} className="p-0.5 hover:text-red-500"><X size={13} /></button>
                                         </div>
                                     ) : (
-                                        <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                                            <button onClick={e => startRename(s, e)} className="p-0.5 opacity-60 hover:opacity-100 hover:text-primary" title="Rename"><Pencil size={12} /></button>
-                                            <button onClick={e => deleteSession(s.session_id, e)} className="p-0.5 opacity-60 hover:opacity-100 hover:text-red-500" title="Delete"><Trash2 size={12} /></button>
+                                        <div className={`items-center gap-0.5 shrink-0 ${activeSessionId === s.session_id ? 'flex' : 'hidden group-hover:flex'}`}>
+                                            <button onClick={e => startRename(s, e)} className="p-0.5 opacity-50 hover:opacity-100 hover:text-primary" title="Rename"><Pencil size={12} /></button>
+                                            <button onClick={e => deleteSession(s.session_id, e)} className="p-0.5 opacity-50 hover:opacity-100 hover:text-red-500" title="Delete"><Trash2 size={12} /></button>
                                         </div>
                                     )}
                                 </div>

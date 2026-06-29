@@ -226,6 +226,13 @@ async def chat_stream(
 
     await enforce_ai_token_quota("hotelier", current_user.hotel_id, session)
 
+    # Agno emits events at two layers:
+    # - Team-level:  TeamRunContent, TeamToolCallStarted, TeamRunCompleted, TeamRunError
+    # - Member-level: RunContent, ToolCallStarted (no session_id on RunCompleted)
+    # Both layers must be handled so streaming works when the Team delegates to a sub-agent.
+    _CONTENT_EVENTS = {"TeamRunContent", "RunContent"}
+    _TOOL_EVENTS    = {"TeamToolCallStarted", "ToolCallStarted"}
+
     async def generate():
         try:
             from app.ai_engine.agent import create_agent_executor
@@ -240,22 +247,22 @@ async def chat_stream(
             ):
                 ev = getattr(evt, "event", "")
 
-                if ev == "TeamToolCallStarted":
+                if ev in _TOOL_EVENTS:
                     tool_name = ""
-                    if evt.tool:
+                    if getattr(evt, "tool", None):
                         tool_name = getattr(evt.tool, "tool_name", "") or ""
                     yield f"data: {json.dumps({'type': 'tool', 'name': tool_name})}\n\n"
 
-                elif ev == "TeamRunContent":
-                    if evt.content:
-                        yield f"data: {json.dumps({'type': 'content', 'delta': str(evt.content)})}\n\n"
+                elif ev in _CONTENT_EVENTS:
+                    chunk = getattr(evt, "content", None)
+                    if chunk:
+                        yield f"data: {json.dumps({'type': 'content', 'delta': str(chunk)})}\n\n"
 
                 elif ev == "TeamRunCompleted":
                     sid = getattr(evt, "session_id", None) or agent.session_id
-                    # Record usage using the event's metrics (same fields as TeamRunOutput)
                     record_ai_usage(current_user.hotel_id, evt, agent_type="hotelier", user_identifier=str(current_user.id))
                     await persist_ai_usage_db(current_user.hotel_id, evt, agent_type="hotelier", user_identifier=str(current_user.id))
-                    # Auto-name new sessions
+                    # Auto-name new sessions from first user message
                     if not payload.session_id and sid:
                         try:
                             from agno.db.base import SessionType
@@ -268,7 +275,7 @@ async def chat_stream(
                             pass
                     yield f"data: {json.dumps({'type': 'done', 'session_id': sid or ''})}\n\n"
 
-                elif ev == "TeamRunError":
+                elif ev in ("TeamRunError", "RunError"):
                     yield f"data: {json.dumps({'type': 'error', 'message': 'AI error occurred'})}\n\n"
 
         except Exception as e:
