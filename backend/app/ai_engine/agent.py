@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agno.agent import Agent
 from agno.team import Team
+from agno.tools import tool
 from agno.db.postgres import AsyncPostgresDb
 from app.ai_engine.cache import cached_tool
 
@@ -55,7 +56,7 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 2. **Direct Answers Only**:
    - "How many pending bookings?" -> Use `get_pending_approvals`. IGNORE 'today' filter. Return ALL pending.
    - "Pending payments?" -> Use `get_pending_payments`.
-3. **Safe Actions (HARD RULE)**: For any DESTRUCTIVE or money-affecting action (cancel booking, price update, promo, block dates), you MUST first show the details and get the hotelier's EXPLICIT "yes" for that specific item. NEVER cancel bookings on your own initiative, in bulk, or to "clean up" pending bookings. `cancel_booking` must first be called with confirm=False (preview) and only with confirm=True after the user explicitly confirms that exact booking number. A pending booking is awaiting the hotelier's decision — do NOT cancel it unless they explicitly ask to cancel that specific booking.
+3. **Safe Actions (HARD RULE)**: For any DESTRUCTIVE or money-affecting action (cancel booking, price update, promo, block dates), clearly state what you are about to do. The system enforces human-in-the-loop: it will PAUSE and ask the hotelier to click "Proceed" or "Cancel" before the action runs — so you never execute it yourself. NEVER cancel bookings on your own initiative, in bulk, or to "clean up" pending bookings. A pending booking is awaiting the hotelier's decision — only act on a specific booking when they explicitly ask.
 4. **Smart Pricing**: Check Weather/Events/Web Search before suggesting price changes.
 5. **Reasoning First**: ALWAYS explain 'WHY' before recommending an action. Cite data (e.g. "Because of Coldplay concert...").
 6. **Use Web Search**: If you lack context (e.g. "Is it a holiday?"), use `search_web`.
@@ -227,35 +228,32 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         """
         return details
 
-    async def cancel_booking(booking_number: str, confirm: bool = False) -> str:
+    @tool(requires_confirmation=True)
+    async def cancel_booking(booking_number: str) -> str:
         """
         Cancel a single booking. This is a DESTRUCTIVE, hard-to-reverse action.
 
-        TWO-STEP SAFETY (mandatory):
-          1. First call this with confirm=False (the default). It will NOT change
-             anything — it returns the booking details and asks the hotelier to
-             confirm.
-          2. Only call again with confirm=True AFTER the hotelier has explicitly
-             said yes to cancelling THIS specific booking number.
-
-        NEVER pass confirm=True on your own initiative, in bulk, or to "clean up"
-        pending bookings. Call this ONE booking at a time, never in parallel.
+        The hotelier's explicit "Proceed" is enforced by the system before this
+        runs (human-in-the-loop), so you do NOT manage confirmation yourself — just
+        call this with the booking number when the hotelier asks to cancel. Call it
+        ONE booking at a time, never in parallel, and never to "clean up" pending
+        bookings on your own initiative.
         """
-        return await logic_cancel_booking(session, user, booking_number, confirm)
+        return await logic_cancel_booking(session, user, booking_number)
 
-
-
+    @tool(requires_confirmation=True)
     async def update_room_price(room_name: str, new_price: float) -> str:
         """
-        Updates the base price of a room type in the database.
-        USE THIS ONLY AFTER EXPLICIT USER CONFIRMATION.
+        Update the base price of a room type. DESTRUCTIVE / money-affecting — the
+        system will require the hotelier's explicit confirmation before it runs.
         """
         return await logic_update_room_price(session, user, room_name, new_price)
 
+    @tool(requires_confirmation=True)
     async def create_promo_code(code: str, discount_percent: int) -> str:
         """
-        Creates a new discount promo code in the database.
-        USE THIS ONLY AFTER EXPLICIT USER CONFIRMATION.
+        Create a new discount promo code. DESTRUCTIVE / money-affecting — the system
+        will require the hotelier's explicit confirmation before it runs.
         """
         return await logic_create_promo_code(session, user, code, discount_percent)
 
@@ -373,11 +371,12 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
             summary += f"  - Last Search: {g['last_visit']}\n"
         return summary
 
+    @tool(requires_confirmation=True)
     async def block_room_dates(room_type_name: str, start_date_str: str, end_date_str: str, reason: str = "Maintenance") -> str:
         """
         Block a room for a specific date range (e.g. for maintenance).
-        Format dates as YYYY-MM-DD.
-        USE THIS ONLY AFTER EXPLICIT USER CONFIRMATION.
+        Format dates as YYYY-MM-DD. DESTRUCTIVE — the system will require the
+        hotelier's explicit confirmation before it runs.
         """
         from app.ai_engine.tools.guest_inventory import logic_block_room
         from datetime import date
@@ -905,10 +904,18 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         get_daily_revenue, get_pending_payments, get_upsell_opportunities
     ]
     
+    # cancel_booking is destructive. Even though agno's requires_confirmation gate
+    # makes it impossible to execute without the hotelier's explicit "Proceed",
+    # we also keep it OUT of the Booking Agent's toolset unless the query actually
+    # signals cancel/void intent — so the model can't even reach for it while
+    # answering a plain "show me my bookings" question (defense-in-depth).
+    cancel_intent = any(w in q for w in ["cancel", "void"]) if q else True
     booking_tools = [
-        search_bookings, get_booking_details, cancel_booking, 
+        search_bookings, get_booking_details,
         create_quick_booking, check_availability_matrix, find_guest
     ]
+    if cancel_intent:
+        booking_tools.append(cancel_booking)
     
     ops_tools = [
         get_dashboard_stats, get_room_inventory, get_todays_arrivals,
@@ -935,11 +942,11 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         tools=booking_tools,
         instructions=(
             "You are a hotel reservations specialist. "
-            "DESTRUCTIVE-ACTION RULE: never cancel a booking without the hotelier's "
-            "explicit confirmation for that exact booking number. Always call "
-            "cancel_booking with confirm=False first (preview), and only call it with "
-            "confirm=True after the user clearly says yes. Never cancel pending bookings "
-            "to 'clean up' or in bulk. "
+            "DESTRUCTIVE-ACTION RULE: only call cancel_booking when the hotelier "
+            "explicitly asks to cancel a specific booking. The system will pause and "
+            "ask them to confirm before anything is cancelled, so call it once for "
+            "that exact booking number — never cancel pending bookings to 'clean up' "
+            "or in bulk on your own initiative. "
             "Never start responses with 'Let me check/fetch/search' — jump directly to the result."
         ),
         user_id=str(user.id),
@@ -953,8 +960,8 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         instructions=(
             "You are a hotel operations specialist. Be proactive and concise. "
             "DESTRUCTIVE-ACTION RULE: for price updates, promo codes, or blocking dates, "
-            "always show the change and get the hotelier's explicit confirmation before "
-            "applying it. "
+            "clearly state the change you intend to make. The system will pause and ask "
+            "the hotelier to confirm before it is applied — so never assume consent. "
             "Never start responses with 'Let me check/fetch/search' — jump directly to the result."
         ),
         user_id=str(user.id),

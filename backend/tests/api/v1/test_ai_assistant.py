@@ -224,6 +224,20 @@ class TestChatSessionHistory:
         r = await client.get("/api/v1/agent/sessions/does-not-exist")
         assert r.status_code == 404
 
+    async def test_view_history_db_failure_is_503(self, sessions_client, monkeypatch):
+        """Regression: a DB failure must surface as 503, NOT a silent empty history
+        (which previously hid the real error from the hotelier)."""
+        import app.ai_assistant.agent as agent_mod
+        client, _ = sessions_client
+
+        class _FailingDb:
+            async def get_session(self, *args, **kwargs):
+                raise RuntimeError("db down")
+
+        monkeypatch.setattr(agent_mod, "_make_agent_db", lambda: _FailingDb())
+        r = await client.get("/api/v1/agent/sessions/sess-owned")
+        assert r.status_code == 503
+
 
 class TestChatSessionDelete:
     async def test_delete_owned_session_succeeds(self, sessions_client):
@@ -302,23 +316,25 @@ async def _get_status(booking_number: str):
         return b.status
 
 
-class TestCancelBookingSafety:
-    async def test_preview_does_not_cancel_pending_booking(self, seeded_hotel):
-        """THE regression: a confirm=False (default) call must NOT change a pending
-        booking. This is exactly what 'AI cancelled pending bookings' was."""
-        from app.ai_engine.tools.actions import logic_cancel_booking
-        from app.core.db.database import engine
-        from app.bookings.booking import BookingStatus
+async def _get_booking_id(booking_number: str) -> str:
+    from sqlmodel import select
+    from app.core.db.database import engine
+    from app.bookings.booking import Booking
+    async with AsyncSession(engine) as s:
+        b = (await s.execute(
+            select(Booking).where(Booking.booking_number == booking_number)
+        )).scalar_one()
+        return b.id
 
-        bn = await _seed_booking(seeded_hotel.id, BookingStatus.PENDING)
-        user = SimpleNamespace(id="u-owner", hotel_id=seeded_hotel.id, role="OWNER")
-        async with AsyncSession(engine) as s:
-            msg = await logic_cancel_booking(s, user, bn, confirm=False)
-        assert "CONFIRMATION REQUIRED" in msg
-        assert await _get_status(bn) == BookingStatus.PENDING  # untouched
+
+class TestCancelBookingSafety:
+    """`logic_cancel_booking` is the server-side guard that runs only AFTER agno's
+    human-in-the-loop gate has already obtained the hotelier's "Proceed" (the
+    pause/confirm flow itself is covered in TestHITLConfirmation). These tests
+    verify the guards the LLM cannot talk its way past."""
 
     async def test_staff_cannot_cancel(self, seeded_hotel):
-        """RBAC: STAFF must be refused even with confirm=True, and nothing changes."""
+        """RBAC: STAFF is refused and nothing changes."""
         from app.ai_engine.tools.actions import logic_cancel_booking
         from app.core.db.database import engine
         from app.bookings.booking import BookingStatus
@@ -326,12 +342,13 @@ class TestCancelBookingSafety:
         bn = await _seed_booking(seeded_hotel.id, BookingStatus.PENDING)
         staff = SimpleNamespace(id="u-staff", hotel_id=seeded_hotel.id, role="STAFF")
         async with AsyncSession(engine) as s:
-            msg = await logic_cancel_booking(s, staff, bn, confirm=True)
+            msg = await logic_cancel_booking(s, staff, bn)
         assert "permission" in msg.lower()
         assert await _get_status(bn) == BookingStatus.PENDING
 
-    async def test_confirmed_cancel_updates_status_and_writes_audit(self, seeded_hotel):
-        """Happy path: explicit confirm=True cancels and leaves an audit trail."""
+    async def test_owner_cancel_updates_status_and_writes_scoped_audit(self, seeded_hotel):
+        """Happy path: an authorised cancel flips status and leaves an AI-attributed
+        audit row scoped to THIS booking."""
         from sqlmodel import select
         from app.ai_engine.tools.actions import logic_cancel_booking
         from app.core.db.database import engine
@@ -341,15 +358,21 @@ class TestCancelBookingSafety:
         bn = await _seed_booking(seeded_hotel.id, BookingStatus.CONFIRMED)
         user = SimpleNamespace(id="u-owner", hotel_id=seeded_hotel.id, role="OWNER")
         async with AsyncSession(engine) as s:
-            msg = await logic_cancel_booking(s, user, bn, confirm=True)
+            msg = await logic_cancel_booking(s, user, bn)
         assert "SUCCESS" in msg
         assert await _get_status(bn) == BookingStatus.CANCELLED
-        # Audit trail attributing the change to the AI agent must exist.
+        # Audit row must exist for THIS booking (scoped by booking_id so prior
+        # tests' ai_agent rows can't false-pass).
+        booking_id = await _get_booking_id(bn)
         async with AsyncSession(engine) as s:
             rows = (await s.execute(
-                select(BookingTimeline).where(BookingTimeline.changed_by == "ai_agent")
+                select(BookingTimeline).where(
+                    BookingTimeline.booking_id == booking_id,
+                    BookingTimeline.changed_by == "ai_agent",
+                )
             )).scalars().all()
-        assert any(r.new_value == "cancelled" for r in rows)
+        assert len(rows) == 1
+        assert rows[0].new_value == "cancelled"
 
     async def test_checked_in_booking_cannot_be_cancelled(self, seeded_hotel):
         from app.ai_engine.tools.actions import logic_cancel_booking
@@ -359,7 +382,7 @@ class TestCancelBookingSafety:
         bn = await _seed_booking(seeded_hotel.id, BookingStatus.CHECKED_IN)
         user = SimpleNamespace(id="u-owner", hotel_id=seeded_hotel.id, role="OWNER")
         async with AsyncSession(engine) as s:
-            msg = await logic_cancel_booking(s, user, bn, confirm=True)
+            msg = await logic_cancel_booking(s, user, bn)
         assert "front desk" in msg.lower()
         assert await _get_status(bn) == BookingStatus.CHECKED_IN
 
@@ -372,6 +395,170 @@ class TestCancelBookingSafety:
         bn = await _seed_booking(seeded_hotel.id, BookingStatus.PENDING)
         other = SimpleNamespace(id="u-x", hotel_id="some-other-hotel", role="OWNER")
         async with AsyncSession(engine) as s:
-            msg = await logic_cancel_booking(s, other, bn, confirm=True)
+            msg = await logic_cancel_booking(s, other, bn)
         assert "not found" in msg.lower()
         assert await _get_status(bn) == BookingStatus.PENDING
+
+
+# ─── Human-in-the-loop confirmation flow (pause → Proceed/Cancel → resume) ────
+# The real agno pause/resume runs against Postgres + a live LLM, which the test
+# harness (SQLite, no API key) can't exercise. We stub ONLY the agent (like
+# conftest stubs auth) and verify our endpoint contract: chat surfaces a
+# confirmation, and /chat/confirm confirms or rejects the paused requirement and
+# resumes the run.
+
+class _FakeToolExec:
+    def __init__(self, name, args):
+        self.tool_name = name
+        self.tool_args = args
+
+
+class _FakeReq:
+    def __init__(self, name="cancel_booking", args=None):
+        self.tool_execution = _FakeToolExec(name, args or {"booking_number": "BK-TEST"})
+        self.needs_confirmation = True
+        self.confirmed = None
+        self.rejected_note = None
+
+    def confirm(self):
+        self.needs_confirmation = False
+        self.confirmed = True
+
+    def reject(self, note=None):
+        self.needs_confirmation = False
+        self.confirmed = False
+        self.rejected_note = note
+
+
+class _FakePausedRun:
+    def __init__(self, run_id, session_id):
+        self.is_paused = True
+        self.run_id = run_id
+        self.session_id = session_id
+        self.content = None
+        self.active_requirements = [_FakeReq()]
+
+
+class _FakeCompletedRun:
+    def __init__(self, content, run_id, session_id):
+        self.is_paused = False
+        self.content = content
+        self.run_id = run_id
+        self.session_id = session_id
+
+
+class _FakeHITLAgent:
+    def __init__(self, run_id="run-1", session_id="sess-1"):
+        self.session_id = session_id
+        self.run_id = run_id
+        self._paused = _FakePausedRun(run_id, session_id)
+
+    async def arun(self, message, user_id=None, session_id=None):
+        if session_id:
+            self._paused.session_id = session_id
+            self.session_id = session_id
+        return self._paused
+
+    async def aget_run_output(self, run_id, session_id=None, user_id=None):
+        return self._paused
+
+    async def acontinue_run(self, run_response=None, session_id=None, user_id=None):
+        reqs = getattr(run_response, "active_requirements", []) or []
+        proceeded = any(getattr(r, "confirmed", None) is True for r in reqs)
+        content = (
+            "SUCCESS: Booking BK-TEST has been cancelled."
+            if proceeded else "Okay — cancelled. No changes were made."
+        )
+        return _FakeCompletedRun(content, self.run_id, session_id or self.session_id)
+
+
+@pytest_asyncio.fixture
+async def hitl_client(monkeypatch):
+    """Authenticated client with the agent stubbed to a paused (HITL) run."""
+    import app.ai_engine.agent as engine_mod
+    import app.ai_assistant.agent as route_mod
+    from app.core.auth.deps import get_current_active_user
+    from main import app
+
+    user = SimpleNamespace(
+        id="hitl-owner",
+        hotel_id="hotel-hitl",
+        role="OWNER",
+        hotel=SimpleNamespace(feature_ai_agent=True, feature_ai_assistant=True),
+    )
+    fake_agent = _FakeHITLAgent(run_id="run-1", session_id="sess-1")
+
+    async def _fake_create(*args, **kwargs):
+        return fake_agent
+
+    async def _noop_async(*a, **k):
+        return None
+
+    monkeypatch.setattr(engine_mod, "create_agent_executor", _fake_create)
+    monkeypatch.setattr(route_mod, "enforce_ai_token_quota", _noop_async)
+    monkeypatch.setattr(route_mod, "record_ai_usage", lambda *a, **k: None)
+    monkeypatch.setattr(route_mod, "persist_ai_usage_db", _noop_async)
+
+    app.dependency_overrides[get_current_active_user] = lambda: user
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac, fake_agent
+    app.dependency_overrides.pop(get_current_active_user, None)
+
+
+class TestHITLConfirmation:
+    async def test_confirm_requires_auth(self, client: AsyncClient):
+        r = await client.post(
+            "/api/v1/agent/chat/confirm",
+            json={"session_id": "s", "run_id": "r", "decision": "proceed"},
+        )
+        assert r.status_code == 401
+
+    async def test_chat_surfaces_confirmation_when_paused(self, hitl_client):
+        """A destructive action pauses the run — chat returns a confirmation
+        request with the run_id, NOT a silent execution."""
+        client, _ = hitl_client
+        r = await client.post(
+            "/api/v1/agent/chat",
+            json={"message": "cancel booking BK-TEST", "session_id": "sess-1"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["requires_confirmation"] is True
+        assert data["run_id"] == "run-1"
+        assert "Cancel booking" in data["response"]
+
+    async def test_confirm_proceed_resumes_and_executes(self, hitl_client):
+        client, fake = hitl_client
+        r = await client.post(
+            "/api/v1/agent/chat/confirm",
+            json={"session_id": "sess-1", "run_id": "run-1", "decision": "proceed"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["requires_confirmation"] is False
+        assert "cancelled" in data["response"].lower()
+        assert fake._paused.active_requirements[0].confirmed is True
+
+    async def test_confirm_cancel_rejects_and_makes_no_change(self, hitl_client):
+        client, fake = hitl_client
+        r = await client.post(
+            "/api/v1/agent/chat/confirm",
+            json={"session_id": "sess-1", "run_id": "run-1", "decision": "cancel"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert "no changes" in data["response"].lower()
+        assert fake._paused.active_requirements[0].confirmed is False
+
+    async def test_confirm_unknown_run_is_404(self, hitl_client, monkeypatch):
+        client, fake = hitl_client
+
+        async def _none(*a, **k):
+            return None
+
+        monkeypatch.setattr(fake, "aget_run_output", _none)
+        r = await client.post(
+            "/api/v1/agent/chat/confirm",
+            json={"session_id": "sess-1", "run_id": "nope", "decision": "proceed"},
+        )
+        assert r.status_code == 404

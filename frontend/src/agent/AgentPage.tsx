@@ -21,11 +21,16 @@ import {
 interface Message {
     role: 'human' | 'ai';
     content: string;
+    // Human-in-the-loop: when present, this AI message is asking the hotelier to
+    // approve a destructive action. Render Proceed/Cancel until `resolved`.
+    confirm?: { runId: string; resolved?: boolean };
 }
 
 interface ChatResponse {
     response: string;
     session_id: string;
+    requires_confirmation?: boolean;
+    run_id?: string | null;
 }
 
 interface ChatSession {
@@ -473,6 +478,8 @@ const AgentPage = () => {
             const decoder = new TextDecoder();
             let accumulated = '';
             let doneSessionId = '';
+            // Human-in-the-loop: set when the backend pauses for a destructive action.
+            let pendingConfirm: { runId: string; sessionId: string; prompt: string } | null = null;
             // Buffer for partial SSE lines that span multiple network chunks
             let lineBuffer = '';
 
@@ -497,6 +504,9 @@ const AgentPage = () => {
                                 accumulated += evt.delta;
                                 setStreamingText(accumulated);
                                 setActiveToolName('');
+                            } else if (evt.type === 'confirmation') {
+                                pendingConfirm = { runId: evt.run_id, sessionId: evt.session_id, prompt: evt.prompt };
+                                setActiveToolName('');
                             } else if (evt.type === 'done') {
                                 doneSessionId = evt.session_id;
                             } else if (evt.type === 'error') {
@@ -509,8 +519,17 @@ const AgentPage = () => {
                 }
             }
 
-            // Commit streamed text as a proper message
-            if (accumulated) {
+            // Human-in-the-loop takes priority: render the approval prompt with
+            // Proceed/Cancel instead of treating it as a normal answer.
+            if (pendingConfirm) {
+                const pc = pendingConfirm;
+                if (accumulated) {
+                    setMessages(prev => [...prev, { role: 'ai', content: accumulated }]);
+                }
+                setMessages(prev => [...prev, { role: 'ai', content: pc.prompt, confirm: { runId: pc.runId } }]);
+                if (pc.sessionId) setActiveSessionId(pc.sessionId);
+            } else if (accumulated) {
+                // Commit streamed text as a proper message
                 setMessages(prev => [...prev, { role: 'ai', content: accumulated }]);
             }
             // Always update active session when backend returns a session_id
@@ -532,6 +551,37 @@ const AgentPage = () => {
             setIsLoading(false);
             setStreamingText('');
             setActiveToolName('');
+        }
+    };
+
+    // Human-in-the-loop: hotelier clicked Proceed/Cancel on a pending destructive
+    // action. Resume the paused run on the backend and append its result.
+    const confirmAction = async (runId: string, decision: 'proceed' | 'cancel') => {
+        if (isLoading) return;
+        // Mark the prompt as resolved so its buttons disappear.
+        setMessages(prev => prev.map(m =>
+            m.confirm?.runId === runId ? { ...m, confirm: { ...m.confirm, resolved: true } } : m
+        ));
+        setIsLoading(true);
+        try {
+            const data = await apiClient.post<ChatResponse>('/agent/chat/confirm', {
+                session_id: activeSessionId,
+                run_id: runId,
+                decision,
+            });
+            const msg: Message = data.requires_confirmation && data.run_id
+                ? { role: 'ai', content: data.response, confirm: { runId: data.run_id } }
+                : { role: 'ai', content: data.response };
+            setMessages(prev => [...prev, msg]);
+            if (data.session_id) setActiveSessionId(data.session_id);
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Could not complete the action.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -722,6 +772,27 @@ const AgentPage = () => {
                                                             {parsed!.charts.map((chart, ci) => (
                                                                 <ChartRenderer key={ci} chart={chart} />
                                                             ))}
+                                                            {msg.confirm && !msg.confirm.resolved && (
+                                                                <div className="flex gap-2 mt-3 pt-3 border-t">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => confirmAction(msg.confirm!.runId, 'proceed')}
+                                                                        disabled={isLoading}
+                                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                                                                    >
+                                                                        <Check size={14} /> Proceed
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => confirmAction(msg.confirm!.runId, 'cancel')}
+                                                                        disabled={isLoading}
+                                                                        className="gap-1.5"
+                                                                    >
+                                                                        <X size={14} /> Cancel
+                                                                    </Button>
+                                                                </div>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>

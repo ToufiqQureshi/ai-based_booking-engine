@@ -54,7 +54,21 @@ def _make_agent_db():
         db_url = "postgresql+asyncpg://" + db_url[len("postgresql://"):]
 
     connect_args = {"statement_cache_size": 0} if "asyncpg" in db_url else {}
-    engine = create_async_engine(db_url, connect_args=connect_args, pool_pre_ping=True)
+
+    # Pool sizing is env-driven (DB_POOL_SIZE/DB_MAX_OVERFLOW) so this — a SECOND,
+    # dedicated pool for the agno session store, separate from the app ORM engine —
+    # stays inside Supabase's limit: keep
+    # (DB_POOL_SIZE + this) * WEB_CONCURRENCY * replicas <= connection limit.
+    # SQLite (tests) uses its own pooling and rejects these kwargs, so skip them there.
+    engine_kwargs = {"connect_args": connect_args, "pool_pre_ping": True}
+    if "sqlite" not in db_url:
+        engine_kwargs.update(
+            pool_size=settings.DB_POOL_SIZE,
+            max_overflow=settings.DB_MAX_OVERFLOW,
+            pool_recycle=settings.DB_POOL_RECYCLE,
+            pool_timeout=settings.DB_POOL_TIMEOUT,
+        )
+    engine = create_async_engine(db_url, **engine_kwargs)
     _agent_db_singleton = AsyncPostgresDb(db_engine=engine, session_table="agno_sessions")
     return _agent_db_singleton
 
@@ -72,6 +86,54 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     session_id: str
+    # Human-in-the-loop: when the AI wants to run a destructive tool (cancel
+    # booking, price change, promo, block dates), agno PAUSES the run and we
+    # surface a confirmation request instead of executing. The frontend renders
+    # Proceed/Cancel and calls /agent/chat/confirm with run_id to resume.
+    requires_confirmation: bool = False
+    run_id: str | None = None
+
+
+class ConfirmRequest(BaseModel):
+    session_id: str
+    run_id: str
+    decision: str  # "proceed" | "cancel"
+
+
+# Friendly descriptions of what each destructive tool is about to do, built from
+# the paused run's tool args so the hotelier sees exactly what they're approving.
+def _describe_pending_action(tool_name: str, args: dict) -> str:
+    args = args or {}
+    if tool_name == "cancel_booking":
+        return f"Cancel booking **{args.get('booking_number', '?')}**"
+    if tool_name == "update_room_price":
+        return f"Change **{args.get('room_name', '?')}** base price to **₹{args.get('new_price', '?')}**"
+    if tool_name == "create_promo_code":
+        return f"Create promo code **{args.get('code', '?')}** ({args.get('discount_percent', '?')}% off)"
+    if tool_name == "block_room_dates":
+        return (
+            f"Block **{args.get('room_type_name', '?')}** from "
+            f"{args.get('start_date_str', '?')} to {args.get('end_date_str', '?')} "
+            f"({args.get('reason', 'Maintenance')})"
+        )
+    return f"Run `{tool_name}`"
+
+
+def _build_confirmation_prompt(run_output) -> str:
+    """Turn a paused run's active requirements into a hotelier-facing prompt."""
+    actions = []
+    for req in getattr(run_output, "active_requirements", []) or []:
+        te = getattr(req, "tool_execution", None)
+        if te is None:
+            continue
+        actions.append(_describe_pending_action(getattr(te, "tool_name", ""), getattr(te, "tool_args", {})))
+    if not actions:
+        return "The assistant wants to perform an action. Proceed?"
+    bullet = "\n".join(f"- {a}" for a in actions)
+    return (
+        "⚠️ **Confirmation required** — I'm about to:\n"
+        f"{bullet}\n\nThis won't happen until you choose **Proceed**."
+    )
 
 
 @router.get("/usage")
@@ -220,6 +282,17 @@ async def chat_with_agent(
             except Exception:
                 pass  # non-critical — sidebar falls back to "New Chat"
 
+        # Human-in-the-loop: the AI asked to run a destructive tool. agno paused
+        # the run instead of executing it — surface a confirmation request so the
+        # hotelier explicitly approves before anything changes.
+        if getattr(result, "is_paused", False):
+            return ChatResponse(
+                response=_build_confirmation_prompt(result),
+                session_id=agent.session_id,
+                requires_confirmation=True,
+                run_id=result.run_id,
+            )
+
         return ChatResponse(response=result.content or "", session_id=agent.session_id)
 
     except ValueError as e:
@@ -309,6 +382,18 @@ async def chat_stream(
                             pass
                     yield f"data: {json.dumps({'type': 'done', 'session_id': sid or ''})}\n\n"
 
+                elif ev == "TeamRunPaused":
+                    # Human-in-the-loop: the AI wants to run a destructive tool.
+                    # Emit a confirmation request (with run_id) instead of a result;
+                    # the frontend shows Proceed/Cancel and calls /agent/chat/confirm.
+                    sid = (
+                        getattr(evt, "session_id", None)
+                        or captured_session_id
+                        or getattr(agent, "session_id", None)
+                    )
+                    run_id = getattr(evt, "run_id", None) or getattr(agent, "run_id", None)
+                    yield f"data: {json.dumps({'type': 'confirmation', 'prompt': _build_confirmation_prompt(evt), 'run_id': run_id or '', 'session_id': sid or ''})}\n\n"
+
                 elif ev in ("TeamRunError", "RunError"):
                     yield f"data: {json.dumps({'type': 'error', 'message': 'AI error occurred'})}\n\n"
 
@@ -321,6 +406,74 @@ async def chat_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.post("/chat/confirm", response_model=ChatResponse, dependencies=[Depends(require_feature("feature_ai_agent"))])
+@limiter.limit("15/minute")
+async def confirm_pending_action(
+    request: Request,
+    payload: ConfirmRequest,
+    current_user: CurrentUser,
+    session: DbSession,
+):
+    """Resume a paused human-in-the-loop run after the hotelier decides.
+
+    The destructive tool (cancel booking, price change, promo, block dates) was
+    NOT executed when the run paused. Here we either confirm the pending
+    requirement(s) — letting agno run the tool — or reject them, then continue the
+    run so the assistant produces a closing message. The destructive write itself
+    still goes through the server-side guards in the tool (role, status, tenant).
+    """
+    if not current_user.hotel or not getattr(current_user.hotel, "feature_ai_assistant", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AI Assistant feature is not enabled")
+
+    proceed = payload.decision.strip().lower() == "proceed"
+    await enforce_ai_token_quota("hotelier", current_user.hotel_id, session)
+
+    try:
+        from app.ai_engine.agent import create_agent_executor
+        agent = await create_agent_executor(session, current_user)
+
+        paused = await agent.aget_run_output(payload.run_id, payload.session_id, user_id=str(current_user.id))
+        if paused is None or not getattr(paused, "is_paused", False):
+            raise HTTPException(status_code=404, detail="No pending action to confirm — it may have already been handled or expired.")
+
+        for req in (getattr(paused, "active_requirements", []) or []):
+            if not req.needs_confirmation:
+                continue
+            if proceed:
+                req.confirm()
+            else:
+                req.reject(note="Hotelier declined the action.")
+
+        result = await agent.acontinue_run(
+            run_response=paused,
+            session_id=payload.session_id,
+            user_id=str(current_user.id),
+        )
+        record_ai_usage(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
+        await persist_ai_usage_db(current_user.hotel_id, result, agent_type="hotelier", user_identifier=current_user.id)
+
+        # The continued run could itself pause on a further destructive tool.
+        if getattr(result, "is_paused", False):
+            return ChatResponse(
+                response=_build_confirmation_prompt(result),
+                session_id=payload.session_id,
+                requires_confirmation=True,
+                run_id=result.run_id,
+            )
+
+        fallback = "Done." if proceed else "Okay — cancelled. No changes were made."
+        return ChatResponse(response=(result.content or fallback), session_id=payload.session_id)
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.warning(f"Confirm config error: {e}")
+        raise HTTPException(status_code=503, detail="AI Assistant is not configured. Please contact support.") from e
+    except Exception as e:
+        logger.error(f"Confirm error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not complete the action. Please try again.") from e
 
 
 class RenameSessionRequest(BaseModel):
@@ -370,7 +523,7 @@ async def get_chat_session_history(session_id: str, current_user: CurrentUser):
         # showed the hotelier a blank, "working" chat. Log and surface 503 so the
         # frontend shows a real "could not load" toast instead of fake-empty data.
         logger.error(f"Failed to fetch session {session_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=503, detail="Could not load chat history. Please try again.")
+        raise HTTPException(status_code=503, detail="Could not load chat history. Please try again.") from e
 
     if not sess:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -420,7 +573,7 @@ async def rename_chat_session(
         )
     except Exception as e:
         logger.error(f"Failed to rename session {session_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not rename session")
+        raise HTTPException(status_code=500, detail="Could not rename session") from e
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"session_id": session_id, "session_name": name}
@@ -441,7 +594,7 @@ async def delete_chat_session(session_id: str, current_user: CurrentUser):
         deleted = await db.delete_session(session_id=session_id, user_id=str(current_user.id))
     except Exception as e:
         logger.error(f"Failed to delete session {session_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not delete session")
+        raise HTTPException(status_code=500, detail="Could not delete session") from e
     if not deleted:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"deleted": True}

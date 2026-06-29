@@ -14,15 +14,21 @@ _CANCEL_ALLOWED_ROLES = {"OWNER", "MANAGER", "SUPER_ADMIN"}
 # Logic functions to be wrapped as @tool in agent.py
 
 
-async def logic_cancel_booking(session, user, booking_number: str, confirm: bool = False) -> str:
-    """Cancel a single booking — destructive, two-phase, role-gated, audited.
+async def logic_cancel_booking(session, user, booking_number: str) -> str:
+    """Cancel a single booking — destructive, role-gated, status-guarded, audited.
 
     Lives here (not as a closure in agent.py) so it can be unit-tested directly.
 
-    Safety layers:
+    The hotelier's explicit go-ahead is enforced one layer up by agno's
+    human-in-the-loop gate (`@tool(requires_confirmation=True)`), which pauses the
+    run and will not invoke this function until the hotelier clicks "Proceed". By
+    the time we get here, consent has already been given — so this function just
+    performs the cancellation, with these server-side safety layers that the LLM
+    cannot talk its way past:
+
       - RBAC: only OWNER / MANAGER / SUPER_ADMIN may cancel.
       - Status guard: a CHECKED_IN / CHECKED_OUT stay can't be cancelled here.
-      - Two-phase: confirm=False only previews; the DB changes solely on confirm=True.
+      - Tenant isolation: the booking must belong to the caller's hotel.
       - Audit: writes a BookingTimeline row attributing the change to the AI agent.
     """
     # Imported here to avoid a heavy import at module load for the tool layer.
@@ -56,15 +62,6 @@ async def logic_cancel_booking(session, user, booking_number: str, confirm: bool
                 f"ERROR: Booking {booking_number} is '{booking.status.value}'. "
                 "A checked-in or checked-out booking cannot be cancelled from the "
                 "assistant — handle it at the front desk."
-            )
-
-        if not confirm:
-            return (
-                f"⚠️ CONFIRMATION REQUIRED — nothing has been changed yet.\n"
-                f"You asked to cancel booking **{booking_number}** "
-                f"(status: {booking.status.value}, dates: {booking.check_in} → {booking.check_out}, "
-                f"amount: ₹{booking.total_amount}). This is irreversible.\n"
-                f"Reply **\"yes, cancel {booking_number}\"** to confirm, or tell me to stop."
             )
 
         old_status = booking.status
