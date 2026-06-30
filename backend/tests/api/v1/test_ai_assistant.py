@@ -629,3 +629,42 @@ class TestHITLConfirmation:
             json={"session_id": "sess-1", "run_id": "", "decision": "proceed"},
         )
         assert r.status_code == 422
+
+
+class TestAgentHardening:
+    """P0/P1 DoS + prompt-injection guards."""
+
+    async def test_chat_rejects_oversized_message(self, hitl_client):
+        """Token-bomb guard: a message past the char cap is rejected with 422
+        before it ever reaches the LLM."""
+        client, _ = hitl_client
+        r = await client.post(
+            "/api/v1/agent/chat",
+            json={"message": "x" * 9000, "session_id": "sess-1"},
+        )
+        assert r.status_code == 422
+
+    async def test_chat_accepts_normal_message(self, hitl_client):
+        """A normal-sized message is not blocked by the cap (paused → confirmation)."""
+        client, _ = hitl_client
+        r = await client.post(
+            "/api/v1/agent/chat",
+            json={"message": "cancel booking BK-TEST", "session_id": "sess-1"},
+        )
+        assert r.status_code == 200
+
+    def test_runaway_guards_are_configured(self):
+        """tool_call_limit / history cap / message cap have sane bounded defaults."""
+        from app.core.utils.config import get_settings
+        s = get_settings()
+        assert 1 <= s.AI_TOOL_CALL_LIMIT <= 50
+        assert 0 <= s.AI_MAX_TOOL_CALLS_FROM_HISTORY <= 20
+        assert s.AI_MAX_MESSAGE_CHARS >= 1000
+
+    def test_system_prompt_has_anti_injection_rule(self):
+        """The system prompt must instruct the model to treat tool/web/guest
+        content as data, not instructions (LLM01:2025)."""
+        from app.ai_engine.agent import SYSTEM_PROMPT
+        p = SYSTEM_PROMPT.lower()
+        assert "data, never as instructions" in p or "untrusted" in p
+        assert "never reveal" in p

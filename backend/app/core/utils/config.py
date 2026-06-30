@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     # LLM, so a stuck provider must not hold the request open indefinitely.
     AI_CONFIRM_TIMEOUT_SECONDS: int = 60
 
+    # DoS / runaway-agent guards (CLAUDE.md §4). A jailbroken or looping prompt
+    # must not be able to hammer the DB via unbounded tool calls.
+    AI_TOOL_CALL_LIMIT: int = 8               # max tool calls per agent run
+    AI_MAX_TOOL_CALLS_FROM_HISTORY: int = 3   # cap replayed tool results in context
+    AI_MAX_MESSAGE_CHARS: int = 8000          # reject oversized prompts (token-bomb)
+
     # Background scheduler (APScheduler). Runs periodic jobs (social-proof
     # refresh, subscription-expiry) guarded by a Redis lock so only one
     # worker/replica runs each tick. Disable with ENABLE_SCHEDULER=false.

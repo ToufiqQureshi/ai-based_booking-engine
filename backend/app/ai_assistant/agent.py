@@ -77,9 +77,25 @@ def _make_agent_db():
 # conversations" display metric shown to hoteliers. Not used in billing logic.
 _AVG_TOKENS_PER_CONVERSATION = 800
 
+# Hard cap on inbound message size (token-bomb / cost-abuse guard). Read once at
+# import; safe default if settings are unavailable.
+try:
+    from app.core.utils.config import get_settings as _get_settings
+    _MAX_MESSAGE_CHARS = _get_settings().AI_MAX_MESSAGE_CHARS
+except Exception:
+    _MAX_MESSAGE_CHARS = 8000
+
+
+def _user_rate_key(request: Request) -> str:
+    """Rate-limit key per authenticated user (bearer token), so one hijacked or
+    abusive account can't spam even when rotating IPs. Falls back to client IP."""
+    from app.core.utils.limiter import get_real_ip
+    auth = request.headers.get("authorization") or ""
+    return auth[-40:] if auth else get_real_ip(request)
+
 
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(min_length=1, max_length=_MAX_MESSAGE_CHARS)
     session_id: str | None = None
     history: List[List[str]] = []  # [[role, content], ...]
 
@@ -227,6 +243,7 @@ async def get_ai_usage(
 
 @router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_feature("feature_ai_agent"))])
 @limiter.limit("15/minute")
+@limiter.limit("20/minute", key_func=_user_rate_key)
 async def chat_with_agent(
     request: Request,
     payload: ChatRequest,
@@ -309,6 +326,7 @@ async def chat_with_agent(
 
 @router.post("/chat/stream", dependencies=[Depends(require_feature("feature_ai_agent"))])
 @limiter.limit("15/minute")
+@limiter.limit("20/minute", key_func=_user_rate_key)
 async def chat_stream(
     request: Request,
     payload: ChatRequest,
@@ -411,6 +429,7 @@ async def chat_stream(
 
 @router.post("/chat/confirm", response_model=ChatResponse, dependencies=[Depends(require_feature("feature_ai_agent"))])
 @limiter.limit("15/minute")
+@limiter.limit("20/minute", key_func=_user_rate_key)
 async def confirm_pending_action(
     request: Request,
     payload: ConfirmRequest,
