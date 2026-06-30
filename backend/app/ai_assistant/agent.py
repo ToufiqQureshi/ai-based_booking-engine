@@ -82,16 +82,23 @@ _AVG_TOKENS_PER_CONVERSATION = 800
 try:
     from app.core.utils.config import get_settings as _get_settings
     _MAX_MESSAGE_CHARS = _get_settings().AI_MAX_MESSAGE_CHARS
-except Exception:
+except (ImportError, AttributeError):
+    # Only fall back for a genuinely missing import/attribute — let a broken
+    # settings object surface instead of silently bypassing an intentional cap.
     _MAX_MESSAGE_CHARS = 8000
 
 
 def _user_rate_key(request: Request) -> str:
     """Rate-limit key per authenticated user (bearer token), so one hijacked or
-    abusive account can't spam even when rotating IPs. Falls back to client IP."""
+    abusive account can't spam even when rotating IPs. Falls back to client IP.
+
+    The token is hashed so no raw bearer-token material lands in limiter keys/logs."""
+    import hashlib
     from app.core.utils.limiter import get_real_ip
     auth = request.headers.get("authorization") or ""
-    return auth[-40:] if auth else get_real_ip(request)
+    if auth:
+        return "auth:" + hashlib.sha256(auth.encode("utf-8")).hexdigest()
+    return "ip:" + get_real_ip(request)
 
 
 class ChatRequest(BaseModel):
@@ -411,7 +418,13 @@ async def chat_stream(
                         or getattr(agent, "session_id", None)
                     )
                     run_id = getattr(evt, "run_id", None) or getattr(agent, "run_id", None)
-                    yield f"data: {json.dumps({'type': 'confirmation', 'prompt': _build_confirmation_prompt(evt), 'run_id': run_id or '', 'session_id': sid or ''})}\n\n"
+                    if not sid or not run_id:
+                        # Without both IDs the frontend can't resume via /chat/confirm,
+                        # so don't surface an unusable confirmation prompt.
+                        logger.error("Paused run missing ids (run_id=%s session_id=%s)", run_id, sid)
+                        yield f"data: {json.dumps({'type': 'error', 'message': 'Confirmation could not be started. Please try again.'})}\n\n"
+                        return
+                    yield f"data: {json.dumps({'type': 'confirmation', 'prompt': _build_confirmation_prompt(evt), 'run_id': run_id, 'session_id': sid})}\n\n"
 
                 elif ev in ("TeamRunError", "RunError"):
                     yield f"data: {json.dumps({'type': 'error', 'message': 'AI error occurred'})}\n\n"

@@ -7,9 +7,25 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Roles permitted to perform destructive booking changes via the assistant.
-# STAFF is intentionally excluded (CLAUDE.md RBAC: STAFF cannot modify critical data).
-_CANCEL_ALLOWED_ROLES = {"OWNER", "MANAGER", "SUPER_ADMIN"}
+# Roles permitted to perform destructive / money-affecting changes via the
+# assistant. STAFF is intentionally excluded (CLAUDE.md RBAC: STAFF cannot modify
+# critical data). The agno requires_confirmation gate only enforces hotelier
+# approval — it does NOT check role — so each money-affecting tool must verify
+# this itself.
+_DESTRUCTIVE_ALLOWED_ROLES = {"OWNER", "MANAGER", "SUPER_ADMIN"}
+# Back-compat alias (used by cancel logic / tests).
+_CANCEL_ALLOWED_ROLES = _DESTRUCTIVE_ALLOWED_ROLES
+
+_PERMISSION_DENIED = (
+    "ERROR: You do not have permission to perform this action. "
+    "Only an OWNER or MANAGER can — please ask them."
+)
+
+
+def _role_allows_destructive(user) -> bool:
+    role = getattr(user.role, "value", str(user.role)).upper()
+    return role in _DESTRUCTIVE_ALLOWED_ROLES
+
 
 # Logic functions to be wrapped as @tool in agent.py
 
@@ -90,7 +106,10 @@ async def logic_cancel_booking(session, user, booking_number: str) -> str:
 
 
 async def logic_update_room_price(session, user, room_name: str, new_price: float) -> str:
-    """Updates the base price of a room type."""
+    """Updates the base price of a room type. Money-affecting → OWNER/MANAGER only."""
+    # RBAC: requires_confirmation gates approval, not role — enforce role here too.
+    if not _role_allows_destructive(user):
+        return _PERMISSION_DENIED
     # SECURITY: Input validation
     if new_price < 0:
         return "ERROR: Price cannot be negative."
@@ -118,7 +137,10 @@ async def logic_update_room_price(session, user, room_name: str, new_price: floa
 
 
 async def logic_create_promo_code(session, user, code: str, discount_percent: int) -> str:
-    """Creates a new promo code."""
+    """Creates a new promo code. Money-affecting → OWNER/MANAGER only."""
+    # RBAC: requires_confirmation gates approval, not role — enforce role here too.
+    if not _role_allows_destructive(user):
+        return _PERMISSION_DENIED
     # SECURITY: Input validation
     if not code or len(code) < 3:
         return "ERROR: Promo code must be at least 3 characters."
