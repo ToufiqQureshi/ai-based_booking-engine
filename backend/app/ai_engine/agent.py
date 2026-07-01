@@ -108,7 +108,7 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 2. **Direct Answers Only**:
    - "How many pending bookings?" -> Use `get_pending_approvals`. IGNORE 'today' filter. Return ALL pending.
    - "Pending payments?" -> Use `get_pending_payments`.
-3. **Safe Actions (HARD RULE)**: For any DESTRUCTIVE or money-affecting action (cancel booking, price update, promo, block dates), clearly state what you are about to do. The system enforces human-in-the-loop: it will PAUSE and ask the hotelier to click "Proceed" or "Cancel" before the action runs — so you never execute it yourself. NEVER cancel bookings on your own initiative, in bulk, or to "clean up" pending bookings. A pending booking is awaiting the hotelier's decision — only act on a specific booking when they explicitly ask.
+3. **Safe Actions (HARD RULE)**: For any DESTRUCTIVE or money-affecting action (cancel booking, price update, promo, block dates), you MUST CALL the matching tool — do not just describe the action in words, and do not ask for confirmation yourself. The system enforces human-in-the-loop: the moment you call the tool it PAUSES and shows the hotelier a "Proceed"/"Cancel" prompt, and nothing changes until they click Proceed. So: call the tool, then stop. NEVER cancel bookings on your own initiative, in bulk, or to "clean up" pending bookings. A pending booking is awaiting the hotelier's decision — only act on a specific booking when they explicitly ask.
 4. **Smart Pricing**: Check Weather/Events/Web Search before suggesting price changes.
 5. **Reasoning First**: ALWAYS explain 'WHY' before recommending an action. Cite data (e.g. "Because of Coldplay concert...").
 6. **Use Web Search**: If you lack context (e.g. "Is it a holiday?"), use `search_web`.
@@ -967,22 +967,17 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         get_daily_revenue, get_pending_payments, get_upsell_opportunities
     ]
     
-    # cancel_booking is destructive. Even though agno's requires_confirmation gate
-    # makes it impossible to execute without the hotelier's explicit "Proceed",
-    # we also keep it OUT of the Booking Agent's toolset unless the query actually
-    # signals cancel/void intent — so the model can't even reach for it while
-    # answering a plain "show me my bookings" question (defense-in-depth).
-    # `q` is empty only on the /agent/chat/confirm resume path (create_agent_executor
-    # is called with no user_query). There cancel_booking MUST stay registered so
-    # agno can execute the paused run — so default to True. Do NOT change this to
-    # False: it would break confirm-resume of a cancellation.
-    cancel_intent = _has_cancel_intent(q) if q else True
+    # cancel_booking is ALWAYS registered on the Booking Agent. It is safe to expose
+    # because agno's requires_confirmation gate makes it impossible to execute without
+    # the hotelier's explicit "Proceed" (and it's role-gated + audited in the tool).
+    # NOTE: do NOT conditionally register it behind a keyword check — if the model
+    # decides to call cancel_booking but the tool isn't in the toolset (e.g. the user
+    # typed "cancle" and a keyword gate removed it), agno raises
+    # "Function cancel_booking not found" and the whole run fails (Sentry STAYBOOKERAI-3G).
     booking_tools = [
-        search_bookings, get_booking_details,
+        search_bookings, get_booking_details, cancel_booking,
         create_quick_booking, check_availability_matrix, find_guest
     ]
-    if cancel_intent:
-        booking_tools.append(cancel_booking)
     
     ops_tools = [
         get_dashboard_stats, get_room_inventory, get_todays_arrivals,
@@ -1020,11 +1015,14 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         tools=booking_tools,
         instructions=(
             "You are a hotel reservations specialist. "
-            "DESTRUCTIVE-ACTION RULE: only call cancel_booking when the hotelier "
-            "explicitly asks to cancel a specific booking. The system will pause and "
-            "ask them to confirm before anything is cancelled, so call it once for "
-            "that exact booking number — never cancel pending bookings to 'clean up' "
-            "or in bulk on your own initiative. "
+            "CANCELLING A BOOKING: when the hotelier asks to cancel a booking, you MUST "
+            "actually CALL the cancel_booking tool with the booking_number — one call "
+            "per booking. Do NOT just describe the cancellation in text and do NOT ask "
+            "for confirmation yourself: the system automatically shows the hotelier a "
+            "Proceed/Cancel prompt as soon as you call the tool, and nothing is cancelled "
+            "until they click Proceed. If a booking number is unknown, look it up first "
+            "(search_bookings / get_booking_details), then call cancel_booking. Never "
+            "cancel bookings in bulk on your own initiative. "
             "Never start responses with 'Let me check/fetch/search' — jump directly to the result."
         ),
         user_id=str(user.id),
@@ -1038,9 +1036,11 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         tools=ops_tools,
         instructions=(
             "You are a hotel operations specialist. Be proactive and concise. "
-            "DESTRUCTIVE-ACTION RULE: for price updates, promo codes, or blocking dates, "
-            "clearly state the change you intend to make. The system will pause and ask "
-            "the hotelier to confirm before it is applied — so never assume consent. "
+            "PRICE / PROMO / BLOCK-DATES: when the hotelier asks for one of these, you MUST "
+            "actually CALL the matching tool (update_room_price / create_promo_code / "
+            "block_room_dates). Do NOT just describe the change in text and do NOT ask for "
+            "confirmation yourself — the system automatically shows a Proceed/Cancel prompt "
+            "once you call the tool, and nothing changes until the hotelier clicks Proceed. "
             "Never start responses with 'Let me check/fetch/search' — jump directly to the result."
         ),
         user_id=str(user.id),

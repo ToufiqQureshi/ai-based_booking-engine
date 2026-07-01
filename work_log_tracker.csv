@@ -90,41 +90,74 @@
 "2026-06-24","Fix: Add Employee always fails — Supabase trigger collision","backend/app/superadmin/dashboard/users.py, backend/app/guests/users.py","Bug Fix","POST /superadmin/hotels/{hotel_id}/users, POST /api/v1/users","No cache impact; public.users row now found via supabase_id and updated instead of second INSERT","Trigger-created stub row is updated in-place; hotel_id and role enforced server-side; Supabase auth user created first, cleaned up on DB failure"
 "2026-06-24","Fix: Test suite failing — DEBUG=True from .env leaks into test environment","backend/tests/conftest.py","Bug Fix","0","No API change","os.environ['DEBUG'] = 'False' forced before app import so /docs returns 404 in all test runs regardless of local .env"
 "2026-06-24","Fix: Analytics dashboard — 8 bugs across backend and frontend","backend/app/analytics/analytics.py, frontend/src/analytics/AnalyticsDashboard.tsx","Bug Fix","GET /analytics/dashboard/* (6 endpoints)","Analytics cache keys unchanged (expire=120s); added forecast query (8-row SELECT); lead query now date-filtered; all new fields computed in-memory from existing booking/session data","All endpoints tenant-scoped by current_user.hotel_id; no new IDOR surface; added fields computed server-side only"
-" 2 0 2 6 - 0 6 - 2 5 " , " F i x :   E n f o r c e   a d v a n c e _ p u r c h a s e _ d a y s   a n d   m i n _ n i g h t s   c o n s t r a i n t s   o n   i n i t i a l   l o a d   a n d   c a l e n d a r   c h e c k o u t   s e l e c t i o n " , " f r o n t e n d / s r c / g u e s t _ b o o k i n g / B o o k i n g S e l e c t i o n . t s x ,   f r o n t e n d / s r c / g u e s t _ b o o k i n g / c o m p o n e n t s / p u b l i c / b o o k i n g / R o o m S e a r c h H e a d e r . t s x " , " B u g   F i x " , " N o n e " , " N o   c a c h e / D B   c h a n g e s " , " N o n e "  
- " 2 0 2 6 - 0 6 - 2 5 " , " F i x :   R e t u r n   w i d g e t   f e a t u r e   t o g g l e s   t o   p u b l i c   b o o k i n g   p a g e   ( P r o m o ,   P a c k a g e s ,   F l e x i b l e   D a t e s ,   C u s t o m   C S S ) " , " b a c k e n d / a p p / g u e s t _ b o o k i n g / h o t e l s . p y ,   f r o n t e n d / s r c / g u e s t _ b o o k i n g / B o o k i n g S e l e c t i o n . t s x ,   f r o n t e n d / s r c / c o r e / t y p e s / a p i . t s " , " B u g   F i x " , " G E T   / p u b l i c / h o t e l s / { s l u g } ,   G E T   / p u b l i c / h o t e l s / { i d } " , " N o   c a c h e / D B   c h a n g e s " , " N o n e "  
- " 2 0 2 6 - 0 6 - 2 5 T 1 2 : 4 5 : 0 0 Z " , " F i x   A I   I n t e g r a t i o n   b u g s   a n d   a d d   T u r n s t i l e   t o   a u t h   p a g e s " , " b a c k e n d / a p p / i n t e g r a t i o n / i n t e g r a t i o n . p y ,   f r o n t e n d / s r c / a u t h / F o r g o t P a s s w o r d . t s x ,   f r o n t e n d / s r c / a u t h / R e s e t P a s s w o r d . t s x ,   e t c . " , " B u g   F i x e s   &   S e c u r i t y " , " 1 " , " N / A " , " A d d e d   C l o u d f l a r e   T u r n s t i l e   t o   b l o c k   b o t s "  
+" 2 0 2 6 - 0 6 - 2 5 " , " F i x :   E n f o r c e   a d v a n c e _ p u r c h a s e _ d a y s   a n d   m i n _ n i g h t s   c o n s t r a i n t s   o n   i n i t i a l   l o a d   a n d   c a l e n d a r   c h e c k o u t   s e l e c t i o n " , " f r o n t e n d / s r c / g u e s t _ b o o k i n g / B o o k i n g S e l e c t i o n . t s x ,   f r o n t e n d / s r c / g u e s t _ b o o k i n g / c o m p o n e n t s / p u b l i c / b o o k i n g / R o o m S e a r c h H e a d e r . t s x " , " B u g   F i x " , " N o n e " , " N o   c a c h e / D B   c h a n g e s " , " N o n e " 
+ 
+ " 2 0 2 6 - 0 6 - 2 5 " , " F i x :   R e t u r n   w i d g e t   f e a t u r e   t o g g l e s   t o   p u b l i c   b o o k i n g   p a g e   ( P r o m o ,   P a c k a g e s ,   F l e x i b l e   D a t e s ,   C u s t o m   C S S ) " , " b a c k e n d / a p p / g u e s t _ b o o k i n g / h o t e l s . p y ,   f r o n t e n d / s r c / g u e s t _ b o o k i n g / B o o k i n g S e l e c t i o n . t s x ,   f r o n t e n d / s r c / c o r e / t y p e s / a p i . t s " , " B u g   F i x " , " G E T   / p u b l i c / h o t e l s / { s l u g } ,   G E T   / p u b l i c / h o t e l s / { i d } " , " N o   c a c h e / D B   c h a n g e s " , " N o n e " 
+ 
+ " 2 0 2 6 - 0 6 - 2 5 T 1 2 : 4 5 : 0 0 Z " , " F i x   A I   I n t e g r a t i o n   b u g s   a n d   a d d   T u r n s t i l e   t o   a u t h   p a g e s " , " b a c k e n d / a p p / i n t e g r a t i o n / i n t e g r a t i o n . p y ,   f r o n t e n d / s r c / a u t h / F o r g o t P a s s w o r d . t s x ,   f r o n t e n d / s r c / a u t h / R e s e t P a s s w o r d . t s x ,   e t c . " , " B u g   F i x e s   &   S e c u r i t y " , " 1 " , " N / A " , " A d d e d   C l o u d f l a r e   T u r n s t i l e   t o   b l o c k   b o t s " 
+ 
  "2026-06-25","Audit Fix Pass: Dead code removal, silent bug fixes, broken integration fixes","backend/app/models/ (deleted), backend/app/rate_plans/rates_model.py, backend/app/integration/whatsapp.py, backend/app/guest_booking/hotels.py, backend/app/guest_booking/rooms.py, frontend/src/rooms/components/RoomDialog.tsx, backend/main.py, backend/app/system/ws.py, backend/app/marketing/google_ads.py, backend/app/core/db/database.py, backend/app/ai_assistant/agent.py, backend/app/revenue/rate_signals.py, backend/app/core/auth/deps.py, backend/app/superadmin/platform/sessions.py, frontend/src/analytics/AnalyticsDashboard.tsx, frontend/src/marketing/LoyaltyProgram.tsx, frontend/src/dashboard/Dashboard.tsx, frontend/src/bookings/Bookings.tsx, frontend/src/rooms/Rooms.tsx, frontend/src/components/ui/ (6 deleted)","Dead Code Removal / Bug Fix","No new endpoints","Removed duplicate SQLModel table definitions that would crash SQLAlchemy; fixed N+1 hotel scan in WhatsApp webhook; added Redis idempotency guard against double-AI-agent trigger on Meta retries; removed false-success 200 on unimplemented GHA push endpoint","Multi-tenant isolation preserved; WhatsApp idempotency prevents duplicate credit deductions; GHA stub now returns 501 instead of silently succeeding"
 "2026-06-25","Business Model: Remove free signup, replace with Request Access lead capture","frontend/src/auth/RequestAccess.tsx (NEW), frontend/src/App.tsx, frontend/src/auth/Login.tsx, frontend/src/guest_booking/LandingPage.tsx, frontend/src/core/contexts/AuthContext.tsx","Feature / Business Logic","No new backend API endpoints","No DB or cache changes; lead form uses Formspree external service","Self-serve hotel signup completely disabled; /signup redirects to /request-access; Supabase signUp() removed from AuthContext; hotels get access only after manual payment verification via Superadmin panel"
-" 2 0 2 6 - 0 6 - 2 5 "  
- " F e a t :  
- S u p e r a d m i n  
- p r o v i s i o n  
- h o t e l  
- w i t h o u t  
- s i g n u p  
- f o r m "  
- " b a c k e n d / a p p / s u p e r a d m i n / h o t e l s / h o t e l s . p y  
- f r o n t e n d / s r c / s u p e r a d m i n / c o m p o n e n t s / P r o v i s i o n H o t e l D i a l o g . t s x  
- f r o n t e n d / s r c / s u p e r a d m i n / c o m p o n e n t s / H o t e l s T a b . t s x "  
- " F e a t u r e "  
- " P O S T  
- / s u p e r a d m i n / h o t e l s / p r o v i s i o n "  
- " N o  
- c a c h i n g .  
- C r e a t e s  
- H o t e l  
- U s e r  
- S u b s c r i p t i o n  
- d i r e c t l y "  
- " S U P E R _ A D M I N  
- a u t h  
- r e q u i r e d .  
- V a l i d a t e s  
- p l a n  
- a n d  
- d u p l i c a t e s . "  
- " 2 0 2 6 - 0 6 - 2 6 T 0 6 : 3 0 : 0 0 Z " , " F i x   B u g s   1   t o   6 " , " b a c k e n d / a p p / g u e s t _ b o o k i n g / ,   b a c k e n d / t e s t s / a p i / v 1 / t e s t _ g u e s t _ b o o k i n g . p y ,   f r o n t e n d / s r c / s u p e r a d m i n / c o m p o n e n t s / H o t e l W o r k s p a c e . t s x ,   b a c k e n d / a p p / c o r e / u t i l s / f e a t u r e _ f l a g s . p y " , " B u g   F i x " , " 0 " , " N o n e " , " A d d e d   a s s e r t _ h o t e l _ n o t _ p a u s e d   t o   a l l   g u e s t   r o u t e s .   A d d e d   r e g r e s s i o n   t e s t   f o r   p a u s e   f e a t u r e .   F i x e d   f r o n t e n d   d e l e t e   s w a l l o w i n g   e r r o r ,   p a u s e   c o n f i r m a t i o n ,   a n d   u s e r   f o r m   a u t o f i l l . "  
- \ r \ n  
+" 2 0 2 6 - 0 6 - 2 5 " 
+ 
+ " F e a t : 
+ 
+ S u p e r a d m i n 
+ 
+ p r o v i s i o n 
+ 
+ h o t e l 
+ 
+ w i t h o u t 
+ 
+ s i g n u p 
+ 
+ f o r m " 
+ 
+ " b a c k e n d / a p p / s u p e r a d m i n / h o t e l s / h o t e l s . p y 
+ 
+ f r o n t e n d / s r c / s u p e r a d m i n / c o m p o n e n t s / P r o v i s i o n H o t e l D i a l o g . t s x 
+ 
+ f r o n t e n d / s r c / s u p e r a d m i n / c o m p o n e n t s / H o t e l s T a b . t s x " 
+ 
+ " F e a t u r e " 
+ 
+ " P O S T 
+ 
+ / s u p e r a d m i n / h o t e l s / p r o v i s i o n " 
+ 
+ " N o 
+ 
+ c a c h i n g . 
+ 
+ C r e a t e s 
+ 
+ H o t e l 
+ 
+ U s e r 
+ 
+ S u b s c r i p t i o n 
+ 
+ d i r e c t l y " 
+ 
+ " S U P E R _ A D M I N 
+ 
+ a u t h 
+ 
+ r e q u i r e d . 
+ 
+ V a l i d a t e s 
+ 
+ p l a n 
+ 
+ a n d 
+ 
+ d u p l i c a t e s . " 
+ 
+ " 2 0 2 6 - 0 6 - 2 6 T 0 6 : 3 0 : 0 0 Z " , " F i x   B u g s   1   t o   6 " , " b a c k e n d / a p p / g u e s t _ b o o k i n g / ,   b a c k e n d / t e s t s / a p i / v 1 / t e s t _ g u e s t _ b o o k i n g . p y ,   f r o n t e n d / s r c / s u p e r a d m i n / c o m p o n e n t s / H o t e l W o r k s p a c e . t s x ,   b a c k e n d / a p p / c o r e / u t i l s / f e a t u r e _ f l a g s . p y " , " B u g   F i x " , " 0 " , " N o n e " , " A d d e d   a s s e r t _ h o t e l _ n o t _ p a u s e d   t o   a l l   g u e s t   r o u t e s .   A d d e d   r e g r e s s i o n   t e s t   f o r   p a u s e   f e a t u r e .   F i x e d   f r o n t e n d   d e l e t e   s w a l l o w i n g   e r r o r ,   p a u s e   c o n f i r m a t i o n ,   a n d   u s e r   f o r m   a u t o f i l l . " 
+ 
+ \ r \ n 
+ 
  "2026-06-26","Fix: Hotel user Remove button called hard-delete endpoint (deleted Supabase account) instead of hotel-scoped removal. Added DELETE /superadmin/hotels/{hotel_id}/users/{user_id} endpoint that removes UserHotelLink + clears user.hotel_id without deleting the auth account. Frontend updated to call scoped endpoint.","backend/app/superadmin/dashboard/users.py, frontend/src/superadmin/components/HotelWorkspace.tsx","Bug Fix / Security","DELETE /superadmin/hotels/{hotel_id}/users/{user_id} (new)","Clears user.hotel_id; deletes UserHotelLink row if present; no cascade","IDOR guard: verifies user.hotel_id == hotel_id before removal; cannot remove OWNER; superadmin.users.write required; audit-logged"
 "2026-06-26","Fix hotel deletion deadlock and vault permanent-false cache bug","backend/app/core/auth/vault.py, backend/app/superadmin/hotels/hotels.py","Bug Fix","DELETE /superadmin/hotels/{hotel_id} (modified)","No additional caching changes","hotel_id scoped delete; Supabase auth deletion moved to background task post-commit; vault retry prevents silent AI key loss"
 
@@ -133,4 +166,5 @@
 "2026-06-29","Add human-in-the-loop confirmation (Proceed/Cancel) for AI destructive actions","backend/app/ai_engine/agent.py, backend/app/ai_engine/tools/actions.py, backend/app/ai_assistant/agent.py, frontend/src/agent/AgentPage.tsx, backend/tests/api/v1/test_ai_assistant.py","Feature","POST /agent/chat/confirm (new), POST /agent/chat (paused-state aware), POST /agent/chat/stream (TeamRunPaused event)","agno run state persisted in agno_sessions; agent DB engine pool now env-driven (DB_POOL_SIZE/DB_MAX_OVERFLOW); paused run reloaded via aget_run_output + acontinue_run across requests","Destructive tools (cancel_booking, update_room_price, create_promo_code, block_room_dates) gated with @tool(requires_confirmation=True) — framework-enforced pause the LLM cannot bypass; hotelier must click Proceed; cancel still role-gated (OWNER/MANAGER), status-guarded, tenant-isolated, audited; confirm endpoint scoped to authenticated user/session"
 "2026-06-29","Harden AI HITL confirm flow (CodeRabbit review fixes)","backend/app/ai_assistant/agent.py, backend/app/ai_engine/agent.py, backend/app/core/utils/config.py, backend/requirements.txt, frontend/src/agent/AgentPage.tsx, backend/tests/api/v1/test_ai_assistant.py","Hardening","POST /agent/chat/confirm (validation + timeout)","Cached agno session engine at module level (no per-request pool on chat/confirm); env-driven pool; new AI_CONFIRM_TIMEOUT_SECONDS (default 60) wraps aget_run_output/acontinue_run with asyncio.wait_for -> 504","ConfirmRequest decision constrained to Literal[proceed,cancel] + non-empty run_id/session_id (422); confirm IDOR test enforces user_id/session_id/run_id match (cross-user 404); agno pinned ==2.6.20 so requires_confirmation gate can't silently change; CHECKED_OUT cancel guard test added"
 "2026-06-29","AI security hardening: DoS guards + prompt-injection defense","backend/app/ai_engine/agent.py, backend/app/ai_assistant/agent.py, backend/app/core/utils/config.py, backend/tests/api/v1/test_ai_assistant.py","Security","POST /agent/chat, /chat/stream, /chat/confirm (per-user rate limit + input cap)","No DB schema change; bounds added","tool_call_limit (8) + max_tool_calls_from_history (3) + compress_tool_results on all sub-agents and Team (runaway/loop DB-hammer guard); per-user (bearer-token) rate limit 20/min added alongside per-IP 15/min; ChatRequest.message capped at AI_MAX_MESSAGE_CHARS (8000) -> 422; system-prompt anti-injection rule (treat tool/web/guest output as untrusted data, never instructions; never reveal secrets); web_search output fenced as UNTRUSTED_DATA"
+"2026-06-30","Fix AI cancel broken: cancel_booking tool always registered (Sentry STAYBOOKERAI-3G)","backend/app/ai_engine/agent.py, backend/tests/test_ai_agent_smoke.py","Bug Fix","POST /agent/chat/stream (cancel flow)","No DB change","cancel_booking (and price/promo/block) now ALWAYS registered on the Booking/Ops agents instead of behind a cancel/void keyword gate — the gate dropped the tool for non-matching queries (e.g. typo 'cancle'), so when the model called it agno raised 'Function cancel_booking not found' and the run failed; safety unchanged (requires_confirmation HITL gate + OWNER/MANAGER role gate + audit still enforce); sub-agent + system prompts fixed to CALL the tool instead of narrating confirmation in text; regression test builds the real Team and asserts cancel_booking always present + confirmation-gated"
 "2026-07-02","Production readiness audit: fixes across backend/frontend/DB","backend/main.py, backend/app/channel_manager/ (deleted), backend/app/integration/google.py, backend/app/brand_console/hotel.py, backend/app/superadmin/hotels/hotels.py, backend/app/superadmin/platform/sessions.py, backend/app/superadmin/platform/platform_model.py, backend/app/core/utils/config.py, backend/app/core/utils/exceptions.py, backend/app/revenue/recovery.py, backend/app/services/whatsapp_service.py, backend/app/integration/whatsapp.py, backend/app/integration/settings.py, backend/app/guest_booking/payments.py, backend/app/guest_booking/bookings.py, backend/app/bookings/bookings.py, database/alembic/versions/20260611_1750_drop_rate_shopper_tables.py, frontend/src/core/api/baseUrl.ts, frontend/src/core/utils/currency.ts, frontend/src/agent/AgentPage.tsx, frontend/vite.config.ts, frontend/public/_redirects, docs/audits/2026-07-02_production_audit.md","Audit / Security / Cleanup","Removed: /channel-manager/* (5), superadmin /sessions (2, never mounted). Changed: /integration/google/reviews/{id}/ai-reply now quota-gated + usage-recorded","Prod DB migrations applied via Supabase: dropped 17 dead tables (sb_* tracker, kyc_*, payouts, bank_accounts, tickets, commission_*, platform_invoices, custom_domains, channel_*), pinned search_path on 4 RLS helper functions, dropped duplicate index, added 5 FK indexes, consolidated duplicate permissive policies (13 tables), updated 4 hotels off decommissioned llama-3.1-70b-versatile; alembic drift documented (prod head 4e49118f6e51) and stale drop_rate_shopper migration neutralized","Tenant-isolation sweep over all route handlers (63 flagged, 0 missing guards — prior audits' open item closed with evidence); anon always-true RLS policies eliminated by dropping unused sb_* tables; unmetered platform-key LLM endpoint gated by enforce_ai_token_quota + record/persist usage; CORS single-sourced (CORS_ORIGINS + CORS_ORIGIN_REGEX); regression tests: channel-manager 404s, no decommissioned Groq ids in backend, ai-reply 429 on quota, recovery link uses FRONTEND_URL"
