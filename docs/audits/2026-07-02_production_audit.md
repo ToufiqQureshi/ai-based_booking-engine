@@ -96,8 +96,9 @@ Root: `test_agy.py`.
 Database: 17 dead tables dropped (see §7).
 
 **Kept, flagged (user decision / needs owner input):**
-- `landing/` — static marketing+legal site, referenced nowhere in code/CI. Confirm where (if anywhere) it is
-  deployed; note the GDPR page filename is misspelled (`datadelelationrequest.html`).
+- `landing/` — static marketing+legal site. **Resolved during the audit:** it IS live — deployed from this
+  repo as the separate Cloudflare Pages project `staybooker-landing` (its build ran on this PR). Keep it.
+  Note the GDPR page filename is misspelled (`datadelelationrequest.html`).
 - `GEMINI.md` — second agent-rules doc, redundant with CLAUDE.md.
 - `hotelier_api_keys`, `email_templates` tables + models — no routes use them yet; candidates for the next
   cleanup or the features that were planned around them.
