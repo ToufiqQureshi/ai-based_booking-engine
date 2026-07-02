@@ -178,8 +178,10 @@ async def google_connection_status(current_user: CurrentUser, session: DbSession
                     )
                     if resp2.status_code == 200:
                         email = resp2.json().get("email")
-    except Exception:
-        pass
+    except Exception as exc:
+        # Status stays "connected" without the email — degraded, not broken —
+        # but log it: a silent pass here previously hid expired-token loops.
+        logger.warning("Google account email lookup failed for hotel %s: %s", current_user.hotel_id, exc)
 
     return {
         "connected": True,

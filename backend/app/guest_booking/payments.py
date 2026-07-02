@@ -2,7 +2,7 @@ from typing import List, Optional, Any, Dict
 from datetime import date, datetime
 from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks, Request, Header
 from sqlmodel import select, and_, or_
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 import uuid
 import hmac
 import hashlib
@@ -491,8 +491,7 @@ class RazorpayWebhookPayload(BaseModel):
     created_at: Optional[int] = None
     payload: Optional[Dict[str, Any]] = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 @router.post("/razorpay/webhook")
