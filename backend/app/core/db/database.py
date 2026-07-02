@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from app.core.utils.config import get_settings
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 _migration_logger = logging.getLogger(__name__)
 
@@ -428,7 +429,7 @@ async def init_db():
                             "hotel_id": hotel_id,
                             "ai_provider": ai_prov or "groq",
                             "ai_api_key": ai_key,
-                            "ai_model": ai_mod or "llama-3.1-8b-instant",
+                            "ai_model": ai_mod or GROQ_SMALL_MODEL,
                             "ai_base_url": ai_base,
                             "ai_max_tokens": ai_max,
                             "now": datetime.utcnow()
@@ -453,7 +454,7 @@ async def init_db():
                                 "id": sett_id,
                                 "ai_provider": ai_prov or "groq",
                                 "ai_api_key": ai_key,
-                                "ai_model": ai_mod or "llama-3.1-8b-instant",
+                                "ai_model": ai_mod or GROQ_SMALL_MODEL,
                                 "ai_base_url": ai_base,
                                 "ai_max_tokens": ai_max,
                                 "now": datetime.utcnow()

@@ -16,6 +16,10 @@ const CURRENCY_LOCALES: Record<string, string> = {
   GBP: 'en-GB',
 };
 
+// Currencies conventionally displayed without minor units. Everything else
+// (USD/EUR/GBP…) keeps cents by default so amounts reconcile against charges.
+const ZERO_DECIMAL_CURRENCIES = new Set(['INR', 'JPY']);
+
 let activeCurrency = 'INR';
 
 /** Called by AuthContext when the hotel profile loads/changes. */
@@ -35,11 +39,12 @@ export function formatCurrency(
 ): string {
   const currency = (opts?.currency || activeCurrency).toUpperCase();
   const locale = CURRENCY_LOCALES[currency] || 'en-IN';
+  const defaultDigits = ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2;
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
-      maximumFractionDigits: opts?.maximumFractionDigits ?? 0,
+      maximumFractionDigits: opts?.maximumFractionDigits ?? defaultDigits,
     }).format(amount);
   } catch {
     // Unknown currency code from a misconfigured hotel row — degrade, don't crash.

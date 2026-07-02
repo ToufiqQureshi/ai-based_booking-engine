@@ -568,10 +568,11 @@ async def create_public_booking(
                 overrides = getattr(rt, "rate_plan_overrides", {}) or {}
                 plan_override = overrides.get(room.rate_plan_id) or {} if isinstance(overrides, dict) else {}
             if room.rate_plan_id:
-                rp = await session.get(RatePlan, room.rate_plan_id)
-                # Same hotel-scoping guard as the pricing lookup above — don't let a
-                # cross-tenant rate_plan_id spoof this booking's cancellation terms.
-                if rp and rp.hotel_id == hotel_id:
+                # rate_plan_map is the hotel-scoped batch fetch from the pricing
+                # step above — any hit is guaranteed to belong to this hotel, so
+                # a cross-tenant rate_plan_id can't spoof cancellation terms.
+                rp = rate_plan_map.get(room.rate_plan_id)
+                if rp:
                     is_refundable = plan_override.get("is_refundable", rp.is_refundable)
                     cancellation_hours = plan_override.get("cancellation_hours", rp.cancellation_hours)
             if not cancellation_policy:

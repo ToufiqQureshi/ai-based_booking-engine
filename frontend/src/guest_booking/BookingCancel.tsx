@@ -343,7 +343,7 @@ export default function BookingCancel() {
                                 <span className="text-slate-500 font-medium">
                                     {cancelResult?.status === 'cancel_requested' ? 'Estimated Cancellation Fee:' : 'Cancellation Fee:'}
                                 </span>
-                                <span className="font-bold text-slate-900">{cancelResult?.cancellation_fee > 0 ? formatCurrency(cancelResult.cancellation_fee) : '₹0 (Free)'}</span>
+                                <span className="font-bold text-slate-900">{cancelResult?.cancellation_fee > 0 ? formatCurrency(cancelResult.cancellation_fee) : `${formatCurrency(0)} (Free)`}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500 font-medium">

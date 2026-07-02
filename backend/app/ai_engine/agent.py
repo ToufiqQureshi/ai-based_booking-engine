@@ -36,6 +36,7 @@ from app.ai_engine.tools.analytics import (
 
 import logging
 import re
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 # AI-FIX: module-level logger. This was referenced (e.g. in the smart tool
 # selector) but never defined, so any non-empty hotelier query raised a
@@ -133,7 +134,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
     - **Database Isolation (GEMINI.md Rule 1)**: Sessions are scoped to the user (`current_user.id`), 
       and tools explicitly filter all SQL queries by `user.hotel_id` (e.g., `Booking.hotel_id == user.hotel_id`).
     - **Cost Control (GEMINI.md Rule 3)**: LLM token caps are dynamically applied via `effective_max_tokens`.
-      Uses cheaper fast models (llama-3.1-8b-instant via Groq) unless configured otherwise.
+      Uses the cheap Groq default model unless configured otherwise.
     - **Caching**: Tools use `@cached_tool` with Redis to prevent duplicate DB hits and rate limits.
     """
     settings = get_settings()
@@ -724,8 +725,8 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
 
     target_model = (
         getattr(int_settings, 'ai_model', None) or 
-        getattr(user.hotel, 'ai_model', None) or 
-        "llama-3.3-70b-versatile"
+        getattr(user.hotel, 'ai_model', None) or
+        GROQ_LARGE_MODEL
     )
     target_base_url = (
         getattr(int_settings, 'ai_base_url', None) or 
@@ -778,7 +779,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
     if effective_provider == "openai":
         if target_base_url == "https://api.groq.com/openai/v1":
             target_base_url = None
-        if target_model == "llama-3.3-70b-versatile":
+        if target_model == GROQ_LARGE_MODEL:
             target_model = "gpt-4o"
 
     if effective_provider in ("gemini", "google"):

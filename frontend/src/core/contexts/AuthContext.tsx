@@ -30,7 +30,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Keep the shared money formatter in sync with the hotel's configured
   // currency, whatever path set the hotel (init, login, refresh, impersonate).
   useEffect(() => {
-    setActiveCurrency(hotel?.settings?.currency);
+    // '?? INR' matters: setActiveCurrency ignores undefined, so without it a
+    // logout (setHotel(null)) would leave the previous hotel's currency active.
+    setActiveCurrency(hotel?.settings?.currency ?? 'INR');
   }, [hotel]);
 
   // Check for existing session on mount

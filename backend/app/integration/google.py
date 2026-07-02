@@ -33,6 +33,7 @@ router = APIRouter()
 import hmac
 import hashlib
 import time
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 _STATE_TTL_SECONDS = 600  # 10 minutes to complete the consent flow
 
@@ -437,7 +438,7 @@ Reply:"""
                 resp = await client.post(
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={"Authorization": f"Bearer {config.GROQ_API_KEY}", "Content-Type": "application/json"},
-                    json={"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": prompt}], "max_tokens": 200},
+                    json={"model": GROQ_SMALL_MODEL, "messages": [{"role": "user", "content": prompt}], "max_tokens": 200},
                 )
                 if resp.status_code == 200:
                     payload = resp.json()

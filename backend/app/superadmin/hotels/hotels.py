@@ -22,6 +22,7 @@ from app.superadmin.subscriptions.subscription import Subscription
 from app.guests.user import User, UserRole
 from app.core.db.supabase import get_supabase
 import jwt
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -247,7 +248,7 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(require_pe
             "owner_name": owner.name if owner else "N/A",
             # Non-secret AI config is safe to send; the key itself is never returned.
             "ai_provider": getattr(hotel, "ai_provider", "groq"),
-            "ai_model": getattr(hotel, "ai_model", "llama-3.3-70b-versatile"),
+            "ai_model": getattr(hotel, "ai_model", None) or GROQ_LARGE_MODEL,
             "ai_base_url": getattr(hotel, "ai_base_url", None),
             "ai_max_tokens": getattr(hotel, "ai_max_tokens", None),
             # "<secret>_set" flags so the UI can show "configured" without the value.

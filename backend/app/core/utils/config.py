@@ -139,8 +139,8 @@ class Settings(BaseSettings):
 
     # Central WhatsApp Config
     # One Graph API version for every Meta call — the codebase previously mixed
-    # v17/v19/v21, so senders aged out at different times.
-    META_GRAPH_API_VERSION: str = "v21.0"
+    # v17/v19/v21, so senders aged out at different times. v25.0 is current (2026-07).
+    META_GRAPH_API_VERSION: str = "v25.0"
     CENTRAL_WHATSAPP_PHONE_ID: Optional[str] = None
     CENTRAL_WHATSAPP_TOKEN: Optional[str] = None
     # Platform admin WhatsApp number for booking/cancellation alerts. Empty by

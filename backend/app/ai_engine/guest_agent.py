@@ -11,6 +11,7 @@ from app.bookings.booking import Booking, BookingStatus, Guest
 from app.rooms.room import RoomType
 from app.brand_console.hotel import Hotel
 from app.core.cache.redis_client import redis_client
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -587,7 +588,7 @@ async def create_guest_agent_graph(
             llm_model = OpenAILike(
                 # AI-04: the guest concierge is a scripted sales/booking flow and
                 # does not need a 70B model. Default to the ~10x cheaper 8B model.
-                id=ai_model or ("llama-3.1-8b-instant" if effective_provider == "groq" else "gpt-4o-mini"),
+                id=ai_model or (GROQ_SMALL_MODEL if effective_provider == "groq" else "gpt-4o-mini"),
                 api_key=ai_api_key,
                 base_url=ai_base_url or default_base_url,
                 max_tokens=ai_max_tokens or 1024,

@@ -41,6 +41,10 @@ export const GuestPreferencesProvider = ({ children }: { children: React.ReactNo
   // stay empty and amounts render in the hotel's base currency, which is
   // always correct (FX display is a convenience, never load-bearing).
   useEffect(() => {
+    // 'cancelled' guards against out-of-order responses: if baseCurrency
+    // changes again before this fetch resolves, the stale response must not
+    // overwrite rates keyed for the wrong base.
+    let cancelled = false;
     const fetchRates = async () => {
       try {
         const response = await fetch(
@@ -49,14 +53,17 @@ export const GuestPreferencesProvider = ({ children }: { children: React.ReactNo
         );
         if (!response.ok) return;
         const data = await response.json();
-        if (data && data.rates) {
+        if (!cancelled && data && data.rates) {
           setExchangeRates(data.rates);
         }
       } catch (error) {
-        console.warn('Exchange-rate fetch failed; showing base currency only:', error);
+        if (!cancelled) {
+          console.warn('Exchange-rate fetch failed; showing base currency only:', error);
+        }
       }
     };
     fetchRates();
+    return () => { cancelled = true; };
   }, [baseCurrency]);
 
   return (
