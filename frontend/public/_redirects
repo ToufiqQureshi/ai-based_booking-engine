@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA fallback — without this, refreshing a deep link like
+# /book/<hotel>/checkout or /bookings 404s because there is no file at that
+# path. Static assets in this directory still win over the fallback.
+/* /index.html 200

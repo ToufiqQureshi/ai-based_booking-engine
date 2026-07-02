@@ -5,7 +5,9 @@
 # Security
 .env
 .env.*
-! .env.example
+# Negations must have no space after '!' and match the full path to work.
+!.env.example
+!frontend/.env.example
 secrets.json
 
 # Dependencies
