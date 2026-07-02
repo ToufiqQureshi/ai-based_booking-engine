@@ -2,6 +2,7 @@
 Google Business Profile — OAuth flow, reviews, AI reply.
 """
 import logging
+from types import SimpleNamespace
 from typing import Optional
 
 import httpx
@@ -12,6 +13,7 @@ from sqlmodel import select
 from app.core.auth.deps import CurrentUser, DbSession
 from app.core.utils.config import get_settings
 from app.core.utils.limiter import limiter
+from app.ai_engine.ai_usage import enforce_ai_token_quota, record_ai_usage, persist_ai_usage_db
 from app.brand_console.hotel import Hotel
 from app.integration.integration import IntegrationSettings
 
@@ -390,6 +392,10 @@ async def generate_ai_reply(
     hotel = await session.get(Hotel, current_user.hotel_id)
     hotel_name = hotel.name if hotel else "Our Hotel"
 
+    # Same quota gate as every other LLM surface — without it this endpoint
+    # could burn platform Groq credit outside the hotel's daily budget.
+    await enforce_ai_token_quota("hotelier", current_user.hotel_id, session)
+
     stars_label = {1: "very negative", 2: "negative", 3: "neutral", 4: "positive", 5: "very positive"}.get(star_rating, "positive")
     prompt = f"""You are the hotel manager of {hotel_name}. Write a professional, warm reply to this Google review.
 
@@ -419,18 +425,24 @@ Reply:"""
             )
             if agent:
                 result = await agent.arun([Message(role="user", content=prompt)])
+                record_ai_usage(current_user.hotel_id, result, agent_type="hotelier", user_identifier=str(current_user.id))
+                await persist_ai_usage_db(current_user.hotel_id, result, agent_type="hotelier", user_identifier=str(current_user.id))
                 return {"reply": (result.content or "").strip()}
 
         config = get_settings()
         if config.GROQ_API_KEY:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={"Authorization": f"Bearer {config.GROQ_API_KEY}", "Content-Type": "application/json"},
-                    json={"model": "llama-3.1-70b-versatile", "messages": [{"role": "user", "content": prompt}], "max_tokens": 200},
+                    json={"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": prompt}], "max_tokens": 200},
                 )
                 if resp.status_code == 200:
-                    return {"reply": resp.json()["choices"][0]["message"]["content"].strip()}
+                    payload = resp.json()
+                    usage = SimpleNamespace(metrics={"total_tokens": payload.get("usage", {}).get("total_tokens", 0)})
+                    record_ai_usage(current_user.hotel_id, usage, agent_type="hotelier", user_identifier=str(current_user.id))
+                    await persist_ai_usage_db(current_user.hotel_id, usage, agent_type="hotelier", user_identifier=str(current_user.id))
+                    return {"reply": payload["choices"][0]["message"]["content"].strip()}
 
         raise HTTPException(status_code=500, detail="No AI provider configured.")
     except HTTPException:
