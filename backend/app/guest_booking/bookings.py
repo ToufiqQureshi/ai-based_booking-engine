@@ -183,6 +183,27 @@ async def create_public_booking(
         )).scalars().all()
         lead_time_days = (booking_data.check_in - date.today()).days
 
+        # Batch-fetch the requested rate plans once instead of one SELECT per
+        # room in the loop below. Rate plans are hotel-scoped: filtering by
+        # hotel_id here is the cross-tenant guard — a rate_plan_id belonging to
+        # a DIFFERENT hotel simply isn't found, so that other hotel's
+        # price_adjustment (e.g. a negative "discount package") can never be
+        # applied to this booking (cross-tenant price-tampering path).
+        requested_plan_ids = {
+            r.rate_plan_id for r in booking_data.rooms
+            if r.rate_plan_id and not r.rate_plan_id.startswith("virtual-")
+        }
+        rate_plan_map: dict = {}
+        if requested_plan_ids:
+            rate_plan_map = {
+                rp.id: rp for rp in (await session.execute(
+                    select(RatePlan).where(
+                        RatePlan.id.in_(requested_plan_ids),
+                        RatePlan.hotel_id == hotel_id,
+                    )
+                )).scalars().all()
+            }
+
         # Per-room: availability check + server-side price recomputation.
         # server_room_charges retains the SERVER-computed total/nightly per room
         # (aligned with booking_data.rooms) so the final charge + tax are based on
@@ -195,12 +216,8 @@ async def create_public_booking(
 
             plan_modifier = 0.0
             if room_req.rate_plan_id and not room_req.rate_plan_id.startswith("virtual-"):
-                rp = await session.get(RatePlan, room_req.rate_plan_id)
-                # Rate plans are hotel-scoped. Without this check a guest could submit
-                # a rate_plan_id belonging to a DIFFERENT hotel and have that other
-                # hotel's price_adjustment (e.g. a negative "discount package")
-                # applied to this booking — a cross-tenant price-tampering path.
-                if rp and rp.hotel_id == hotel_id:
+                rp = rate_plan_map.get(room_req.rate_plan_id)
+                if rp:
                     plan_modifier = float(rp.price_adjustment or 0.0)
 
             recalculated_total = 0.0
