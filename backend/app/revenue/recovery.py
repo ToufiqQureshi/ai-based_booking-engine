@@ -27,6 +27,7 @@ from pydantic import BaseModel
 from sqlmodel import select
 
 from app.core.auth.deps import DbSession, CurrentUser, require_hotel_role
+from app.core.utils.config import get_settings
 from app.bookings.booking import Booking, BookingStatus, Guest
 from app.brand_console.hotel import Hotel
 
@@ -41,7 +42,7 @@ DEFAULT_MAX_AGE_HOURS = 72
 
 def _booking_link(hotel: Hotel) -> str:
     """Public booking URL the guest can click to resume."""
-    base = "https://staybooker.ai/book"
+    base = f"{get_settings().FRONTEND_URL.rstrip('/')}/book"
     settings = hotel.settings if isinstance(hotel.settings, dict) else {}
     base = settings.get("public_booking_base_url") or base
     return f"{base}/{hotel.slug}/rooms"
