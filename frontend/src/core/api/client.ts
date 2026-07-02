@@ -13,31 +13,9 @@
 
 import { ApiError, AuthTokens } from '@/core/types/api';
 import { supabase } from '@/core/lib/supabase';
+import { getApiBaseUrl } from '@/core/api/baseUrl';
 
-// Dynamic API URL selection
-const getBaseUrl = () => {
-  const hostname = window.location.hostname;
-  if (hostname.includes('staging')) {
-    return 'https://api-staging.staybooker.ai/api/v1';
-  }
-  if (hostname.includes('staybooker.ai') || hostname.includes('pages.dev')) {
-    return 'https://api.staybooker.ai/api/v1';
-  }
-  
-  if (import.meta.env.VITE_API_URL) {
-    const url = import.meta.env.VITE_API_URL;
-    return url.endsWith('/api/v1') ? url : `${url.replace(/\/$/, '')}/api/v1`;
-  }
-  
-  if (hostname.includes('railway.app')) {
-    return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
-  }
-  
-  // Local development fallback
-  return '/api/v1';
-};
-
-export const API_BASE_URL = getBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 
 // Token storage keys

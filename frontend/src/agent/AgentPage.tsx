@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { apiClient } from "@/core/api/client";
+import { apiClient, tokenStorage, tryRefreshToken } from "@/core/api/client";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useSearchParams } from 'react-router-dom';
@@ -15,6 +15,7 @@ import {
     LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
+import { getApiBaseUrl } from '@/core/api/baseUrl';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -419,11 +420,15 @@ const AgentPage = () => {
     const [usageData, setUsageData] = useState<AIUsageData | null>(null);
     const [usageLoading, setUsageLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const streamAbortRef = useRef<AbortController | null>(null);
     const { toast } = useToast();
 
     useEffect(() => {
         scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    // Kill any in-flight stream when the page unmounts.
+    useEffect(() => () => streamAbortRef.current?.abort(), []);
 
     const fetchUsage = useCallback(async () => {
         setUsageLoading(true);
@@ -454,23 +459,33 @@ const AgentPage = () => {
         setStreamingText('');
         setActiveToolName('');
 
-        try {
-            const token = localStorage.getItem('hotel_access_token');
-            const baseUrl = (() => {
-                const h = window.location.hostname;
-                if (h.includes('staybooker.ai') || h.includes('pages.dev')) return 'https://api.staybooker.ai/api/v1';
-                if (import.meta.env.VITE_API_URL) return (import.meta.env.VITE_API_URL as string).replace(/\/$/, '').replace(/\/api\/v1$/, '') + '/api/v1';
-                return '/api/v1';
-            })();
+        // Cancel any stream still in flight (resend while streaming) and make
+        // this one cancellable on unmount — raw fetch bypasses apiClient's
+        // AbortController, so the stream used to outlive the page.
+        streamAbortRef.current?.abort();
+        const abortController = new AbortController();
+        streamAbortRef.current = abortController;
 
-            const res = await fetch(`${baseUrl}/agent/chat/stream`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-                body: JSON.stringify({ message: userMessage, session_id: activeSessionId }),
-            });
+        try {
+            const baseUrl = getApiBaseUrl();
+
+            const startStream = (token: string | null) =>
+                fetch(`${baseUrl}/agent/chat/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({ message: userMessage, session_id: activeSessionId }),
+                    signal: abortController.signal,
+                });
+
+            let res = await startStream(tokenStorage.getAccessToken());
+            // Expired token mid-session: refresh once and retry, matching
+            // apiClient's behaviour on every non-streaming call.
+            if (res.status === 401 && (await tryRefreshToken())) {
+                res = await startStream(tokenStorage.getAccessToken());
+            }
 
             if (!res.ok || !res.body) throw new Error(`Server error ${res.status}`);
 
@@ -542,12 +557,18 @@ const AgentPage = () => {
                 fetchSessions();
             }
         } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Something went wrong.",
-                variant: "destructive",
-            });
+            // Deliberate cancellation (unmount / resend) is not an error.
+            if (error?.name !== 'AbortError') {
+                toast({
+                    title: "Error",
+                    description: error.message || "Something went wrong.",
+                    variant: "destructive",
+                });
+            }
         } finally {
+            if (streamAbortRef.current === abortController) {
+                streamAbortRef.current = null;
+            }
             setIsLoading(false);
             setStreamingText('');
             setActiveToolName('');

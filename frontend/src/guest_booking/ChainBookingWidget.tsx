@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/core/lib/utils';
+import { getApiBaseUrl } from '@/core/api/baseUrl';
 
 interface ChainProperty {
     hotel_id: string;
@@ -38,10 +39,7 @@ interface ChainInfo {
 
 // ── Resolve API base same way as single hotel widget ─────────────────────────
 function getApiUrl(): string {
-    const hostname = window.location.hostname;
-    if (hostname.includes('staybooker.ai')) return 'https://api.staybooker.ai/api/v1';
-    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
+    return getApiBaseUrl({ embedded: true });
 }
 
 // Target the embedding parent's origin (derived from the referrer) instead of a

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
+import { getApiBaseUrl } from '@/core/api/baseUrl';
 
 // Restrict postMessage to the embedding parent's exact origin. We prefer the
 // browser-provided ancestorOrigins (most reliable, can't be spoofed by the
@@ -102,14 +103,7 @@ const getNights = (inDate: string, outDate: string) => {
     }
 };
 
-const getApiUrl = () => {
-    const hostname = window.location.hostname;
-    if (hostname.includes('staybooker.ai')) {
-        return 'https://api.staybooker.ai/api/v1';
-    }
-    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
-};
+const getApiUrl = () => getApiBaseUrl({ embedded: true });
 
 export function ChatWidget({ hotelSlug, primaryColor: initialPrimaryColor = '#d11026', bottomOffset = 'bottom-4', isStaticPreview = false }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
