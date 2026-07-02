@@ -327,29 +327,14 @@ async def _get_booking_id(booking_number: str) -> str:
         return b.id
 
 
-class TestCancelIntentGating:
-    """The cancel_booking tool is only exposed to the agent on an explicit cancel
-    request. Word-boundary matching avoids re-exposing it on read-only phrases."""
-
-    @pytest.mark.parametrize("query", [
-        "cancel booking BK123",
-        "please void this reservation",
-        "Cancel BK999",
-    ])
-    def test_real_cancel_intent_detected(self, query):
-        from app.ai_engine.agent import _has_cancel_intent
-        assert _has_cancel_intent(query) is True
-
-    @pytest.mark.parametrize("query", [
-        "show cancelled bookings",
-        "what is the cancellation policy",
-        "how do I avoid overbooking",   # contains 'void' as a substring
-        "list my bookings",
-        "",
-    ])
-    def test_readonly_phrases_do_not_trigger_cancel(self, query):
-        from app.ai_engine.agent import _has_cancel_intent
-        assert _has_cancel_intent(query) is False
+# TestCancelIntentGating was removed with the keyword exposure-gate it tested.
+# The gate itself was the production bug (Sentry STAYBOOKERAI-3G): any phrasing
+# without the literal word cancel/void (e.g. the typo "cancle") dropped
+# cancel_booking from the toolset, so when the model called it anyway the whole
+# run failed with "Function cancel_booking not found". cancel_booking is now
+# ALWAYS registered; safety is enforced by agno's requires_confirmation pause +
+# the role gate inside the tool. The replacement regression test lives in
+# tests/test_ai_agent_smoke.py::test_cancel_booking_always_registered_and_confirmation_gated.
 
 
 class TestCancelBookingSafety:

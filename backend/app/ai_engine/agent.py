@@ -43,16 +43,6 @@ import re
 logger = logging.getLogger(__name__)
 
 
-def _has_cancel_intent(query: str) -> bool:
-    """True only when the query contains the standalone word 'cancel' or 'void'.
-
-    Word boundaries matter: a raw substring check exposed the destructive
-    cancel_booking tool on read-only phrases like 'show cancelled bookings',
-    'cancellation policy', or even 'avoid overbooking' (which contains 'void').
-    """
-    return bool(re.search(r"\b(cancel|void)\b", query or "", re.IGNORECASE))
-
-
 # Module-level singleton for the agno session store. Previously create_agent_executor
 # built a fresh AsyncEngine on every call, leaking one connection pool per request
 # (the chat path AND the /agent/chat/confirm resume path). Cache one engine/db per
@@ -713,154 +703,12 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
 
     # --- AGENT SETUP ---
 
-    tools = [
-        get_dashboard_stats,
-        search_bookings,
-        get_booking_details,
-        cancel_booking,
-        get_weather_forecast,
-        get_local_events,
-        generate_pdf_report,
-        update_room_price,
-        create_promo_code,
-        get_room_inventory,
-        get_pending_payments,
-        get_daily_revenue,
-        get_todays_arrivals,
-        get_todays_departures,
-        find_guest,
-        block_room_dates,
-        get_pending_approvals,
-        search_web,
-        create_quick_booking,
-        check_availability_matrix,
-        # Advanced analytics
-        get_revenue_trend,
-        get_occupancy_trend,
-        get_booking_source_breakdown,
-        get_room_performance,
-        get_revpar_analysis,
-        get_revenue_forecast,
-        get_smart_alerts,
-        get_vip_guests,
-        get_at_risk_bookings,
-        get_upsell_opportunities,
-    ]
-
-    # --- SMART TOOL CALLING (DYNAMIC TOOL SELECTION) ---
-    # To reduce token overhead and prevent tool clutter, we filter the tools
-    # passed to the model based on the user's message query.
-    q = (user_query or "").lower().strip()
-    if q:
-        selected_tools = []
-        
-        # 1. Weather
-        if any(w in q for w in ["weather", "forecast", "rain", "temp", "temperature", "climate", "mausam"]):
-            selected_tools.append(get_weather_forecast)
-            
-        # 2. Events
-        if any(w in q for w in ["event", "concert", "festival", "holiday", "local event", "show", "gig", "tyohar"]):
-            selected_tools.append(get_local_events)
-            
-        # 3. PDF/Reports
-        if any(w in q for w in ["pdf", "download", "export", "report"]):
-            selected_tools.append(generate_pdf_report)
-            
-        # 4. Web Search
-        if any(w in q for w in ["web", "search", "google", "news", "internet"]):
-            selected_tools.append(search_web)
-            
-        # 5. Price Updates & Competitiveness
-        if any(w in q for w in ["price", "rate", "update", "change", "set", "promo", "discount", "coupon", "code", "competit", "competitor"]):
-            selected_tools.extend([
-                update_room_price,
-                create_promo_code,
-                get_room_inventory
-            ])
-            
-        # 6. Booking Search / Creation / Details (read + create only)
-        if any(w in q for w in ["booking", "book", "reserve", "quick", "create", "details", "room"]):
-            selected_tools.extend([
-                create_quick_booking,
-                search_bookings,
-                get_booking_details,
-                check_availability_matrix
-            ])
-
-        # 6b. Cancellation — destructive. Only expose cancel_booking when the
-        # hotelier explicitly signals intent to cancel/void, so the model can't
-        # reach for it while answering a plain "show me bookings" question.
-        if _has_cancel_intent(q):
-            selected_tools.extend([
-                search_bookings,
-                get_booking_details,
-                cancel_booking,
-            ])
-            
-        # 7. Occupancy / Block dates
-        if any(w in q for w in ["occupancy", "occupy", "full", "vacant", "block", "date", "maintenance"]):
-            selected_tools.extend([
-                get_occupancy_trend,
-                block_room_dates,
-                check_availability_matrix
-            ])
-            
-        # 8. Payments / Due
-        if any(w in q for w in ["payment", "due", "owe", "collect", "pending payment", "transaction", "paisa", "rupay", "rupee"]):
-            selected_tools.append(get_pending_payments)
-            
-        # 9. Arrivals
-        if any(w in q for w in ["arrival", "arrive", "checkin", "check-in", "reception", "coming"]):
-            selected_tools.append(get_todays_arrivals)
-            
-        # 10. Departures
-        if any(w in q for w in ["departure", "depart", "checkout", "check-out", "leaving"]):
-            selected_tools.append(get_todays_departures)
-            
-        # 11. Guest / Customer / VIP
-        if any(w in q for w in ["guest", "customer", "vip", "find guest", "phone", "email"]):
-            selected_tools.extend([
-                find_guest,
-                get_vip_guests
-            ])
-            
-        # 12. Pending Approvals
-        if any(w in q for w in ["pending", "approve", "confirm", "waiting"]):
-            selected_tools.append(get_pending_approvals)
-            
-        # 13. Analytics & Charts
-        if any(w in q for w in ["revenue", "rev", "trend", "sales", "chart", "graph", "source", "ota", "direct", "performance", "forecast", "revpar", "adr", "alert", "analytics", "upsell", "risk", "lost", "growth", "summary", "report", "weekly", "daily"]):
-            selected_tools.extend([
-                get_revenue_trend,
-                get_occupancy_trend,
-                get_booking_source_breakdown,
-                get_room_performance,
-                get_revpar_analysis,
-                get_revenue_forecast,
-                get_smart_alerts,
-                get_at_risk_bookings,
-                get_upsell_opportunities,
-                get_dashboard_stats,
-                get_daily_revenue
-            ])
-            
-        # Keep unique tools while preserving order
-        unique_tools = []
-        for t in selected_tools:
-            if t not in unique_tools:
-                unique_tools.append(t)
-                
-        # Fallback to general core tools if query doesn't match any specific keywords
-        if not unique_tools:
-            unique_tools = [
-                get_dashboard_stats,
-                get_room_inventory,
-                get_pending_approvals,
-                get_todays_arrivals
-            ]
-            
-        tools = unique_tools
-        logger.info(f"Smart Tool Selector: Loaded {len(tools)} tools for query '{user_query}'")
+    # NOTE (2026-07-02 audit): the old single-agent master tool list and the
+    # 'Smart Tool Selector' keyword filter that lived here were DEAD CODE — the
+    # list they built was never passed to any agent. The Team below assigns each
+    # sub-agent its own focused toolset (finance/booking/ops/general), and its
+    # misleading 'Loaded N tools' log made tool-availability bugs (e.g. the
+    # cancel_booking keyword gate, Sentry STAYBOOKERAI-3G) harder to see.
 
     # Resolve dynamic config from integration settings or hotel relation
     from app.integration.integration import IntegrationSettings
