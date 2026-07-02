@@ -27,7 +27,6 @@ const PaymentsPage = lazy(() => import("@/finance/Payments"));
 const AddonsPage = lazy(() => import("@/marketing/Addons"));
 const SettingsPage = lazy(() => import("@/settings/Settings"));
 const IntegrationPage = lazy(() => import("@/settings/Integration"));
-const ChannelSettings = lazy(() => import("@/dashboard/ChannelSettings"));
 const TaxesPage = lazy(() => import("@/finance/Taxes"));
 const AdminDashboard = lazy(() => import("@/admin/AdminDashboard"));
 const AgentPage = lazy(() => import("@/agent/AgentPage").then(m => ({ default: m.default })));
@@ -124,7 +123,6 @@ const App = () => {
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/addons" element={<AddonsPage />} />
                       <Route path="/taxes" element={<TaxesPage />} />
-                      <Route path="/channel-settings" element={<ChannelSettings />} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/settings/:tab" element={<SettingsPage />} />
                       <Route path="/integration" element={<IntegrationPage />} />

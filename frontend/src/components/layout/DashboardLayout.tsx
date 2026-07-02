@@ -19,7 +19,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
   OWNER: [
     "/dashboard", "/analytics", "/agent", "/rooms", "/rates", "/rate-shopper", 
     "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
-    "/channel-settings", "/integration", "/settings"
+    "/integration", "/settings"
   ],
   MANAGER: [
     "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",

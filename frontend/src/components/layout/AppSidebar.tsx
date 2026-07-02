@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Bed, IndianRupee, Calendar, BookOpen,
   Users, CreditCard, Settings, LogOut, Building2, Plug,
-  Sparkles, Link2, Coffee, TrendingUp, Bot, LineChart, Percent, Star, Gift,
+  Sparkles, Coffee, TrendingUp, Bot, LineChart, Percent, Star, Gift,
   Zap, Send, FileBarChart2,
 } from 'lucide-react';
 import { NavLink } from '@/components/layout/NavLink';
@@ -31,7 +31,6 @@ const mainNavItems = [
   { title: 'Guests',          url: '/guests',           icon: Users },
   { title: 'Payments',        url: '/payments',         icon: CreditCard },
   { title: 'Google Reviews',  url: '/reviews',           icon: Star },
-  { title: 'Channel Manager', url: '/channel-settings', icon: Link2 },
 ];
 
 // Revenue tools — features whose job is to grow bookings & revenue, grouped so
@@ -53,7 +52,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     "/dashboard", "/analytics", "/reports", "/agent", "/rooms", "/rates", "/rate-shopper",
     "/availability", "/bookings", "/taxes", "/guests", "/payments",
     "/loyalty", "/addons", "/revenue/pricing", "/revenue/recovery",
-    "/reviews", "/channel-settings", "/integration", "/settings"
+    "/reviews", "/integration", "/settings"
   ],
   MANAGER: [
     "/dashboard", "/analytics", "/reports", "/rooms", "/rates", "/taxes",

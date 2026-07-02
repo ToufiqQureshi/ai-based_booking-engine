@@ -149,7 +149,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     "OWNER": [
         "/dashboard", "/analytics", "/agent", "/rooms", "/rates",
         "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
-        "/channel-settings", "/integration", "/settings",
+        "/integration", "/settings",
     ],
     "MANAGER": [
         "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",
@@ -503,8 +503,6 @@ async def delete_hotel(
         await session.execute(text("DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)"), {"id": hotel_id})
         await session.execute(text("DELETE FROM payments WHERE hotel_id = :id"), {"id": hotel_id})
         # Dependent tables (all parameterised — no f-strings).
-        await session.execute(text("DELETE FROM channel_logs WHERE hotel_id = :id"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM channel_room_mappings WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM room_rates WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM room_blocks WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM room_rate_links WHERE hotel_id = :id"), {"id": hotel_id})
@@ -516,7 +514,6 @@ async def delete_hotel(
         await session.execute(text("DELETE FROM addons WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM amenities WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM api_keys WHERE hotel_id = :id"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM channel_manager_settings WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM integration_settings WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM leads WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM promo_codes WHERE hotel_id = :id"), {"id": hotel_id})

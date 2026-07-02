@@ -43,7 +43,6 @@ from app.guest_booking import router as public_router
 from app.integration import router as integration_router
 from app.system import upload, admin
 from app.experiences import addons
-from app.channel_manager import channel_manager
 from app.ai_assistant import agent
 from app.superadmin import router as superadmin_router
 from app.marketing import google_ads
@@ -198,7 +197,6 @@ app.include_router(superadmin_router, prefix=API_V1_PREFIX)
 app.include_router(integration_router, prefix=API_V1_PREFIX)
 app.include_router(upload.router, prefix=API_V1_PREFIX)
 app.include_router(addons.router, prefix=API_V1_PREFIX)
-app.include_router(channel_manager.router, prefix=API_V1_PREFIX)
 app.include_router(amenities.router, prefix=API_V1_PREFIX)
 app.include_router(properties.router, prefix=API_V1_PREFIX)
 app.include_router(admin.router, prefix=API_V1_PREFIX)
