@@ -36,17 +36,24 @@ export const GuestPreferencesProvider = ({ children }: { children: React.ReactNo
     localStorage.setItem('guestLanguage', guestLanguage);
   }, [guestLanguage]);
 
-  // Fetch exchange rates when baseCurrency changes
+  // Fetch exchange rates when baseCurrency changes. Third-party, unauthenticated
+  // API: bound it with a timeout and degrade silently — when it fails, rates
+  // stay empty and amounts render in the hotel's base currency, which is
+  // always correct (FX display is a convenience, never load-bearing).
   useEffect(() => {
     const fetchRates = async () => {
       try {
-        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${baseCurrency}`);
+        const response = await fetch(
+          `https://api.exchangerate-api.com/v4/latest/${baseCurrency}`,
+          { signal: AbortSignal.timeout(5000) },
+        );
+        if (!response.ok) return;
         const data = await response.json();
         if (data && data.rates) {
           setExchangeRates(data.rates);
         }
       } catch (error) {
-        console.error('Failed to fetch exchange rates:', error);
+        console.warn('Exchange-rate fetch failed; showing base currency only:', error);
       }
     };
     fetchRates();

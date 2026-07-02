@@ -255,8 +255,8 @@ export function CheckoutSummary() {
                                     <span className="text-xs font-bold text-slate-600 uppercase">256-Bit SSL Secured</span>
                                 </div>
                                 <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-2.5 opacity-50" />
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-4 opacity-50" />
+                                    <img src="/payment-icons/visa.svg" alt="Visa" className="h-2.5 opacity-50" />
+                                    <img src="/payment-icons/mastercard.svg" alt="Mastercard" className="h-4 opacity-50" />
                                 </div>
                             </div>
                             <p className="text-[10px] text-slate-400 max-w-xs mx-auto font-bold uppercase tracking-widest leading-relaxed">
