@@ -12,6 +12,7 @@ import { useToast } from '@/core/hooks/use-toast';
 import { apiClient } from '@/core/api/client';
 import { Hotel } from '@/core/types/api';
 import { PageShell } from '@/components/layout/PageShell';
+import { formatCurrency as sharedFormatCurrency } from '@/core/utils/currency';
 
 export default function Taxes() {
   const { hotel, setHotel } = useAuth();
@@ -172,14 +173,8 @@ export default function Taxes() {
   const calculatedTax = roomTaxAmount + addonTaxAmount;
   const calculatedTotal = calculatedSubtotal + calculatedTax;
 
-  const formatCurrency = (amt: number) => {
-    const currency = hotel?.settings?.currency || 'INR';
-    return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
-      style: 'currency',
-      currency: currency,
-      maximumFractionDigits: 2
-    }).format(amt);
-  };
+  const formatCurrency = (amt: number) =>
+    sharedFormatCurrency(amt, { currency: hotel?.settings?.currency, maximumFractionDigits: 2 });
 
   const pageActions = (
     <Button 

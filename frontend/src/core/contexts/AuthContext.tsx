@@ -5,6 +5,7 @@ import { authApi } from '@/core/api/auth';
 import { apiClient, tokenStorage } from '@/core/api/client';
 import { supabase } from '@/core/lib/supabase';
 import { useToast } from '@/core/hooks/use-toast';
+import { setActiveCurrency } from '@/core/utils/currency';
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +26,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Keep the shared money formatter in sync with the hotel's configured
+  // currency, whatever path set the hotel (init, login, refresh, impersonate).
+  useEffect(() => {
+    setActiveCurrency(hotel?.settings?.currency);
+  }, [hotel]);
 
   // Check for existing session on mount
   useEffect(() => {

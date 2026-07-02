@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RatePlan } from '@/core/types/api';
 import { cn } from '@/core/lib/utils';
+import { formatCurrency } from '@/core/utils/currency';
 
 interface PackageCardProps {
   pkg: RatePlan;
@@ -12,13 +13,6 @@ interface PackageCardProps {
 }
 
 export function PackageCard({ pkg, onEdit, onDelete }: PackageCardProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   // Savings = market (strike-through) price minus the actual add-on price.
   const addOn = pkg.price_adjustment ?? 0;

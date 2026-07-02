@@ -33,6 +33,7 @@ import { useToast } from '@/core/hooks/use-toast';
 import { apiClient } from '@/core/api/client';
 import { PageShell } from '@/components/layout/PageShell';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/core/utils/currency';
 
 const PAGE_SIZE = 20;
 
@@ -220,8 +221,6 @@ export function BookingsPage() {
     }
   };
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 
   // ── Filter bookings ──
   const filteredBookings = useMemo(() => bookings.filter(b => {

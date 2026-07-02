@@ -31,6 +31,7 @@ import { Payment } from '@/core/types/api';
 import { InvoiceDialog } from '@/finance/components/payments/InvoiceDialog';
 import { useToast } from '@/core/hooks/use-toast';
 import { PageShell } from '@/components/layout/PageShell';
+import { formatCurrency } from '@/core/utils/currency';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   completed: { label: 'Completed', variant: 'default' },
@@ -83,13 +84,6 @@ export function PaymentsPage() {
     setIsInvoiceOpen(true);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const filteredPayments = payments.filter(payment => {
     const matchesSearch =
