@@ -435,7 +435,7 @@ async def verify_razorpay_payment(
                     wa_message = f"✅ Booking Confirmed!\n\nDear {guest.first_name},\nYour booking #{booking.booking_number} at {hotel.name} is confirmed.\n\nCheck-in: {booking.check_in}\nCheck-out: {booking.check_out}\nTotal: ₹{booking.total_amount:,.0f}\n\nThank you for choosing us!"
                     async with httpx.AsyncClient() as client:
                         await client.post(
-                            f"https://graph.facebook.com/v19.0/{integration.whatsapp_phone_number_id}/messages",
+                            f"https://graph.facebook.com/{get_settings().META_GRAPH_API_VERSION}/{integration.whatsapp_phone_number_id}/messages",
                             headers={"Authorization": f"Bearer {integration.whatsapp_api_key}", "Content-Type": "application/json"},
                             json={"messaging_product": "whatsapp", "to": guest.phone, "type": "text", "text": {"body": wa_message}},
                             timeout=10.0

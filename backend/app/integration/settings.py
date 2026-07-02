@@ -323,7 +323,7 @@ async def test_whatsapp_connection(current_user: CurrentUser, session: DbSession
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
-                f"https://graph.facebook.com/v21.0/{wa_phone_id}",
+                f"https://graph.facebook.com/{get_settings().META_GRAPH_API_VERSION}/{wa_phone_id}",
                 headers={"Authorization": f"Bearer {wa_token}"},
             )
             if resp.status_code == 200:

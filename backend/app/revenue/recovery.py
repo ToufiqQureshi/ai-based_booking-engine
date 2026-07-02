@@ -92,7 +92,7 @@ async def _send_recovery_whatsapp(guest: Guest, hotel: Hotel, booking: Booking) 
         )
         async with httpx.AsyncClient(timeout=10.0) as client:
             await client.post(
-                f"https://graph.facebook.com/v19.0/{phone_number_id}/messages",
+                f"https://graph.facebook.com/{get_settings().META_GRAPH_API_VERSION}/{phone_number_id}/messages",
                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
                 json={
                     "messaging_product": "whatsapp",

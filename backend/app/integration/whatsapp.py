@@ -364,7 +364,7 @@ async def whatsapp_webhook_receive(
                     try:
                         async with httpx.AsyncClient(timeout=30.0) as client:
                             wa_response = await client.post(
-                                f"https://graph.facebook.com/v19.0/{phone_number_id}/messages",
+                                f"https://graph.facebook.com/{get_settings().META_GRAPH_API_VERSION}/{phone_number_id}/messages",
                                 headers={"Authorization": f"Bearer {whatsapp_token_to_use}", "Content-Type": "application/json"},
                                 json={
                                     "messaging_product": "whatsapp",
