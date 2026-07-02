@@ -76,19 +76,25 @@ class Settings(BaseSettings):
     BOOKING_TOKEN_REQUIRED: bool = False
     BOOKING_TOKEN_TTL_SECONDS: int = 1800
     
-    # CORS - Parsed from JSON string in env
+    # CORS - Parsed from JSON string in env. Single source of truth: main.py's
+    # CORSMiddleware and the global exception handler both read these two
+    # settings — never hardcode origins anywhere else.
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://localhost:8080",
         "https://staybooker.ai",
         "https://www.staybooker.ai",
         "https://app.staybooker.ai",
+        "https://www.app.staybooker.ai",
         "https://superadmin.staybooker.ai",
         "https://www.superadmin.staybooker.ai",
         "https://api.staybooker.ai",
         "https://staybooker.railway.app",
         "https://staybooker-production.up.railway.app"
     ]
+    # Cloudflare Pages serves previews on *.ai-based-booking-engine.pages.dev
+    # (the project name) as well as the production-style staybooker domain.
+    CORS_ORIGIN_REGEX: str = r"https://([a-zA-Z0-9-]+\.)?(staybooker|ai-based-booking-engine)\.pages\.dev"
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
@@ -132,6 +138,9 @@ class Settings(BaseSettings):
 
 
     # Central WhatsApp Config
+    # One Graph API version for every Meta call — the codebase previously mixed
+    # v17/v19/v21, so senders aged out at different times.
+    META_GRAPH_API_VERSION: str = "v21.0"
     CENTRAL_WHATSAPP_PHONE_ID: Optional[str] = None
     CENTRAL_WHATSAPP_TOKEN: Optional[str] = None
     # Platform admin WhatsApp number for booking/cancellation alerts. Empty by
