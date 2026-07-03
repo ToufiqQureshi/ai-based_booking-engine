@@ -444,11 +444,50 @@ async def init_db():
     await _run_boot_maintenance()
 
 
+# Arbitrary constant identifying the boot-maintenance critical section for
+# pg_try_advisory_lock. Must stay stable across deploys so every worker/replica
+# contends on the same lock.
+_BOOT_MAINTENANCE_LOCK_KEY = 815606
+
+
 async def _run_boot_maintenance() -> None:
     """Idempotent per-boot maintenance that must run on EVERY startup,
     including fast-path boots that skip the one-time schema patches:
     AI-config auto-heal backfill, the supabase_vault extension, and the
-    plaintext-secret -> Vault migration."""
+    plaintext-secret -> Vault migration.
+
+    Serialized across workers/replicas with a Postgres session advisory lock:
+    without it, several workers booting together could each scan the same
+    plaintext-secret rows and create duplicate Vault secrets before any row
+    update commits. Losing the lock race just means another worker is already
+    doing this boot's maintenance — safe to skip."""
+    if is_sqlite:
+        await _boot_maintenance_steps()
+        return
+
+    lock_conn = await engine.connect()
+    try:
+        got_lock = (await lock_conn.execute(
+            text("SELECT pg_try_advisory_lock(:key)"),
+            {"key": _BOOT_MAINTENANCE_LOCK_KEY},
+        )).scalar()
+        if not got_lock:
+            _migration_logger.info(
+                "Boot maintenance already running in another worker — skipping"
+            )
+            return
+        try:
+            await _boot_maintenance_steps()
+        finally:
+            await lock_conn.execute(
+                text("SELECT pg_advisory_unlock(:key)"),
+                {"key": _BOOT_MAINTENANCE_LOCK_KEY},
+            )
+    finally:
+        await lock_conn.close()
+
+
+async def _boot_maintenance_steps() -> None:
     # Auto-heal: Sync AI fields from hotels table to integration_settings table if missing or not set
     try:
         async with engine.begin() as conn:
