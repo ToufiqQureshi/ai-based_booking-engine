@@ -5,14 +5,13 @@ from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
-# Mirrors the allow_origins/allow_origin_regex configured on CORSMiddleware in
-# main.py. A response built by a handler registered for the base `Exception`
+# Uses the same CORS_ORIGINS/CORS_ORIGIN_REGEX settings as the CORSMiddleware
+# in main.py. A response built by a handler registered for the base `Exception`
 # class is emitted by Starlette's ServerErrorMiddleware, which wraps OUTSIDE
 # CORSMiddleware — so it never gets CORS headers applied automatically. Every
 # unhandled exception therefore surfaced to the browser as an opaque "blocked
 # by CORS policy" error instead of the real 500, hiding the actual failure.
 # We add the headers here directly so the frontend can read the real error.
-_PAGES_DEV_REGEX = re.compile(r"https://([a-zA-Z0-9-]+\.)?(staybooker|ai-based-booking-engine)\.pages\.dev")
 
 
 def _resolve_cors_origin(request: Request) -> str | None:
@@ -21,12 +20,7 @@ def _resolve_cors_origin(request: Request) -> str | None:
         return None
     from app.core.utils.config import get_settings
     settings = get_settings()
-    allowed = set(settings.CORS_ORIGINS) | {
-        "https://staybooker.ai", "https://www.staybooker.ai",
-        "https://superadmin.staybooker.ai", "https://www.superadmin.staybooker.ai",
-        "https://app.staybooker.ai", "https://www.app.staybooker.ai",
-    }
-    if origin in allowed or _PAGES_DEV_REGEX.fullmatch(origin):
+    if origin in set(settings.CORS_ORIGINS) or re.fullmatch(settings.CORS_ORIGIN_REGEX, origin):
         return origin
     return None
 

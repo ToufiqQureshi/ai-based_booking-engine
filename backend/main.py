@@ -43,7 +43,6 @@ from app.guest_booking import router as public_router
 from app.integration import router as integration_router
 from app.system import upload, admin
 from app.experiences import addons
-from app.channel_manager import channel_manager
 from app.ai_assistant import agent
 from app.superadmin import router as superadmin_router
 from app.marketing import google_ads
@@ -126,27 +125,13 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
-allowed_origins = list(settings.CORS_ORIGINS)
-extra_origins = [
-    "https://staybooker.ai",
-    "https://www.staybooker.ai",
-    "https://superadmin.staybooker.ai",
-    "https://www.superadmin.staybooker.ai",
-    "https://app.staybooker.ai",
-    "https://www.app.staybooker.ai"
-]
-for origin in extra_origins:
-    if origin not in allowed_origins:
-        allowed_origins.append(origin)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    # Cloudflare Pages serves previews on *.ai-based-booking-engine.pages.dev
-    # (the project name), not *.staybooker.pages.dev — the old regex never
-    # matched, so every PR-preview API call was blocked by CORS and login
-    # failed. Allow both the production-style and the actual project domain.
-    allow_origin_regex=r"https://([a-zA-Z0-9-]+\.)?(staybooker|ai-based-booking-engine)\.pages\.dev",
+    # Origins and the Pages-preview regex live in config (CORS_ORIGINS /
+    # CORS_ORIGIN_REGEX) so the exception handler and this middleware can
+    # never drift apart again.
+    allow_origins=list(settings.CORS_ORIGINS),
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -198,7 +183,6 @@ app.include_router(superadmin_router, prefix=API_V1_PREFIX)
 app.include_router(integration_router, prefix=API_V1_PREFIX)
 app.include_router(upload.router, prefix=API_V1_PREFIX)
 app.include_router(addons.router, prefix=API_V1_PREFIX)
-app.include_router(channel_manager.router, prefix=API_V1_PREFIX)
 app.include_router(amenities.router, prefix=API_V1_PREFIX)
 app.include_router(properties.router, prefix=API_V1_PREFIX)
 app.include_router(admin.router, prefix=API_V1_PREFIX)

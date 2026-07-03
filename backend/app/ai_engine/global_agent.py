@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.brand_console.hotel import Hotel
 from app.core.utils.config import get_settings
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 SYSTEM_PROMPT = """You are the Staybooker Global Concierge.
 Your sole purpose is to help guests connect to the correct hotel AI agent.
@@ -103,7 +104,7 @@ def create_global_concierge_graph(
         default_base_url = "https://api.groq.com/openai/v1" if effective_provider == "groq" else None
         llm_model = OpenAILike(
             # AI-04: cheap 8B model is sufficient for the routing/concierge flow.
-            id=ai_model or ("llama-3.1-8b-instant" if effective_provider == "groq" else "gpt-4o-mini"),
+            id=ai_model or (GROQ_SMALL_MODEL if effective_provider == "groq" else "gpt-4o-mini"),
             api_key=ai_api_key,
             base_url=ai_base_url or default_base_url,
             # AI-07: cap output tokens so a runaway response can't balloon cost.

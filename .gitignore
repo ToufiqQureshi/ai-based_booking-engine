@@ -5,7 +5,9 @@
 # Security
 .env
 .env.*
-! .env.example
+# Negations must have no space after '!' and match the full path to work.
+!.env.example
+!frontend/.env.example
 secrets.json
 
 # Dependencies
@@ -46,3 +48,6 @@ cloudflared_config.yml
 # Stray submodule gitlink that repeatedly breaks the Cloudflare Pages build
 # (gitlink with no .gitmodules URL). Ignore so it can't be re-added by accident.
 decodo-api-docs/
+
+# graphify AST cache — regenerable build artifact, bloats PR diffs
+graphify-out/cache/

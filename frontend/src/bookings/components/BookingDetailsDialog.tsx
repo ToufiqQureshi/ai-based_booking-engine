@@ -13,6 +13,7 @@ import { Calendar, User, Mail, CreditCard, Bed, Clock, MessageSquare, CheckCircl
 import { format } from 'date-fns';
 import { apiClient } from '@/core/api/client';
 import { useToast } from '@/core/hooks/use-toast';
+import { formatCurrency } from '@/core/utils/currency';
 
 interface BookingDetailsDialogProps {
     open: boolean;
@@ -34,13 +35,6 @@ export function BookingDetailsDialog({ open, onOpenChange, booking, onStatusChan
     const { toast } = useToast();
     if (!booking) return null;
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0,
-        }).format(amount);
-    };
 
     const status = statusConfig[booking.status] || { label: booking.status, variant: 'outline' };
 

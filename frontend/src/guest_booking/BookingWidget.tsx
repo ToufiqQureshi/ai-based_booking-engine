@@ -10,6 +10,7 @@ import { cn } from '@/core/lib/utils';
 
 import { RoomSearchHeader } from '@/guest_booking/components/public/booking/RoomSearchHeader';
 import { FARWidget } from '@/guest_booking/components/public/FARWidget';
+import { getApiBaseUrl } from '@/core/api/baseUrl';
 
 // Embedding (hotelier) page ka origin referrer se nikaalte hain taaki
 // postMessage wildcard '*' pe broadcast na ho
@@ -21,9 +22,7 @@ const PARENT_ORIGIN: string = (() => {
     }
 })();
 
-const API_BASE_URL = window.location.hostname.includes('staybooker.ai')
-    ? 'https://api.staybooker.ai/api/v1'
-    : (import.meta.env.VITE_API_URL as string | undefined) || 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
+const API_BASE_URL = getApiBaseUrl({ embedded: true });
 
 export default function BookingWidget() {
     const { hotelSlug } = useParams<{ hotelSlug: string }>();

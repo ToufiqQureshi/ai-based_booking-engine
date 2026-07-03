@@ -22,6 +22,9 @@ from app.calendar import clear_availability_cache
 from app.services.email_service import get_email_service
 from app.core.cache.redis_client import redis_client as _redis
 
+import logging
+logger = logging.getLogger(__name__)
+
 def _clear_booking_caches(hotel_id: str):
     """Clear all booking-related caches when bookings change."""
     try:
@@ -39,8 +42,10 @@ def _clear_booking_caches(hotel_id: str):
             "analytics_kpis",
         ):
             _redis.delete_pattern(f"{prefix}:{hotel_id}:*")
-    except Exception:
-        pass
+    except Exception as exc:
+        # Best-effort: a cache-bust failure must not fail the booking write,
+        # but silently swallowing it hid real Redis outages (stale dashboards).
+        logger.warning("Booking cache invalidation failed for hotel %s: %s", hotel_id, exc)
 
 # Keep old name as alias for compatibility with existing callers
 _clear_dashboard_cache = _clear_booking_caches
@@ -389,8 +394,8 @@ async def create_booking(
                 "rooms_count": len(rooms_list),
             },
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Sentry breadcrumb for booking %s failed: %s", booking.id, exc)
 
     response = booking.model_dump()
     response["guest"] = guest.model_dump()

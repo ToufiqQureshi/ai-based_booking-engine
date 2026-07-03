@@ -2,7 +2,7 @@ from typing import List, Optional, Any, Dict
 from datetime import date, datetime
 from fastapi import APIRouter, HTTPException, Query, Depends, status, BackgroundTasks, Request, Header
 from sqlmodel import select, and_, or_
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 import uuid
 import hmac
 import hashlib
@@ -435,7 +435,7 @@ async def verify_razorpay_payment(
                     wa_message = f"✅ Booking Confirmed!\n\nDear {guest.first_name},\nYour booking #{booking.booking_number} at {hotel.name} is confirmed.\n\nCheck-in: {booking.check_in}\nCheck-out: {booking.check_out}\nTotal: ₹{booking.total_amount:,.0f}\n\nThank you for choosing us!"
                     async with httpx.AsyncClient() as client:
                         await client.post(
-                            f"https://graph.facebook.com/v19.0/{integration.whatsapp_phone_number_id}/messages",
+                            f"https://graph.facebook.com/{get_settings().META_GRAPH_API_VERSION}/{integration.whatsapp_phone_number_id}/messages",
                             headers={"Authorization": f"Bearer {integration.whatsapp_api_key}", "Content-Type": "application/json"},
                             json={"messaging_product": "whatsapp", "to": guest.phone, "type": "text", "text": {"body": wa_message}},
                             timeout=10.0
@@ -491,8 +491,7 @@ class RazorpayWebhookPayload(BaseModel):
     created_at: Optional[int] = None
     payload: Optional[Dict[str, Any]] = None
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 @router.post("/razorpay/webhook")

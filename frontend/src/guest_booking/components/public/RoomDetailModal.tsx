@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PublicRoomSearchResult, RateOption } from "@/core/types/api";
 import { Wifi, User, Maximize, Check, Info, Tv, Coffee, Snowflake, Waves, Dumbbell, Car, Utensils, Star, LucideIcon, ShieldCheck, Sparkles, BedDouble, Wine, Bath, ShowerHead, Flame, Baby, Languages, ConciergeBell, WashingMachine, Key, Wind, CigaretteOff, PawPrint, VolumeX, Briefcase, Map } from "lucide-react";
+import { formatCurrency } from '@/core/utils/currency';
 
 // Icon mapping for amenities
 const AMENITY_ICONS: Record<string, LucideIcon> = {
@@ -71,13 +72,6 @@ interface RoomDetailModalProps {
 export function RoomDetailModal({ room, open, onOpenChange, onBook, guests, themeColor }: RoomDetailModalProps) {
     if (!room) return null;
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0,
-        }).format(amount);
-    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

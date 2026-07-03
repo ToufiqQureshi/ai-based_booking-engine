@@ -22,6 +22,7 @@ from app.superadmin.subscriptions.subscription import Subscription
 from app.guests.user import User, UserRole
 from app.core.db.supabase import get_supabase
 import jwt
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -149,7 +150,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     "OWNER": [
         "/dashboard", "/analytics", "/agent", "/rooms", "/rates",
         "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
-        "/channel-settings", "/integration", "/settings",
+        "/integration", "/settings",
     ],
     "MANAGER": [
         "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",
@@ -247,7 +248,7 @@ async def list_hotels(session: DbSession, super_admin: User = Depends(require_pe
             "owner_name": owner.name if owner else "N/A",
             # Non-secret AI config is safe to send; the key itself is never returned.
             "ai_provider": getattr(hotel, "ai_provider", "groq"),
-            "ai_model": getattr(hotel, "ai_model", "llama-3.1-70b-versatile"),
+            "ai_model": getattr(hotel, "ai_model", None) or GROQ_LARGE_MODEL,
             "ai_base_url": getattr(hotel, "ai_base_url", None),
             "ai_max_tokens": getattr(hotel, "ai_max_tokens", None),
             # "<secret>_set" flags so the UI can show "configured" without the value.
@@ -503,8 +504,6 @@ async def delete_hotel(
         await session.execute(text("DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE hotel_id = :id)"), {"id": hotel_id})
         await session.execute(text("DELETE FROM payments WHERE hotel_id = :id"), {"id": hotel_id})
         # Dependent tables (all parameterised — no f-strings).
-        await session.execute(text("DELETE FROM channel_logs WHERE hotel_id = :id"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM channel_room_mappings WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM room_rates WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM room_blocks WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM room_rate_links WHERE hotel_id = :id"), {"id": hotel_id})
@@ -516,7 +515,6 @@ async def delete_hotel(
         await session.execute(text("DELETE FROM addons WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM amenities WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM api_keys WHERE hotel_id = :id"), {"id": hotel_id})
-        await session.execute(text("DELETE FROM channel_manager_settings WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM integration_settings WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM leads WHERE hotel_id = :id"), {"id": hotel_id})
         await session.execute(text("DELETE FROM promo_codes WHERE hotel_id = :id"), {"id": hotel_id})

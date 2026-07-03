@@ -17,6 +17,7 @@ from app.core.utils.limiter import limiter
 from app.core.cache.redis_client import redis_client
 from app.brand_console.hotel import Hotel
 from app.integration.integration import IntegrationSettings
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -215,7 +216,7 @@ async def whatsapp_webhook_receive(
                                 session,
                                 ai_provider="groq",
                                 ai_api_key=config.GROQ_API_KEY,
-                                ai_model="llama-3.1-8b-instant",
+                                ai_model=GROQ_SMALL_MODEL,
                             )
                             if not global_agent:
                                 debug_log.append("Global agent disabled or missing GROQ key.")
@@ -364,7 +365,7 @@ async def whatsapp_webhook_receive(
                     try:
                         async with httpx.AsyncClient(timeout=30.0) as client:
                             wa_response = await client.post(
-                                f"https://graph.facebook.com/v19.0/{phone_number_id}/messages",
+                                f"https://graph.facebook.com/{config.META_GRAPH_API_VERSION}/{phone_number_id}/messages",
                                 headers={"Authorization": f"Bearer {whatsapp_token_to_use}", "Content-Type": "application/json"},
                                 json={
                                     "messaging_product": "whatsapp",

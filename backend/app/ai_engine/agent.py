@@ -36,21 +36,12 @@ from app.ai_engine.tools.analytics import (
 
 import logging
 import re
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 # AI-FIX: module-level logger. This was referenced (e.g. in the smart tool
 # selector) but never defined, so any non-empty hotelier query raised a
 # NameError and the assistant 500'd on every message. Define it once here.
 logger = logging.getLogger(__name__)
-
-
-def _has_cancel_intent(query: str) -> bool:
-    """True only when the query contains the standalone word 'cancel' or 'void'.
-
-    Word boundaries matter: a raw substring check exposed the destructive
-    cancel_booking tool on read-only phrases like 'show cancelled bookings',
-    'cancellation policy', or even 'avoid overbooking' (which contains 'void').
-    """
-    return bool(re.search(r"\b(cancel|void)\b", query or "", re.IGNORECASE))
 
 
 # Module-level singleton for the agno session store. Previously create_agent_executor
@@ -108,7 +99,7 @@ GOAL: Help the hotelier manage bookings, revenue, and tasks directly and profess
 2. **Direct Answers Only**:
    - "How many pending bookings?" -> Use `get_pending_approvals`. IGNORE 'today' filter. Return ALL pending.
    - "Pending payments?" -> Use `get_pending_payments`.
-3. **Safe Actions (HARD RULE)**: For any DESTRUCTIVE or money-affecting action (cancel booking, price update, promo, block dates), clearly state what you are about to do. The system enforces human-in-the-loop: it will PAUSE and ask the hotelier to click "Proceed" or "Cancel" before the action runs — so you never execute it yourself. NEVER cancel bookings on your own initiative, in bulk, or to "clean up" pending bookings. A pending booking is awaiting the hotelier's decision — only act on a specific booking when they explicitly ask.
+3. **Safe Actions (HARD RULE)**: For any DESTRUCTIVE or money-affecting action (cancel booking, price update, promo, block dates), you MUST CALL the matching tool — do not just describe the action in words, and do not ask for confirmation yourself. The system enforces human-in-the-loop: the moment you call the tool it PAUSES and shows the hotelier a "Proceed"/"Cancel" prompt, and nothing changes until they click Proceed. So: call the tool, then stop. NEVER cancel bookings on your own initiative, in bulk, or to "clean up" pending bookings. A pending booking is awaiting the hotelier's decision — only act on a specific booking when they explicitly ask.
 4. **Smart Pricing**: Check Weather/Events/Web Search before suggesting price changes.
 5. **Reasoning First**: ALWAYS explain 'WHY' before recommending an action. Cite data (e.g. "Because of Coldplay concert...").
 6. **Use Web Search**: If you lack context (e.g. "Is it a holiday?"), use `search_web`.
@@ -143,7 +134,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
     - **Database Isolation (GEMINI.md Rule 1)**: Sessions are scoped to the user (`current_user.id`), 
       and tools explicitly filter all SQL queries by `user.hotel_id` (e.g., `Booking.hotel_id == user.hotel_id`).
     - **Cost Control (GEMINI.md Rule 3)**: LLM token caps are dynamically applied via `effective_max_tokens`.
-      Uses cheaper fast models (llama-3.1-8b-instant via Groq) unless configured otherwise.
+      Uses the cheap Groq default model unless configured otherwise.
     - **Caching**: Tools use `@cached_tool` with Redis to prevent duplicate DB hits and rate limits.
     """
     settings = get_settings()
@@ -713,154 +704,12 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
 
     # --- AGENT SETUP ---
 
-    tools = [
-        get_dashboard_stats,
-        search_bookings,
-        get_booking_details,
-        cancel_booking,
-        get_weather_forecast,
-        get_local_events,
-        generate_pdf_report,
-        update_room_price,
-        create_promo_code,
-        get_room_inventory,
-        get_pending_payments,
-        get_daily_revenue,
-        get_todays_arrivals,
-        get_todays_departures,
-        find_guest,
-        block_room_dates,
-        get_pending_approvals,
-        search_web,
-        create_quick_booking,
-        check_availability_matrix,
-        # Advanced analytics
-        get_revenue_trend,
-        get_occupancy_trend,
-        get_booking_source_breakdown,
-        get_room_performance,
-        get_revpar_analysis,
-        get_revenue_forecast,
-        get_smart_alerts,
-        get_vip_guests,
-        get_at_risk_bookings,
-        get_upsell_opportunities,
-    ]
-
-    # --- SMART TOOL CALLING (DYNAMIC TOOL SELECTION) ---
-    # To reduce token overhead and prevent tool clutter, we filter the tools
-    # passed to the model based on the user's message query.
-    q = (user_query or "").lower().strip()
-    if q:
-        selected_tools = []
-        
-        # 1. Weather
-        if any(w in q for w in ["weather", "forecast", "rain", "temp", "temperature", "climate", "mausam"]):
-            selected_tools.append(get_weather_forecast)
-            
-        # 2. Events
-        if any(w in q for w in ["event", "concert", "festival", "holiday", "local event", "show", "gig", "tyohar"]):
-            selected_tools.append(get_local_events)
-            
-        # 3. PDF/Reports
-        if any(w in q for w in ["pdf", "download", "export", "report"]):
-            selected_tools.append(generate_pdf_report)
-            
-        # 4. Web Search
-        if any(w in q for w in ["web", "search", "google", "news", "internet"]):
-            selected_tools.append(search_web)
-            
-        # 5. Price Updates & Competitiveness
-        if any(w in q for w in ["price", "rate", "update", "change", "set", "promo", "discount", "coupon", "code", "competit", "competitor"]):
-            selected_tools.extend([
-                update_room_price,
-                create_promo_code,
-                get_room_inventory
-            ])
-            
-        # 6. Booking Search / Creation / Details (read + create only)
-        if any(w in q for w in ["booking", "book", "reserve", "quick", "create", "details", "room"]):
-            selected_tools.extend([
-                create_quick_booking,
-                search_bookings,
-                get_booking_details,
-                check_availability_matrix
-            ])
-
-        # 6b. Cancellation — destructive. Only expose cancel_booking when the
-        # hotelier explicitly signals intent to cancel/void, so the model can't
-        # reach for it while answering a plain "show me bookings" question.
-        if _has_cancel_intent(q):
-            selected_tools.extend([
-                search_bookings,
-                get_booking_details,
-                cancel_booking,
-            ])
-            
-        # 7. Occupancy / Block dates
-        if any(w in q for w in ["occupancy", "occupy", "full", "vacant", "block", "date", "maintenance"]):
-            selected_tools.extend([
-                get_occupancy_trend,
-                block_room_dates,
-                check_availability_matrix
-            ])
-            
-        # 8. Payments / Due
-        if any(w in q for w in ["payment", "due", "owe", "collect", "pending payment", "transaction", "paisa", "rupay", "rupee"]):
-            selected_tools.append(get_pending_payments)
-            
-        # 9. Arrivals
-        if any(w in q for w in ["arrival", "arrive", "checkin", "check-in", "reception", "coming"]):
-            selected_tools.append(get_todays_arrivals)
-            
-        # 10. Departures
-        if any(w in q for w in ["departure", "depart", "checkout", "check-out", "leaving"]):
-            selected_tools.append(get_todays_departures)
-            
-        # 11. Guest / Customer / VIP
-        if any(w in q for w in ["guest", "customer", "vip", "find guest", "phone", "email"]):
-            selected_tools.extend([
-                find_guest,
-                get_vip_guests
-            ])
-            
-        # 12. Pending Approvals
-        if any(w in q for w in ["pending", "approve", "confirm", "waiting"]):
-            selected_tools.append(get_pending_approvals)
-            
-        # 13. Analytics & Charts
-        if any(w in q for w in ["revenue", "rev", "trend", "sales", "chart", "graph", "source", "ota", "direct", "performance", "forecast", "revpar", "adr", "alert", "analytics", "upsell", "risk", "lost", "growth", "summary", "report", "weekly", "daily"]):
-            selected_tools.extend([
-                get_revenue_trend,
-                get_occupancy_trend,
-                get_booking_source_breakdown,
-                get_room_performance,
-                get_revpar_analysis,
-                get_revenue_forecast,
-                get_smart_alerts,
-                get_at_risk_bookings,
-                get_upsell_opportunities,
-                get_dashboard_stats,
-                get_daily_revenue
-            ])
-            
-        # Keep unique tools while preserving order
-        unique_tools = []
-        for t in selected_tools:
-            if t not in unique_tools:
-                unique_tools.append(t)
-                
-        # Fallback to general core tools if query doesn't match any specific keywords
-        if not unique_tools:
-            unique_tools = [
-                get_dashboard_stats,
-                get_room_inventory,
-                get_pending_approvals,
-                get_todays_arrivals
-            ]
-            
-        tools = unique_tools
-        logger.info(f"Smart Tool Selector: Loaded {len(tools)} tools for query '{user_query}'")
+    # NOTE (2026-07-02 audit): the old single-agent master tool list and the
+    # 'Smart Tool Selector' keyword filter that lived here were DEAD CODE — the
+    # list they built was never passed to any agent. The Team below assigns each
+    # sub-agent its own focused toolset (finance/booking/ops/general), and its
+    # misleading 'Loaded N tools' log made tool-availability bugs (e.g. the
+    # cancel_booking keyword gate, Sentry STAYBOOKERAI-3G) harder to see.
 
     # Resolve dynamic config from integration settings or hotel relation
     from app.integration.integration import IntegrationSettings
@@ -876,8 +725,8 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
 
     target_model = (
         getattr(int_settings, 'ai_model', None) or 
-        getattr(user.hotel, 'ai_model', None) or 
-        "llama-3.3-70b-versatile"
+        getattr(user.hotel, 'ai_model', None) or
+        GROQ_LARGE_MODEL
     )
     target_base_url = (
         getattr(int_settings, 'ai_base_url', None) or 
@@ -930,7 +779,7 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
     if effective_provider == "openai":
         if target_base_url == "https://api.groq.com/openai/v1":
             target_base_url = None
-        if target_model == "llama-3.3-70b-versatile":
+        if target_model == GROQ_LARGE_MODEL:
             target_model = "gpt-4o"
 
     if effective_provider in ("gemini", "google"):
@@ -967,22 +816,17 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         get_daily_revenue, get_pending_payments, get_upsell_opportunities
     ]
     
-    # cancel_booking is destructive. Even though agno's requires_confirmation gate
-    # makes it impossible to execute without the hotelier's explicit "Proceed",
-    # we also keep it OUT of the Booking Agent's toolset unless the query actually
-    # signals cancel/void intent — so the model can't even reach for it while
-    # answering a plain "show me my bookings" question (defense-in-depth).
-    # `q` is empty only on the /agent/chat/confirm resume path (create_agent_executor
-    # is called with no user_query). There cancel_booking MUST stay registered so
-    # agno can execute the paused run — so default to True. Do NOT change this to
-    # False: it would break confirm-resume of a cancellation.
-    cancel_intent = _has_cancel_intent(q) if q else True
+    # cancel_booking is ALWAYS registered on the Booking Agent. It is safe to expose
+    # because agno's requires_confirmation gate makes it impossible to execute without
+    # the hotelier's explicit "Proceed" (and it's role-gated + audited in the tool).
+    # NOTE: do NOT conditionally register it behind a keyword check — if the model
+    # decides to call cancel_booking but the tool isn't in the toolset (e.g. the user
+    # typed "cancle" and a keyword gate removed it), agno raises
+    # "Function cancel_booking not found" and the whole run fails (Sentry STAYBOOKERAI-3G).
     booking_tools = [
-        search_bookings, get_booking_details,
+        search_bookings, get_booking_details, cancel_booking,
         create_quick_booking, check_availability_matrix, find_guest
     ]
-    if cancel_intent:
-        booking_tools.append(cancel_booking)
     
     ops_tools = [
         get_dashboard_stats, get_room_inventory, get_todays_arrivals,
@@ -1020,11 +864,14 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         tools=booking_tools,
         instructions=(
             "You are a hotel reservations specialist. "
-            "DESTRUCTIVE-ACTION RULE: only call cancel_booking when the hotelier "
-            "explicitly asks to cancel a specific booking. The system will pause and "
-            "ask them to confirm before anything is cancelled, so call it once for "
-            "that exact booking number — never cancel pending bookings to 'clean up' "
-            "or in bulk on your own initiative. "
+            "CANCELLING A BOOKING: when the hotelier asks to cancel a booking, you MUST "
+            "actually CALL the cancel_booking tool with the booking_number — one call "
+            "per booking. Do NOT just describe the cancellation in text and do NOT ask "
+            "for confirmation yourself: the system automatically shows the hotelier a "
+            "Proceed/Cancel prompt as soon as you call the tool, and nothing is cancelled "
+            "until they click Proceed. If a booking number is unknown, look it up first "
+            "(search_bookings / get_booking_details), then call cancel_booking. Never "
+            "cancel bookings in bulk on your own initiative. "
             "Never start responses with 'Let me check/fetch/search' — jump directly to the result."
         ),
         user_id=str(user.id),
@@ -1038,9 +885,11 @@ async def create_agent_executor(session: AsyncSession, user: User, user_query: O
         tools=ops_tools,
         instructions=(
             "You are a hotel operations specialist. Be proactive and concise. "
-            "DESTRUCTIVE-ACTION RULE: for price updates, promo codes, or blocking dates, "
-            "clearly state the change you intend to make. The system will pause and ask "
-            "the hotelier to confirm before it is applied — so never assume consent. "
+            "PRICE / PROMO / BLOCK-DATES: when the hotelier asks for one of these, you MUST "
+            "actually CALL the matching tool (update_room_price / create_promo_code / "
+            "block_room_dates). Do NOT just describe the change in text and do NOT ask for "
+            "confirmation yourself — the system automatically shows a Proceed/Cancel prompt "
+            "once you call the tool, and nothing changes until the hotelier clicks Proceed. "
             "Never start responses with 'Let me check/fetch/search' — jump directly to the result."
         ),
         user_id=str(user.id),

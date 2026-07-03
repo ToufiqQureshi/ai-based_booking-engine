@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Printer, Download } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/core/utils/currency';
 
 interface InvoiceDialogProps {
     open: boolean;
@@ -60,13 +61,6 @@ export function InvoiceDialog({ open, onOpenChange, payment }: InvoiceDialogProp
         printWindow.close();
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0,
-        }).format(amount);
-    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

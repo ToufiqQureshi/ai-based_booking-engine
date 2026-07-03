@@ -12,6 +12,7 @@ import { apiClient } from '@/core/api/client';
 import { useToast } from '@/components/ui/use-toast';
 import { BookingStepper } from '@/guest_booking/components/public/BookingStepper';
 import { cn } from '@/core/lib/utils';
+import { formatCurrency } from '@/core/utils/currency';
 
 interface LookupForm {
     bookingNumber: string;
@@ -117,9 +118,6 @@ export default function BookingCancel() {
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
-    };
 
     const themeColor = hotel?.primary_color || '#d11026';
 
@@ -345,7 +343,7 @@ export default function BookingCancel() {
                                 <span className="text-slate-500 font-medium">
                                     {cancelResult?.status === 'cancel_requested' ? 'Estimated Cancellation Fee:' : 'Cancellation Fee:'}
                                 </span>
-                                <span className="font-bold text-slate-900">{cancelResult?.cancellation_fee > 0 ? formatCurrency(cancelResult.cancellation_fee) : '₹0 (Free)'}</span>
+                                <span className="font-bold text-slate-900">{cancelResult?.cancellation_fee > 0 ? formatCurrency(cancelResult.cancellation_fee) : `${formatCurrency(0)} (Free)`}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500 font-medium">

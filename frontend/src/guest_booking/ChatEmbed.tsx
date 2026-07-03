@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { ChatWidget } from '@/guest_booking/components/public/ChatWidget';
 import { useEffect, useState } from 'react';
+import { getApiBaseUrl } from '@/core/api/baseUrl';
 
 export default function ChatEmbed() {
     const { hotelSlug } = useParams();
@@ -9,15 +10,7 @@ export default function ChatEmbed() {
     // Fetch config for colors
     useEffect(() => {
         if (!hotelSlug) return;
-        const getApiUrl = () => {
-            const hostname = window.location.hostname;
-            if (hostname.includes('staybooker.ai')) {
-                return 'https://api.staybooker.ai/api/v1';
-            }
-            if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-            return 'https://ai-basedbooking-engine-production.up.railway.app/api/v1';
-        };
-        const apiUrl = getApiUrl();
+        const apiUrl = getApiBaseUrl({ embedded: true });
         fetch(`${apiUrl}/public/hotels/slug/${hotelSlug}/widget-config`)
             .then(res => res.json())
             .then(data => setConfig(data))

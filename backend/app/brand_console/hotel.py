@@ -10,6 +10,7 @@ from typing import Optional, List, Union, TYPE_CHECKING
 from datetime import datetime
 import uuid
 import re
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 if TYPE_CHECKING:
     from app.guests.user import User
@@ -174,7 +175,9 @@ class Hotel(HotelBase, table=True):
     ai_provider: Optional[str] = Field(default="groq")
     ai_api_key: Optional[str] = Field(default=None)
     ai_api_key_vault_id: Optional[str] = Field(default=None)  # Vault UUID replaces ai_api_key
-    ai_model: Optional[str] = Field(default="llama-3.1-70b-versatile")
+    # Default model id comes from the central constants (Groq keeps
+    # decommissioning llama ids; see app/core/utils/ai_models.py).
+    ai_model: Optional[str] = Field(default=GROQ_LARGE_MODEL)
     ai_base_url: Optional[str] = Field(default=None)
     ai_max_tokens: Optional[int] = Field(default=None)
     

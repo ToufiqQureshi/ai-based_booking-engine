@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { apiClient } from '@/core/api/client';
 import { Guest } from '@/core/types/api';
 import { PageShell } from '@/components/layout/PageShell';
+import { formatCurrency } from '@/core/utils/currency';
 
 export function GuestsPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -74,13 +75,6 @@ export function GuestsPage() {
     guest.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase();

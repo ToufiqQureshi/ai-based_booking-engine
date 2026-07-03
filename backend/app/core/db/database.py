@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from app.core.utils.config import get_settings
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 _migration_logger = logging.getLogger(__name__)
 
@@ -104,6 +105,11 @@ async def init_db():
                     "Schema already at v%s — skipping inline patches (fast startup)",
                     applied,
                 )
+                # The fast-path must only skip the one-time ALTER TABLE patches.
+                # Auto-heal backfill and the plaintext-secret -> Vault migration
+                # are per-boot maintenance: skipping them here meant a secret
+                # saved after the first boot would stay in plaintext forever.
+                await _run_boot_maintenance()
                 return
         except Exception as _ve:
             _migration_logger.warning(
@@ -423,6 +429,65 @@ async def init_db():
             else:
                 raise
 
+    # All inline patches done — persist version so next boot skips this entire block.
+    if not is_sqlite:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(
+                    "INSERT INTO _staybooker_schema_version (id, version) VALUES (1, :v) "
+                    "ON CONFLICT (id) DO UPDATE SET version = :v"
+                ), {"v": _SCHEMA_PATCH_VERSION})
+            _migration_logger.info("Schema patched to v%s", _SCHEMA_PATCH_VERSION)
+        except Exception as _ve:
+            _migration_logger.warning("Failed to save schema version: %s", _ve)
+
+    await _run_boot_maintenance()
+
+
+# Arbitrary constant identifying the boot-maintenance critical section for
+# pg_try_advisory_lock. Must stay stable across deploys so every worker/replica
+# contends on the same lock.
+_BOOT_MAINTENANCE_LOCK_KEY = 815606
+
+
+async def _run_boot_maintenance() -> None:
+    """Idempotent per-boot maintenance that must run on EVERY startup,
+    including fast-path boots that skip the one-time schema patches:
+    AI-config auto-heal backfill, the supabase_vault extension, and the
+    plaintext-secret -> Vault migration.
+
+    Serialized across workers/replicas with a Postgres session advisory lock:
+    without it, several workers booting together could each scan the same
+    plaintext-secret rows and create duplicate Vault secrets before any row
+    update commits. Losing the lock race just means another worker is already
+    doing this boot's maintenance — safe to skip."""
+    if is_sqlite:
+        await _boot_maintenance_steps()
+        return
+
+    lock_conn = await engine.connect()
+    try:
+        got_lock = (await lock_conn.execute(
+            text("SELECT pg_try_advisory_lock(:key)"),
+            {"key": _BOOT_MAINTENANCE_LOCK_KEY},
+        )).scalar()
+        if not got_lock:
+            _migration_logger.info(
+                "Boot maintenance already running in another worker — skipping"
+            )
+            return
+        try:
+            await _boot_maintenance_steps()
+        finally:
+            await lock_conn.execute(
+                text("SELECT pg_advisory_unlock(:key)"),
+                {"key": _BOOT_MAINTENANCE_LOCK_KEY},
+            )
+    finally:
+        await lock_conn.close()
+
+
+async def _boot_maintenance_steps() -> None:
     # Auto-heal: Sync AI fields from hotels table to integration_settings table if missing or not set
     try:
         async with engine.begin() as conn:
@@ -457,7 +522,7 @@ async def init_db():
                             "hotel_id": hotel_id,
                             "ai_provider": ai_prov or "groq",
                             "ai_api_key": ai_key,
-                            "ai_model": ai_mod or "llama-3.1-8b-instant",
+                            "ai_model": ai_mod or GROQ_SMALL_MODEL,
                             "ai_base_url": ai_base,
                             "ai_max_tokens": ai_max,
                             "now": datetime.utcnow()
@@ -482,7 +547,7 @@ async def init_db():
                                 "id": sett_id,
                                 "ai_provider": ai_prov or "groq",
                                 "ai_api_key": ai_key,
-                                "ai_model": ai_mod or "llama-3.1-8b-instant",
+                                "ai_model": ai_mod or GROQ_SMALL_MODEL,
                                 "ai_base_url": ai_base,
                                 "ai_max_tokens": ai_max,
                                 "now": datetime.utcnow()
@@ -491,18 +556,6 @@ async def init_db():
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Database auto-heal for AI integration settings failed: {e}")
-
-    # All inline patches done — persist version so next boot skips this entire block.
-    if not is_sqlite:
-        try:
-            async with engine.begin() as conn:
-                await conn.execute(text(
-                    "INSERT INTO _staybooker_schema_version (id, version) VALUES (1, :v) "
-                    "ON CONFLICT (id) DO UPDATE SET version = :v"
-                ), {"v": _SCHEMA_PATCH_VERSION})
-            _migration_logger.info("Schema patched to v%s", _SCHEMA_PATCH_VERSION)
-        except Exception as _ve:
-            _migration_logger.warning("Failed to save schema version: %s", _ve)
 
     # Vault: enable supabase_vault extension (idempotent, Postgres only)
     if not is_sqlite:

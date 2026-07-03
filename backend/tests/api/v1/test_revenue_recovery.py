@@ -157,3 +157,21 @@ class TestRecoveryEndpoints:
         r = await auth_client.post("/api/v1/revenue/recovery/run")
         assert r.status_code == 200
         assert "nudged" in r.json()
+
+
+class TestBookingLink:
+    """Regression: the resume link was hardcoded to https://staybooker.ai/book,
+    ignoring FRONTEND_URL — a staging/self-hosted deploy would email guests
+    prod links. It must follow config, with the per-hotel override intact."""
+
+    async def test_link_uses_frontend_url_config(self):
+        from app.core.utils.config import get_settings
+
+        hotel = await _make_hotel(recovery_enabled=True)
+        expected_base = get_settings().FRONTEND_URL.rstrip("/")
+        assert recovery._booking_link(hotel) == f"{expected_base}/book/{hotel.slug}/rooms"
+
+    async def test_per_hotel_override_still_wins(self):
+        hotel = await _make_hotel(recovery_enabled=True)
+        hotel.settings = {**hotel.settings, "public_booking_base_url": "https://book.myhotel.example"}
+        assert recovery._booking_link(hotel) == f"https://book.myhotel.example/{hotel.slug}/rooms"

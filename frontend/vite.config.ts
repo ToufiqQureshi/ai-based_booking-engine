@@ -32,6 +32,17 @@ export default defineConfig(() => ({
   },
   build: {
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Split the heaviest libraries out of the entry chunk (was 706 kB).
+        // Each group is only pulled in by the pages that need it.
+        manualChunks: {
+          recharts: ["recharts"],
+          pdf: ["jspdf", "html2canvas"],
+          markdown: ["react-markdown", "remark-gfm"],
+        },
+      },
+    },
   },
   plugins: [react()],
   resolve: {

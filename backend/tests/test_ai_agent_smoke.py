@@ -48,3 +48,46 @@ async def test_create_agent_executor_runs_tool_selector_without_nameerror(seeded
             # ValueError (missing key) or any other well-defined failure is fine —
             # the point is the logger code path executed cleanly.
             pass
+
+
+def _collect_member_tools(team):
+    """Map every tool name → requires_confirmation across all team members."""
+    flags = {}
+    for member in getattr(team, "members", []) or []:
+        for f in (getattr(member, "tools", None) or []):
+            name = getattr(f, "name", None) or getattr(f, "__name__", "")
+            flags[name] = getattr(f, "requires_confirmation", False)
+    return flags
+
+
+@pytest.mark.asyncio
+async def test_cancel_booking_always_registered_and_confirmation_gated(seeded_user: User, monkeypatch):
+    """Regression STAYBOOKERAI-3G: 'Function cancel_booking not found'.
+
+    cancel_booking used to be registered only when the query contained the word
+    'cancel'/'void'. A query without that exact word (e.g. the typo 'cancle', or a
+    resume) dropped the tool from the toolset — so when the model still called it,
+    agno raised 'Function cancel_booking not found' and the run failed. The tool
+    must ALWAYS be registered, and must stay behind the requires_confirmation gate.
+    """
+    from app.core.utils.config import get_settings
+    # Dummy key so the executor builds the full Team (OpenAILike construction is
+    # offline). Set on the cached settings instance.
+    monkeypatch.setattr(get_settings(), "GROQ_API_KEY", "gsk_dummy_key_for_construction_only")
+
+    async with AsyncSession(engine) as session:
+        res = await session.execute(
+            select(User).where(User.id == seeded_user.id).options(selectinload(User.hotel))
+        )
+        user = res.scalar_one()
+
+        # A query that does NOT contain 'cancel'/'void' — this is exactly what the
+        # old keyword gate removed the tool for.
+        team = await create_agent_executor(session, user, user_query="show me my bookings please")
+
+    flags = _collect_member_tools(team)
+    assert "cancel_booking" in flags, "cancel_booking must always be registered on the Booking Agent"
+    assert flags["cancel_booking"] is True, "cancel_booking must stay behind requires_confirmation"
+    # Other destructive tools stay confirmation-gated too.
+    for t in ("update_room_price", "create_promo_code", "block_room_dates"):
+        assert flags.get(t) is True, f"{t} must be confirmation-gated"

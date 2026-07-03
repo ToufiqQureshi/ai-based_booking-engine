@@ -52,7 +52,6 @@ const AVAILABLE_ROUTES = [
     { path: '/payments', label: 'Payments' },
     { path: '/addons', label: 'Addons' },
     { path: '/amenities', label: 'Amenities' },
-    { path: '/channel-settings', label: 'Channel Settings' },
     { path: '/integration', label: 'Integrations' },
     { path: '/settings', label: 'Settings' },
 ];
@@ -162,7 +161,7 @@ export const HotelWorkspace = ({ hotel, onBack, users, onImpersonate, isImperson
             OWNER: [
                 "/dashboard", "/analytics", "/agent", "/rooms", "/rates",
                 "/availability", "/bookings", "/guests", "/payments", "/addons", "/amenities",
-                "/channel-settings", "/integration", "/settings",
+                "/integration", "/settings",
             ],
             MANAGER: [
                 "/dashboard", "/analytics", "/rooms", "/rates", "/amenities",

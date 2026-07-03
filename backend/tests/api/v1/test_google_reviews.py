@@ -56,3 +56,24 @@ class TestUpdateSocialProof:
         """PUT with is_enabled as a non-boolean object returns 422."""
         r = await auth_client.put(_SOCIAL_PROOF_URL, json={"is_enabled": {"nested": "object"}})
         assert r.status_code == 422
+
+
+class TestAiReplyQuotaGate:
+    """Regression: /google/reviews/{id}/ai-reply called the LLM with the
+    platform Groq key but never went through enforce_ai_token_quota, so a
+    hotel over its daily budget could still burn platform credit here."""
+
+    async def test_ai_reply_respects_daily_quota(self, auth_client: AsyncClient, monkeypatch):
+        from fastapi import HTTPException
+        import app.integration.google as google_mod
+
+        async def _quota_exceeded(agent_type, hotel_id, session):
+            assert agent_type == "hotelier"
+            raise HTTPException(status_code=429, detail="Daily AI quota exceeded.")
+
+        monkeypatch.setattr(google_mod, "enforce_ai_token_quota", _quota_exceeded)
+        r = await auth_client.post(
+            "/api/v1/integration/google/reviews/rev-1/ai-reply",
+            json={"reviewer_name": "Asha", "review_text": "Great stay!", "star_rating": 5},
+        )
+        assert r.status_code == 429

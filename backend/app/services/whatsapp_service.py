@@ -28,7 +28,7 @@ class WhatsAppService:
             logger.warning("WhatsApp API credentials missing. Skipping message to %s", phone_number)
             return False
 
-        url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
+        url = f"https://graph.facebook.com/{self.settings.META_GRAPH_API_VERSION}/{phone_number_id}/messages"
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
@@ -75,7 +75,7 @@ class WhatsAppService:
             logger.warning("WhatsApp API credentials missing. Skipping template to %s", phone_number)
             return False
 
-        url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
+        url = f"https://graph.facebook.com/{self.settings.META_GRAPH_API_VERSION}/{phone_number_id}/messages"
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",

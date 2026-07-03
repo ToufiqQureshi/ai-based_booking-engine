@@ -1,6 +1,6 @@
 """
 Platform-level Settings Models
-HotelierApiKey, CustomDomain, EmailTemplate, SuperAdminRole.
+HotelierApiKey, EmailTemplate, SuperAdminRole.
 """
 from sqlmodel import SQLModel, Field, Column
 from sqlalchemy import JSON
@@ -39,30 +39,10 @@ class HotelierApiKey(SQLModel, table=True):
     revoked_reason: Optional[str] = None
 
 
-class CustomDomain(SQLModel, table=True):
-    """White-label domain mapping for a hotel."""
-    __tablename__ = "custom_domains"
-
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    hotel_id: str = Field(foreign_key="hotels.id", index=True)
-
-    domain: str = Field(unique=True, index=True)  # book.example.com
-    is_primary: bool = Field(default=True)
-
-    # DNS verification
-    verification_token: Optional[str] = None
-    is_verified: bool = Field(default=False)
-    verified_at: Optional[datetime] = None
-    dns_records: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
-
-    # SSL state
-    ssl_status: str = Field(default="pending")  # pending, active, failed, expired
-    ssl_issued_at: Optional[datetime] = None
-    ssl_expires_at: Optional[datetime] = None
-
-    is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+# CustomDomain (white-label domain mapping) was removed in the 2026-07-02
+# production audit: no route ever used it and the custom_domains table was
+# empty in production. Rebuild the model + table together if white-labelling
+# ships for real.
 
 
 class EmailTemplate(SQLModel, table=True):

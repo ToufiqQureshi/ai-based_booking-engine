@@ -159,6 +159,7 @@ class GuestChatResponse(BaseModel):
 from fastapi import Request
 from fastapi.responses import StreamingResponse
 from app.core.utils.limiter import limiter, get_real_ip
+from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +320,7 @@ async def chat_with_guest_ai(
                         # default to the ~10x pricier 70B model, which meant every
                         # transient error doubled spend AND jumped to a costlier
                         # model — exactly the wrong direction during an error storm.
-                        id=ai_model_name or ("llama-3.1-8b-instant" if effective_provider == "groq" else "gpt-4o-mini"),
+                        id=ai_model_name or (GROQ_SMALL_MODEL if effective_provider == "groq" else "gpt-4o-mini"),
                         api_key=target_api_key,
                         base_url=ai_base_url_val or default_base,
                         max_tokens=fallback_max_tokens,

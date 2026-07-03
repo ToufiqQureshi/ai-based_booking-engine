@@ -18,6 +18,7 @@ import { useAuth } from '@/core/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { formatCurrency } from '@/core/utils/currency';
 
 // Lazy load dialog components
 const RoomDialog = lazy(() => import('@/rooms/components/RoomDialog').then(m => ({ default: m.RoomDialog })));
@@ -131,13 +132,6 @@ export function RoomsPage() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const filteredRooms = rooms.filter(room =>
     room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
