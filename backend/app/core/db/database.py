@@ -105,6 +105,11 @@ async def init_db():
                     "Schema already at v%s — skipping inline patches (fast startup)",
                     applied,
                 )
+                # The fast-path must only skip the one-time ALTER TABLE patches.
+                # Auto-heal backfill and the plaintext-secret -> Vault migration
+                # are per-boot maintenance: skipping them here meant a secret
+                # saved after the first boot would stay in plaintext forever.
+                await _run_boot_maintenance()
                 return
         except Exception as _ve:
             _migration_logger.warning(
@@ -424,6 +429,26 @@ async def init_db():
             else:
                 raise
 
+    # All inline patches done — persist version so next boot skips this entire block.
+    if not is_sqlite:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(
+                    "INSERT INTO _staybooker_schema_version (id, version) VALUES (1, :v) "
+                    "ON CONFLICT (id) DO UPDATE SET version = :v"
+                ), {"v": _SCHEMA_PATCH_VERSION})
+            _migration_logger.info("Schema patched to v%s", _SCHEMA_PATCH_VERSION)
+        except Exception as _ve:
+            _migration_logger.warning("Failed to save schema version: %s", _ve)
+
+    await _run_boot_maintenance()
+
+
+async def _run_boot_maintenance() -> None:
+    """Idempotent per-boot maintenance that must run on EVERY startup,
+    including fast-path boots that skip the one-time schema patches:
+    AI-config auto-heal backfill, the supabase_vault extension, and the
+    plaintext-secret -> Vault migration."""
     # Auto-heal: Sync AI fields from hotels table to integration_settings table if missing or not set
     try:
         async with engine.begin() as conn:
@@ -492,18 +517,6 @@ async def init_db():
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Database auto-heal for AI integration settings failed: {e}")
-
-    # All inline patches done — persist version so next boot skips this entire block.
-    if not is_sqlite:
-        try:
-            async with engine.begin() as conn:
-                await conn.execute(text(
-                    "INSERT INTO _staybooker_schema_version (id, version) VALUES (1, :v) "
-                    "ON CONFLICT (id) DO UPDATE SET version = :v"
-                ), {"v": _SCHEMA_PATCH_VERSION})
-            _migration_logger.info("Schema patched to v%s", _SCHEMA_PATCH_VERSION)
-        except Exception as _ve:
-            _migration_logger.warning("Failed to save schema version: %s", _ve)
 
     # Vault: enable supabase_vault extension (idempotent, Postgres only)
     if not is_sqlite:
