@@ -16,6 +16,11 @@ from app.core.utils.ai_models import GROQ_LARGE_MODEL, GROQ_SMALL_MODEL
 
 _migration_logger = logging.getLogger(__name__)
 
+# Bump this integer whenever new inline patches are added below.
+# First boot after a bump re-runs the full patch loop; all subsequent boots
+# read this version from _staybooker_schema_version and return in < 1 s.
+_SCHEMA_PATCH_VERSION = 13
+
 
 def _is_idempotent_migration_error(err: Exception) -> bool:
     """Return True only for 'already exists' / duplicate-column DB errors."""
@@ -81,6 +86,30 @@ async def init_db():
             settings.DB_POOL_SIZE, settings.DB_MAX_OVERFLOW,
             settings.DB_POOL_RECYCLE, settings.DB_POOL_TIMEOUT,
         )
+
+    # Fast-path: skip the 40+ ALTER TABLE statements on boots after the first.
+    # Creates the version table if missing, then returns early when already up to date.
+    if not is_sqlite:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS _staybooker_schema_version "
+                    "(id INTEGER PRIMARY KEY, version INTEGER NOT NULL DEFAULT 0)"
+                ))
+                row = (await conn.execute(
+                    text("SELECT version FROM _staybooker_schema_version LIMIT 1")
+                )).fetchone()
+                applied = row[0] if row else 0
+            if applied >= _SCHEMA_PATCH_VERSION:
+                _migration_logger.info(
+                    "Schema already at v%s — skipping inline patches (fast startup)",
+                    applied,
+                )
+                return
+        except Exception as _ve:
+            _migration_logger.warning(
+                "Schema version check failed, running all patches: %s", _ve
+            )
 
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -463,6 +492,18 @@ async def init_db():
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Database auto-heal for AI integration settings failed: {e}")
+
+    # All inline patches done — persist version so next boot skips this entire block.
+    if not is_sqlite:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(
+                    "INSERT INTO _staybooker_schema_version (id, version) VALUES (1, :v) "
+                    "ON CONFLICT (id) DO UPDATE SET version = :v"
+                ), {"v": _SCHEMA_PATCH_VERSION})
+            _migration_logger.info("Schema patched to v%s", _SCHEMA_PATCH_VERSION)
+        except Exception as _ve:
+            _migration_logger.warning("Failed to save schema version: %s", _ve)
 
     # Vault: enable supabase_vault extension (idempotent, Postgres only)
     if not is_sqlite:
