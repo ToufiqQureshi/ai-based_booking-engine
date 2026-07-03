@@ -112,7 +112,7 @@ const IntegrationPage = () => {
 
             if (widgetRes) {
                 const currentOrigin = window.location.origin;
-                const urlRegex = /(http:\/\/localhost:8080|https:\/\/app\.gadget4me\.in|https:\/\/api\.hotelierhub\.com|https:\/\/book\.hotelierhub\.com)/g;
+                const urlRegex = /(http:\/\/localhost:8080|https:\/\/app\.gadget4me\.in|https:\/\/api\.hotelierhub\.com|https:\/\/book\.hotelierhub\.com|https:\/\/staybooker\.ai(?![\w-]))/g;
                 widgetRes.html_code = widgetRes.html_code?.replace(urlRegex, currentOrigin);
                 widgetRes.javascript_code = widgetRes.javascript_code?.replace(urlRegex, currentOrigin);
                 widgetRes.instructions = widgetRes.instructions?.replace(urlRegex, currentOrigin);
