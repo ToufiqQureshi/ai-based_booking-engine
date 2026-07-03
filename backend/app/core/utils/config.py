@@ -126,7 +126,7 @@ class Settings(BaseSettings):
 
     # Public URLs (for emails, widgets, etc.)
     API_URL: str = "https://api.staybooker.ai"
-    FRONTEND_URL: str = "https://staybooker.ai"
+    FRONTEND_URL: str = "https://app.staybooker.ai"
 
     # AI Config
     OPENAI_API_KEY: str | None = None
