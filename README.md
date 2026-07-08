@@ -14,8 +14,6 @@
 
 <p>
   🔴 <b>Live in production:</b> <a href="https://staybooker.ai">staybooker.ai</a> — white-label deployment powering a real hotel-booking business
-  <br/>
-  🧪 <b>Try the demo:</b> <a href="https://ai-based-booking-engine.vercel.app">ai-based-booking-engine.vercel.app</a>
 </p>
 
 ---
