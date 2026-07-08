@@ -60,30 +60,32 @@ Staybooker gives every hotel its own **direct booking website**, a full **manage
 
 ## 🏗️ Architecture
 
-```
-        Guests & Hoteliers
-               │
-               ▼
-┌─────────────────────────────┐
-│  React + Vite + Tailwind    │   Cloudflare Pages
-│  shadcn/ui · React Query    │   (frontend cache: 5 min staleTime)
-└──────────────┬──────────────┘
-               │ HTTPS + Supabase JWT
-               ▼
-┌─────────────────────────────┐
-│  FastAPI (Python)           │   Railway
-│  RBAC · Rate Limiting       │
-│  AI Agents (Groq/OpenAI)    │
-└───────┬─────────────┬───────┘
-        │             │
-        ▼             ▼
-┌──────────────┐  ┌──────────────────┐
-│ Redis        │  │ PostgreSQL       │
-│ cache · DDoS │  │ (Supabase)       │
-│ AI quotas    │  │ SQLModel/Alchemy │
-└──────────────┘  └──────────────────┘
-        │
-        ▼  External: Razorpay · WhatsApp · Brevo · Google
+```mermaid
+flowchart TB
+    U["👤 Guests &amp; Hoteliers"]
+
+    subgraph FE["🌐 Frontend — Cloudflare Pages"]
+        R["React + Vite + TailwindCSS<br/>shadcn/ui · React Query (5 min cache)"]
+    end
+
+    subgraph BE["⚙️ Backend — Railway"]
+        API["FastAPI<br/>Auth (JWT/JWKS) · RBAC · Rate Limiting"]
+        AI["🤖 AI Agents<br/>Groq / OpenAI · quotas &amp; usage metering"]
+    end
+
+    subgraph DATA["💾 Data Layer"]
+        REDIS[("Redis<br/>cache · DDoS shield · AI quotas")]
+        PG[("PostgreSQL — Supabase<br/>SQLModel / SQLAlchemy")]
+    end
+
+    EXT["🔌 Razorpay · WhatsApp · Brevo · Google"]
+
+    U --> R
+    R -- "HTTPS + Supabase JWT" --> API
+    API <--> AI
+    API -- "cache first" --> REDIS
+    API -- "on cache miss" --> PG
+    API -- "HMAC-verified webhooks" --> EXT
 ```
 
 ### Engineering decisions worth noticing
