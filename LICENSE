@@ -1,0 +1,57 @@
+Staybooker — Proprietary License
+
+Copyright (c) 2026 Toufiq Qureshi. All rights reserved.
+
+This repository and its contents, including but not limited to all source
+code, documentation, designs, diagrams, and assets (collectively, the
+"Software"), are the proprietary and confidential property of the copyright
+holder.
+
+SOURCE-AVAILABLE, NOT OPEN SOURCE
+
+The Software is made publicly viewable for portfolio, educational, and
+evaluation purposes only. No license, right, or interest in the Software is
+granted by making it publicly viewable.
+
+PERMITTED
+
+You may:
+
+1. View and read the source code of the Software.
+2. Reference the Software for the purpose of evaluating the author's work
+   (e.g. recruitment, code review, technical assessment).
+
+PROHIBITED
+
+Except with the prior written permission of the copyright holder, you may
+NOT:
+
+1. Use the Software, in whole or in part, in any product or service,
+   whether commercial or non-commercial.
+2. Copy, reproduce, modify, adapt, translate, or create derivative works
+   of the Software.
+3. Distribute, sublicense, sell, rent, lease, or otherwise transfer the
+   Software or any portion of it.
+4. Deploy, host, or operate the Software or any derivative of it.
+5. Remove or alter any copyright, trademark, or attribution notices.
+
+TRADEMARKS
+
+"Staybooker" and associated logos are trademarks of the copyright holder.
+Nothing in this license grants any right to use them.
+
+NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+CONTACT
+
+For licensing inquiries or permission requests, contact the copyright
+holder via the repository owner's GitHub profile:
+https://github.com/ToufiqQureshi

@@ -10,6 +10,7 @@
 ![Tailwind](https://img.shields.io/badge/TailwindCSS-shadcn%2Fui-06B6D4?logo=tailwindcss&logoColor=white)
 ![AI](https://img.shields.io/badge/AI-LLM%20Agents%20(Groq%2FOpenAI)-8A2BE2)
 ![Payments](https://img.shields.io/badge/Payments-Razorpay-0C2451)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 
 ---
 
@@ -201,6 +202,12 @@ See [`SECURITY.md`](SECURITY.md) for the full policy and [`STAYBOOKER_DOCS.md`](
 | [`SECURITY.md`](SECURITY.md) | Security policy |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release history |
 | [`CLAUDE.md`](CLAUDE.md) | Engineering rules, testing policy, and production discipline |
+
+---
+
+## 📄 License
+
+**Proprietary — All Rights Reserved.** The source code is publicly viewable for portfolio and evaluation purposes only; copying, modifying, or using it in any product or service is not permitted. See [`LICENSE`](LICENSE) for the full terms.
 
 ---
 
