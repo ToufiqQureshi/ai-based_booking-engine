@@ -12,6 +12,10 @@
 ![Payments](https://img.shields.io/badge/Payments-Razorpay-0C2451)
 ![License](https://img.shields.io/badge/License-Proprietary-red)
 
+<p>
+  🔴 <b>Live in production:</b> <a href="https://staybooker.ai">staybooker.ai</a> — white-label deployment powering a real hotel-booking business
+</p>
+
 ---
 
 ## ✨ What Is Staybooker?
