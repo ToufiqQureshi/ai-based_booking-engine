@@ -156,6 +156,28 @@ const toufiq = {
 
 ---
 
+## 🆕 **Latest Repositories**
+
+<div align="center">
+
+> 🤖 _This section auto-updates daily via a GitHub Action — always shows my most recently pushed repos._
+
+<table>
+  <tr><th>Repository</th><th>Description</th><th>Language</th><th>Updated</th></tr>
+  <!-- RECENT-REPOS:START -->
+  <tr><td>📌 <a href="https://github.com/ToufiqQureshi/ai-based_booking-engine">ai-based_booking-engine</a></td><td>—</td><td>🔷 TypeScript</td><td>Jul 08, 2026</td></tr>
+  <tr><td>📌 <a href="https://github.com/ToufiqQureshi/chuscraper">chuscraper</a> ⭐11</td><td>Stealth-native web &amp; Android scraping framework powered by CDP and ADB with adaptive fingerprint rotation and bot-protection bypass.</td><td>🐍 Python</td><td>Apr 09, 2026</td></tr>
+  <tr><td>📌 <a href="https://github.com/ToufiqQureshi/agentic-ai-based-content-research-to-deployment-on-cpanel">agentic-ai-based-content-research-to-deployment-on-cpanel</a></td><td>—</td><td>🐍 Python</td><td>Jan 31, 2026</td></tr>
+  <tr><td>📌 <a href="https://github.com/ToufiqQureshi/rankpilot">rankpilot</a></td><td>—</td><td>🟨 JavaScript</td><td>Dec 30, 2025</td></tr>
+  <tr><td>📌 <a href="https://github.com/ToufiqQureshi/candidate-analyser">candidate-analyser</a></td><td>—</td><td>🐍 Python</td><td>Jun 01, 2025</td></tr>
+  <tr><td>📌 <a href="https://github.com/ToufiqQureshi/ai_agent_for_voice_call">ai_agent_for_voice_call</a></td><td>—</td><td>🐍 Python</td><td>Apr 22, 2025</td></tr>
+  <!-- RECENT-REPOS:END -->
+</table>
+
+</div>
+
+---
+
 ## 📊 **GitHub Analytics**
 
 <div align="center">
